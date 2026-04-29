@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AdminRouteImport } from './routes/_admin'
+import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminManageRouteImport } from './routes/_admin.manage'
-import { Route as AdminDashboardRouteImport } from './routes/_admin.dashboard'
+import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
+import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
@@ -26,8 +26,8 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/_admin',
+const ProtectedRoute = ProtectedRouteImport.update({
+  id: '/_protected',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -35,39 +35,39 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminManageRoute = AdminManageRouteImport.update({
+const ProtectedManageRoute = ProtectedManageRouteImport.update({
   id: '/manage',
   path: '/manage',
-  getParentRoute: () => AdminRoute,
+  getParentRoute: () => ProtectedRoute,
 } as any)
-const AdminDashboardRoute = AdminDashboardRouteImport.update({
+const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => AdminRoute,
+  getParentRoute: () => ProtectedRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/scan': typeof ScanRoute
-  '/dashboard': typeof AdminDashboardRoute
-  '/manage': typeof AdminManageRoute
+  '/dashboard': typeof ProtectedDashboardRoute
+  '/manage': typeof ProtectedManageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/scan': typeof ScanRoute
-  '/dashboard': typeof AdminDashboardRoute
-  '/manage': typeof AdminManageRoute
+  '/dashboard': typeof ProtectedDashboardRoute
+  '/manage': typeof ProtectedManageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_admin': typeof AdminRouteWithChildren
+  '/_protected': typeof ProtectedRouteWithChildren
   '/admin': typeof AdminRoute
   '/scan': typeof ScanRoute
-  '/_admin/dashboard': typeof AdminDashboardRoute
-  '/_admin/manage': typeof AdminManageRoute
+  '/_protected/dashboard': typeof ProtectedDashboardRoute
+  '/_protected/manage': typeof ProtectedManageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -77,16 +77,16 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/_admin'
+    | '/_protected'
     | '/admin'
     | '/scan'
-    | '/_admin/dashboard'
-    | '/_admin/manage'
+    | '/_protected/dashboard'
+    | '/_protected/manage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRouteWithChildren
+  ProtectedRoute: typeof ProtectedRouteWithChildren
   AdminRoute: typeof AdminRoute
   ScanRoute: typeof ScanRoute
 }
@@ -107,11 +107,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_admin': {
-      id: '/_admin'
+    '/_protected': {
+      id: '/_protected'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AdminRouteImport
+      preLoaderRoute: typeof ProtectedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -121,41 +121,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_admin/manage': {
-      id: '/_admin/manage'
+    '/_protected/manage': {
+      id: '/_protected/manage'
       path: '/manage'
       fullPath: '/manage'
-      preLoaderRoute: typeof AdminManageRouteImport
-      parentRoute: typeof AdminRoute
+      preLoaderRoute: typeof ProtectedManageRouteImport
+      parentRoute: typeof ProtectedRoute
     }
-    '/_admin/dashboard': {
-      id: '/_admin/dashboard'
+    '/_protected/dashboard': {
+      id: '/_protected/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
-      preLoaderRoute: typeof AdminDashboardRouteImport
-      parentRoute: typeof AdminRoute
+      preLoaderRoute: typeof ProtectedDashboardRouteImport
+      parentRoute: typeof ProtectedRoute
     }
   }
 }
 
-interface AdminRouteChildren {
-  AdminDashboardRoute: typeof AdminDashboardRoute
-  AdminManageRoute: typeof AdminManageRoute
+interface ProtectedRouteChildren {
+  ProtectedDashboardRoute: typeof ProtectedDashboardRoute
+  ProtectedManageRoute: typeof ProtectedManageRoute
 }
 
-const AdminRouteChildren: AdminRouteChildren = {
-  AdminDashboardRoute: AdminDashboardRoute,
-  AdminManageRoute: AdminManageRoute,
+const ProtectedRouteChildren: ProtectedRouteChildren = {
+  ProtectedDashboardRoute: ProtectedDashboardRoute,
+  ProtectedManageRoute: ProtectedManageRoute,
 }
 
-const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
+  ProtectedRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRouteWithChildren,
+  ProtectedRoute: ProtectedRouteWithChildren,
   AdminRoute: AdminRoute,
   ScanRoute: ScanRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

@@ -15,7 +15,7 @@ import { Plus, Trash2, Pencil, Save, X, Users, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
-export const Route = createFileRoute("/_admin/manage")({
+export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "Manage — ProductionTrack Admin" }] }),
   component: Manage,
 });

@@ -27,7 +27,7 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
-export const Route = createFileRoute("/_admin/dashboard")({
+export const Route = createFileRoute("/_protected/dashboard")({
   head: () => ({
     meta: [{ title: "Dashboard — ProductionTrack Admin" }],
   }),

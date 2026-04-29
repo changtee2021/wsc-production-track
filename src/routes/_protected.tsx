@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Users, LogOut } from "lucide-react";
 
-export const Route = createFileRoute("/_admin")({
+export const Route = createFileRoute("/_protected")({
   beforeLoad: ({ location }) => {
     if (typeof window !== "undefined" && !isAdminSession()) {
       throw redirect({
@@ -21,13 +21,13 @@ function AdminLayout() {
   return (
     <div className="min-h-screen bg-muted/30">
       <AppHeader>
-        <Link to="/_admin/dashboard">
+        <Link to="/dashboard">
           <Button variant="secondary" size="sm" className="gap-1">
             <LayoutDashboard className="h-4 w-4" />
             <span className="hidden sm:inline">Dashboard</span>
           </Button>
         </Link>
-        <Link to="/_admin/manage">
+        <Link to="/manage">
           <Button variant="secondary" size="sm" className="gap-1">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Manage</span>

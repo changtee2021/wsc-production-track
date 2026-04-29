@@ -15,7 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/admin")({
   validateSearch: zodValidator(
-    z.object({ redirect: fallback(z.string(), "/_admin/dashboard").default("/_admin/dashboard") }),
+    z.object({ redirect: fallback(z.string(), "/dashboard").default("/dashboard") }),
   ),
   head: () => ({
     meta: [
