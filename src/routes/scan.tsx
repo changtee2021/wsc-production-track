@@ -107,11 +107,11 @@ function ScanPage() {
 
   const submit = async (action: "start" | "finish") => {
     if (!job_id) {
-      toast.error("Missing Job ID");
+      toast.error("ไม่พบรหัสงาน (Job ID)");
       return;
     }
     if (!employeeId || !stepId) {
-      toast.error("Please select Employee and Step");
+      toast.error("กรุณาเลือกพนักงานและขั้นตอน");
       return;
     }
     setSubmitting(action);
@@ -126,9 +126,9 @@ function ScanPage() {
       toast.error(error.message);
       return;
     }
-    const at = new Date().toLocaleString();
+    const at = new Date().toLocaleString("th-TH");
     setLastSubmit({ action, at });
-    toast.success(`${action === "start" ? "Started" : "Finished"} at ${at}`);
+    toast.success(`${action === "start" ? "เริ่มงาน" : "เสร็จงาน"} เมื่อ ${at}`);
   };
 
   return (
