@@ -33,10 +33,10 @@ export const Route = createFileRoute("/scan")({
   validateSearch: zodValidator(scanSearchSchema),
   head: () => ({
     meta: [
-      { title: "Scan Job — ProductionTrack" },
+      { title: "สแกนงาน — ProductionTrack" },
       {
         name: "description",
-        content: "Log production start and finish times for a scanned job.",
+        content: "บันทึกเวลาเริ่มและเสร็จงานการผลิตจาก QR code",
       },
     ],
   }),
