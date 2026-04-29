@@ -33,10 +33,10 @@ export const Route = createFileRoute("/scan")({
   validateSearch: zodValidator(scanSearchSchema),
   head: () => ({
     meta: [
-      { title: "Scan Job — ProductionTrack" },
+      { title: "สแกนงาน — ProductionTrack" },
       {
         name: "description",
-        content: "Log production start and finish times for a scanned job.",
+        content: "บันทึกเวลาเริ่มและเสร็จงานการผลิตจาก QR code",
       },
     ],
   }),
@@ -107,11 +107,11 @@ function ScanPage() {
 
   const submit = async (action: "start" | "finish") => {
     if (!job_id) {
-      toast.error("Missing Job ID");
+      toast.error("ไม่พบรหัสงาน (Job ID)");
       return;
     }
     if (!employeeId || !stepId) {
-      toast.error("Please select Employee and Step");
+      toast.error("กรุณาเลือกพนักงานและขั้นตอน");
       return;
     }
     setSubmitting(action);
@@ -126,9 +126,9 @@ function ScanPage() {
       toast.error(error.message);
       return;
     }
-    const at = new Date().toLocaleString();
+    const at = new Date().toLocaleString("th-TH");
     setLastSubmit({ action, at });
-    toast.success(`${action === "start" ? "Started" : "Finished"} at ${at}`);
+    toast.success(`${action === "start" ? "เริ่มงาน" : "เสร็จงาน"} เมื่อ ${at}`);
   };
 
   return (
@@ -137,7 +137,7 @@ function ScanPage() {
       <AppHeader>
         <Link to="/admin">
           <Button variant="secondary" size="sm">
-            Admin
+            ผู้ดูแลระบบ
           </Button>
         </Link>
       </AppHeader>
@@ -147,26 +147,31 @@ function ScanPage() {
         <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <QrCode className="h-4 w-4" />
-            Job ID
+            รหัสงาน (Job ID)
           </div>
           <div className="mt-1 text-3xl font-bold text-primary">
             {job_id || (
               <span className="text-base font-normal text-destructive">
-                No job_id in URL
+                ไม่พบรหัสงานใน URL — กรุณาสแกน QR code
               </span>
             )}
           </div>
+          {job_id && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              ระบบดึงรหัสจาก QR code อัตโนมัติ ไม่ต้องพิมพ์เอง
+            </p>
+          )}
         </div>
 
         {/* Employee */}
         <div className="mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
           <Label className="mb-2 flex items-center gap-2 text-sm font-medium">
             <User className="h-4 w-4 text-secondary" />
-            Employee / พนักงาน
+            พนักงาน
           </Label>
           <Select value={employeeId} onValueChange={setEmployeeId}>
             <SelectTrigger className="h-14 text-base">
-              <SelectValue placeholder={loading ? "Loading..." : "Select employee"}>
+              <SelectValue placeholder={loading ? "กำลังโหลด..." : "เลือกพนักงาน"}>
                 {employeeId && (
                   <span className="flex items-center gap-2">
                     <span className="text-xl">{flag}</span>
@@ -192,11 +197,11 @@ function ScanPage() {
         <div className="mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
           <Label className="mb-2 flex items-center gap-2 text-sm font-medium">
             <ListChecks className="h-4 w-4 text-secondary" />
-            Production Step / ขั้นตอน
+            ขั้นตอนการผลิต
           </Label>
           <Select value={stepId} onValueChange={setStepId}>
             <SelectTrigger className="h-14 text-base">
-              <SelectValue placeholder={loading ? "Loading..." : "Select step"} />
+              <SelectValue placeholder={loading ? "กำลังโหลด..." : "เลือกขั้นตอน"} />
             </SelectTrigger>
             <SelectContent>
               {steps.map((s) => (
@@ -220,7 +225,7 @@ function ScanPage() {
             ) : (
               <Play className="h-8 w-8 fill-current" />
             )}
-            START
+            เริ่มงาน
           </Button>
           <Button
             onClick={() => submit("finish")}
@@ -232,7 +237,7 @@ function ScanPage() {
             ) : (
               <Square className="h-8 w-8 fill-current" />
             )}
-            FINISH
+            เสร็จงาน
           </Button>
         </div>
 
@@ -240,11 +245,17 @@ function ScanPage() {
           <div className="mt-5 flex items-center gap-2 rounded-xl border border-success/30 bg-success/10 p-4 text-success">
             <CheckCircle2 className="h-5 w-5" />
             <div className="text-sm">
-              <div className="font-semibold capitalize">{lastSubmit.action} logged</div>
+              <div className="font-semibold">
+                บันทึก{lastSubmit.action === "start" ? "การเริ่มงาน" : "การเสร็จงาน"}เรียบร้อย
+              </div>
               <div className="text-xs opacity-80">{lastSubmit.at}</div>
             </div>
           </div>
         )}
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          🇹🇭 ไทย · 🇲🇲 พม่า · 🇱🇦 ลาว · 🇰🇭 กัมพูชา
+        </p>
       </main>
     </div>
   );
