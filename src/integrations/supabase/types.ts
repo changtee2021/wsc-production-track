@@ -14,7 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      employees: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          nationality: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          nationality?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          nationality?: string | null
+        }
+        Relationships: []
+      }
+      production_logs: {
+        Row: {
+          action: string
+          created_at: string
+          employee_id: string
+          id: string
+          job_id: string
+          step_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          job_id: string
+          step_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          job_id?: string
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_logs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_logs_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steps: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          step_name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          step_name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          step_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
