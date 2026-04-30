@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -11,25 +12,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Save, X, Users, ListChecks } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  Save,
+  X,
+  Users,
+  ListChecks,
+  Upload,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { flagFor, initialsOf } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_protected/manage")({
-  head: () => ({ meta: [{ title: "Manage — ProductionTrack Admin" }] }),
+  head: () => ({ meta: [{ title: "จัดการ — ProductionTrack" }] }),
   component: Manage,
 });
 
 interface Employee {
   id: string;
   name: string;
+  emp_code: string | null;
   nationality: string | null;
+  avatar_url: string | null;
   active: boolean;
 }
 interface Step {
   id: string;
   step_name: string;
   description: string | null;
+  image_url: string | null;
+  std_duration_minutes: number | null;
   active: boolean;
 }
 
@@ -39,9 +55,9 @@ function Manage() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
       <Toaster richColors position="top-center" />
-      <h1 className="mb-1 text-2xl font-bold tracking-tight">Manage</h1>
+      <h1 className="mb-1 text-2xl font-bold tracking-tight">จัดการข้อมูล</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Add, edit, or remove employees and production steps.
+        เพิ่ม แก้ไข ลบพนักงานและขั้นตอนการผลิต พร้อมอัปโหลดรูปและตั้งเวลามาตรฐาน
       </p>
       <div className="grid gap-6 lg:grid-cols-2">
         <EmployeesPanel />
@@ -51,11 +67,28 @@ function Manage() {
   );
 }
 
+async function uploadFile(bucket: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl;
+}
+
 function EmployeesPanel() {
   const [items, setItems] = useState<Employee[]>([]);
   const [name, setName] = useState("");
+  const [code, setCode] = useState("");
   const [nat, setNat] = useState("Thai");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     const { data, error } = await supabase
@@ -63,20 +96,40 @@ function EmployeesPanel() {
       .select("*")
       .order("name");
     if (error) toast.error(error.message);
-    setItems(data ?? []);
+    setItems((data as Employee[]) ?? []);
   };
   useEffect(() => {
     load();
   }, []);
 
+  const handleUpload = async (file: File, target: "new" | "edit") => {
+    setUploading(true);
+    try {
+      const url = await uploadFile("avatars", file);
+      if (target === "new") setAvatarUrl(url);
+      else if (editing) setEditing({ ...editing, avatar_url: url });
+      toast.success("อัปโหลดรูปสำเร็จ");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const add = async () => {
-    if (!name.trim()) return;
-    const { error } = await supabase
-      .from("employees")
-      .insert({ name: name.trim(), nationality: nat });
+    if (!name.trim()) return toast.error("กรุณากรอกชื่อ");
+    const { error } = await supabase.from("employees").insert({
+      name: name.trim(),
+      emp_code: code.trim() || null,
+      nationality: nat,
+      avatar_url: avatarUrl,
+    });
     if (error) return toast.error(error.message);
     setName("");
-    toast.success("Employee added");
+    setCode("");
+    setAvatarUrl(null);
+    if (fileRef.current) fileRef.current.value = "";
+    toast.success("เพิ่มพนักงานแล้ว");
     load();
   };
 
@@ -86,21 +139,23 @@ function EmployeesPanel() {
       .from("employees")
       .update({
         name: editing.name,
+        emp_code: editing.emp_code,
         nationality: editing.nationality,
+        avatar_url: editing.avatar_url,
         active: editing.active,
       })
       .eq("id", editing.id);
     if (error) return toast.error(error.message);
     setEditing(null);
-    toast.success("Saved");
+    toast.success("บันทึกแล้ว");
     load();
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this employee? Past logs are preserved only if no logs reference it.")) return;
+    if (!confirm("ลบพนักงานคนนี้?")) return;
     const { error } = await supabase.from("employees").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Deleted");
+    toast.success("ลบแล้ว");
     load();
   };
 
@@ -108,69 +163,103 @@ function EmployeesPanel() {
     <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
         <Users className="h-5 w-5 text-secondary" />
-        Employees
+        พนักงาน
       </h2>
 
-      <div className="mb-4 grid grid-cols-[1fr_auto_auto] gap-2">
+      <div className="mb-4 space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-14 w-14 border border-border">
+            {avatarUrl && <AvatarImage src={avatarUrl} />}
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {name ? initialsOf(name) : "?"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUpload(f, "new");
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              อัปโหลดรูป
+            </Button>
+          </div>
+        </div>
         <Input
-          placeholder="Employee name"
+          placeholder="ชื่อพนักงาน"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <Select value={nat} onValueChange={setNat}>
-          <SelectTrigger className="w-[120px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {NATIONALITIES.map((n) => (
-              <SelectItem key={n} value={n}>
-                {n}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={add} className="gap-1">
-          <Plus className="h-4 w-4" /> Add
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            placeholder="รหัสพนักงาน (เช่น EMP001)"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+          <Select value={nat} onValueChange={setNat}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {NATIONALITIES.map((n) => (
+                <SelectItem key={n} value={n}>
+                  {flagFor(n)} {n}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={add} className="w-full gap-1 bg-secondary hover:bg-secondary/90">
+          <Plus className="h-4 w-4" /> เพิ่มพนักงาน
         </Button>
       </div>
 
       <ul className="divide-y divide-border">
         {items.map((e) => (
-          <li key={e.id} className="py-2">
+          <li key={e.id} className="py-3">
             {editing?.id === e.id ? (
-              <div className="grid grid-cols-[1fr_120px_auto_auto] gap-2">
-                <Input
-                  value={editing.name}
-                  onChange={(ev) => setEditing({ ...editing, name: ev.target.value })}
-                />
-                <Select
-                  value={editing.nationality ?? "Other"}
-                  onValueChange={(v) => setEditing({ ...editing, nationality: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {NATIONALITIES.map((n) => (
-                      <SelectItem key={n} value={n}>
-                        {n}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button size="icon" onClick={save} className="bg-secondary hover:bg-secondary/90">
-                  <Save className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="outline" onClick={() => setEditing(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+              <EmployeeEditor
+                editing={editing}
+                setEditing={setEditing}
+                onSave={save}
+                onUpload={(f) => handleUpload(f, "edit")}
+                uploading={uploading}
+              />
             ) : (
               <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="font-medium">{e.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {e.nationality || "—"}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 border border-border">
+                    {e.avatar_url && <AvatarImage src={e.avatar_url} />}
+                    <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+                      {initialsOf(e.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="flex items-center gap-1 font-medium">
+                      <span>{flagFor(e.nationality)}</span>
+                      {e.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {e.emp_code ? <span className="font-mono">{e.emp_code} · </span> : null}
+                      {e.nationality || "—"}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-1">
@@ -192,7 +281,7 @@ function EmployeesPanel() {
         ))}
         {items.length === 0 && (
           <li className="py-4 text-center text-sm text-muted-foreground">
-            No employees yet
+            ยังไม่มีพนักงาน
           </li>
         )}
       </ul>
@@ -200,11 +289,97 @@ function EmployeesPanel() {
   );
 }
 
+function EmployeeEditor({
+  editing,
+  setEditing,
+  onSave,
+  onUpload,
+  uploading,
+}: {
+  editing: Employee;
+  setEditing: (e: Employee | null) => void;
+  onSave: () => void;
+  onUpload: (f: File) => void;
+  uploading: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-2 rounded-lg bg-muted/30 p-2">
+      <div className="flex items-center gap-2">
+        <Avatar className="h-12 w-12 border border-border">
+          {editing.avatar_url && <AvatarImage src={editing.avatar_url} />}
+          <AvatarFallback>{initialsOf(editing.name)}</AvatarFallback>
+        </Avatar>
+        <input
+          ref={ref}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onUpload(f);
+          }}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => ref.current?.click()}
+          disabled={uploading}
+          className="gap-1"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          เปลี่ยนรูป
+        </Button>
+      </div>
+      <Input
+        value={editing.name}
+        onChange={(ev) => setEditing({ ...editing, name: ev.target.value })}
+        placeholder="ชื่อ"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          value={editing.emp_code ?? ""}
+          onChange={(ev) => setEditing({ ...editing, emp_code: ev.target.value })}
+          placeholder="รหัสพนักงาน"
+        />
+        <Select
+          value={editing.nationality ?? "Other"}
+          onValueChange={(v) => setEditing({ ...editing, nationality: v })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {NATIONALITIES.map((n) => (
+              <SelectItem key={n} value={n}>
+                {flagFor(n)} {n}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex gap-2">
+        <Button onClick={onSave} className="flex-1 gap-1 bg-secondary hover:bg-secondary/90">
+          <Save className="h-4 w-4" /> บันทึก
+        </Button>
+        <Button variant="outline" onClick={() => setEditing(null)} className="gap-1">
+          <X className="h-4 w-4" /> ยกเลิก
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function StepsPanel() {
   const [items, setItems] = useState<Step[]>([]);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
+  const [duration, setDuration] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState<Step | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     const { data, error } = await supabase
@@ -212,21 +387,41 @@ function StepsPanel() {
       .select("*")
       .order("step_name");
     if (error) toast.error(error.message);
-    setItems(data ?? []);
+    setItems((data as Step[]) ?? []);
   };
   useEffect(() => {
     load();
   }, []);
 
+  const handleUpload = async (file: File, target: "new" | "edit") => {
+    setUploading(true);
+    try {
+      const url = await uploadFile("step-images", file);
+      if (target === "new") setImageUrl(url);
+      else if (editing) setEditing({ ...editing, image_url: url });
+      toast.success("อัปโหลดรูปสำเร็จ");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const add = async () => {
-    if (!name.trim()) return;
-    const { error } = await supabase
-      .from("steps")
-      .insert({ step_name: name.trim(), description: desc.trim() || null });
+    if (!name.trim()) return toast.error("กรุณากรอกชื่อขั้นตอน");
+    const { error } = await supabase.from("steps").insert({
+      step_name: name.trim(),
+      description: desc.trim() || null,
+      image_url: imageUrl,
+      std_duration_minutes: duration ? Number(duration) : null,
+    });
     if (error) return toast.error(error.message);
     setName("");
     setDesc("");
-    toast.success("Step added");
+    setDuration("");
+    setImageUrl(null);
+    if (fileRef.current) fileRef.current.value = "";
+    toast.success("เพิ่มขั้นตอนแล้ว");
     load();
   };
 
@@ -237,19 +432,21 @@ function StepsPanel() {
       .update({
         step_name: editing.step_name,
         description: editing.description,
+        image_url: editing.image_url,
+        std_duration_minutes: editing.std_duration_minutes,
       })
       .eq("id", editing.id);
     if (error) return toast.error(error.message);
     setEditing(null);
-    toast.success("Saved");
+    toast.success("บันทึกแล้ว");
     load();
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this step?")) return;
+    if (!confirm("ลบขั้นตอนนี้?")) return;
     const { error } = await supabase.from("steps").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Deleted");
+    toast.success("ลบแล้ว");
     load();
   };
 
@@ -257,62 +454,103 @@ function StepsPanel() {
     <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
         <ListChecks className="h-5 w-5 text-secondary" />
-        Production Steps
+        ขั้นตอนการผลิต
       </h2>
 
-      <div className="mb-4 space-y-2">
+      <div className="mb-4 space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+            {imageUrl ? (
+              <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <ListChecks className="h-6 w-6 text-muted-foreground" />
+            )}
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleUpload(f, "new");
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            disabled={uploading}
+            onClick={() => fileRef.current?.click()}
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            อัปโหลดรูปขั้นตอน
+          </Button>
+        </div>
         <Input
-          placeholder="Step name (e.g. Cutting)"
+          placeholder="ชื่อขั้นตอน (เช่น สอดใบมู่ลี่)"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <div className="flex gap-2">
+        <Input
+          placeholder="คำอธิบาย (ไม่บังคับ)"
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+        />
+        <div className="space-y-1">
+          <Label className="text-xs">เวลามาตรฐาน (นาที)</Label>
           <Input
-            placeholder="Description (optional)"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
+            type="number"
+            min="0"
+            placeholder="เช่น 15"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
           />
-          <Button onClick={add} className="gap-1">
-            <Plus className="h-4 w-4" /> Add
-          </Button>
         </div>
+        <Button onClick={add} className="w-full gap-1 bg-secondary hover:bg-secondary/90">
+          <Plus className="h-4 w-4" /> เพิ่มขั้นตอน
+        </Button>
       </div>
 
       <ul className="divide-y divide-border">
         {items.map((s) => (
-          <li key={s.id} className="py-2">
+          <li key={s.id} className="py-3">
             {editing?.id === s.id ? (
-              <div className="space-y-2">
-                <Input
-                  value={editing.step_name}
-                  onChange={(ev) =>
-                    setEditing({ ...editing, step_name: ev.target.value })
-                  }
-                />
-                <div className="flex gap-2">
-                  <Input
-                    value={editing.description ?? ""}
-                    onChange={(ev) =>
-                      setEditing({ ...editing, description: ev.target.value })
-                    }
-                  />
-                  <Button size="icon" onClick={save} className="bg-secondary hover:bg-secondary/90">
-                    <Save className="h-4 w-4" />
-                  </Button>
-                  <Button size="icon" variant="outline" onClick={() => setEditing(null)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <StepEditor
+                editing={editing}
+                setEditing={setEditing}
+                onSave={save}
+                onUpload={(f) => handleUpload(f, "edit")}
+                uploading={uploading}
+              />
             ) : (
               <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="font-medium">{s.step_name}</div>
-                  {s.description && (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+                    {s.image_url ? (
+                      <img src={s.image_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <ListChecks className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-medium">{s.step_name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {s.description}
+                      {s.std_duration_minutes != null ? (
+                        <span className="font-medium text-destructive">
+                          ≤ {s.std_duration_minutes} นาที
+                        </span>
+                      ) : (
+                        "ไม่ตั้งเวลามาตรฐาน"
+                      )}
+                      {s.description ? ` · ${s.description}` : ""}
                     </div>
-                  )}
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <Button size="icon" variant="ghost" onClick={() => setEditing(s)}>
@@ -333,10 +571,90 @@ function StepsPanel() {
         ))}
         {items.length === 0 && (
           <li className="py-4 text-center text-sm text-muted-foreground">
-            No steps yet
+            ยังไม่มีขั้นตอน
           </li>
         )}
       </ul>
     </section>
+  );
+}
+
+function StepEditor({
+  editing,
+  setEditing,
+  onSave,
+  onUpload,
+  uploading,
+}: {
+  editing: Step;
+  setEditing: (s: Step | null) => void;
+  onSave: () => void;
+  onUpload: (f: File) => void;
+  uploading: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-2 rounded-lg bg-muted/30 p-2">
+      <div className="flex items-center gap-2">
+        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+          {editing.image_url ? (
+            <img src={editing.image_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <ListChecks className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+        <input
+          ref={ref}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onUpload(f);
+          }}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => ref.current?.click()}
+          disabled={uploading}
+          className="gap-1"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          เปลี่ยนรูป
+        </Button>
+      </div>
+      <Input
+        value={editing.step_name}
+        onChange={(ev) => setEditing({ ...editing, step_name: ev.target.value })}
+        placeholder="ชื่อขั้นตอน"
+      />
+      <Input
+        value={editing.description ?? ""}
+        onChange={(ev) => setEditing({ ...editing, description: ev.target.value })}
+        placeholder="คำอธิบาย"
+      />
+      <Input
+        type="number"
+        min="0"
+        value={editing.std_duration_minutes ?? ""}
+        onChange={(ev) =>
+          setEditing({
+            ...editing,
+            std_duration_minutes: ev.target.value ? Number(ev.target.value) : null,
+          })
+        }
+        placeholder="เวลามาตรฐาน (นาที)"
+      />
+      <div className="flex gap-2">
+        <Button onClick={onSave} className="flex-1 gap-1 bg-secondary hover:bg-secondary/90">
+          <Save className="h-4 w-4" /> บันทึก
+        </Button>
+        <Button variant="outline" onClick={() => setEditing(null)} className="gap-1">
+          <X className="h-4 w-4" /> ยกเลิก
+        </Button>
+      </div>
+    </div>
   );
 }
