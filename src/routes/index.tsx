@@ -8,6 +8,13 @@ import { QrScannerDialog } from "@/components/QrScannerDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -204,87 +211,55 @@ function ScanHomePage() {
           </div>
         </div>
 
-        {/* Employee card grid */}
+        {/* Employee dropdown */}
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
             <User className="h-4 w-4 text-secondary" />
             เลือกพนักงาน
           </h2>
-          {loading ? (
-            <div className="rounded-xl border border-border bg-card p-4 text-center text-sm text-muted-foreground">
-              กำลังโหลด…
-            </div>
-          ) : employees.length === 0 ? (
-            <div className="rounded-xl border border-border bg-card p-4 text-center text-sm text-muted-foreground">
-              ยังไม่มีพนักงาน
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {employees.map((e) => {
-                const active = e.id === employeeId;
-                return (
-                  <button
-                    key={e.id}
-                    type="button"
-                    onClick={() => setEmployeeId(e.id)}
-                    className={`flex items-center gap-3 rounded-xl border-2 bg-card p-3 text-left transition ${
-                      active
-                        ? "border-secondary bg-secondary/5 shadow-[var(--shadow-card)]"
-                        : "border-border hover:border-secondary/50"
-                    }`}
-                  >
-                    <Avatar className="h-12 w-12 border border-border">
+          <Select value={employeeId} onValueChange={setEmployeeId} disabled={loading}>
+            <SelectTrigger className="h-12 w-full">
+              <SelectValue placeholder={loading ? "กำลังโหลด…" : "-- เลือกพนักงาน --"} />
+            </SelectTrigger>
+            <SelectContent>
+              {employees.map((e) => (
+                <SelectItem key={e.id} value={e.id}>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-7 w-7 border border-border">
                       {e.avatar_url ? <AvatarImage src={e.avatar_url} alt={e.name} /> : null}
-                      <AvatarFallback className="bg-primary text-sm font-bold text-primary-foreground">
+                      <AvatarFallback className="bg-primary text-[10px] font-bold text-primary-foreground">
                         {initialsOf(e.name)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1">
-                        <span className="text-base">{flagFor(e.nationality)}</span>
-                        <span className="truncate text-sm font-semibold text-foreground">
-                          {e.name}
-                        </span>
-                      </div>
-                      {e.emp_code && (
-                        <div className="truncate font-mono text-[10px] text-muted-foreground">
-                          {e.emp_code}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                    <span>{flagFor(e.nationality)}</span>
+                    <span className="font-medium">{e.name}</span>
+                    {e.emp_code && (
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        ({e.emp_code})
+                      </span>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </section>
 
-        {/* Step card grid */}
+        {/* Step dropdown */}
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
             <ListChecks className="h-4 w-4 text-secondary" />
             เลือกขั้นตอนการผลิต
           </h2>
-          {loading ? (
-            <div className="rounded-xl border border-border bg-card p-4 text-center text-sm text-muted-foreground">
-              กำลังโหลด…
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {steps.map((s) => {
-                const active = s.id === stepId;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setStepId(s.id)}
-                    className={`flex flex-col items-center gap-2 rounded-xl border-2 bg-card p-3 text-center transition ${
-                      active
-                        ? "border-secondary bg-secondary/5 shadow-[var(--shadow-card)]"
-                        : "border-border hover:border-secondary/50"
-                    }`}
-                  >
-                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-muted">
+          <Select value={stepId} onValueChange={setStepId} disabled={loading}>
+            <SelectTrigger className="h-12 w-full">
+              <SelectValue placeholder={loading ? "กำลังโหลด…" : "-- เลือกขั้นตอน --"} />
+            </SelectTrigger>
+            <SelectContent>
+              {steps.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded bg-muted">
                       {s.image_url ? (
                         <img
                           src={s.image_url}
@@ -292,23 +267,20 @@ function ScanHomePage() {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <ListChecks className="h-7 w-7 text-secondary" />
+                        <ListChecks className="h-4 w-4 text-secondary" />
                       )}
                     </div>
-                    <div className="text-sm font-semibold leading-tight text-foreground">
-                      {s.step_name}
-                    </div>
+                    <span className="font-medium">{s.step_name}</span>
                     {s.std_duration_minutes != null && (
-                      <div className="flex items-center gap-1 text-[11px] font-medium text-destructive">
-                        <Clock className="h-3 w-3" />
-                        ≤ {s.std_duration_minutes} นาที
-                      </div>
+                      <span className="ml-1 flex items-center gap-1 text-[10px] font-medium text-destructive">
+                        <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} นาที
+                      </span>
                     )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </section>
 
         {/* Standard-time warning */}
