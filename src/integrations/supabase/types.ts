@@ -17,21 +17,27 @@ export type Database = {
       employees: {
         Row: {
           active: boolean
+          avatar_url: string | null
           created_at: string
+          emp_code: string | null
           id: string
           name: string
           nationality: string | null
         }
         Insert: {
           active?: boolean
+          avatar_url?: string | null
           created_at?: string
+          emp_code?: string | null
           id?: string
           name: string
           nationality?: string | null
         }
         Update: {
           active?: boolean
+          avatar_url?: string | null
           created_at?: string
+          emp_code?: string | null
           id?: string
           name?: string
           nationality?: string | null
@@ -87,6 +93,8 @@ export type Database = {
           description: string | null
           icon: string | null
           id: string
+          image_url: string | null
+          std_duration_minutes: number | null
           step_name: string
         }
         Insert: {
@@ -95,6 +103,8 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          image_url?: string | null
+          std_duration_minutes?: number | null
           step_name: string
         }
         Update: {
@@ -103,6 +113,8 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          image_url?: string | null
+          std_duration_minutes?: number | null
           step_name?: string
         }
         Relationships: []

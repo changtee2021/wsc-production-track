@@ -4,28 +4,26 @@ import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
+import { QrScannerDialog } from "@/components/QrScannerDialog";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
   Play,
   Square,
   QrCode,
-  User,
-  ListChecks,
   CheckCircle2,
   Loader2,
   ShieldCheck,
+  ScanLine,
+  Clock,
+  AlertTriangle,
+  ListChecks,
+  User,
 } from "lucide-react";
+import { flagFor, initialsOf } from "@/lib/i18n";
 
 const indexSearchSchema = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -41,11 +39,6 @@ export const Route = createFileRoute("/")({
         content:
           "สแกน QR code เพื่อบันทึกเวลาเริ่มและเสร็จงานในสายการผลิต ใช้งานง่ายบนมือถือ",
       },
-      { property: "og:title", content: "ProductionTrack — ระบบติดตามการผลิต" },
-      {
-        property: "og:description",
-        content: "สแกน QR code เพื่อบันทึกขั้นตอนการผลิต",
-      },
     ],
   }),
   component: ScanHomePage,
@@ -54,27 +47,31 @@ export const Route = createFileRoute("/")({
 interface Employee {
   id: string;
   name: string;
+  emp_code: string | null;
   nationality: string | null;
+  avatar_url: string | null;
 }
 interface Step {
   id: string;
   step_name: string;
   description: string | null;
+  image_url: string | null;
+  std_duration_minutes: number | null;
 }
 
 function ScanHomePage() {
   const { job_id } = Route.useSearch();
   const navigate = useNavigate({ from: "/" });
   const [manualJob, setManualJob] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [steps, setSteps] = useState<Step[]>([]);
   const [employeeId, setEmployeeId] = useState<string>("");
   const [stepId, setStepId] = useState<string>("");
   const [submitting, setSubmitting] = useState<"start" | "finish" | null>(null);
-  const [lastSubmit, setLastSubmit] = useState<{
-    action: string;
-    at: string;
-  } | null>(null);
+  const [lastSubmit, setLastSubmit] = useState<{ action: string; at: string } | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -82,12 +79,12 @@ function ScanHomePage() {
       const [e, s] = await Promise.all([
         supabase
           .from("employees")
-          .select("id,name,nationality")
+          .select("id,name,emp_code,nationality,avatar_url")
           .eq("active", true)
           .order("name"),
         supabase
           .from("steps")
-          .select("id,step_name,description")
+          .select("id,step_name,description,image_url,std_duration_minutes")
           .eq("active", true)
           .order("step_name"),
       ]);
@@ -97,10 +94,10 @@ function ScanHomePage() {
     })();
   }, []);
 
-  const flag = useMemo(() => {
-    const emp = employees.find((x) => x.id === employeeId);
-    return flagFor(emp?.nationality ?? null);
-  }, [employees, employeeId]);
+  const selectedStep = useMemo(
+    () => steps.find((s) => s.id === stepId) ?? null,
+    [steps, stepId],
+  );
 
   const submit = async (action: "start" | "finish") => {
     if (!job_id) {
@@ -134,6 +131,21 @@ function ScanHomePage() {
     navigate({ search: { job_id: trimmed } });
   };
 
+  const handleScanned = (text: string) => {
+    // accept either a raw job id or a URL containing ?job_id=...
+    let jobValue = text;
+    try {
+      const url = new URL(text);
+      const fromQuery = url.searchParams.get("job_id");
+      if (fromQuery) jobValue = fromQuery;
+    } catch {
+      // not a URL — use raw text
+    }
+    setManualJob(jobValue);
+    navigate({ search: { job_id: jobValue } });
+    toast.success(`สแกนสำเร็จ: ${jobValue}`);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Toaster richColors position="top-center" />
@@ -146,7 +158,7 @@ function ScanHomePage() {
         </Link>
       </AppHeader>
 
-      <main className="mx-auto max-w-md px-4 py-6">
+      <main className="mx-auto max-w-md px-4 py-6 pb-32">
         <h1 className="sr-only">สแกน QR code เพื่อบันทึกการผลิต</h1>
 
         {/* Job ID */}
@@ -163,73 +175,151 @@ function ScanHomePage() {
               </p>
             </>
           ) : (
-            <div className="mt-2">
-              <p className="text-sm text-destructive">
-                ไม่พบรหัสงานใน URL — กรุณาสแกน QR code หรือกรอกด้วยตัวเอง
-              </p>
-              <div className="mt-3 flex gap-2">
-                <Input
-                  value={manualJob}
-                  onChange={(e) => setManualJob(e.target.value)}
-                  placeholder="เช่น JOB123"
-                  className="h-11"
-                  onKeyDown={(e) => e.key === "Enter" && applyManualJob()}
-                />
-                <Button onClick={applyManualJob} className="h-11">
-                  ใช้งาน
-                </Button>
-              </div>
+            <p className="mt-2 text-sm text-destructive">
+              ยังไม่มีรหัสงาน — กดปุ่ม "สแกน QR" หรือกรอกด้วยตัวเอง
+            </p>
+          )}
+
+          <div className="mt-3 flex gap-2">
+            <Button
+              onClick={() => setScannerOpen(true)}
+              className="h-11 flex-1 gap-1 bg-secondary hover:bg-secondary/90"
+            >
+              <ScanLine className="h-4 w-4" />
+              สแกน QR
+            </Button>
+          </div>
+
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={manualJob}
+              onChange={(e) => setManualJob(e.target.value)}
+              placeholder="หรือพิมพ์รหัสงาน เช่น JOB123"
+              className="h-11"
+              onKeyDown={(e) => e.key === "Enter" && applyManualJob()}
+            />
+            <Button onClick={applyManualJob} variant="outline" className="h-11">
+              ใช้
+            </Button>
+          </div>
+        </div>
+
+        {/* Employee card grid */}
+        <section className="mt-5">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <User className="h-4 w-4 text-secondary" />
+            เลือกพนักงาน
+          </h2>
+          {loading ? (
+            <div className="rounded-xl border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+              กำลังโหลด…
+            </div>
+          ) : employees.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+              ยังไม่มีพนักงาน
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {employees.map((e) => {
+                const active = e.id === employeeId;
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => setEmployeeId(e.id)}
+                    className={`flex items-center gap-3 rounded-xl border-2 bg-card p-3 text-left transition ${
+                      active
+                        ? "border-secondary bg-secondary/5 shadow-[var(--shadow-card)]"
+                        : "border-border hover:border-secondary/50"
+                    }`}
+                  >
+                    <Avatar className="h-12 w-12 border border-border">
+                      {e.avatar_url ? <AvatarImage src={e.avatar_url} alt={e.name} /> : null}
+                      <AvatarFallback className="bg-primary text-sm font-bold text-primary-foreground">
+                        {initialsOf(e.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-base">{flagFor(e.nationality)}</span>
+                        <span className="truncate text-sm font-semibold text-foreground">
+                          {e.name}
+                        </span>
+                      </div>
+                      {e.emp_code && (
+                        <div className="truncate font-mono text-[10px] text-muted-foreground">
+                          {e.emp_code}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Employee */}
-        <div className="mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <Label className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <User className="h-4 w-4 text-secondary" />
-            พนักงาน
-          </Label>
-          <Select value={employeeId} onValueChange={setEmployeeId}>
-            <SelectTrigger className="h-14 text-base">
-              <SelectValue placeholder={loading ? "กำลังโหลด..." : "เลือกพนักงาน"}>
-                {employeeId && (
-                  <span className="flex items-center gap-2">
-                    <span className="text-xl">{flag}</span>
-                    {employees.find((e) => e.id === employeeId)?.name}
-                  </span>
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {employees.map((e) => (
-                <SelectItem key={e.id} value={e.id} className="text-base">
-                  <span className="mr-2">{flagFor(e.nationality)}</span>
-                  {e.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Step */}
-        <div className="mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <Label className="mb-2 flex items-center gap-2 text-sm font-medium">
+        {/* Step card grid */}
+        <section className="mt-5">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
             <ListChecks className="h-4 w-4 text-secondary" />
-            ขั้นตอนการผลิต
-          </Label>
-          <Select value={stepId} onValueChange={setStepId}>
-            <SelectTrigger className="h-14 text-base">
-              <SelectValue placeholder={loading ? "กำลังโหลด..." : "เลือกขั้นตอน"} />
-            </SelectTrigger>
-            <SelectContent>
-              {steps.map((s) => (
-                <SelectItem key={s.id} value={s.id} className="text-base">
-                  {s.step_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            เลือกขั้นตอนการผลิต
+          </h2>
+          {loading ? (
+            <div className="rounded-xl border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+              กำลังโหลด…
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {steps.map((s) => {
+                const active = s.id === stepId;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setStepId(s.id)}
+                    className={`flex flex-col items-center gap-2 rounded-xl border-2 bg-card p-3 text-center transition ${
+                      active
+                        ? "border-secondary bg-secondary/5 shadow-[var(--shadow-card)]"
+                        : "border-border hover:border-secondary/50"
+                    }`}
+                  >
+                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                      {s.image_url ? (
+                        <img
+                          src={s.image_url}
+                          alt={s.step_name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <ListChecks className="h-7 w-7 text-secondary" />
+                      )}
+                    </div>
+                    <div className="text-sm font-semibold leading-tight text-foreground">
+                      {s.step_name}
+                    </div>
+                    {s.std_duration_minutes != null && (
+                      <div className="flex items-center gap-1 text-[11px] font-medium text-destructive">
+                        <Clock className="h-3 w-3" />
+                        ≤ {s.std_duration_minutes} นาที
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Standard-time warning */}
+        {selectedStep?.std_duration_minutes != null && (
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-destructive">
+            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
+            <div className="text-sm font-semibold leading-snug">
+              ขั้นตอนนี้ไม่ควรเกิน {selectedStep.std_duration_minutes} นาที
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="mt-6 grid grid-cols-2 gap-3">
@@ -275,23 +365,12 @@ function ScanHomePage() {
           🇹🇭 ไทย · 🇲🇲 พม่า · 🇱🇦 ลาว · 🇰🇭 กัมพูชา
         </p>
       </main>
+
+      <QrScannerDialog
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onScanned={handleScanned}
+      />
     </div>
   );
-}
-
-function flagFor(nat: string | null): string {
-  switch (nat?.toLowerCase()) {
-    case "thai":
-      return "🇹🇭";
-    case "burmese":
-    case "myanmar":
-      return "🇲🇲";
-    case "lao":
-      return "🇱🇦";
-    case "khmer":
-    case "cambodian":
-      return "🇰🇭";
-    default:
-      return "👤";
-  }
 }
