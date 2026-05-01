@@ -29,9 +29,10 @@ import {
   ListChecks,
   User,
 } from "lucide-react";
-import { flagFor, initialsOf } from "@/lib/i18n";
+import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 import { SlideToConfirm } from "@/components/SlideToConfirm";
 import { RotateCcw } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const indexSearchSchema = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -81,6 +82,7 @@ function ScanHomePage() {
     null,
   );
   const [loading, setLoading] = useState(true);
+  const { t, lang } = useI18n();
 
   useEffect(() => {
     (async () => {
@@ -109,11 +111,11 @@ function ScanHomePage() {
 
   const submit = async (action: "start" | "finish") => {
     if (!job_id) {
-      toast.error("ไม่พบรหัสงาน — กรุณาสแกน QR code");
+      toast.error(t("toast.noJob"));
       return;
     }
     if (!employeeId || !stepId) {
-      toast.error("กรุณาเลือกพนักงานและขั้นตอน");
+      toast.error(t("toast.noSelect"));
       return;
     }
     setSubmitting(action);
@@ -128,9 +130,11 @@ function ScanHomePage() {
       toast.error(error.message);
       return;
     }
-    const at = new Date().toLocaleString("th-TH");
+    const at = new Date().toLocaleString(lang === "my" ? "my-MM" : "th-TH");
     setLastSubmit({ action, at });
-    toast.success(`${action === "start" ? "เริ่มงาน" : "เสร็จงาน"} เมื่อ ${at}`);
+    toast.success(
+      action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }),
+    );
   };
 
   const applyManualJob = () => {
@@ -151,41 +155,38 @@ function ScanHomePage() {
     }
     setManualJob(jobValue);
     navigate({ search: { job_id: jobValue } });
-    toast.success(`สแกนสำเร็จ: ${jobValue}`);
+    toast.success(t("toast.scanned", { v: jobValue }));
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Toaster richColors position="top-center" />
       <AppHeader>
+        <LanguageSwitcher />
         <Link to="/admin">
           <Button variant="secondary" size="sm" className="gap-1">
             <ShieldCheck className="h-4 w-4" />
-            ผู้ดูแล
+            <span className="hidden sm:inline">{t("header.admin")}</span>
           </Button>
         </Link>
       </AppHeader>
 
       <main className="mx-auto max-w-md px-4 py-6 pb-32">
-        <h1 className="sr-only">สแกน QR code เพื่อบันทึกการผลิต</h1>
+        <h1 className="sr-only">{t("page.title")}</h1>
 
         {/* Job ID */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <QrCode className="h-4 w-4" />
-            รหัสงาน (Job ID)
+            {t("job.label")}
           </div>
           {job_id ? (
             <>
               <div className="mt-1 text-3xl font-bold text-primary">{job_id}</div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                ระบบดึงรหัสจาก QR code อัตโนมัติ ไม่ต้องพิมพ์เอง
-              </p>
+              <p className="mt-2 text-xs text-muted-foreground">{t("job.autoHint")}</p>
             </>
           ) : (
-            <p className="mt-2 text-sm text-destructive">
-              ยังไม่มีรหัสงาน — กดปุ่ม "สแกน QR" หรือกรอกด้วยตัวเอง
-            </p>
+            <p className="mt-2 text-sm text-destructive">{t("job.empty")}</p>
           )}
 
           <div className="mt-3 flex gap-2">
@@ -194,7 +195,7 @@ function ScanHomePage() {
               className="h-11 flex-1 gap-1 bg-secondary hover:bg-secondary/90"
             >
               <ScanLine className="h-4 w-4" />
-              สแกน QR
+              {t("job.scan")}
             </Button>
           </div>
 
@@ -202,7 +203,7 @@ function ScanHomePage() {
             <Input
               value={manualJob}
               onChange={(e) => setManualJob(e.target.value)}
-              placeholder="หรือพิมพ์รหัสงาน เช่น JOB123"
+              placeholder={t("job.placeholder")}
               className="h-11"
               onKeyDown={(e) => e.key === "Enter" && applyManualJob()}
             />
@@ -215,17 +216,16 @@ function ScanHomePage() {
                 }}
                 variant="outline"
                 className="h-11 gap-1"
-                title="ล้างรหัสงานเพื่อสแกนใหม่"
+                title={t("job.resetTitle")}
               >
                 <RotateCcw className="h-4 w-4" />
-                Reset
               </Button>
             ) : (
               <Button
                 onClick={applyManualJob}
                 variant="outline"
                 className="h-11 gap-1"
-                title="ยืนยันรหัสงาน"
+                title={t("job.confirmTitle")}
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
@@ -237,11 +237,11 @@ function ScanHomePage() {
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
             <User className="h-4 w-4 text-secondary" />
-            เลือกพนักงาน
+            {t("emp.title")}
           </h2>
           <Select value={employeeId} onValueChange={setEmployeeId} disabled={loading}>
             <SelectTrigger className="h-16 w-full text-base">
-              <SelectValue placeholder={loading ? "กำลังโหลด…" : "-- เลือกพนักงาน --"} />
+              <SelectValue placeholder={loading ? t("emp.loading") : t("emp.placeholder")} />
             </SelectTrigger>
             <SelectContent>
               {employees.map((e) => (
@@ -273,11 +273,11 @@ function ScanHomePage() {
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
             <ListChecks className="h-4 w-4 text-secondary" />
-            เลือกขั้นตอนการผลิต
+            {t("step.title")}
           </h2>
           <Select value={stepId} onValueChange={setStepId} disabled={loading}>
             <SelectTrigger className="h-16 w-full text-base">
-              <SelectValue placeholder={loading ? "กำลังโหลด…" : "-- เลือกขั้นตอน --"} />
+              <SelectValue placeholder={loading ? t("emp.loading") : t("step.placeholder")} />
             </SelectTrigger>
             <SelectContent>
               {steps.map((s) => (
@@ -300,7 +300,7 @@ function ScanHomePage() {
                       </span>
                       {s.std_duration_minutes != null && (
                         <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-destructive">
-                          <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} นาที
+                          <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} {t("step.minutes")}
                         </span>
                       )}
                     </div>
@@ -316,7 +316,7 @@ function ScanHomePage() {
           <div className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-destructive">
             <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
             <div className="text-sm font-semibold leading-snug">
-              ขั้นตอนนี้ไม่ควรเกิน {selectedStep.std_duration_minutes} นาที
+              {t("step.warning", { n: selectedStep.std_duration_minutes })}
             </div>
           </div>
         )}
@@ -324,7 +324,7 @@ function ScanHomePage() {
         {/* Actions — slide to confirm to prevent accidental taps */}
         <div className="mt-6 space-y-3">
           <SlideToConfirm
-            label="เริ่มงาน"
+            label={t("action.start")}
             icon={Play}
             loading={submitting === "start"}
             disabled={submitting !== null}
@@ -333,7 +333,7 @@ function ScanHomePage() {
             thumbClass="bg-white text-secondary"
           />
           <SlideToConfirm
-            label="เสร็จงาน"
+            label={t("action.finish")}
             icon={Square}
             loading={submitting === "finish"}
             disabled={submitting !== null}
@@ -348,16 +348,14 @@ function ScanHomePage() {
             <CheckCircle2 className="h-5 w-5" />
             <div className="text-sm">
               <div className="font-semibold">
-                บันทึก{lastSubmit.action === "start" ? "การเริ่มงาน" : "การเสร็จงาน"}เรียบร้อย
+                {lastSubmit.action === "start" ? t("log.startOk") : t("log.finishOk")}
               </div>
               <div className="text-xs opacity-80">{lastSubmit.at}</div>
             </div>
           </div>
         )}
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          🇹🇭 ไทย · 🇲🇲 พม่า · 🇱🇦 ลาว · 🇰🇭 กัมพูชา
-        </p>
+        <p className="mt-6 text-center text-xs text-muted-foreground">{t("footer.langs")}</p>
       </main>
 
       <QrScannerDialog
