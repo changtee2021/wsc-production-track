@@ -218,26 +218,28 @@ function ScanHomePage() {
             เลือกพนักงาน
           </h2>
           <Select value={employeeId} onValueChange={setEmployeeId} disabled={loading}>
-            <SelectTrigger className="h-12 w-full">
+            <SelectTrigger className="h-16 w-full text-base">
               <SelectValue placeholder={loading ? "กำลังโหลด…" : "-- เลือกพนักงาน --"} />
             </SelectTrigger>
             <SelectContent>
               {employees.map((e) => (
-                <SelectItem key={e.id} value={e.id}>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-7 w-7 border border-border">
+                <SelectItem key={e.id} value={e.id} className="py-2">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12 border-2 border-border">
                       {e.avatar_url ? <AvatarImage src={e.avatar_url} alt={e.name} /> : null}
-                      <AvatarFallback className="bg-primary text-[10px] font-bold text-primary-foreground">
+                      <AvatarFallback className="bg-primary text-sm font-bold text-primary-foreground">
                         {initialsOf(e.name)}
                       </AvatarFallback>
                     </Avatar>
-                    <span>{flagFor(e.nationality)}</span>
-                    <span className="font-medium">{e.name}</span>
-                    {e.emp_code && (
-                      <span className="font-mono text-[10px] text-muted-foreground">
-                        ({e.emp_code})
-                      </span>
-                    )}
+                    <span className="text-xl">{flagFor(e.nationality)}</span>
+                    <div className="flex flex-col text-left">
+                      <span className="text-base font-semibold leading-tight">{e.name}</span>
+                      {e.emp_code && (
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {e.emp_code}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </SelectItem>
               ))}
