@@ -22,7 +22,6 @@ import {
   Square,
   QrCode,
   CheckCircle2,
-  Loader2,
   ShieldCheck,
   ScanLine,
   Clock,
@@ -31,6 +30,8 @@ import {
   User,
 } from "lucide-react";
 import { flagFor, initialsOf } from "@/lib/i18n";
+import { SlideToConfirm } from "@/components/SlideToConfirm";
+import { RotateCcw } from "lucide-react";
 
 const indexSearchSchema = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -205,9 +206,25 @@ function ScanHomePage() {
               className="h-11"
               onKeyDown={(e) => e.key === "Enter" && applyManualJob()}
             />
-            <Button onClick={applyManualJob} variant="outline" className="h-11">
-              ใช้
-            </Button>
+            {job_id ? (
+              <Button
+                onClick={() => {
+                  setManualJob("");
+                  setLastSubmit(null);
+                  navigate({ search: { job_id: "" } });
+                }}
+                variant="outline"
+                className="h-11 gap-1"
+                title="ล้างรหัสงานเพื่อสแกนใหม่"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset
+              </Button>
+            ) : (
+              <Button onClick={applyManualJob} variant="outline" className="h-11">
+                ใช้
+              </Button>
+            )}
           </div>
         </div>
 
@@ -295,32 +312,26 @@ function ScanHomePage() {
           </div>
         )}
 
-        {/* Actions */}
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <Button
-            onClick={() => submit("start")}
+        {/* Actions — slide to confirm to prevent accidental taps */}
+        <div className="mt-6 space-y-3">
+          <SlideToConfirm
+            label="เริ่มงาน"
+            icon={Play}
+            loading={submitting === "start"}
             disabled={submitting !== null}
-            className="h-24 flex-col gap-1 rounded-2xl bg-secondary text-xl font-bold text-secondary-foreground shadow-md hover:bg-secondary/90"
-          >
-            {submitting === "start" ? (
-              <Loader2 className="h-7 w-7 animate-spin" />
-            ) : (
-              <Play className="h-8 w-8 fill-current" />
-            )}
-            เริ่มงาน
-          </Button>
-          <Button
-            onClick={() => submit("finish")}
+            onConfirm={() => submit("start")}
+            colorClass="bg-secondary text-secondary-foreground"
+            thumbClass="bg-white text-secondary"
+          />
+          <SlideToConfirm
+            label="เสร็จงาน"
+            icon={Square}
+            loading={submitting === "finish"}
             disabled={submitting !== null}
-            className="h-24 flex-col gap-1 rounded-2xl bg-primary text-xl font-bold text-primary-foreground shadow-md hover:bg-primary/90"
-          >
-            {submitting === "finish" ? (
-              <Loader2 className="h-7 w-7 animate-spin" />
-            ) : (
-              <Square className="h-8 w-8 fill-current" />
-            )}
-            เสร็จงาน
-          </Button>
+            onConfirm={() => submit("finish")}
+            colorClass="bg-primary text-primary-foreground"
+            thumbClass="bg-white text-primary"
+          />
         </div>
 
         {lastSubmit && (
