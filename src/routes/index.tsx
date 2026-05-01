@@ -221,8 +221,13 @@ function ScanHomePage() {
                 Reset
               </Button>
             ) : (
-              <Button onClick={applyManualJob} variant="outline" className="h-11">
-                ใช้
+              <Button
+                onClick={applyManualJob}
+                variant="outline"
+                className="h-11 gap-1"
+                title="ยืนยันรหัสงาน"
+              >
+                <RotateCcw className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -271,14 +276,14 @@ function ScanHomePage() {
             เลือกขั้นตอนการผลิต
           </h2>
           <Select value={stepId} onValueChange={setStepId} disabled={loading}>
-            <SelectTrigger className="h-12 w-full">
+            <SelectTrigger className="h-16 w-full text-base">
               <SelectValue placeholder={loading ? "กำลังโหลด…" : "-- เลือกขั้นตอน --"} />
             </SelectTrigger>
             <SelectContent>
               {steps.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded bg-muted">
+                <SelectItem key={s.id} value={s.id} className="py-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border-2 border-border bg-muted">
                       {s.image_url ? (
                         <img
                           src={s.image_url}
@@ -286,15 +291,19 @@ function ScanHomePage() {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <ListChecks className="h-4 w-4 text-secondary" />
+                        <ListChecks className="h-6 w-6 text-secondary" />
                       )}
                     </div>
-                    <span className="font-medium">{s.step_name}</span>
-                    {s.std_duration_minutes != null && (
-                      <span className="ml-1 flex items-center gap-1 text-[10px] font-medium text-destructive">
-                        <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} นาที
+                    <div className="flex flex-col text-left">
+                      <span className="text-base font-semibold leading-tight">
+                        {s.step_name}
                       </span>
-                    )}
+                      {s.std_duration_minutes != null && (
+                        <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-destructive">
+                          <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} นาที
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </SelectItem>
               ))}
