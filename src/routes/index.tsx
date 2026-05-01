@@ -22,7 +22,6 @@ import {
   Square,
   QrCode,
   CheckCircle2,
-  Loader2,
   ShieldCheck,
   ScanLine,
   Clock,
