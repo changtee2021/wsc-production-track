@@ -82,6 +82,7 @@ function ScanHomePage() {
     null,
   );
   const [loading, setLoading] = useState(true);
+  const { t, lang } = useI18n();
 
   useEffect(() => {
     (async () => {
@@ -110,11 +111,11 @@ function ScanHomePage() {
 
   const submit = async (action: "start" | "finish") => {
     if (!job_id) {
-      toast.error("ไม่พบรหัสงาน — กรุณาสแกน QR code");
+      toast.error(t("toast.noJob"));
       return;
     }
     if (!employeeId || !stepId) {
-      toast.error("กรุณาเลือกพนักงานและขั้นตอน");
+      toast.error(t("toast.noSelect"));
       return;
     }
     setSubmitting(action);
@@ -129,9 +130,11 @@ function ScanHomePage() {
       toast.error(error.message);
       return;
     }
-    const at = new Date().toLocaleString("th-TH");
+    const at = new Date().toLocaleString(lang === "my" ? "my-MM" : "th-TH");
     setLastSubmit({ action, at });
-    toast.success(`${action === "start" ? "เริ่มงาน" : "เสร็จงาน"} เมื่อ ${at}`);
+    toast.success(
+      action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }),
+    );
   };
 
   const applyManualJob = () => {
@@ -152,41 +155,38 @@ function ScanHomePage() {
     }
     setManualJob(jobValue);
     navigate({ search: { job_id: jobValue } });
-    toast.success(`สแกนสำเร็จ: ${jobValue}`);
+    toast.success(t("toast.scanned", { v: jobValue }));
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Toaster richColors position="top-center" />
       <AppHeader>
+        <LanguageSwitcher />
         <Link to="/admin">
           <Button variant="secondary" size="sm" className="gap-1">
             <ShieldCheck className="h-4 w-4" />
-            ผู้ดูแล
+            <span className="hidden sm:inline">{t("header.admin")}</span>
           </Button>
         </Link>
       </AppHeader>
 
       <main className="mx-auto max-w-md px-4 py-6 pb-32">
-        <h1 className="sr-only">สแกน QR code เพื่อบันทึกการผลิต</h1>
+        <h1 className="sr-only">{t("page.title")}</h1>
 
         {/* Job ID */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <QrCode className="h-4 w-4" />
-            รหัสงาน (Job ID)
+            {t("job.label")}
           </div>
           {job_id ? (
             <>
               <div className="mt-1 text-3xl font-bold text-primary">{job_id}</div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                ระบบดึงรหัสจาก QR code อัตโนมัติ ไม่ต้องพิมพ์เอง
-              </p>
+              <p className="mt-2 text-xs text-muted-foreground">{t("job.autoHint")}</p>
             </>
           ) : (
-            <p className="mt-2 text-sm text-destructive">
-              ยังไม่มีรหัสงาน — กดปุ่ม "สแกน QR" หรือกรอกด้วยตัวเอง
-            </p>
+            <p className="mt-2 text-sm text-destructive">{t("job.empty")}</p>
           )}
 
           <div className="mt-3 flex gap-2">
@@ -195,7 +195,7 @@ function ScanHomePage() {
               className="h-11 flex-1 gap-1 bg-secondary hover:bg-secondary/90"
             >
               <ScanLine className="h-4 w-4" />
-              สแกน QR
+              {t("job.scan")}
             </Button>
           </div>
 
@@ -203,7 +203,7 @@ function ScanHomePage() {
             <Input
               value={manualJob}
               onChange={(e) => setManualJob(e.target.value)}
-              placeholder="หรือพิมพ์รหัสงาน เช่น JOB123"
+              placeholder={t("job.placeholder")}
               className="h-11"
               onKeyDown={(e) => e.key === "Enter" && applyManualJob()}
             />
@@ -216,17 +216,16 @@ function ScanHomePage() {
                 }}
                 variant="outline"
                 className="h-11 gap-1"
-                title="ล้างรหัสงานเพื่อสแกนใหม่"
+                title={t("job.resetTitle")}
               >
                 <RotateCcw className="h-4 w-4" />
-                Reset
               </Button>
             ) : (
               <Button
                 onClick={applyManualJob}
                 variant="outline"
                 className="h-11 gap-1"
-                title="ยืนยันรหัสงาน"
+                title={t("job.confirmTitle")}
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
