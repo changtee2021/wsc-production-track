@@ -29,9 +29,10 @@ import {
   ListChecks,
   User,
 } from "lucide-react";
-import { flagFor, initialsOf } from "@/lib/i18n";
+import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 import { SlideToConfirm } from "@/components/SlideToConfirm";
 import { RotateCcw } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const indexSearchSchema = z.object({
   job_id: fallback(z.string(), "").default(""),
