@@ -237,11 +237,11 @@ function ScanHomePage() {
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
             <User className="h-4 w-4 text-secondary" />
-            เลือกพนักงาน
+            {t("emp.title")}
           </h2>
           <Select value={employeeId} onValueChange={setEmployeeId} disabled={loading}>
             <SelectTrigger className="h-16 w-full text-base">
-              <SelectValue placeholder={loading ? "กำลังโหลด…" : "-- เลือกพนักงาน --"} />
+              <SelectValue placeholder={loading ? t("emp.loading") : t("emp.placeholder")} />
             </SelectTrigger>
             <SelectContent>
               {employees.map((e) => (
@@ -273,11 +273,11 @@ function ScanHomePage() {
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
             <ListChecks className="h-4 w-4 text-secondary" />
-            เลือกขั้นตอนการผลิต
+            {t("step.title")}
           </h2>
           <Select value={stepId} onValueChange={setStepId} disabled={loading}>
             <SelectTrigger className="h-16 w-full text-base">
-              <SelectValue placeholder={loading ? "กำลังโหลด…" : "-- เลือกขั้นตอน --"} />
+              <SelectValue placeholder={loading ? t("emp.loading") : t("step.placeholder")} />
             </SelectTrigger>
             <SelectContent>
               {steps.map((s) => (
@@ -300,7 +300,7 @@ function ScanHomePage() {
                       </span>
                       {s.std_duration_minutes != null && (
                         <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-destructive">
-                          <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} นาที
+                          <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} {t("step.minutes")}
                         </span>
                       )}
                     </div>
@@ -316,7 +316,7 @@ function ScanHomePage() {
           <div className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-destructive">
             <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
             <div className="text-sm font-semibold leading-snug">
-              ขั้นตอนนี้ไม่ควรเกิน {selectedStep.std_duration_minutes} นาที
+              {t("step.warning", { n: selectedStep.std_duration_minutes })}
             </div>
           </div>
         )}
@@ -324,7 +324,7 @@ function ScanHomePage() {
         {/* Actions — slide to confirm to prevent accidental taps */}
         <div className="mt-6 space-y-3">
           <SlideToConfirm
-            label="เริ่มงาน"
+            label={t("action.start")}
             icon={Play}
             loading={submitting === "start"}
             disabled={submitting !== null}
@@ -333,7 +333,7 @@ function ScanHomePage() {
             thumbClass="bg-white text-secondary"
           />
           <SlideToConfirm
-            label="เสร็จงาน"
+            label={t("action.finish")}
             icon={Square}
             loading={submitting === "finish"}
             disabled={submitting !== null}
@@ -348,16 +348,14 @@ function ScanHomePage() {
             <CheckCircle2 className="h-5 w-5" />
             <div className="text-sm">
               <div className="font-semibold">
-                บันทึก{lastSubmit.action === "start" ? "การเริ่มงาน" : "การเสร็จงาน"}เรียบร้อย
+                {lastSubmit.action === "start" ? t("log.startOk") : t("log.finishOk")}
               </div>
               <div className="text-xs opacity-80">{lastSubmit.at}</div>
             </div>
           </div>
         )}
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          🇹🇭 ไทย · 🇲🇲 พม่า · 🇱🇦 ลาว · 🇰🇭 กัมพูชา
-        </p>
+        <p className="mt-6 text-center text-xs text-muted-foreground">{t("footer.langs")}</p>
       </main>
 
       <QrScannerDialog
