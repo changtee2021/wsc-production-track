@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,9 @@ import {
   ListChecks,
   User,
   Layers,
+  Camera,
+  Loader2,
+  X,
 } from "lucide-react";
 import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 import { SlideToConfirm } from "@/components/SlideToConfirm";
@@ -89,6 +92,11 @@ function ScanHomePage() {
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [hasIssue, setHasIssue] = useState(false);
+  const [note, setNote] = useState("");
+  const [noteImageUrl, setNoteImageUrl] = useState<string | null>(null);
+  const [uploadingNote, setUploadingNote] = useState(false);
+  const noteFileRef = useRef<HTMLInputElement>(null);
   const { t, lang } = useI18n();
 
   useEffect(() => {
@@ -131,6 +139,10 @@ function ScanHomePage() {
       toast.error(t("toast.noSelect"));
       return;
     }
+    if (action === "finish" && hasIssue && !note.trim()) {
+      toast.error(t("note.required"));
+      return;
+    }
     setSubmitting(action);
     const { error } = await supabase.from("production_logs").insert({
       job_id,
@@ -138,6 +150,8 @@ function ScanHomePage() {
       step_id: stepId,
       category_id: categoryId,
       action,
+      note: action === "finish" && hasIssue ? note.trim() : null,
+      note_image_url: action === "finish" && hasIssue ? noteImageUrl : null,
     });
     setSubmitting(null);
     if (error) {
@@ -146,9 +160,32 @@ function ScanHomePage() {
     }
     const at = new Date().toLocaleString(lang === "my" ? "my-MM" : "th-TH");
     setLastSubmit({ action, at });
+    if (action === "finish") {
+      setHasIssue(false);
+      setNote("");
+      setNoteImageUrl(null);
+    }
     toast.success(
       action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }),
     );
+  };
+
+  const uploadNoteImage = async (file: File) => {
+    setUploadingNote(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("log-notes")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from("log-notes").getPublicUrl(path);
+      setNoteImageUrl(data.publicUrl);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "upload failed");
+    } finally {
+      setUploadingNote(false);
+    }
   };
 
   const applyManualJob = () => {
