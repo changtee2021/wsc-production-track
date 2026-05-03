@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           active: boolean
@@ -47,6 +68,7 @@ export type Database = {
       production_logs: {
         Row: {
           action: string
+          category_id: string | null
           created_at: string
           employee_id: string
           id: string
@@ -55,6 +77,7 @@ export type Database = {
         }
         Insert: {
           action: string
+          category_id?: string | null
           created_at?: string
           employee_id: string
           id?: string
@@ -63,6 +86,7 @@ export type Database = {
         }
         Update: {
           action?: string
+          category_id?: string | null
           created_at?: string
           employee_id?: string
           id?: string
@@ -70,6 +94,13 @@ export type Database = {
           step_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "production_logs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "production_logs_employee_id_fkey"
             columns: ["employee_id"]
