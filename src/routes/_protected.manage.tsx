@@ -22,6 +22,7 @@ import {
   ListChecks,
   Upload,
   Loader2,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -57,13 +58,127 @@ function Manage() {
       <Toaster richColors position="top-center" />
       <h1 className="mb-1 text-2xl font-bold tracking-tight">จัดการข้อมูล</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        เพิ่ม แก้ไข ลบพนักงานและขั้นตอนการผลิต พร้อมอัปโหลดรูปและตั้งเวลามาตรฐาน
+        เพิ่ม แก้ไข ลบหมวดหมู่งานม่าน พนักงาน และขั้นตอนการผลิต พร้อมอัปโหลดรูปและตั้งเวลามาตรฐาน
       </p>
       <div className="grid gap-6 lg:grid-cols-2">
+        <CategoriesPanel />
         <EmployeesPanel />
         <StepsPanel />
       </div>
     </main>
+  );
+}
+
+interface Category {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+function CategoriesPanel() {
+  const [items, setItems] = useState<Category[]>([]);
+  const [name, setName] = useState("");
+  const [editing, setEditing] = useState<Category | null>(null);
+
+  const load = async () => {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .order("name");
+    if (error) toast.error(error.message);
+    setItems((data as Category[]) ?? []);
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const add = async () => {
+    if (!name.trim()) return toast.error("กรุณากรอกชื่อหมวดหมู่");
+    const { error } = await supabase.from("categories").insert({ name: name.trim() });
+    if (error) return toast.error(error.message);
+    setName("");
+    toast.success("เพิ่มหมวดหมู่แล้ว");
+    load();
+  };
+
+  const save = async () => {
+    if (!editing) return;
+    const { error } = await supabase
+      .from("categories")
+      .update({ name: editing.name })
+      .eq("id", editing.id);
+    if (error) return toast.error(error.message);
+    setEditing(null);
+    toast.success("บันทึกแล้ว");
+    load();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("ลบหมวดหมู่นี้?")) return;
+    const { error } = await supabase.from("categories").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("ลบแล้ว");
+    load();
+  };
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm lg:col-span-2">
+      <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+        <Layers className="h-5 w-5 text-secondary" />
+        หมวดหมู่งานม่าน
+      </h2>
+      <div className="mb-4 flex gap-2 rounded-xl border border-border bg-muted/30 p-3">
+        <Input
+          placeholder="ชื่อหมวดหมู่ (เช่น ม่านม้วน)"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && add()}
+        />
+        <Button onClick={add} className="gap-1 bg-secondary hover:bg-secondary/90">
+          <Plus className="h-4 w-4" /> เพิ่ม
+        </Button>
+      </div>
+      <ul className="divide-y divide-border">
+        {items.map((c) => (
+          <li key={c.id} className="py-3">
+            {editing?.id === c.id ? (
+              <div className="flex gap-2">
+                <Input
+                  value={editing.name}
+                  onChange={(ev) => setEditing({ ...editing, name: ev.target.value })}
+                />
+                <Button onClick={save} size="sm" className="gap-1 bg-secondary hover:bg-secondary/90">
+                  <Save className="h-4 w-4" /> บันทึก
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEditing(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{c.name}</span>
+                <div className="flex gap-1">
+                  <Button size="icon" variant="ghost" onClick={() => setEditing(c)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => remove(c.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+        {items.length === 0 && (
+          <li className="py-4 text-center text-sm text-muted-foreground">ยังไม่มีหมวดหมู่</li>
+        )}
+      </ul>
+    </section>
   );
 }
 
