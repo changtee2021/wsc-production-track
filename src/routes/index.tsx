@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   ListChecks,
   User,
+  Layers,
 } from "lucide-react";
 import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 import { SlideToConfirm } from "@/components/SlideToConfirm";
@@ -67,6 +68,10 @@ interface Step {
   image_url: string | null;
   std_duration_minutes: number | null;
 }
+interface Category {
+  id: string;
+  name: string;
+}
 
 function ScanHomePage() {
   const { job_id } = Route.useSearch();
@@ -75,8 +80,10 @@ function ScanHomePage() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [steps, setSteps] = useState<Step[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [employeeId, setEmployeeId] = useState<string>("");
   const [stepId, setStepId] = useState<string>("");
+  const [categoryId, setCategoryId] = useState<string>("");
   const [submitting, setSubmitting] = useState<"start" | "finish" | null>(null);
   const [lastSubmit, setLastSubmit] = useState<{ action: string; at: string } | null>(
     null,
@@ -86,7 +93,7 @@ function ScanHomePage() {
 
   useEffect(() => {
     (async () => {
-      const [e, s] = await Promise.all([
+      const [e, s, c] = await Promise.all([
         supabase
           .from("employees")
           .select("id,name,emp_code,nationality,avatar_url")
@@ -97,9 +104,15 @@ function ScanHomePage() {
           .select("id,step_name,description,image_url,std_duration_minutes")
           .eq("active", true)
           .order("step_name"),
+        supabase
+          .from("categories")
+          .select("id,name")
+          .eq("active", true)
+          .order("name"),
       ]);
       if (e.data) setEmployees(e.data);
       if (s.data) setSteps(s.data);
+      if (c.data) setCategories(c.data);
       setLoading(false);
     })();
   }, []);
@@ -114,7 +127,7 @@ function ScanHomePage() {
       toast.error(t("toast.noJob"));
       return;
     }
-    if (!employeeId || !stepId) {
+    if (!employeeId || !stepId || !categoryId) {
       toast.error(t("toast.noSelect"));
       return;
     }
@@ -123,6 +136,7 @@ function ScanHomePage() {
       job_id,
       employee_id: employeeId,
       step_id: stepId,
+      category_id: categoryId,
       action,
     });
     setSubmitting(null);
