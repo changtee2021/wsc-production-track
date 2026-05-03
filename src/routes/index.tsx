@@ -403,11 +403,96 @@ function ScanHomePage() {
             colorClass="bg-secondary text-secondary-foreground"
             thumbClass="bg-white text-secondary"
           />
+
+          {/* Optional issue note before finishing */}
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasIssue}
+                onChange={(e) => setHasIssue(e.target.checked)}
+                className="h-5 w-5 accent-destructive"
+              />
+              <span className="flex items-center gap-1 text-sm font-semibold">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                {t("note.toggle")}
+              </span>
+            </label>
+
+            {hasIssue && (
+              <div className="mt-3 space-y-2">
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={t("note.placeholder")}
+                  rows={3}
+                  maxLength={1000}
+                  className="w-full rounded-lg border border-border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-destructive"
+                />
+                <input
+                  ref={noteFileRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadNoteImage(f);
+                  }}
+                />
+                {noteImageUrl ? (
+                  <div className="relative">
+                    <img
+                      src={noteImageUrl}
+                      alt="note"
+                      className="h-40 w-full rounded-lg object-cover border border-border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNoteImageUrl(null)}
+                      className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 w-full gap-1"
+                      onClick={() => noteFileRef.current?.click()}
+                      disabled={uploadingNote}
+                    >
+                      <Camera className="h-4 w-4" /> {t("note.changePhoto")}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full gap-1"
+                    onClick={() => noteFileRef.current?.click()}
+                    disabled={uploadingNote}
+                  >
+                    {uploadingNote ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> {t("note.uploading")}
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="h-4 w-4" /> {t("note.addPhoto")}
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
           <SlideToConfirm
             label={t("action.finish")}
             icon={Square}
             loading={submitting === "finish"}
-            disabled={submitting !== null}
+            disabled={submitting !== null || uploadingNote}
             onConfirm={() => submit("finish")}
             colorClass="bg-primary text-primary-foreground"
             thumbClass="bg-white text-primary"
