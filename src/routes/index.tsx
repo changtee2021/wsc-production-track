@@ -247,6 +247,26 @@ function ScanHomePage() {
           </div>
         </div>
 
+        {/* Category dropdown */}
+        <section className="mt-5">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Layers className="h-4 w-4 text-secondary" />
+            {t("cat.title")}
+          </h2>
+          <Select value={categoryId} onValueChange={setCategoryId} disabled={loading}>
+            <SelectTrigger className="h-16 w-full text-base">
+              <SelectValue placeholder={loading ? t("emp.loading") : t("cat.placeholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id} className="py-3">
+                  <span className="text-base font-semibold">{c.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </section>
+
         {/* Employee dropdown */}
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
