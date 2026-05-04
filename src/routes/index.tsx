@@ -308,6 +308,7 @@ function ScanHomePage() {
         {/* Employee dropdown */}
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <StepNumber n={2} done={!!employeeId} />
             <User className="h-4 w-4 text-secondary" />
             {t("emp.title")}
           </h2>
