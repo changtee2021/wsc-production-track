@@ -287,7 +287,6 @@ function ScanHomePage() {
         {/* Category dropdown */}
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <StepNumber n={1} done={!!categoryId} />
             <Layers className="h-4 w-4 text-secondary" />
             {t("cat.title")}
           </h2>
@@ -308,7 +307,6 @@ function ScanHomePage() {
         {/* Employee dropdown */}
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <StepNumber n={2} done={!!employeeId} />
             <User className="h-4 w-4 text-secondary" />
             {t("emp.title")}
           </h2>
@@ -345,7 +343,6 @@ function ScanHomePage() {
         {/* Step dropdown */}
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <StepNumber n={3} done={!!stepId} />
             <ListChecks className="h-4 w-4 text-secondary" />
             {t("step.title")}
           </h2>
@@ -523,19 +520,5 @@ function ScanHomePage() {
         onScanned={handleScanned}
       />
     </div>
-  );
-}
-
-function StepNumber({ n, done }: { n: number; done: boolean }) {
-  return (
-    <span
-      className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition ${
-        done
-          ? "bg-primary text-primary-foreground"
-          : "bg-muted text-muted-foreground border border-border"
-      }`}
-    >
-      {n}
-    </span>
   );
 }
