@@ -30,7 +30,7 @@ function AdminLayout() {
         <Link to="/logs">
           <Button variant="secondary" size="sm" className="gap-1">
             <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Logs</span>
+            <span className="hidden sm:inline">History</span>
           </Button>
         </Link>
         <Link to="/manage">
