@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
+import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 
 const ScanRoute = ScanRouteImport.update({
@@ -40,6 +41,11 @@ const ProtectedManageRoute = ProtectedManageRouteImport.update({
   path: '/manage',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedLogsRoute = ProtectedLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/scan': typeof ScanRoute
   '/dashboard': typeof ProtectedDashboardRoute
+  '/logs': typeof ProtectedLogsRoute
   '/manage': typeof ProtectedManageRoute
 }
 export interface FileRoutesByTo {
@@ -58,6 +65,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/scan': typeof ScanRoute
   '/dashboard': typeof ProtectedDashboardRoute
+  '/logs': typeof ProtectedLogsRoute
   '/manage': typeof ProtectedManageRoute
 }
 export interface FileRoutesById {
@@ -67,13 +75,14 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/scan': typeof ScanRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
+  '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/manage': typeof ProtectedManageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/scan' | '/dashboard' | '/manage'
+  fullPaths: '/' | '/admin' | '/scan' | '/dashboard' | '/logs' | '/manage'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/scan' | '/dashboard' | '/manage'
+  to: '/' | '/admin' | '/scan' | '/dashboard' | '/logs' | '/manage'
   id:
     | '__root__'
     | '/'
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/scan'
     | '/_protected/dashboard'
+    | '/_protected/logs'
     | '/_protected/manage'
   fileRoutesById: FileRoutesById
 }
@@ -128,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedManageRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/logs': {
+      id: '/_protected/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof ProtectedLogsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/dashboard': {
       id: '/_protected/dashboard'
       path: '/dashboard'
@@ -140,11 +157,13 @@ declare module '@tanstack/react-router' {
 
 interface ProtectedRouteChildren {
   ProtectedDashboardRoute: typeof ProtectedDashboardRoute
+  ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedManageRoute: typeof ProtectedManageRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedDashboardRoute: ProtectedDashboardRoute,
+  ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedManageRoute: ProtectedManageRoute,
 }
 

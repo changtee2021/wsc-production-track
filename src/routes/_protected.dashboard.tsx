@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   BarChart,
   Bar,
   XAxis,
@@ -46,8 +53,15 @@ interface LogRow {
   created_at: string;
   employee_id: string;
   step_id: string;
+  category_id: string | null;
   employees: { id: string; name: string } | null;
   steps: { id: string; step_name: string; std_duration_minutes: number | null } | null;
+  categories: { id: string; name: string } | null;
+}
+
+interface CategoryRow {
+  id: string;
+  name: string;
 }
 
 const CHART_COLORS = [
@@ -66,28 +80,41 @@ function Dashboard() {
   const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10));
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
 
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("production_logs")
-        .select(
-          "id, job_id, action, created_at, employee_id, step_id, employees(id,name), steps(id,step_name,std_duration_minutes)",
-        )
-        .order("created_at", { ascending: false })
-        .limit(1000);
+      const [{ data, error }, { data: catData }] = await Promise.all([
+        supabase
+          .from("production_logs")
+          .select(
+            "id, job_id, action, created_at, employee_id, step_id, category_id, employees(id,name), steps(id,step_name,std_duration_minutes), categories(id,name)",
+          )
+          .order("created_at", { ascending: false })
+          .limit(1000),
+        supabase.from("categories").select("id,name").eq("active", true).order("name"),
+      ]);
       if (error) toast.error(error.message);
       setLogs((data as unknown as LogRow[]) ?? []);
+      setCategories((catData as CategoryRow[]) ?? []);
       setLoading(false);
     })();
   }, []);
 
+  // Apply category filter globally
+  const scopedLogs = useMemo(() => {
+    if (categoryFilter === "all") return logs;
+    return logs.filter((l) => l.category_id === categoryFilter);
+  }, [logs, categoryFilter]);
+
   // Filter logs by selected day/month for ranking & report sections
   const filtered = useMemo(() => {
     if (scope === "day") {
-      return logs.filter((l) => l.created_at.slice(0, 10) === day);
+      return scopedLogs.filter((l) => l.created_at.slice(0, 10) === day);
     }
-    return logs.filter((l) => l.created_at.slice(0, 7) === month);
-  }, [logs, scope, day, month]);
+    return scopedLogs.filter((l) => l.created_at.slice(0, 7) === month);
+  }, [scopedLogs, scope, day, month]);
 
   // Build sessions: pair start/finish per (employee, step, job)
   // Used for: avg duration, over-standard list, MoM speed
@@ -104,7 +131,7 @@ function Dashboard() {
   };
 
   const sessions = useMemo<Session[]>(() => {
-    const sorted = [...logs].sort(
+    const sorted = [...scopedLogs].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
     const open = new Map<string, LogRow>();
@@ -134,7 +161,7 @@ function Dashboard() {
       }
     }
     return out;
-  }, [logs]);
+  }, [scopedLogs]);
 
   // Stats for top cards
   const stats = useMemo(() => {
@@ -143,7 +170,7 @@ function Dashboard() {
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const finishedToday = new Set<string>();
     const finishedMonth = new Set<string>();
-    for (const l of logs) {
+    for (const l of scopedLogs) {
       if (l.action !== "finish") continue;
       const d = new Date(l.created_at);
       if (d >= today) finishedToday.add(l.job_id);
@@ -152,9 +179,9 @@ function Dashboard() {
     return {
       todayCount: finishedToday.size,
       monthCount: finishedMonth.size,
-      total: logs.length,
+      total: scopedLogs.length,
     };
-  }, [logs]);
+  }, [scopedLogs]);
 
   // 14-day chart
   const days14 = useMemo(() => {
@@ -170,7 +197,7 @@ function Dashboard() {
         finishes: 0,
         starts: 0,
       };
-      for (const l of logs) {
+      for (const l of scopedLogs) {
         if (l.created_at.slice(0, 10) === key) {
           if (l.action === "finish") item.finishes += 1;
           else if (l.action === "start") item.starts += 1;
@@ -179,7 +206,7 @@ function Dashboard() {
       arr.push(item);
     }
     return arr;
-  }, [logs]);
+  }, [scopedLogs]);
 
   // Step pie (last 30 days starts)
   const stepPie = useMemo(() => {
@@ -187,14 +214,14 @@ function Dashboard() {
     const cutoff = new Date(now);
     cutoff.setDate(cutoff.getDate() - 30);
     const map = new Map<string, number>();
-    for (const l of logs) {
+    for (const l of scopedLogs) {
       if (l.action !== "start") continue;
       if (new Date(l.created_at) < cutoff) continue;
       const n = l.steps?.step_name ?? "ไม่ทราบ";
       map.set(n, (map.get(n) ?? 0) + 1);
     }
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
-  }, [logs]);
+  }, [scopedLogs]);
 
   // Employee ranking within filtered scope
   const ranking = useMemo(() => {
@@ -226,7 +253,7 @@ function Dashboard() {
     const stat = (from: Date, to: Date | null) => {
       const jobsByEmp = new Map<string, { name: string; jobs: Set<string>; durations: number[] }>();
       // jobs finished
-      for (const l of logs) {
+      for (const l of scopedLogs) {
         if (l.action !== "finish") continue;
         const d = new Date(l.created_at);
         if (d < from) continue;
@@ -278,7 +305,7 @@ function Dashboard() {
           : ((curAvg - prevAvg) / prevAvg) * 100;
       return { id, name, curJobs, prevJobs, jobsPct, curAvg, prevAvg, speedPct };
     }).sort((a, b) => b.curJobs - a.curJobs);
-  }, [logs, sessions]);
+  }, [scopedLogs, sessions]);
 
   // Over-standard sessions in scope
   const overStandard = useMemo(() => {
@@ -366,7 +393,20 @@ function Dashboard() {
             ภาพรวมงาน ขั้นตอน และประสิทธิภาพพนักงาน
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="h-9 w-[180px]">
+              <SelectValue placeholder="หมวดหมู่งาน" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกหมวดหมู่</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button onClick={exportFullCSV} variant="outline" size="sm" className="gap-2">
             <Download className="h-4 w-4" />
             CSV ทั้งหมด
@@ -609,7 +649,7 @@ function Dashboard() {
             <h2 className="mb-3 font-semibold text-foreground">กิจกรรมล่าสุด</h2>
             {loading ? (
               <p className="text-sm text-muted-foreground">กำลังโหลด…</p>
-            ) : logs.length === 0 ? (
+            ) : scopedLogs.length === 0 ? (
               <p className="text-sm text-muted-foreground">ยังไม่มีบันทึก</p>
             ) : (
               <div className="overflow-x-auto">
@@ -624,7 +664,7 @@ function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {logs.slice(0, 30).map((l) => (
+                    {scopedLogs.slice(0, 30).map((l) => (
                       <tr key={l.id}>
                         <td className="py-2 pr-3 text-muted-foreground">
                           {new Date(l.created_at).toLocaleString("th-TH")}
