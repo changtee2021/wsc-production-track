@@ -131,7 +131,7 @@ function Dashboard() {
   };
 
   const sessions = useMemo<Session[]>(() => {
-    const sorted = [...logs].sort(
+    const sorted = [...scopedLogs].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
     const open = new Map<string, LogRow>();
@@ -170,7 +170,7 @@ function Dashboard() {
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const finishedToday = new Set<string>();
     const finishedMonth = new Set<string>();
-    for (const l of logs) {
+    for (const l of scopedLogs) {
       if (l.action !== "finish") continue;
       const d = new Date(l.created_at);
       if (d >= today) finishedToday.add(l.job_id);
@@ -197,7 +197,7 @@ function Dashboard() {
         finishes: 0,
         starts: 0,
       };
-      for (const l of logs) {
+      for (const l of scopedLogs) {
         if (l.created_at.slice(0, 10) === key) {
           if (l.action === "finish") item.finishes += 1;
           else if (l.action === "start") item.starts += 1;
@@ -214,7 +214,7 @@ function Dashboard() {
     const cutoff = new Date(now);
     cutoff.setDate(cutoff.getDate() - 30);
     const map = new Map<string, number>();
-    for (const l of logs) {
+    for (const l of scopedLogs) {
       if (l.action !== "start") continue;
       if (new Date(l.created_at) < cutoff) continue;
       const n = l.steps?.step_name ?? "ไม่ทราบ";
@@ -253,7 +253,7 @@ function Dashboard() {
     const stat = (from: Date, to: Date | null) => {
       const jobsByEmp = new Map<string, { name: string; jobs: Set<string>; durations: number[] }>();
       // jobs finished
-      for (const l of logs) {
+      for (const l of scopedLogs) {
         if (l.action !== "finish") continue;
         const d = new Date(l.created_at);
         if (d < from) continue;
