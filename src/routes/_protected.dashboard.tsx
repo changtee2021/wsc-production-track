@@ -161,7 +161,7 @@ function Dashboard() {
       }
     }
     return out;
-  }, [logs]);
+  }, [scopedLogs]);
 
   // Stats for top cards
   const stats = useMemo(() => {
@@ -179,9 +179,9 @@ function Dashboard() {
     return {
       todayCount: finishedToday.size,
       monthCount: finishedMonth.size,
-      total: logs.length,
+      total: scopedLogs.length,
     };
-  }, [logs]);
+  }, [scopedLogs]);
 
   // 14-day chart
   const days14 = useMemo(() => {
@@ -206,7 +206,7 @@ function Dashboard() {
       arr.push(item);
     }
     return arr;
-  }, [logs]);
+  }, [scopedLogs]);
 
   // Step pie (last 30 days starts)
   const stepPie = useMemo(() => {
@@ -221,7 +221,7 @@ function Dashboard() {
       map.set(n, (map.get(n) ?? 0) + 1);
     }
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
-  }, [logs]);
+  }, [scopedLogs]);
 
   // Employee ranking within filtered scope
   const ranking = useMemo(() => {
@@ -305,7 +305,7 @@ function Dashboard() {
           : ((curAvg - prevAvg) / prevAvg) * 100;
       return { id, name, curJobs, prevJobs, jobsPct, curAvg, prevAvg, speedPct };
     }).sort((a, b) => b.curJobs - a.curJobs);
-  }, [logs, sessions]);
+  }, [scopedLogs, sessions]);
 
   // Over-standard sessions in scope
   const overStandard = useMemo(() => {
@@ -649,7 +649,7 @@ function Dashboard() {
             <h2 className="mb-3 font-semibold text-foreground">กิจกรรมล่าสุด</h2>
             {loading ? (
               <p className="text-sm text-muted-foreground">กำลังโหลด…</p>
-            ) : logs.length === 0 ? (
+            ) : scopedLogs.length === 0 ? (
               <p className="text-sm text-muted-foreground">ยังไม่มีบันทึก</p>
             ) : (
               <div className="overflow-x-auto">
@@ -664,7 +664,7 @@ function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {logs.slice(0, 30).map((l) => (
+                    {scopedLogs.slice(0, 30).map((l) => (
                       <tr key={l.id}>
                         <td className="py-2 pr-3 text-muted-foreground">
                           {new Date(l.created_at).toLocaleString("th-TH")}
