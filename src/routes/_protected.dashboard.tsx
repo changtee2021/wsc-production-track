@@ -393,7 +393,20 @@ function Dashboard() {
             ภาพรวมงาน ขั้นตอน และประสิทธิภาพพนักงาน
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="h-9 w-[180px]">
+              <SelectValue placeholder="หมวดหมู่งาน" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกหมวดหมู่</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button onClick={exportFullCSV} variant="outline" size="sm" className="gap-2">
             <Download className="h-4 w-4" />
             CSV ทั้งหมด
