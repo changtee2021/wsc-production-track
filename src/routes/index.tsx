@@ -525,3 +525,17 @@ function ScanHomePage() {
     </div>
   );
 }
+
+function StepNumber({ n, done }: { n: number; done: boolean }) {
+  return (
+    <span
+      className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition ${
+        done
+          ? "bg-primary text-primary-foreground"
+          : "bg-muted text-muted-foreground border border-border"
+      }`}
+    >
+      {n}
+    </span>
+  );
+}
