@@ -73,28 +73,41 @@ function Dashboard() {
   const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10));
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
 
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("production_logs")
-        .select(
-          "id, job_id, action, created_at, employee_id, step_id, employees(id,name), steps(id,step_name,std_duration_minutes)",
-        )
-        .order("created_at", { ascending: false })
-        .limit(1000);
+      const [{ data, error }, { data: catData }] = await Promise.all([
+        supabase
+          .from("production_logs")
+          .select(
+            "id, job_id, action, created_at, employee_id, step_id, category_id, employees(id,name), steps(id,step_name,std_duration_minutes), categories(id,name)",
+          )
+          .order("created_at", { ascending: false })
+          .limit(1000),
+        supabase.from("categories").select("id,name").eq("active", true).order("name"),
+      ]);
       if (error) toast.error(error.message);
       setLogs((data as unknown as LogRow[]) ?? []);
+      setCategories((catData as CategoryRow[]) ?? []);
       setLoading(false);
     })();
   }, []);
 
+  // Apply category filter globally
+  const scopedLogs = useMemo(() => {
+    if (categoryFilter === "all") return logs;
+    return logs.filter((l) => l.category_id === categoryFilter);
+  }, [logs, categoryFilter]);
+
   // Filter logs by selected day/month for ranking & report sections
   const filtered = useMemo(() => {
     if (scope === "day") {
-      return logs.filter((l) => l.created_at.slice(0, 10) === day);
+      return scopedLogs.filter((l) => l.created_at.slice(0, 10) === day);
     }
-    return logs.filter((l) => l.created_at.slice(0, 7) === month);
-  }, [logs, scope, day, month]);
+    return scopedLogs.filter((l) => l.created_at.slice(0, 7) === month);
+  }, [scopedLogs, scope, day, month]);
 
   // Build sessions: pair start/finish per (employee, step, job)
   // Used for: avg duration, over-standard list, MoM speed
