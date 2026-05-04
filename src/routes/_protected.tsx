@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect, Link, useNavigate } from "@tanstack/
 import { isAdminSession, clearAdminSession } from "@/lib/admin-session";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/_protected")({
   beforeLoad: ({ location }) => {
