@@ -46,8 +46,15 @@ interface LogRow {
   created_at: string;
   employee_id: string;
   step_id: string;
+  category_id: string | null;
   employees: { id: string; name: string } | null;
   steps: { id: string; step_name: string; std_duration_minutes: number | null } | null;
+  categories: { id: string; name: string } | null;
+}
+
+interface CategoryRow {
+  id: string;
+  name: string;
 }
 
 const CHART_COLORS = [
