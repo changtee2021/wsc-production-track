@@ -36,7 +36,6 @@ import {
 import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 import { SlideToConfirm } from "@/components/SlideToConfirm";
 import { RotateCcw } from "lucide-react";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const indexSearchSchema = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -213,7 +212,6 @@ function ScanHomePage() {
     <div className="min-h-screen bg-background">
       <Toaster richColors position="top-center" />
       <AppHeader>
-        <LanguageSwitcher />
         <Link to="/admin">
           <Button variant="secondary" size="sm" className="gap-1">
             <ShieldCheck className="h-4 w-4" />
