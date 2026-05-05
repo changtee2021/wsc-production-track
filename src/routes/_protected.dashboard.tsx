@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { downloadFile as download } from "@/lib/download";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -370,11 +371,12 @@ function Dashboard() {
 
   const exportFullCSV = () => {
     const rows = logs.map((l) => ({
-      job_id: l.job_id,
-      employee: l.employees?.name ?? "",
-      step: l.steps?.step_name ?? "",
-      action: l.action,
-      timestamp: new Date(l.created_at).toISOString(),
+      รหัสงาน: l.job_id,
+      พนักงาน: l.employees?.name ?? "",
+      หมวดหมู่: (l as { categories?: { name?: string } | null }).categories?.name ?? "",
+      ขั้นตอน: l.steps?.step_name ?? "",
+      การกระทำ: l.action === "start" ? "เริ่มงาน" : l.action === "finish" ? "เสร็จงาน" : l.action,
+      เวลา: new Date(l.created_at).toLocaleString("th-TH"),
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const csv = XLSX.utils.sheet_to_csv(ws);
@@ -775,14 +777,4 @@ function EmptyChart() {
       ยังไม่มีกิจกรรมใน 30 วันล่าสุด
     </div>
   );
-}
-
-function download(content: string, filename: string, mime: string) {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
