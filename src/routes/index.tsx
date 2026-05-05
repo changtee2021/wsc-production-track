@@ -96,7 +96,7 @@ function ScanHomePage() {
   const [noteImageUrl, setNoteImageUrl] = useState<string | null>(null);
   const [uploadingNote, setUploadingNote] = useState(false);
   const noteFileRef = useRef<HTMLInputElement>(null);
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
 
   useEffect(() => {
     (async () => {
@@ -157,7 +157,7 @@ function ScanHomePage() {
       toast.error(error.message);
       return;
     }
-    const at = new Date().toLocaleString(lang === "my" ? "my-MM" : "th-TH");
+    const at = new Date().toLocaleString("th-TH");
     setLastSubmit({ action, at });
     if (action === "finish") {
       setHasIssue(false);
