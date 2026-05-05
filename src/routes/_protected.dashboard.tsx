@@ -778,5 +778,3 @@ function EmptyChart() {
     </div>
   );
 }
-
-import { downloadFile as download } from "@/lib/download";
