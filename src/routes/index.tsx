@@ -509,7 +509,7 @@ function ScanHomePage() {
           </div>
         )}
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">{t("footer.langs")}</p>
+        
       </main>
 
       <QrScannerDialog
