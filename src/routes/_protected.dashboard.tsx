@@ -88,31 +88,51 @@ function Dashboard() {
 
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [employees, setEmployees] = useState<NamedRow[]>([]);
+  const [employeeFilter, setEmployeeFilter] = useState<string>("all");
+  const [steps, setSteps] = useState<NamedRow[]>([]);
+  const [stepFilter, setStepFilter] = useState<string>("all");
 
   useEffect(() => {
     (async () => {
-      const [{ data, error }, { data: catData }] = await Promise.all([
-        supabase
-          .from("production_logs")
-          .select(
-            "id, job_id, action, created_at, employee_id, step_id, category_id, employees(id,name), steps(id,step_name,std_duration_minutes), categories(id,name)",
-          )
-          .order("created_at", { ascending: false })
-          .limit(1000),
-        supabase.from("categories").select("id,name").eq("active", true).order("name"),
-      ]);
+      const [{ data, error }, { data: catData }, { data: empData }, { data: stepData }] =
+        await Promise.all([
+          supabase
+            .from("production_logs")
+            .select(
+              "id, job_id, action, created_at, employee_id, step_id, category_id, employees(id,name), steps(id,step_name,std_duration_minutes), categories(id,name)",
+            )
+            .order("created_at", { ascending: false })
+            .limit(1000),
+          supabase.from("categories").select("id,name").eq("active", true).order("name"),
+          supabase.from("employees").select("id,name").eq("active", true).order("name"),
+          supabase.from("steps").select("id,step_name").eq("active", true).order("step_name"),
+        ]);
       if (error) toast.error(error.message);
       setLogs((data as unknown as LogRow[]) ?? []);
       setCategories((catData as CategoryRow[]) ?? []);
+      setEmployees((empData as NamedRow[]) ?? []);
+      setSteps(
+        ((stepData as { id: string; step_name: string }[]) ?? []).map((s) => ({
+          id: s.id,
+          name: s.step_name,
+        })),
+      );
       setLoading(false);
     })();
   }, []);
 
-  // Apply category filter globally
+  const hasFilter = categoryFilter !== "all" || employeeFilter !== "all" || stepFilter !== "all";
+
+  // Apply filters globally
   const scopedLogs = useMemo(() => {
-    if (categoryFilter === "all") return logs;
-    return logs.filter((l) => l.category_id === categoryFilter);
-  }, [logs, categoryFilter]);
+    return logs.filter((l) => {
+      if (categoryFilter !== "all" && l.category_id !== categoryFilter) return false;
+      if (employeeFilter !== "all" && l.employee_id !== employeeFilter) return false;
+      if (stepFilter !== "all" && l.step_id !== stepFilter) return false;
+      return true;
+    });
+  }, [logs, categoryFilter, employeeFilter, stepFilter]);
 
   // Filter logs by selected day/month for ranking & report sections
   const filtered = useMemo(() => {
