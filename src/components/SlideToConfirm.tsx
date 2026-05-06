@@ -91,6 +91,13 @@ export function SlideToConfirm({
         className="absolute inset-y-0 left-0 bg-black/15 transition-[width]"
         style={{ width: `${progress * 100}%` }}
       />
+      {/* shimmer hint */}
+      {!dragging && !loading && progress === 0 && (
+        <div
+          className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 animate-[shimmer_2.4s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/25 to-transparent"
+          style={{ animationDelay: "0.2s" }}
+        />
+      )}
       {/* label */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg font-bold tracking-wide">
         {loading ? (
