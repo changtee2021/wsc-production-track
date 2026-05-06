@@ -422,7 +422,7 @@ function Dashboard() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="h-9 w-[180px]">
+            <SelectTrigger className="h-9 w-[170px]">
               <SelectValue placeholder="หมวดหมู่งาน" />
             </SelectTrigger>
             <SelectContent>
@@ -434,6 +434,45 @@ function Dashboard() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+            <SelectTrigger className="h-9 w-[170px]">
+              <SelectValue placeholder="พนักงาน" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">พนักงานทั้งหมด</SelectItem>
+              {employees.map((e) => (
+                <SelectItem key={e.id} value={e.id}>
+                  {e.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={stepFilter} onValueChange={setStepFilter}>
+            <SelectTrigger className="h-9 w-[170px]">
+              <SelectValue placeholder="ขั้นตอน" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกขั้นตอน</SelectItem>
+              {steps.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hasFilter && (
+            <Button
+              onClick={() => {
+                setCategoryFilter("all");
+                setEmployeeFilter("all");
+                setStepFilter("all");
+              }}
+              variant="ghost"
+              size="sm"
+            >
+              ล้างฟิลเตอร์
+            </Button>
+          )}
           <Button onClick={exportFullCSV} variant="outline" size="sm" className="gap-2">
             <Download className="h-4 w-4" />
             CSV ทั้งหมด
