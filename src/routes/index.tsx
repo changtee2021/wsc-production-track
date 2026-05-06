@@ -1,522 +1,114 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { z } from "zod";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
-import { supabase } from "@/integrations/supabase/client";
-import { AppHeader } from "@/components/AppHeader";
-import { QrScannerDialog } from "@/components/QrScannerDialog";
+import { ArrowRight, Factory, ShieldCheck, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "sonner";
-import { Toaster } from "@/components/ui/sonner";
-import {
-  Play,
-  Square,
-  QrCode,
-  CheckCircle2,
-  ShieldCheck,
-  ScanLine,
-  Clock,
-  AlertTriangle,
-  ListChecks,
-  User,
-  Layers,
-  Camera,
-  Loader2,
-  X,
-} from "lucide-react";
-import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 import { SlideToConfirm } from "@/components/SlideToConfirm";
-import { RotateCcw } from "lucide-react";
-
-const indexSearchSchema = z.object({
-  job_id: fallback(z.string(), "").default(""),
-});
+import heroImage from "@/assets/welcome-hero.png";
 
 export const Route = createFileRoute("/")({
-  validateSearch: zodValidator(indexSearchSchema),
   head: () => ({
     meta: [
-      { title: "สแกนงาน — ProductionTrack" },
+      { title: "ยินดีต้อนรับ — ProductionTrack" },
       {
         name: "description",
         content:
-          "สแกน QR code เพื่อบันทึกเวลาเริ่มและเสร็จงานในสายการผลิต ใช้งานง่ายบนมือถือ",
+          "ระบบติดตามการผลิตในโรงงาน บันทึกเวลาเริ่ม–เสร็จงานด้วย QR code อย่างรวดเร็ว",
       },
     ],
   }),
-  component: ScanHomePage,
+  component: WelcomePage,
 });
 
-interface Employee {
-  id: string;
-  name: string;
-  emp_code: string | null;
-  nationality: string | null;
-  avatar_url: string | null;
-}
-interface Step {
-  id: string;
-  step_name: string;
-  description: string | null;
-  image_url: string | null;
-  std_duration_minutes: number | null;
-}
-interface Category {
-  id: string;
-  name: string;
-}
-
-function ScanHomePage() {
-  const { job_id } = Route.useSearch();
+function WelcomePage() {
   const navigate = useNavigate({ from: "/" });
-  const [manualJob, setManualJob] = useState("");
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [steps, setSteps] = useState<Step[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [employeeId, setEmployeeId] = useState<string>("");
-  const [stepId, setStepId] = useState<string>("");
-  const [categoryId, setCategoryId] = useState<string>("");
-  const [submitting, setSubmitting] = useState<"start" | "finish" | null>(null);
-  const [lastSubmit, setLastSubmit] = useState<{ action: string; at: string } | null>(
-    null,
-  );
-  const [loading, setLoading] = useState(true);
-  const [hasIssue, setHasIssue] = useState(false);
-  const [note, setNote] = useState("");
-  const [noteImageUrl, setNoteImageUrl] = useState<string | null>(null);
-  const [uploadingNote, setUploadingNote] = useState(false);
-  const noteFileRef = useRef<HTMLInputElement>(null);
-  const { t } = useI18n();
-
-  useEffect(() => {
-    (async () => {
-      const [e, s, c] = await Promise.all([
-        supabase
-          .from("employees")
-          .select("id,name,emp_code,nationality,avatar_url")
-          .eq("active", true)
-          .order("name"),
-        supabase
-          .from("steps")
-          .select("id,step_name,description,image_url,std_duration_minutes")
-          .eq("active", true)
-          .order("step_name"),
-        supabase
-          .from("categories")
-          .select("id,name")
-          .eq("active", true)
-          .order("name"),
-      ]);
-      if (e.data) setEmployees(e.data);
-      if (s.data) setSteps(s.data);
-      if (c.data) setCategories(c.data);
-      setLoading(false);
-    })();
-  }, []);
-
-  const selectedStep = useMemo(
-    () => steps.find((s) => s.id === stepId) ?? null,
-    [steps, stepId],
-  );
-
-  const submit = async (action: "start" | "finish") => {
-    if (!job_id) {
-      toast.error(t("toast.noJob"));
-      return;
-    }
-    if (!employeeId || !stepId || !categoryId) {
-      toast.error(t("toast.noSelect"));
-      return;
-    }
-    if (action === "finish" && hasIssue && !note.trim()) {
-      toast.error(t("note.required"));
-      return;
-    }
-    setSubmitting(action);
-    const { error } = await supabase.from("production_logs").insert({
-      job_id,
-      employee_id: employeeId,
-      step_id: stepId,
-      category_id: categoryId,
-      action,
-      note: action === "finish" && hasIssue ? note.trim() : null,
-      note_image_url: action === "finish" && hasIssue ? noteImageUrl : null,
-    });
-    setSubmitting(null);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    const at = new Date().toLocaleString("th-TH");
-    setLastSubmit({ action, at });
-    if (action === "finish") {
-      setHasIssue(false);
-      setNote("");
-      setNoteImageUrl(null);
-    }
-    toast.success(
-      action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }),
-    );
-  };
-
-  const uploadNoteImage = async (file: File) => {
-    setUploadingNote(true);
-    try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage
-        .from("log-notes")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (error) throw error;
-      const { data } = supabase.storage.from("log-notes").getPublicUrl(path);
-      setNoteImageUrl(data.publicUrl);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "upload failed");
-    } finally {
-      setUploadingNote(false);
-    }
-  };
-
-  const applyManualJob = () => {
-    const trimmed = manualJob.trim();
-    if (!trimmed) return;
-    navigate({ search: { job_id: trimmed } });
-  };
-
-  const handleScanned = (text: string) => {
-    // accept either a raw job id or a URL containing ?job_id=...
-    let jobValue = text;
-    try {
-      const url = new URL(text);
-      const fromQuery = url.searchParams.get("job_id");
-      if (fromQuery) jobValue = fromQuery;
-    } catch {
-      // not a URL — use raw text
-    }
-    setManualJob(jobValue);
-    navigate({ search: { job_id: jobValue } });
-    toast.success(t("toast.scanned", { v: jobValue }));
-  };
+  const goToScan = () => navigate({ to: "/scan", search: { job_id: "" } });
 
   return (
-    <div className="min-h-screen bg-background">
-      <Toaster richColors position="top-center" />
-      <AppHeader>
+    <div className="relative min-h-screen overflow-hidden bg-primary">
+      {/* Background image */}
+      <img
+        src={heroImage}
+        alt="พนักงานกำลังประกอบงานในสายการผลิต"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      {/* Blue gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/80 via-primary/55 to-primary/95" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-secondary/40 via-transparent to-transparent" />
+
+      {/* Top bar */}
+      <header className="relative z-10 flex items-center justify-between px-5 pt-6">
+        <div className="flex items-center gap-2 text-primary-foreground">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/20">
+            <Factory className="h-5 w-5" />
+          </div>
+          <span className="font-bold tracking-tight">ProductionTrack</span>
+        </div>
         <Link to="/admin">
-          <Button variant="secondary" size="sm" className="gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 rounded-full bg-white/15 text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/25 hover:text-primary-foreground"
+          >
             <ShieldCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("header.admin")}</span>
+            <span className="hidden sm:inline">แอดมิน</span>
           </Button>
         </Link>
-      </AppHeader>
+      </header>
 
-      <main className="mx-auto max-w-md px-4 py-6 pb-32">
-        <h1 className="sr-only">{t("page.title")}</h1>
-
-        {/* Job ID */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <QrCode className="h-4 w-4" />
-            {t("job.label")}
-          </div>
-          {job_id ? (
-            <>
-              <div className="mt-1 text-3xl font-bold text-primary">{job_id}</div>
-              <p className="mt-2 text-xs text-muted-foreground">{t("job.autoHint")}</p>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-destructive">{t("job.empty")}</p>
-          )}
-
-          <div className="mt-3 flex gap-2">
-            <Button
-              onClick={() => setScannerOpen(true)}
-              className="h-11 flex-1 gap-1 bg-secondary hover:bg-secondary/90"
-            >
-              <ScanLine className="h-4 w-4" />
-              {t("job.scan")}
-            </Button>
+      {/* Content */}
+      <main className="relative z-10 flex min-h-[calc(100vh-72px)] flex-col px-6 pb-10 pt-16">
+        <div className="flex-1 animate-fade-in">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-primary-foreground backdrop-blur-md ring-1 ring-white/20">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-secondary opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-secondary" />
+            </span>
+            ระบบพร้อมใช้งาน
           </div>
 
-          <div className="mt-2 flex gap-2">
-            <Input
-              value={manualJob}
-              onChange={(e) => setManualJob(e.target.value)}
-              placeholder={t("job.placeholder")}
-              className="h-11"
-              onKeyDown={(e) => e.key === "Enter" && applyManualJob()}
-            />
-            {job_id ? (
-              <Button
-                onClick={() => {
-                  setManualJob("");
-                  setLastSubmit(null);
-                  navigate({ search: { job_id: "" } });
-                }}
-                variant="outline"
-                className="h-11 gap-1"
-                title={t("job.resetTitle")}
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={applyManualJob}
-                variant="outline"
-                className="h-11 gap-1"
-                title={t("job.confirmTitle")}
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            )}
+          <h1 className="mt-6 text-5xl font-bold leading-tight text-primary-foreground">
+            ยินดีต้อนรับ
+            <span className="mt-1 block bg-gradient-to-r from-white to-secondary-foreground/90 bg-clip-text text-transparent">
+              สู่สายการผลิต
+            </span>
+          </h1>
+
+          <p className="mt-4 max-w-sm text-base leading-relaxed text-primary-foreground/85">
+            สแกน QR code เพื่อบันทึกเวลาเริ่มและเสร็จงาน
+            ติดตามประสิทธิภาพได้แบบเรียลไทม์
+          </p>
+
+          {/* Highlight card */}
+          <div className="mt-8 rounded-3xl border border-white/20 bg-white/10 p-5 backdrop-blur-xl shadow-2xl shadow-primary/40">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg shadow-secondary/40">
+                <ScanLine className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-primary-foreground">
+                  เริ่มต้นง่ายๆ ใน 3 ขั้นตอน
+                </div>
+                <div className="mt-1 text-xs leading-relaxed text-primary-foreground/80">
+                  สแกน QR → เลือกพนักงาน/ขั้นตอน → เลื่อนเพื่อยืนยัน
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Category dropdown */}
-        <section className="mt-5">
-          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Layers className="h-4 w-4 text-secondary" />
-            {t("cat.title")}
-          </h2>
-          <Select value={categoryId} onValueChange={setCategoryId} disabled={loading}>
-            <SelectTrigger className="h-16 w-full text-base">
-              <SelectValue placeholder={loading ? t("emp.loading") : t("cat.placeholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id} className="py-3">
-                  <span className="text-base font-semibold">{c.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </section>
-
-        {/* Employee dropdown */}
-        <section className="mt-5">
-          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <User className="h-4 w-4 text-secondary" />
-            {t("emp.title")}
-          </h2>
-          <Select value={employeeId} onValueChange={setEmployeeId} disabled={loading}>
-            <SelectTrigger className="h-16 w-full text-base">
-              <SelectValue placeholder={loading ? t("emp.loading") : t("emp.placeholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {employees.map((e) => (
-                <SelectItem key={e.id} value={e.id} className="py-2">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12 border-2 border-border">
-                      {e.avatar_url ? <AvatarImage src={e.avatar_url} alt={e.name} /> : null}
-                      <AvatarFallback className="bg-primary text-sm font-bold text-primary-foreground">
-                        {initialsOf(e.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xl">{flagFor(e.nationality)}</span>
-                    <div className="flex flex-col text-left">
-                      <span className="text-base font-semibold leading-tight">{e.name}</span>
-                      {e.emp_code && (
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {e.emp_code}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </section>
-
-        {/* Step dropdown */}
-        <section className="mt-5">
-          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <ListChecks className="h-4 w-4 text-secondary" />
-            {t("step.title")}
-          </h2>
-          <Select value={stepId} onValueChange={setStepId} disabled={loading}>
-            <SelectTrigger className="h-16 w-full text-base">
-              <SelectValue placeholder={loading ? t("emp.loading") : t("step.placeholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {steps.map((s) => (
-                <SelectItem key={s.id} value={s.id} className="py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border-2 border-border bg-muted">
-                      {s.image_url ? (
-                        <img
-                          src={s.image_url}
-                          alt={s.step_name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <ListChecks className="h-6 w-6 text-secondary" />
-                      )}
-                    </div>
-                    <div className="flex flex-col text-left">
-                      <span className="text-base font-semibold leading-tight">
-                        {s.step_name}
-                      </span>
-                      {s.std_duration_minutes != null && (
-                        <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-destructive">
-                          <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} {t("step.minutes")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </section>
-
-        {/* Standard-time warning */}
-        {selectedStep?.std_duration_minutes != null && (
-          <div className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-destructive">
-            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
-            <div className="text-sm font-semibold leading-snug">
-              {t("step.warning", { n: selectedStep.std_duration_minutes })}
-            </div>
-          </div>
-        )}
-
-        {/* Actions — slide to confirm to prevent accidental taps */}
-        <div className="mt-6 space-y-3">
+        {/* Slide to enter */}
+        <div className="mt-8 space-y-3">
           <SlideToConfirm
-            label={t("action.start")}
-            icon={Play}
-            loading={submitting === "start"}
-            disabled={submitting !== null}
-            onConfirm={() => submit("start")}
-            colorClass="bg-secondary text-secondary-foreground"
-            thumbClass="bg-white text-secondary"
+            label="เริ่มงาน"
+            icon={ArrowRight}
+            onConfirm={goToScan}
+            colorClass="bg-white/15 text-primary-foreground backdrop-blur-xl ring-1 ring-white/30"
+            thumbClass="bg-secondary text-secondary-foreground"
           />
-
-          {/* Optional issue note before finishing */}
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hasIssue}
-                onChange={(e) => setHasIssue(e.target.checked)}
-                className="h-5 w-5 accent-destructive"
-              />
-              <span className="flex items-center gap-1 text-sm font-semibold">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                {t("note.toggle")}
-              </span>
-            </label>
-
-            {hasIssue && (
-              <div className="mt-3 space-y-2">
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={t("note.placeholder")}
-                  rows={3}
-                  maxLength={1000}
-                  className="w-full rounded-lg border border-border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-destructive"
-                />
-                <input
-                  ref={noteFileRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) uploadNoteImage(f);
-                  }}
-                />
-                {noteImageUrl ? (
-                  <div className="relative">
-                    <img
-                      src={noteImageUrl}
-                      alt="note"
-                      className="h-40 w-full rounded-lg object-cover border border-border"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setNoteImageUrl(null)}
-                      className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 w-full gap-1"
-                      onClick={() => noteFileRef.current?.click()}
-                      disabled={uploadingNote}
-                    >
-                      <Camera className="h-4 w-4" /> {t("note.changePhoto")}
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full gap-1"
-                    onClick={() => noteFileRef.current?.click()}
-                    disabled={uploadingNote}
-                  >
-                    {uploadingNote ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" /> {t("note.uploading")}
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="h-4 w-4" /> {t("note.addPhoto")}
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <SlideToConfirm
-            label={t("action.finish")}
-            icon={Square}
-            loading={submitting === "finish"}
-            disabled={submitting !== null || uploadingNote}
-            onConfirm={() => submit("finish")}
-            colorClass="bg-primary text-primary-foreground"
-            thumbClass="bg-white text-primary"
-          />
+          <p className="text-center text-xs text-primary-foreground/70">
+            เลื่อนปุ่มไปทางขวาเพื่อเข้าหน้าสแกน
+          </p>
         </div>
-
-        {lastSubmit && (
-          <div className="mt-5 flex items-center gap-2 rounded-xl border border-success/30 bg-success/10 p-4 text-success">
-            <CheckCircle2 className="h-5 w-5" />
-            <div className="text-sm">
-              <div className="font-semibold">
-                {lastSubmit.action === "start" ? t("log.startOk") : t("log.finishOk")}
-              </div>
-              <div className="text-xs opacity-80">{lastSubmit.at}</div>
-            </div>
-          </div>
-        )}
-
-        
       </main>
-
-      <QrScannerDialog
-        open={scannerOpen}
-        onOpenChange={setScannerOpen}
-        onScanned={handleScanned}
-      />
     </div>
   );
 }
