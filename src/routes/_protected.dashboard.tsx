@@ -65,6 +65,11 @@ interface CategoryRow {
   name: string;
 }
 
+interface NamedRow {
+  id: string;
+  name: string;
+}
+
 const CHART_COLORS = [
   "oklch(0.32 0.10 256)",
   "oklch(0.60 0.20 256)",
