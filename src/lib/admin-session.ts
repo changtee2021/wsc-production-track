@@ -1,8 +1,13 @@
-const KEY = "ptrack_admin_session";
+const KEY = "ptrack_admin_token";
 
-export function setAdminSession() {
+export function setAdminToken(token: string) {
   if (typeof window === "undefined") return;
-  sessionStorage.setItem(KEY, "1");
+  sessionStorage.setItem(KEY, token);
+}
+
+export function getAdminToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(KEY);
 }
 
 export function clearAdminSession() {
@@ -11,6 +16,5 @@ export function clearAdminSession() {
 }
 
 export function isAdminSession(): boolean {
-  if (typeof window === "undefined") return false;
-  return sessionStorage.getItem(KEY) === "1";
+  return !!getAdminToken();
 }
