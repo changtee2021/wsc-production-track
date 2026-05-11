@@ -294,7 +294,7 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
           .order("created_at", { ascending: false })
           .range(from, from + PAGE - 1);
         if (error) throw new Error(error.message);
-        const chunk = rows ?? [];
+        const chunk = (rows as Record<string, unknown>[] | null) ?? [];
         all.push(...chunk);
         if (chunk.length < PAGE) break;
         from += PAGE;
@@ -307,7 +307,7 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(data.limit ?? 1000);
     if (error) throw new Error(error.message);
-    return { rows: rows ?? [] };
+    return { rows: ((rows as Record<string, unknown>[] | null) ?? []) };
   });
 
 // ---- Announcements --------------------------------------------------------
