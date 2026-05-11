@@ -215,20 +215,27 @@ function CategoriesPanel() {
   );
 }
 
-async function uploadFile(bucket: string, file: File): Promise<string> {
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = `${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType: file.type,
-  });
+async function adminUpload(
+  bucket: "avatars" | "step-images",
+  file: File,
+  createUrl: (args: { data: { token: string; bucket: "avatars" | "step-images"; ext: string } }) => Promise<{ path: string; token: string; publicUrl: string }>,
+): Promise<string> {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const signed = await createUrl({ data: { token: requireToken(), bucket, ext } });
+  const { error } = await supabase.storage
+    .from(bucket)
+    .uploadToSignedUrl(signed.path, signed.token, file, {
+      contentType: file.type,
+      upsert: false,
+    });
   if (error) throw error;
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  return signed.publicUrl;
 }
 
 function EmployeesPanel() {
+  const upsert = useServerFn(adminUpsertEmployee);
+  const del = useServerFn(adminDeleteEmployee);
+  const createUrl = useServerFn(adminCreateUploadUrl);
   const [items, setItems] = useState<Employee[]>([]);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -253,12 +260,12 @@ function EmployeesPanel() {
   const handleUpload = async (file: File, target: "new" | "edit") => {
     setUploading(true);
     try {
-      const url = await uploadFile("avatars", file);
+      const url = await adminUpload("avatars", file, createUrl);
       if (target === "new") setAvatarUrl(url);
       else if (editing) setEditing({ ...editing, avatar_url: url });
       toast.success("อัปโหลดรูปสำเร็จ");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+      showError(err);
     } finally {
       setUploading(false);
     }
@@ -266,47 +273,47 @@ function EmployeesPanel() {
 
   const add = async () => {
     if (!name.trim()) return toast.error("กรุณากรอกชื่อ");
-    const { error } = await supabase.from("employees").insert({
-      name: name.trim(),
-      emp_code: code.trim() || null,
-      nationality: nat,
-      avatar_url: avatarUrl,
-    });
-    if (error) return toast.error(error.message);
-    setName("");
-    setCode("");
-    setAvatarUrl(null);
-    if (fileRef.current) fileRef.current.value = "";
-    toast.success("เพิ่มพนักงานแล้ว");
-    load();
+    try {
+      await upsert({ data: {
+        token: requireToken(),
+        name: name.trim(),
+        emp_code: code.trim() || null,
+        nationality: nat,
+        avatar_url: avatarUrl,
+      } });
+      setName(""); setCode(""); setAvatarUrl(null);
+      if (fileRef.current) fileRef.current.value = "";
+      toast.success("เพิ่มพนักงานแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const save = async () => {
     if (!editing) return;
-    const { error } = await supabase
-      .from("employees")
-      .update({
+    try {
+      await upsert({ data: {
+        token: requireToken(),
+        id: editing.id,
         name: editing.name,
         emp_code: editing.emp_code,
         nationality: editing.nationality,
         avatar_url: editing.avatar_url,
         active: editing.active,
-      })
-      .eq("id", editing.id);
-    if (error) return toast.error(error.message);
-    setEditing(null);
-    toast.success("บันทึกแล้ว");
-    load();
+      } });
+      setEditing(null);
+      toast.success("บันทึกแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const remove = async (id: string) => {
     if (!confirm("ลบพนักงานคนนี้?")) return;
-    const { error } = await supabase.from("employees").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("ลบแล้ว");
-    load();
+    try {
+      await del({ data: { token: requireToken(), id } });
+      toast.success("ลบแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
-
   return (
     <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
