@@ -28,7 +28,6 @@ import {
   Calendar,
   TrendingUp,
   CheckSquare,
-  Download,
   FileSpreadsheet,
   Activity,
   Trophy,
