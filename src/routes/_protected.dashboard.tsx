@@ -1250,3 +1250,55 @@ function EmptyChart() {
     </div>
   );
 }
+
+function MultiSelectGroup({
+  title,
+  items,
+  selected,
+  onToggle,
+  onAll,
+  onClear,
+}: {
+  title: string;
+  items: { id: string; name: string }[];
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  onAll: () => void;
+  onClear: () => void;
+}) {
+  const allSelected = selected.size === 0;
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between">
+        <h4 className="text-sm font-semibold">
+          {title}{" "}
+          <span className="text-xs font-normal text-muted-foreground">
+            ({allSelected ? `ทั้งหมด ${items.length}` : `${selected.size}/${items.length}`})
+          </span>
+        </h4>
+        <div className="flex gap-1">
+          <Button type="button" variant="ghost" size="sm" onClick={onAll}>
+            ทั้งหมด
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClear}>
+            ล้าง
+          </Button>
+        </div>
+      </div>
+      <div className="grid max-h-40 grid-cols-2 gap-1 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 sm:grid-cols-3">
+        {items.map((it) => (
+          <label key={it.id} className="flex cursor-pointer items-center gap-2 text-sm">
+            <Checkbox
+              checked={allSelected || selected.has(it.id)}
+              onCheckedChange={() => onToggle(it.id)}
+            />
+            <span className="truncate">{it.name}</span>
+          </label>
+        ))}
+        {items.length === 0 && (
+          <span className="text-xs text-muted-foreground">ไม่มีรายการ</span>
+        )}
+      </div>
+    </section>
+  );
+}
