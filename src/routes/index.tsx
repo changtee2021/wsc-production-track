@@ -99,6 +99,12 @@ function WelcomePage() {
           </CarouselContent>
         </Carousel>
 
+        {/* Bottom fade overlay */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-1/4 bg-gradient-to-t from-primary via-primary/70 to-transparent"
+        />
+
         {/* Floating header */}
         <header
           className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-5 pt-6"
