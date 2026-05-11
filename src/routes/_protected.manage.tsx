@@ -11,6 +11,9 @@ import {
   adminUpsertStep,
   adminDeleteStep,
   adminCreateUploadUrl,
+  adminInsertBanner,
+  adminUpdateBanner,
+  adminDeleteBanner,
 } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
