@@ -1,56 +1,49 @@
+# เพิ่มระบบประกาศ (Announcements)
+
 ## เป้าหมาย
-1. เปลี่ยนชื่อแอป `ProductionTrack` → `WSC ProductionTrack` ทั้งระบบ
-2. ออกแบบหน้าแรก (`/`) ใหม่ แบ่งเป็น 2 ส่วน: แบนเนอร์สไลด์โชว์ (2/3) + ส่วนเริ่มงาน + 3 ขั้นตอน (1/3)
-3. เพิ่มหน้าจัดการแบนเนอร์ในหน้าแอดมิน (จัดการข้อมูล) เพื่ออัปโหลด/ลบ/เรียงรูปแบนเนอร์ได้
+- แสดงแถบประกาศบนสุดของหน้าแรก (`/`) และหน้า scan (`/scan`)
+- แอดมินสามารถเพิ่ม/แก้ไข/ลบ/เปิด-ปิดประกาศได้จากหน้า `/manage`
 
-## Backend (Lovable Cloud)
+## ฐานข้อมูล
+สร้างตาราง `announcements`:
+- `message` (text) — ข้อความประกาศ
+- `active` (boolean, default true) — เปิด/ปิดการแสดง
+- `sort_order` (int, default 0) — ลำดับการแสดงเมื่อมีหลายประกาศ
+- มาตรฐาน: `id`, `created_at`, `updated_at`
 
-**Storage bucket ใหม่: `banners`** (public read)
-- นโยบาย: ทุกคนดูได้ / เฉพาะผู้ใช้ที่ล็อกอินแล้วอัปโหลด/ลบได้
+RLS: ทุกคนอ่านได้ (public SELECT). การเขียน/แก้ไข/ลบทำผ่าน server function ที่ใช้ admin token เหมือน `home_banners`
 
-**ตารางใหม่: `home_banners`**
-- `id`, `image_path` (path ใน bucket), `sort_order` (int), `active` (bool), `created_at`
-- RLS: select = ทุกคน, insert/update/delete = authenticated เท่านั้น
+## Server Functions (`src/lib/admin.functions.ts`)
+เพิ่ม 3 ฟังก์ชันแบบเดียวกับ banner:
+- `adminInsertAnnouncement` — รับ `message`, `sort_order`
+- `adminUpdateAnnouncement` — รับ `id`, `message?`, `active?`, `sort_order?`
+- `adminDeleteAnnouncement` — รับ `id`
 
-## Frontend
+## หน้าจอ
 
-### `src/routes/index.tsx` — หน้าแรกใหม่
-Layout เต็มจอแบ่งเป็น 2 ส่วนด้วย flex:
-```text
-┌─────────────────────────┐
-│                         │
-│   Banner Carousel       │  2/3 ของจอ (h-[66.67vh])
-│   (auto-slide ทุก 5s)   │
-│   • • •  (dots)         │
-├─────────────────────────┤
-│  3 ขั้นตอน + ไอคอน      │  1/3 ของจอ (h-[33.33vh])
-│  ① สแกน ② เลือก ③ ยืนยัน│
-│  [ เลื่อนเพื่อเริ่มงาน → ]│
-└─────────────────────────┘
-```
-- Carousel: ใช้ `embla-carousel-react` (มีอยู่แล้วใน `components/ui/carousel`) + `embla-carousel-autoplay`
-- โหลดรูปจาก `home_banners` ที่ `active = true` เรียงตาม `sort_order`
-- ถ้าไม่มีรูป → fallback เป็น `welcome-hero.png`
-- ส่วนล่าง: 3 ไอคอน (ScanLine, Users, CheckCircle2) เรียงแนวนอนพร้อมคำอธิบายสั้น + `SlideToConfirm` "เริ่มงาน"
-- Header เล็กลง (logo + ปุ่มแอดมิน) ลอยทับแบนเนอร์ (absolute, glass effect)
+### Component ใหม่: `AnnouncementBar`
+- อ่านประกาศที่ `active=true` เรียงตาม `sort_order`
+- แสดงเป็นแถบบนสุด (sticky top หรือ inline บนสุดของ container)
+- ถ้ามีหลายประกาศ → หมุนเปลี่ยนอัตโนมัติ หรือใช้ marquee เลื่อน
+- ใช้สีจาก design token (เช่น `bg-primary/10 text-primary` พร้อม icon Megaphone)
 
-### `src/routes/_protected.manage.tsx` — เพิ่มแท็บ/การ์ด "แบนเนอร์หน้าแรก"
-- รายการรูปแบนเนอร์ปัจจุบัน (thumbnail + ปุ่มลบ + toggle active + ปุ่มเลื่อนขึ้น/ลง)
-- ปุ่ม "อัปโหลดรูปแบนเนอร์" → upload เข้า bucket `banners` แล้ว insert row
-- แนะนำสัดส่วน 3:4 (portrait) หรือเตือนถ้ารูปเล็กเกินไป
+### หน้าแรก (`src/routes/index.tsx`)
+- วาง `<AnnouncementBar />` เหนือ banner carousel
 
-### เปลี่ยนชื่อแอป
-แทนที่ `ProductionTrack` → `WSC ProductionTrack` ใน:
-- `src/components/AppHeader.tsx`
-- `src/routes/index.tsx`, `scan.tsx`, `admin.tsx`, `_protected.logs.tsx`, `_protected.dashboard.tsx`, `_protected.manage.tsx`
-- `src/lib/i18n.tsx`
+### หน้า scan (`src/routes/scan.tsx`)
+- วาง `<AnnouncementBar />` ไว้บนสุดของเนื้อหา
+
+### หน้า manage (`src/routes/_protected.manage.tsx`)
+- เพิ่ม `AnnouncementsPanel` ใต้/ข้าง `BannersPanel`
+- รายการประกาศแบบเดียวกับ banner: ปุ่มเพิ่ม, แก้ไขข้อความ inline (textarea + save), เปิด/ปิด (Eye/EyeOff), ขึ้น/ลง (ArrowUp/Down), ลบ (Trash2)
+
+## ภาษา
+ทุก label เป็นภาษาไทย: "ประกาศ", "เพิ่มประกาศ", "แก้ไข", "บันทึก", "ลบประกาศนี้?"
 
 ## ไฟล์ที่จะแก้ไข/สร้าง
-- ใหม่: migration สร้างตาราง `home_banners` + bucket `banners` + RLS
-- แก้: `src/routes/index.tsx` (รื้อ layout ใหม่)
-- แก้: `src/routes/_protected.manage.tsx` (เพิ่มส่วนจัดการแบนเนอร์)
-- แก้: ไฟล์ที่มีคำว่า `ProductionTrack` (8 ไฟล์)
-
-## คำถามสั้น ๆ ก่อนลงมือ
-- รูปแบนเนอร์ให้ auto-slide ไหม (ค่าเริ่มต้น: ใช่ ทุก 5 วินาที) — ถ้าไม่ตอบจะใช้ค่านี้
-- 3 ขั้นตอนใช้ข้อความเดิม: **สแกน QR → เลือกพนักงาน/ขั้นตอน → เลื่อนเพื่อยืนยัน** — ถ้าไม่ตอบจะใช้ข้อความนี้
+- migration ใหม่: สร้างตาราง `announcements` + RLS
+- `src/lib/admin.functions.ts` — เพิ่ม 3 ฟังก์ชัน
+- `src/components/AnnouncementBar.tsx` — สร้างใหม่
+- `src/routes/index.tsx` — แทรกแถบประกาศ
+- `src/routes/scan.tsx` — แทรกแถบประกาศ
+- `src/routes/_protected.manage.tsx` — เพิ่ม `AnnouncementsPanel`
