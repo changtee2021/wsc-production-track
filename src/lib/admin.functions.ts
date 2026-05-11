@@ -285,7 +285,7 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
     assertAdmin(data.token);
     if (data.paginate) {
       const PAGE = 1000;
-      const all: Record<string, unknown>[] = [];
+      const all: Record<string, any>[] = [];
       let from = 0;
       for (let p = 0; p < 100; p++) {
         const { data: rows, error } = await supabaseAdmin
@@ -294,12 +294,12 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
           .order("created_at", { ascending: false })
           .range(from, from + PAGE - 1);
         if (error) throw new Error(error.message);
-        const chunk = (rows ?? []) as unknown as Record<string, unknown>[];
+        const chunk = (rows ?? []) as unknown as Record<string, any>[];
         all.push(...chunk);
         if (chunk.length < PAGE) break;
         from += PAGE;
       }
-      return { rows: all as unknown as Array<Record<string, unknown>> };
+      return { rows: all as unknown as Array<Record<string, any>> };
     }
     const { data: rows, error } = await supabaseAdmin
       .from("production_logs")
@@ -307,7 +307,7 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(data.limit ?? 1000);
     if (error) throw new Error(error.message);
-    return { rows: ((rows ?? []) as unknown as Array<Record<string, unknown>>) };
+    return { rows: ((rows ?? []) as unknown as Array<Record<string, any>>) };
   });
 
 // ---- Announcements --------------------------------------------------------
