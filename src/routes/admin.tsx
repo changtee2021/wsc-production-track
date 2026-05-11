@@ -45,7 +45,7 @@ function AdminLogin() {
     try {
       const res = await verify({ data: { password } });
       if (res.ok) {
-        setAdminSession();
+        setAdminToken(res.token);
         toast.success("Welcome, admin");
         navigate({ to: redirect });
       } else {
