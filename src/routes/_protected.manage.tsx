@@ -981,52 +981,50 @@ function BannersPanel() {
                     b.active ? "" : "opacity-40 grayscale"
                   }`}
                 />
-              </div>
-              <div className="flex items-center justify-between gap-1 p-1.5">
-                <span className="text-xs text-muted-foreground">
-                  อันดับ {b.sort_order}
+                <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  #{i + 1}
                 </span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    disabled={i === 0}
-                    onClick={() => move(b, -1)}
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    disabled={i === items.length - 1}
-                    onClick={() => move(b, 1)}
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => toggleActive(b)}
-                    title={b.active ? "ซ่อน" : "แสดง"}
-                  >
-                    {b.active ? (
-                      <Eye className="h-4 w-4" />
-                    ) : (
-                      <EyeOff className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => remove(b)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-0.5 p-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-full"
+                  disabled={i === 0}
+                  onClick={() => move(b, -1)}
+                >
+                  <ArrowUp className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-full"
+                  disabled={i === items.length - 1}
+                  onClick={() => move(b, 1)}
+                >
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-full"
+                  onClick={() => toggleActive(b)}
+                  title={b.active ? "ซ่อน" : "แสดง"}
+                >
+                  {b.active ? (
+                    <Eye className="h-3.5 w-3.5" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-full text-destructive hover:text-destructive"
+                  onClick={() => remove(b)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </li>
           ))}
