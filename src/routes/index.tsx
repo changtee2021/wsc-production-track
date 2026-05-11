@@ -124,26 +124,34 @@ function WelcomePage() {
           </Link>
         </header>
 
-        {/* Dots */}
-        {slides.length > 1 && (
-          <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center gap-1.5">
-            {slides.map((_, i) => (
-              <button
-                key={i}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  api?.scrollTo(i);
-                }}
-                aria-label={`ไปที่แบนเนอร์ ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === current
-                    ? "w-6 bg-white"
-                    : "w-1.5 bg-white/50 hover:bg-white/80"
-                }`}
-              />
-            ))}
+        {/* Dots + Slide to scan */}
+        <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 px-5 pb-6">
+          {slides.length > 1 && (
+            <div className="flex justify-center gap-1.5">
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => api?.scrollTo(i)}
+                  aria-label={`ไปที่แบนเนอร์ ${i + 1}`}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === current
+                      ? "w-6 bg-white"
+                      : "w-1.5 bg-white/50 hover:bg-white/80"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+          <div className="w-full max-w-md">
+            <SlideToConfirm
+              label="สแกน"
+              icon={ScanLine}
+              onConfirm={goToScan}
+              colorClass="bg-white/15 text-white backdrop-blur-md ring-1 ring-white/25"
+              thumbClass="bg-white text-primary"
+            />
           </div>
-        )}
+        </div>
       </section>
     </div>
   );
