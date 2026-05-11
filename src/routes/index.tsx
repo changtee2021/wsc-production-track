@@ -167,21 +167,21 @@ function WelcomePage() {
 
       {/* ── Bottom: 3 steps + slide-to-start (1/3) ── */}
       <section className="relative flex flex-[1] w-full flex-col justify-between gap-3 px-5 pb-5 pt-4">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-3">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             return (
               <div
                 key={i}
-                className="flex flex-col items-center rounded-2xl border bg-card p-2.5 text-center shadow-sm"
+                className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border bg-card px-2 py-3.5 text-center shadow-sm"
               >
-                <div className="relative mb-1.5 flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground shadow-md shadow-secondary/30">
+                <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground shadow-md shadow-secondary/30">
                   <Icon className="h-5 w-5" />
                   <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                     {i + 1}
                   </span>
                 </div>
-                <div className="text-[11px] font-semibold leading-tight">
+                <div className="text-sm font-semibold leading-snug tracking-tight">
                   {s.title}
                 </div>
               </div>
