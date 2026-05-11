@@ -1,16 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
-import {
-  ArrowRight,
-  Factory,
-  ShieldCheck,
-  ScanLine,
-  UserCheck,
-  CheckCircle2,
-} from "lucide-react";
+import { Factory, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SlideToConfirm } from "@/components/SlideToConfirm";
 import {
   Carousel,
   CarouselContent,
@@ -34,24 +26,6 @@ export const Route = createFileRoute("/")({
   }),
   component: WelcomePage,
 });
-
-const STEPS = [
-  {
-    icon: ScanLine,
-    title: "สแกน QR",
-    desc: "สแกนรหัสงานบนใบสั่งผลิต",
-  },
-  {
-    icon: UserCheck,
-    title: "เลือกพนักงาน/ขั้นตอน",
-    desc: "ระบุผู้ปฏิบัติงานและขั้นตอน",
-  },
-  {
-    icon: CheckCircle2,
-    title: "เลื่อนเพื่อยืนยัน",
-    desc: "ยืนยันเริ่ม/เสร็จงานแบบเรียลไทม์",
-  },
-] as const;
 
 function WelcomePage() {
   const navigate = useNavigate({ from: "/" });
@@ -96,8 +70,13 @@ function WelcomePage() {
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-background">
       <AnnouncementBar />
-      {/* ── Top: banner carousel ── */}
-      <section className="relative flex-[2] w-full overflow-hidden bg-primary">
+      {/* ── Fullscreen banner carousel (tap to start) ── */}
+      <section
+        className="relative flex-1 w-full overflow-hidden bg-primary"
+        onClick={goToScan}
+        role="button"
+        aria-label="เริ่มงาน"
+      >
         <Carousel
           className="h-full w-full"
           opts={{ loop: true, align: "start" }}
@@ -111,13 +90,12 @@ function WelcomePage() {
           <CarouselContent className="ml-0 h-full">
             {slides.map((src, i) => (
               <CarouselItem key={i} className="relative h-full pl-0 basis-full">
-                <div className="relative h-[66.67dvh] w-full">
+                <div className="relative h-full w-full">
                   <img
                     src={src}
                     alt={`แบนเนอร์ ${i + 1}`}
                     className="absolute inset-0 h-full w-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-b from-primary/40 via-transparent to-background/95" />
                 </div>
               </CarouselItem>
             ))}
@@ -125,7 +103,10 @@ function WelcomePage() {
         </Carousel>
 
         {/* Floating header */}
-        <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-5 pt-6">
+        <header
+          className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-5 pt-6"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center gap-2 text-primary-foreground">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/20">
               <Factory className="h-5 w-5" />
@@ -152,7 +133,10 @@ function WelcomePage() {
             {slides.map((_, i) => (
               <button
                 key={i}
-                onClick={() => api?.scrollTo(i)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  api?.scrollTo(i);
+                }}
                 aria-label={`ไปที่แบนเนอร์ ${i + 1}`}
                 className={`h-1.5 rounded-full transition-all ${
                   i === current
@@ -163,39 +147,6 @@ function WelcomePage() {
             ))}
           </div>
         )}
-      </section>
-
-      {/* ── Bottom: 3 steps + slide-to-start (1/3) ── */}
-      <section className="relative flex flex-[1] w-full flex-col justify-between gap-3 px-5 pb-5 pt-4">
-        <div className="grid grid-cols-3 gap-3">
-          {STEPS.map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <div
-                key={i}
-                className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border bg-card px-2 py-3.5 text-center shadow-sm"
-              >
-                <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground shadow-md shadow-secondary/30">
-                  <Icon className="h-5 w-5" />
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                    {i + 1}
-                  </span>
-                </div>
-                <div className="text-sm font-semibold leading-snug tracking-tight">
-                  {s.title}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <SlideToConfirm
-          label="เริ่มงาน"
-          icon={ArrowRight}
-          onConfirm={goToScan}
-          colorClass="bg-primary text-primary-foreground"
-          thumbClass="bg-secondary text-secondary-foreground"
-        />
       </section>
     </div>
   );
