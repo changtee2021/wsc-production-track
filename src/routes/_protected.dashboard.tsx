@@ -1060,6 +1060,114 @@ function Dashboard() {
           </div>
         </TabsContent>
       </Tabs>
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>ตั้งค่าการส่งออก Excel</DialogTitle>
+            <DialogDescription>
+              เลือกช่วงเวลา ฟิลเตอร์ และชีตที่ต้องการก่อนส่งออก
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            {/* Range */}
+            <section>
+              <h4 className="mb-2 text-sm font-semibold">ช่วงเวลา</h4>
+              <RadioGroup value={exRange} onValueChange={(v) => setExRange(v as typeof exRange)}>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="current" id="r-current" />
+                  <Label htmlFor="r-current" className="cursor-pointer">
+                    ใช้ช่วงปัจจุบันบนหน้า ({scope === "day" ? day : month})
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="custom" id="r-custom" />
+                  <Label htmlFor="r-custom" className="cursor-pointer">
+                    ระบุช่วงเอง
+                  </Label>
+                </div>
+                {exRange === "custom" && (
+                  <div className="ml-6 flex flex-wrap items-center gap-2">
+                    <Input
+                      type="date"
+                      value={exFrom}
+                      onChange={(e) => setExFrom(e.target.value)}
+                      className="max-w-[170px]"
+                    />
+                    <span className="text-muted-foreground">ถึง</span>
+                    <Input
+                      type="date"
+                      value={exTo}
+                      onChange={(e) => setExTo(e.target.value)}
+                      className="max-w-[170px]"
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="all" id="r-all" />
+                  <Label htmlFor="r-all" className="cursor-pointer">
+                    ทั้งหมด (ไม่จำกัดช่วง)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </section>
+
+            <MultiSelectGroup
+              title="พนักงาน"
+              items={employees.map((e) => ({ id: e.id, name: e.name }))}
+              selected={exEmpIds}
+              onToggle={(id) => toggleInSet(setExEmpIds, id)}
+              onAll={() => setExEmpIds(new Set())}
+              onClear={() => setExEmpIds(new Set(employees.map((e) => e.id)))}
+            />
+
+            <MultiSelectGroup
+              title="ขั้นตอน"
+              items={steps}
+              selected={exStepIds}
+              onToggle={(id) => toggleInSet(setExStepIds, id)}
+              onAll={() => setExStepIds(new Set())}
+              onClear={() => setExStepIds(new Set(steps.map((s) => s.id)))}
+            />
+
+            <MultiSelectGroup
+              title="หมวดหมู่"
+              items={categories}
+              selected={exCatIds}
+              onToggle={(id) => toggleInSet(setExCatIds, id)}
+              onAll={() => setExCatIds(new Set())}
+              onClear={() => setExCatIds(new Set(categories.map((c) => c.id)))}
+            />
+
+            {/* Sheets */}
+            <section>
+              <h4 className="mb-2 text-sm font-semibold">ชีตที่ต้องการ</h4>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {ALL_SHEETS.map((s) => (
+                  <label key={s} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={exSheets.has(s)}
+                      onCheckedChange={() => toggleInSet(setExSheets, s)}
+                    />
+                    {s}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">ชีต Info จะถูกใส่ให้เสมอ</p>
+            </section>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setExportOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button onClick={handleExport} className="gap-2">
+              <FileSpreadsheet className="h-4 w-4" />
+              ส่งออก Excel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
