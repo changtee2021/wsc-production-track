@@ -269,7 +269,7 @@ function EmployeesPanel() {
   const handleUpload = async (file: File, target: "new" | "edit") => {
     setUploading(true);
     try {
-      const url = await adminUpload("avatars", file, createUrl);
+      const { publicUrl: url } = await adminUpload("avatars", file, createUrl);
       if (target === "new") setAvatarUrl(url);
       else if (editing) setEditing({ ...editing, avatar_url: url });
       toast.success("อัปโหลดรูปสำเร็จ");
