@@ -75,7 +75,7 @@ function WelcomePage() {
       <section className="relative flex-1 w-full overflow-hidden bg-primary">
 
         <Carousel
-          className="h-full w-full"
+          className="absolute inset-0 h-full w-full [&>div]:h-full"
           opts={{ loop: true, align: "start" }}
           plugins={
             slides.length > 1
