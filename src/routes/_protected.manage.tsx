@@ -225,10 +225,10 @@ function CategoriesPanel() {
 }
 
 async function adminUpload(
-  bucket: "avatars" | "step-images",
+  bucket: "avatars" | "step-images" | "banners",
   file: File,
-  createUrl: (args: { data: { token: string; bucket: "avatars" | "step-images"; ext: string } }) => Promise<{ path: string; token: string; publicUrl: string }>,
-): Promise<string> {
+  createUrl: (args: { data: { token: string; bucket: "avatars" | "step-images" | "banners"; ext: string } }) => Promise<{ path: string; token: string; publicUrl: string }>,
+): Promise<{ path: string; publicUrl: string }> {
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const signed = await createUrl({ data: { token: requireToken(), bucket, ext } });
   const { error } = await supabase.storage
@@ -238,7 +238,7 @@ async function adminUpload(
       upsert: false,
     });
   if (error) throw error;
-  return signed.publicUrl;
+  return { path: signed.path, publicUrl: signed.publicUrl };
 }
 
 function EmployeesPanel() {
