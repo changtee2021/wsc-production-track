@@ -184,9 +184,6 @@ function WelcomePage() {
                 <div className="text-[11px] font-semibold leading-tight">
                   {s.title}
                 </div>
-                <div className="mt-0.5 text-[10px] leading-tight text-muted-foreground line-clamp-2">
-                  {s.desc}
-                </div>
               </div>
             );
           })}
