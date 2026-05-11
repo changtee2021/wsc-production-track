@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { adminFetchLogs } from "@/lib/admin.functions";
+import { getAdminToken } from "@/lib/admin-session";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -53,24 +56,35 @@ function LogsPage() {
   const [onlyNotes, setOnlyNotes] = useState(false);
   const [selected, setSelected] = useState<LogRow | null>(null);
 
+  const fetchLogs = useServerFn(adminFetchLogs);
+
   useEffect(() => {
     (async () => {
-      const [{ data: logData, error: logErr }, { data: catData }] = await Promise.all([
-        supabase
-          .from("production_logs")
-          .select(
-            "id, job_id, action, created_at, note, note_image_url, category_id, employees(id,name), steps(id,step_name), categories(id,name)",
-          )
-          .order("created_at", { ascending: false })
-          .limit(1000),
-        supabase.from("categories").select("id,name").eq("active", true).order("name"),
-      ]);
-      if (logErr) toast.error(logErr.message);
-      setLogs((logData as unknown as LogRow[]) ?? []);
-      setCategories((catData as Category[]) ?? []);
+      const token = getAdminToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const [logResp, { data: catData }] = await Promise.all([
+          fetchLogs({
+            data: {
+              token,
+              select:
+                "id, job_id, action, created_at, note, note_image_url, category_id, employees(id,name), steps(id,step_name), categories(id,name)",
+              limit: 1000,
+            },
+          }),
+          supabase.from("categories").select("id,name").eq("active", true).order("name"),
+        ]);
+        setLogs((logResp.rows as unknown as LogRow[]) ?? []);
+        setCategories((catData as Category[]) ?? []);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "โหลดข้อมูลไม่สำเร็จ");
+      }
       setLoading(false);
     })();
-  }, []);
+  }, [fetchLogs]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

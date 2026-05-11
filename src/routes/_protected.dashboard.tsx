@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { adminFetchLogs } from "@/lib/admin.functions";
+import { getAdminToken } from "@/lib/admin-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -102,49 +105,46 @@ function Dashboard() {
   const [steps, setSteps] = useState<NamedRow[]>([]);
   const [stepFilter, setStepFilter] = useState<string>("all");
 
+  const fetchLogs = useServerFn(adminFetchLogs);
+
   useEffect(() => {
     (async () => {
-      // Paginate production_logs to bypass the 1000-row default cap
-      const PAGE = 1000;
-      const all: LogRow[] = [];
-      let from = 0;
-      // Hard upper bound to avoid runaway loops on huge datasets
-      const MAX_PAGES = 100;
-      for (let p = 0; p < MAX_PAGES; p++) {
-        const { data, error } = await supabase
-          .from("production_logs")
-          .select(
-            "id, job_id, action, created_at, employee_id, step_id, category_id, employees(id,name), steps(id,step_name,std_duration_minutes), categories(id,name)",
-          )
-          .order("created_at", { ascending: false })
-          .range(from, from + PAGE - 1);
-        if (error) {
-          toast.error(error.message);
-          break;
-        }
-        const rows = (data as unknown as LogRow[]) ?? [];
-        all.push(...rows);
-        if (rows.length < PAGE) break;
-        from += PAGE;
+      const token = getAdminToken();
+      if (!token) {
+        setLoading(false);
+        return;
       }
+      try {
+        const logResp = await fetchLogs({
+          data: {
+            token,
+            select:
+              "id, job_id, action, created_at, employee_id, step_id, category_id, employees(id,name), steps(id,step_name,std_duration_minutes), categories(id,name)",
+            paginate: true,
+          },
+        });
+        const all = (logResp.rows as unknown as LogRow[]) ?? [];
 
-      const [{ data: catData }, { data: empData }, { data: stepData }] = await Promise.all([
-        supabase.from("categories").select("id,name").eq("active", true).order("name"),
-        supabase.from("employees").select("id,name").eq("active", true).order("name"),
-        supabase.from("steps").select("id,step_name").eq("active", true).order("step_name"),
-      ]);
-      setLogs(all);
-      setCategories((catData as CategoryRow[]) ?? []);
-      setEmployees((empData as NamedRow[]) ?? []);
-      setSteps(
-        ((stepData as { id: string; step_name: string }[]) ?? []).map((s) => ({
-          id: s.id,
-          name: s.step_name,
-        })),
-      );
+        const [{ data: catData }, { data: empData }, { data: stepData }] = await Promise.all([
+          supabase.from("categories").select("id,name").eq("active", true).order("name"),
+          supabase.from("employees").select("id,name").eq("active", true).order("name"),
+          supabase.from("steps").select("id,step_name").eq("active", true).order("step_name"),
+        ]);
+        setLogs(all);
+        setCategories((catData as CategoryRow[]) ?? []);
+        setEmployees((empData as NamedRow[]) ?? []);
+        setSteps(
+          ((stepData as { id: string; step_name: string }[]) ?? []).map((s) => ({
+            id: s.id,
+            name: s.step_name,
+          })),
+        );
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "โหลดข้อมูลไม่สำเร็จ");
+      }
       setLoading(false);
     })();
-  }, []);
+  }, [fetchLogs]);
 
   const hasFilter = categoryFilter !== "all" || employeeFilter !== "all" || stepFilter !== "all";
 
