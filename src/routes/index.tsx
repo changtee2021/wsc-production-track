@@ -166,7 +166,7 @@ function WelcomePage() {
       </section>
 
       {/* ── Bottom: 3 steps + slide-to-start (1/3) ── */}
-      <section className="relative flex h-1/3 w-full flex-col justify-between gap-3 px-5 pb-5 pt-4">
+      <section className="relative flex flex-[1] w-full flex-col justify-between gap-3 px-5 pb-5 pt-4">
         <div className="grid grid-cols-3 gap-2">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
