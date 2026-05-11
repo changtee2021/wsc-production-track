@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { useServerFn } from "@tanstack/react-start";
-import { verifyAdminPassword } from "@/server/admin.functions";
-import { isAdminSession, setAdminSession } from "@/lib/admin-session";
+import { verifyAdminPassword } from "@/lib/admin.functions";
+import { isAdminSession, setAdminToken } from "@/lib/admin-session";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ function AdminLogin() {
     try {
       const res = await verify({ data: { password } });
       if (res.ok) {
-        setAdminSession();
+        setAdminToken(res.token);
         toast.success("Welcome, admin");
         navigate({ to: redirect });
       } else {

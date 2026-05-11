@@ -1,6 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { getAdminToken, clearAdminSession } from "@/lib/admin-session";
+import {
+  adminUpsertCategory,
+  adminDeleteCategory,
+  adminUpsertEmployee,
+  adminDeleteEmployee,
+  adminUpsertStep,
+  adminDeleteStep,
+  adminCreateUploadUrl,
+} from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +38,26 @@ import {
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/i18n";
+
+function requireToken(): string {
+  const t = getAdminToken();
+  if (!t) {
+    clearAdminSession();
+    if (typeof window !== "undefined") window.location.href = "/admin";
+    throw new Error("Unauthorized");
+  }
+  return t;
+}
+
+function showError(err: unknown) {
+  const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
+  if (msg === "Unauthorized") {
+    clearAdminSession();
+    if (typeof window !== "undefined") window.location.href = "/admin";
+    return;
+  }
+  toast.error(msg);
+}
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — ProductionTrack" }] }),
@@ -76,6 +107,8 @@ interface Category {
 }
 
 function CategoriesPanel() {
+  const upsert = useServerFn(adminUpsertCategory);
+  const del = useServerFn(adminDeleteCategory);
   const [items, setItems] = useState<Category[]>([]);
   const [name, setName] = useState("");
   const [editing, setEditing] = useState<Category | null>(null);
@@ -94,31 +127,31 @@ function CategoriesPanel() {
 
   const add = async () => {
     if (!name.trim()) return toast.error("กรุณากรอกชื่อหมวดหมู่");
-    const { error } = await supabase.from("categories").insert({ name: name.trim() });
-    if (error) return toast.error(error.message);
-    setName("");
-    toast.success("เพิ่มหมวดหมู่แล้ว");
-    load();
+    try {
+      await upsert({ data: { token: requireToken(), name: name.trim() } });
+      setName("");
+      toast.success("เพิ่มหมวดหมู่แล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const save = async () => {
     if (!editing) return;
-    const { error } = await supabase
-      .from("categories")
-      .update({ name: editing.name })
-      .eq("id", editing.id);
-    if (error) return toast.error(error.message);
-    setEditing(null);
-    toast.success("บันทึกแล้ว");
-    load();
+    try {
+      await upsert({ data: { token: requireToken(), id: editing.id, name: editing.name } });
+      setEditing(null);
+      toast.success("บันทึกแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const remove = async (id: string) => {
     if (!confirm("ลบหมวดหมู่นี้?")) return;
-    const { error } = await supabase.from("categories").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("ลบแล้ว");
-    load();
+    try {
+      await del({ data: { token: requireToken(), id } });
+      toast.success("ลบแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   return (
@@ -182,20 +215,27 @@ function CategoriesPanel() {
   );
 }
 
-async function uploadFile(bucket: string, file: File): Promise<string> {
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = `${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType: file.type,
-  });
+async function adminUpload(
+  bucket: "avatars" | "step-images",
+  file: File,
+  createUrl: (args: { data: { token: string; bucket: "avatars" | "step-images"; ext: string } }) => Promise<{ path: string; token: string; publicUrl: string }>,
+): Promise<string> {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const signed = await createUrl({ data: { token: requireToken(), bucket, ext } });
+  const { error } = await supabase.storage
+    .from(bucket)
+    .uploadToSignedUrl(signed.path, signed.token, file, {
+      contentType: file.type,
+      upsert: false,
+    });
   if (error) throw error;
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  return signed.publicUrl;
 }
 
 function EmployeesPanel() {
+  const upsert = useServerFn(adminUpsertEmployee);
+  const del = useServerFn(adminDeleteEmployee);
+  const createUrl = useServerFn(adminCreateUploadUrl);
   const [items, setItems] = useState<Employee[]>([]);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -220,12 +260,12 @@ function EmployeesPanel() {
   const handleUpload = async (file: File, target: "new" | "edit") => {
     setUploading(true);
     try {
-      const url = await uploadFile("avatars", file);
+      const url = await adminUpload("avatars", file, createUrl);
       if (target === "new") setAvatarUrl(url);
       else if (editing) setEditing({ ...editing, avatar_url: url });
       toast.success("อัปโหลดรูปสำเร็จ");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+      showError(err);
     } finally {
       setUploading(false);
     }
@@ -233,47 +273,47 @@ function EmployeesPanel() {
 
   const add = async () => {
     if (!name.trim()) return toast.error("กรุณากรอกชื่อ");
-    const { error } = await supabase.from("employees").insert({
-      name: name.trim(),
-      emp_code: code.trim() || null,
-      nationality: nat,
-      avatar_url: avatarUrl,
-    });
-    if (error) return toast.error(error.message);
-    setName("");
-    setCode("");
-    setAvatarUrl(null);
-    if (fileRef.current) fileRef.current.value = "";
-    toast.success("เพิ่มพนักงานแล้ว");
-    load();
+    try {
+      await upsert({ data: {
+        token: requireToken(),
+        name: name.trim(),
+        emp_code: code.trim() || null,
+        nationality: nat,
+        avatar_url: avatarUrl,
+      } });
+      setName(""); setCode(""); setAvatarUrl(null);
+      if (fileRef.current) fileRef.current.value = "";
+      toast.success("เพิ่มพนักงานแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const save = async () => {
     if (!editing) return;
-    const { error } = await supabase
-      .from("employees")
-      .update({
+    try {
+      await upsert({ data: {
+        token: requireToken(),
+        id: editing.id,
         name: editing.name,
         emp_code: editing.emp_code,
         nationality: editing.nationality,
         avatar_url: editing.avatar_url,
         active: editing.active,
-      })
-      .eq("id", editing.id);
-    if (error) return toast.error(error.message);
-    setEditing(null);
-    toast.success("บันทึกแล้ว");
-    load();
+      } });
+      setEditing(null);
+      toast.success("บันทึกแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const remove = async (id: string) => {
     if (!confirm("ลบพนักงานคนนี้?")) return;
-    const { error } = await supabase.from("employees").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("ลบแล้ว");
-    load();
+    try {
+      await del({ data: { token: requireToken(), id } });
+      toast.success("ลบแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
-
   return (
     <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
@@ -487,6 +527,9 @@ function EmployeeEditor({
 }
 
 function StepsPanel() {
+  const upsert = useServerFn(adminUpsertStep);
+  const del = useServerFn(adminDeleteStep);
+  const createUrl = useServerFn(adminCreateUploadUrl);
   const [items, setItems] = useState<Step[]>([]);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
@@ -511,12 +554,12 @@ function StepsPanel() {
   const handleUpload = async (file: File, target: "new" | "edit") => {
     setUploading(true);
     try {
-      const url = await uploadFile("step-images", file);
+      const url = await adminUpload("step-images", file, createUrl);
       if (target === "new") setImageUrl(url);
       else if (editing) setEditing({ ...editing, image_url: url });
       toast.success("อัปโหลดรูปสำเร็จ");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+      showError(err);
     } finally {
       setUploading(false);
     }
@@ -524,47 +567,46 @@ function StepsPanel() {
 
   const add = async () => {
     if (!name.trim()) return toast.error("กรุณากรอกชื่อขั้นตอน");
-    const { error } = await supabase.from("steps").insert({
-      step_name: name.trim(),
-      description: desc.trim() || null,
-      image_url: imageUrl,
-      std_duration_minutes: duration ? Number(duration) : null,
-    });
-    if (error) return toast.error(error.message);
-    setName("");
-    setDesc("");
-    setDuration("");
-    setImageUrl(null);
-    if (fileRef.current) fileRef.current.value = "";
-    toast.success("เพิ่มขั้นตอนแล้ว");
-    load();
+    try {
+      await upsert({ data: {
+        token: requireToken(),
+        step_name: name.trim(),
+        description: desc.trim() || null,
+        image_url: imageUrl,
+        std_duration_minutes: duration ? Number(duration) : null,
+      } });
+      setName(""); setDesc(""); setDuration(""); setImageUrl(null);
+      if (fileRef.current) fileRef.current.value = "";
+      toast.success("เพิ่มขั้นตอนแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const save = async () => {
     if (!editing) return;
-    const { error } = await supabase
-      .from("steps")
-      .update({
+    try {
+      await upsert({ data: {
+        token: requireToken(),
+        id: editing.id,
         step_name: editing.step_name,
         description: editing.description,
         image_url: editing.image_url,
         std_duration_minutes: editing.std_duration_minutes,
-      })
-      .eq("id", editing.id);
-    if (error) return toast.error(error.message);
-    setEditing(null);
-    toast.success("บันทึกแล้ว");
-    load();
+      } });
+      setEditing(null);
+      toast.success("บันทึกแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const remove = async (id: string) => {
     if (!confirm("ลบขั้นตอนนี้?")) return;
-    const { error } = await supabase.from("steps").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("ลบแล้ว");
-    load();
+    try {
+      await del({ data: { token: requireToken(), id } });
+      toast.success("ลบแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
-
   return (
     <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
