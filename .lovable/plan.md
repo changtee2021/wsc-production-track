@@ -1,49 +1,13 @@
-# เพิ่มระบบประกาศ (Announcements)
+## ปัญหา
+แบนเนอร์ 3 รูปยังโหลดมาได้ (เห็นเป็น 3 dots) แต่ภาพไม่แสดง เพราะ `Carousel` (shadcn) ไม่ส่ง `h-full` ลงไปที่ wrapper ภายใน — ตัว `<div className="overflow-hidden">` ของ embla จึงสูง 0 ทำให้ `CarouselItem` ที่ใช้ `h-full` ไม่มีความสูงจริง รูปเลยถูกซ่อน
 
-## เป้าหมาย
-- แสดงแถบประกาศบนสุดของหน้าแรก (`/`) และหน้า scan (`/scan`)
-- แอดมินสามารถเพิ่ม/แก้ไข/ลบ/เปิด-ปิดประกาศได้จากหน้า `/manage`
+## แก้
 
-## ฐานข้อมูล
-สร้างตาราง `announcements`:
-- `message` (text) — ข้อความประกาศ
-- `active` (boolean, default true) — เปิด/ปิดการแสดง
-- `sort_order` (int, default 0) — ลำดับการแสดงเมื่อมีหลายประกาศ
-- มาตรฐาน: `id`, `created_at`, `updated_at`
+แก้ที่ `src/routes/index.tsx` โดยไม่แตะ `components/ui/carousel.tsx`:
 
-RLS: ทุกคนอ่านได้ (public SELECT). การเขียน/แก้ไข/ลบทำผ่าน server function ที่ใช้ admin token เหมือน `home_banners`
+1. ห่อ `<Carousel>` ใน `<div className="absolute inset-0">` เพื่อกำหนดกรอบความสูงชัดเจน
+2. เพิ่ม `[&>div]:h-full` ให้ `<Carousel>` (ส่ง h-full ทะลุไป embla wrapper)
+3. ให้ `CarouselContent` มี `h-full` (เดิมมีอยู่แล้ว) และ `CarouselItem` คง `h-full`
+4. ตรวจ `<img>` ยังเป็น `absolute inset-0 h-full w-full object-cover` ตามเดิม
 
-## Server Functions (`src/lib/admin.functions.ts`)
-เพิ่ม 3 ฟังก์ชันแบบเดียวกับ banner:
-- `adminInsertAnnouncement` — รับ `message`, `sort_order`
-- `adminUpdateAnnouncement` — รับ `id`, `message?`, `active?`, `sort_order?`
-- `adminDeleteAnnouncement` — รับ `id`
-
-## หน้าจอ
-
-### Component ใหม่: `AnnouncementBar`
-- อ่านประกาศที่ `active=true` เรียงตาม `sort_order`
-- แสดงเป็นแถบบนสุด (sticky top หรือ inline บนสุดของ container)
-- ถ้ามีหลายประกาศ → หมุนเปลี่ยนอัตโนมัติ หรือใช้ marquee เลื่อน
-- ใช้สีจาก design token (เช่น `bg-primary/10 text-primary` พร้อม icon Megaphone)
-
-### หน้าแรก (`src/routes/index.tsx`)
-- วาง `<AnnouncementBar />` เหนือ banner carousel
-
-### หน้า scan (`src/routes/scan.tsx`)
-- วาง `<AnnouncementBar />` ไว้บนสุดของเนื้อหา
-
-### หน้า manage (`src/routes/_protected.manage.tsx`)
-- เพิ่ม `AnnouncementsPanel` ใต้/ข้าง `BannersPanel`
-- รายการประกาศแบบเดียวกับ banner: ปุ่มเพิ่ม, แก้ไขข้อความ inline (textarea + save), เปิด/ปิด (Eye/EyeOff), ขึ้น/ลง (ArrowUp/Down), ลบ (Trash2)
-
-## ภาษา
-ทุก label เป็นภาษาไทย: "ประกาศ", "เพิ่มประกาศ", "แก้ไข", "บันทึก", "ลบประกาศนี้?"
-
-## ไฟล์ที่จะแก้ไข/สร้าง
-- migration ใหม่: สร้างตาราง `announcements` + RLS
-- `src/lib/admin.functions.ts` — เพิ่ม 3 ฟังก์ชัน
-- `src/components/AnnouncementBar.tsx` — สร้างใหม่
-- `src/routes/index.tsx` — แทรกแถบประกาศ
-- `src/routes/scan.tsx` — แทรกแถบประกาศ
-- `src/routes/_protected.manage.tsx` — เพิ่ม `AnnouncementsPanel`
+ผลลัพธ์: รูปแบนเนอร์กลับมาแสดงเต็มจอเหมือนเดิม dots/SlideToConfirm/header ยังลอยอยู่ด้านบน
