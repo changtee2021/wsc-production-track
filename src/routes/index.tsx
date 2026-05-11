@@ -94,8 +94,9 @@ function WelcomePage() {
 
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-background">
-      {/* ── Top: banner carousel (2/3) ── */}
-      <section className="relative h-2/3 w-full overflow-hidden bg-primary">
+      <AnnouncementBar />
+      {/* ── Top: banner carousel ── */}
+      <section className="relative flex-[2] w-full overflow-hidden bg-primary">
         <Carousel
           className="h-full w-full"
           opts={{ loop: true, align: "start" }}
