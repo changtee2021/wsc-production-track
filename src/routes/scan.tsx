@@ -114,6 +114,7 @@ function ScanPage() {
   const [uploadingNote, setUploadingNote] = useState(false);
   const noteFileRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
+  const uploadNote = useServerFn(uploadWorkerNoteImage);
 
   useEffect(() => {
     (async () => {
