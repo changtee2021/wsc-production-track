@@ -1,13 +1,19 @@
-## ปัญหา
-แบนเนอร์ 3 รูปยังโหลดมาได้ (เห็นเป็น 3 dots) แต่ภาพไม่แสดง เพราะ `Carousel` (shadcn) ไม่ส่ง `h-full` ลงไปที่ wrapper ภายใน — ตัว `<div className="overflow-hidden">` ของ embla จึงสูง 0 ทำให้ `CarouselItem` ที่ใช้ `h-full` ไม่มีความสูงจริง รูปเลยถูกซ่อน
+## เพิ่ม fade สีน้ำเงินเข้มที่ด้านล่างหน้าแรก
 
-## แก้
+แก้ที่ `src/routes/index.tsx` เท่านั้น
 
-แก้ที่ `src/routes/index.tsx` โดยไม่แตะ `components/ui/carousel.tsx`:
+เพิ่ม overlay `<div>` ภายใน `<section>` ของแบนเนอร์ วางก่อน header/dots/SlideToConfirm เพื่อให้ปุ่มยังกดได้:
 
-1. ห่อ `<Carousel>` ใน `<div className="absolute inset-0">` เพื่อกำหนดกรอบความสูงชัดเจน
-2. เพิ่ม `[&>div]:h-full` ให้ `<Carousel>` (ส่ง h-full ทะลุไป embla wrapper)
-3. ให้ `CarouselContent` มี `h-full` (เดิมมีอยู่แล้ว) และ `CarouselItem` คง `h-full`
-4. ตรวจ `<img>` ยังเป็น `absolute inset-0 h-full w-full object-cover` ตามเดิม
+```tsx
+<div
+  aria-hidden
+  className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-1/4 bg-gradient-to-t from-primary via-primary/70 to-transparent"
+/>
+```
 
-ผลลัพธ์: รูปแบนเนอร์กลับมาแสดงเต็มจอเหมือนเดิม dots/SlideToConfirm/header ยังลอยอยู่ด้านบน
+- ใช้ `from-primary` (สีน้ำเงินเข้มของธีม) ไล่ขึ้นเป็นโปร่งใส
+- สูง `h-1/4` (1/4 ของจอ) ตามที่ขอ
+- `pointer-events-none` ไม่บังการสไลด์
+- `z-[5]` อยู่เหนือรูปแต่ใต้ header/dots/SlideToConfirm (z-10)
+
+ผลลัพธ์: ครึ่งล่างของแบนเนอร์ค่อยๆ จางเป็นสีน้ำเงินเข้ม ทำให้ SlideToConfirm และ dots อ่านง่ายขึ้น
