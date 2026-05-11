@@ -824,3 +824,208 @@ function StepEditor({
     </div>
   );
 }
+
+// ─── Banners panel ──────────────────────────────────────────────────────────
+
+interface Banner {
+  id: string;
+  image_path: string;
+  sort_order: number;
+  active: boolean;
+}
+
+function BannersPanel() {
+  const insertFn = useServerFn(adminInsertBanner);
+  const updateFn = useServerFn(adminUpdateBanner);
+  const deleteFn = useServerFn(adminDeleteBanner);
+  const createUrl = useServerFn(adminCreateUploadUrl);
+  const [items, setItems] = useState<Banner[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const load = async () => {
+    const { data, error } = await supabase
+      .from("home_banners")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) toast.error(error.message);
+    setItems((data as Banner[]) ?? []);
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const publicUrlOf = (path: string) =>
+    supabase.storage.from("banners").getPublicUrl(path).data.publicUrl;
+
+  const onPick = async (file: File) => {
+    setUploading(true);
+    try {
+      const { path } = await adminUpload("banners", file, createUrl);
+      const nextOrder =
+        items.length > 0 ? Math.max(...items.map((b) => b.sort_order)) + 1 : 0;
+      await insertFn({
+        data: { token: requireToken(), image_path: path, sort_order: nextOrder },
+      });
+      toast.success("เพิ่มแบนเนอร์สำเร็จ");
+      await load();
+    } catch (err) {
+      showError(err);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const toggleActive = async (b: Banner) => {
+    try {
+      await updateFn({
+        data: { token: requireToken(), id: b.id, active: !b.active },
+      });
+      await load();
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const move = async (b: Banner, dir: -1 | 1) => {
+    const idx = items.findIndex((x) => x.id === b.id);
+    const swap = items[idx + dir];
+    if (!swap) return;
+    try {
+      await Promise.all([
+        updateFn({
+          data: { token: requireToken(), id: b.id, sort_order: swap.sort_order },
+        }),
+        updateFn({
+          data: { token: requireToken(), id: swap.id, sort_order: b.sort_order },
+        }),
+      ]);
+      await load();
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const remove = async (b: Banner) => {
+    if (!confirm("ลบแบนเนอร์นี้?")) return;
+    try {
+      await deleteFn({
+        data: { token: requireToken(), id: b.id, image_path: b.image_path },
+      });
+      toast.success("ลบสำเร็จ");
+      await load();
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  return (
+    <section className="lg:col-span-2 rounded-2xl border bg-card p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ImageIcon className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">แบนเนอร์หน้าแรก</h2>
+        </div>
+        <div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onPick(f);
+            }}
+          />
+          <Button
+            size="sm"
+            disabled={uploading}
+            onClick={() => fileRef.current?.click()}
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            เพิ่มแบนเนอร์
+          </Button>
+        </div>
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        แนะนำสัดส่วนแนวตั้ง 3:4 หรือ 9:16 เพื่อให้แสดงผลเต็มพื้นที่บนมือถือ
+      </p>
+      {items.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
+          ยังไม่มีแบนเนอร์ — กดเพิ่มแบนเนอร์เพื่ออัปโหลดรูปแรก
+        </div>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+          {items.map((b, i) => (
+            <li
+              key={b.id}
+              className="overflow-hidden rounded-xl border bg-background"
+            >
+              <div className="relative aspect-[3/4] w-full bg-muted">
+                <img
+                  src={publicUrlOf(b.image_path)}
+                  alt="banner"
+                  className={`h-full w-full object-cover ${
+                    b.active ? "" : "opacity-40 grayscale"
+                  }`}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-1 p-2">
+                <span className="text-xs text-muted-foreground">
+                  อันดับ {b.sort_order}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    disabled={i === 0}
+                    onClick={() => move(b, -1)}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    disabled={i === items.length - 1}
+                    onClick={() => move(b, 1)}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => toggleActive(b)}
+                    title={b.active ? "ซ่อน" : "แสดง"}
+                  >
+                    {b.active ? (
+                      <Eye className="h-4 w-4" />
+                    ) : (
+                      <EyeOff className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    onClick={() => remove(b)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
