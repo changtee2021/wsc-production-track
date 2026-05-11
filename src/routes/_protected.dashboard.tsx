@@ -411,10 +411,12 @@ function Dashboard() {
       return d >= rangeStart && d < rangeEnd;
     };
 
-    const matchEmp = (id: string) => cfg.empIds.size === 0 || cfg.empIds.has(id);
-    const matchStep = (id: string) => cfg.stepIds.size === 0 || cfg.stepIds.has(id);
-    const matchCat = (id: string | null) =>
-      cfg.catIds.size === 0 || (id != null && cfg.catIds.has(id));
+    const matchEmp = (id: string) => cfg.empIds.has(id);
+    const matchStep = (id: string) => cfg.stepIds.has(id);
+    const matchCat = (id: string | null) => id != null && cfg.catIds.has(id);
+    const isAllEmp = cfg.empIds.size === employees.length;
+    const isAllStep = cfg.stepIds.size === steps.length;
+    const isAllCat = cfg.catIds.size === categories.length;
 
     const inScopeLogs = logs.filter(
       (l) =>
