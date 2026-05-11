@@ -37,6 +37,24 @@ import {
 } from "lucide-react";
 import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 import { SlideToConfirm } from "@/components/SlideToConfirm";
+import { useServerFn } from "@tanstack/react-start";
+import { uploadWorkerNoteImage } from "@/lib/worker-upload.functions";
+
+const ALLOWED_NOTE_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_NOTE_BYTES = 5 * 1024 * 1024;
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const result = r.result as string;
+      const idx = result.indexOf(",");
+      resolve(idx >= 0 ? result.slice(idx + 1) : result);
+    };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
 
 const scanSearchSchema = z.object({
   job_id: fallback(z.string(), "").default(""),
