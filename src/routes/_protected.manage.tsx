@@ -104,6 +104,7 @@ function Manage() {
       </p>
       <div className="grid gap-6 lg:grid-cols-2">
         <BannersPanel />
+        <AnnouncementsPanel />
         <CategoriesPanel />
         <EmployeesPanel />
         <StepsPanel />
