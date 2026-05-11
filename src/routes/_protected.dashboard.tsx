@@ -411,10 +411,12 @@ function Dashboard() {
       return d >= rangeStart && d < rangeEnd;
     };
 
-    const matchEmp = (id: string) => cfg.empIds.size === 0 || cfg.empIds.has(id);
-    const matchStep = (id: string) => cfg.stepIds.size === 0 || cfg.stepIds.has(id);
-    const matchCat = (id: string | null) =>
-      cfg.catIds.size === 0 || (id != null && cfg.catIds.has(id));
+    const matchEmp = (id: string) => cfg.empIds.has(id);
+    const matchStep = (id: string) => cfg.stepIds.has(id);
+    const matchCat = (id: string | null) => id != null && cfg.catIds.has(id);
+    const isAllEmp = cfg.empIds.size === employees.length;
+    const isAllStep = cfg.stepIds.size === steps.length;
+    const isAllCat = cfg.catIds.size === categories.length;
 
     const inScopeLogs = logs.filter(
       (l) =>
@@ -476,23 +478,23 @@ function Dashboard() {
     const empNameById = new Map(employees.map((e) => [e.id, e.name]));
     const stepNameById = new Map(steps.map((s) => [s.id, s.name]));
     const catNameById = new Map(categories.map((c) => [c.id, c.name]));
-    const namesOf = (ids: Set<string>, src: Map<string, string>) =>
-      ids.size === 0 ? "ทั้งหมด" : Array.from(ids).map((i) => src.get(i) ?? i).join(", ");
+    const namesOf = (ids: Set<string>, src: Map<string, string>, isAll: boolean) =>
+      isAll ? "ทั้งหมด" : Array.from(ids).map((i) => src.get(i) ?? i).join(", ");
     const meta = [
       {
-        Field: "ช่วงเวลา",
-        Value:
+        หัวข้อ: "ช่วงเวลา",
+        ค่า:
           cfg.rangeMode === "all"
             ? "ทั้งหมด"
             : `${fmtDate(rangeStart)} → ${fmtDate(rangeEnd)}`,
       },
-      { Field: "พนักงาน", Value: namesOf(cfg.empIds, empNameById) },
-      { Field: "ขั้นตอน", Value: namesOf(cfg.stepIds, stepNameById) },
-      { Field: "หมวดหมู่", Value: namesOf(cfg.catIds, catNameById) },
-      { Field: "จำนวน log ในช่วง", Value: inScopeLogs.length },
-      { Field: "วันที่ส่งออก", Value: new Date().toLocaleString("th-TH") },
+      { หัวข้อ: "พนักงาน", ค่า: namesOf(cfg.empIds, empNameById, isAllEmp) },
+      { หัวข้อ: "ขั้นตอน", ค่า: namesOf(cfg.stepIds, stepNameById, isAllStep) },
+      { หัวข้อ: "หมวดหมู่", ค่า: namesOf(cfg.catIds, catNameById, isAllCat) },
+      { หัวข้อ: "จำนวน log ในช่วง", ค่า: inScopeLogs.length },
+      { หัวข้อ: "วันที่ส่งออก", ค่า: new Date().toLocaleString("th-TH") },
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meta), "Info");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meta), "ข้อมูลทั่วไป");
 
     // Ranking
     if (want("Ranking")) {
@@ -505,10 +507,7 @@ function Dashboard() {
         seen.add(k);
         finishCountByEmp.set(l.employee_id, (finishCountByEmp.get(l.employee_id) ?? 0) + 1);
       }
-      const baseEmps =
-        cfg.empIds.size === 0
-          ? employees
-          : employees.filter((e) => cfg.empIds.has(e.id));
+      const baseEmps = employees.filter((e) => cfg.empIds.has(e.id));
       const baseMap = new Map(baseEmps.map((e) => [e.id, e.name]));
       for (const id of finishCountByEmp.keys()) {
         if (!baseMap.has(id)) {
@@ -519,8 +518,8 @@ function Dashboard() {
       const rows = Array.from(baseMap.entries())
         .map(([id, name]) => ({ id, name, jobs: finishCountByEmp.get(id) ?? 0 }))
         .sort((a, b) => b.jobs - a.jobs)
-        .map((r, i) => ({ Rank: i + 1, Employee: r.name, Jobs_Finished: r.jobs }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Ranking");
+        .map((r, i) => ({ อันดับ: i + 1, พนักงาน: r.name, "งานที่เสร็จ": r.jobs }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "อันดับพนักงาน");
     }
 
     // MoM — current range vs equivalent previous range
@@ -558,8 +557,7 @@ function Dashboard() {
       };
       const cur = stat(rangeStart, rangeEnd);
       const prev = stat(prevStart, prevEnd);
-      const baseEmps =
-        cfg.empIds.size === 0 ? employees : employees.filter((e) => cfg.empIds.has(e.id));
+      const baseEmps = employees.filter((e) => cfg.empIds.has(e.id));
       const ids = new Set<string>([
         ...baseEmps.map((e) => e.id),
         ...cur.keys(),
@@ -578,16 +576,16 @@ function Dashboard() {
         const pa = avg(p?.durations ?? []);
         const speedPct = ca == null || pa == null || pa === 0 ? null : ((ca - pa) / pa) * 100;
         return {
-          Employee: name,
-          Cur_Jobs: curJ,
-          Prev_Jobs: prevJ,
-          Jobs_MoM_Pct: Math.round(jobsPct * 10) / 10,
-          Cur_AvgMin: ca != null ? Math.round(ca * 10) / 10 : "",
-          Prev_AvgMin: pa != null ? Math.round(pa * 10) / 10 : "",
-          Speed_MoM_Pct: speedPct == null ? "" : Math.round(speedPct * 10) / 10,
+          พนักงาน: name,
+          "งานช่วงนี้": curJ,
+          "งานช่วงก่อน": prevJ,
+          "% เปลี่ยนแปลงงาน": Math.round(jobsPct * 10) / 10,
+          "เฉลี่ยช่วงนี้ (นาที)": ca != null ? Math.round(ca * 10) / 10 : "",
+          "เฉลี่ยช่วงก่อน (นาที)": pa != null ? Math.round(pa * 10) / 10 : "",
+          "% เปลี่ยนแปลงเวลา": speedPct == null ? "" : Math.round(speedPct * 10) / 10,
         };
       });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "MoM");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "เทียบช่วงก่อน");
     }
 
     // Sessions
@@ -595,16 +593,16 @@ function Dashboard() {
       const rows = inScopeSessions
         .sort((a, b) => b.finish.getTime() - a.finish.getTime())
         .map((s) => ({
-          Job_ID: s.job_id,
-          Employee: s.employee_name,
-          Step: s.step_name,
-          Std_Min: s.std ?? "",
-          Actual_Min: Math.round(s.durationMin * 10) / 10,
-          Over_Min: s.std == null ? "" : Math.round((s.durationMin - s.std) * 10) / 10,
-          Start: s.start.toLocaleString("th-TH"),
-          Finish: s.finish.toLocaleString("th-TH"),
+          "รหัสงาน": s.job_id,
+          พนักงาน: s.employee_name,
+          ขั้นตอน: s.step_name,
+          "มาตรฐาน (นาที)": s.std ?? "",
+          "ใช้จริง (นาที)": Math.round(s.durationMin * 10) / 10,
+          "เกินมาตรฐาน (นาที)": s.std == null ? "" : Math.round((s.durationMin - s.std) * 10) / 10,
+          "เริ่ม": s.start.toLocaleString("th-TH"),
+          "เสร็จ": s.finish.toLocaleString("th-TH"),
         }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Sessions");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "รายการงาน");
     }
 
     // Over_Standard
@@ -612,16 +610,16 @@ function Dashboard() {
       const rows = inScopeSessions
         .filter((s) => s.std != null && s.durationMin > (s.std ?? 0))
         .map((s) => ({
-          Employee: s.employee_name,
-          Step: s.step_name,
-          Job_ID: s.job_id,
-          Std_Min: s.std,
-          Actual_Min: Math.round(s.durationMin * 10) / 10,
-          Over_Min: Math.round((s.durationMin - (s.std ?? 0)) * 10) / 10,
-          Finished_At: s.finish.toLocaleString("th-TH"),
+          พนักงาน: s.employee_name,
+          ขั้นตอน: s.step_name,
+          "รหัสงาน": s.job_id,
+          "มาตรฐาน (นาที)": s.std,
+          "ใช้จริง (นาที)": Math.round(s.durationMin * 10) / 10,
+          "เกิน (นาที)": Math.round((s.durationMin - (s.std ?? 0)) * 10) / 10,
+          "เวลาเสร็จ": s.finish.toLocaleString("th-TH"),
         }))
-        .sort((a, b) => (b.Over_Min as number) - (a.Over_Min as number));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Over_Standard");
+        .sort((a, b) => (b["เกิน (นาที)"] as number) - (a["เกิน (นาที)"] as number));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "เกินมาตรฐาน");
     }
 
     // By_Step
@@ -638,8 +636,8 @@ function Dashboard() {
       }
       const rows = Array.from(m.entries())
         .sort((a, b) => b[1] - a[1])
-        .map(([Step, Jobs_Finished]) => ({ Step, Jobs_Finished }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "By_Step");
+        .map(([step, jobs]) => ({ ขั้นตอน: step, "งานที่เสร็จ": jobs }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "ตามขั้นตอน");
     }
 
     // By_Category
@@ -656,29 +654,38 @@ function Dashboard() {
       }
       const rows = Array.from(m.entries())
         .sort((a, b) => b[1] - a[1])
-        .map(([Category, Jobs_Finished]) => ({ Category, Jobs_Finished }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "By_Category");
+        .map(([cat, jobs]) => ({ หมวดหมู่: cat, "งานที่เสร็จ": jobs }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "ตามหมวดหมู่");
     }
 
     // Logs (raw)
     if (want("Logs")) {
       const rows = inScopeLogs.map((l) => ({
-        Time: new Date(l.created_at).toLocaleString("th-TH"),
-        Job_ID: l.job_id,
-        Employee: l.employees?.name ?? "",
-        Category: l.categories?.name ?? "",
-        Step: l.steps?.step_name ?? "",
-        Action: l.action === "start" ? "เริ่มงาน" : l.action === "finish" ? "เสร็จงาน" : l.action,
+        "เวลา": new Date(l.created_at).toLocaleString("th-TH"),
+        "รหัสงาน": l.job_id,
+        พนักงาน: l.employees?.name ?? "",
+        หมวดหมู่: l.categories?.name ?? "",
+        ขั้นตอน: l.steps?.step_name ?? "",
+        "การกระทำ": l.action === "start" ? "เริ่มงาน" : l.action === "finish" ? "เสร็จงาน" : l.action,
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Logs");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "บันทึกดิบ");
     }
 
-    XLSX.writeFile(wb, `summary_${scopeLabel}.xlsx`);
+    XLSX.writeFile(wb, `สรุปการผลิต_${scopeLabel}.xlsx`);
     toast.success("ส่งออก Excel สำเร็จ");
   };
 
   // Export dialog state
   const ALL_SHEETS = ["Ranking", "MoM", "Sessions", "Over_Standard", "By_Step", "By_Category", "Logs"];
+  const SHEET_LABELS: Record<string, string> = {
+    Ranking: "อันดับพนักงาน",
+    MoM: "เทียบช่วงก่อน",
+    Sessions: "รายการงาน",
+    Over_Standard: "เกินมาตรฐาน",
+    By_Step: "สรุปตามขั้นตอน",
+    By_Category: "สรุปตามหมวดหมู่",
+    Logs: "บันทึกดิบ",
+  };
   const [exportOpen, setExportOpen] = useState(false);
   const [exRange, setExRange] = useState<"current" | "custom" | "all">("current");
   const [exFrom, setExFrom] = useState(() => new Date().toISOString().slice(0, 10));
@@ -687,6 +694,17 @@ function Dashboard() {
   const [exStepIds, setExStepIds] = useState<Set<string>>(new Set());
   const [exCatIds, setExCatIds] = useState<Set<string>>(new Set());
   const [exSheets, setExSheets] = useState<Set<string>>(() => new Set(ALL_SHEETS));
+
+  // Initialize "all selected" once data loads
+  useEffect(() => {
+    setExEmpIds((prev) => (prev.size === 0 ? new Set(employees.map((e) => e.id)) : prev));
+  }, [employees]);
+  useEffect(() => {
+    setExStepIds((prev) => (prev.size === 0 ? new Set(steps.map((s) => s.id)) : prev));
+  }, [steps]);
+  useEffect(() => {
+    setExCatIds((prev) => (prev.size === 0 ? new Set(categories.map((c) => c.id)) : prev));
+  }, [categories]);
 
   const toggleInSet = (
     setter: React.Dispatch<React.SetStateAction<Set<string>>>,
@@ -1135,7 +1153,21 @@ function Dashboard() {
 
             {/* Sheets */}
             <section>
-              <h4 className="mb-2 text-sm font-semibold">ชีตที่ต้องการ</h4>
+              <div className="mb-2 flex items-center justify-between">
+                <h4 className="text-sm font-semibold">ชีตที่ต้องการ</h4>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setExSheets((prev) =>
+                      prev.size === ALL_SHEETS.length ? new Set() : new Set(ALL_SHEETS),
+                    )
+                  }
+                >
+                  {exSheets.size === ALL_SHEETS.length ? "ล้างทั้งหมด" : "เลือกทั้งหมด"}
+                </Button>
+              </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {ALL_SHEETS.map((s) => (
                   <label key={s} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -1143,11 +1175,11 @@ function Dashboard() {
                       checked={exSheets.has(s)}
                       onCheckedChange={() => toggleInSet(setExSheets, s)}
                     />
-                    {s}
+                    {SHEET_LABELS[s] ?? s}
                   </label>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">ชีต Info จะถูกใส่ให้เสมอ</p>
+              <p className="mt-1 text-xs text-muted-foreground">ชีต "ข้อมูลทั่วไป" จะถูกใส่ให้เสมอ</p>
             </section>
           </div>
 
@@ -1256,22 +1288,18 @@ function MultiSelectGroup({
   selected: Set<string>;
   setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
 }) {
-  const allSelected = selected.size === 0;
+  const allSelected = items.length > 0 && selected.size === items.length;
+  const noneSelected = selected.size === 0;
   const handleToggle = (id: string) => {
     setSelected((prev) => {
-      if (prev.size === 0) {
-        // currently "all" — uncheck this one means: select all-except-clicked
-        const next = new Set(items.map((i) => i.id));
-        next.delete(id);
-        return next;
-      }
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      // if everything is now selected, collapse back to "all"
-      if (next.size === items.length) return new Set();
       return next;
     });
+  };
+  const toggleAll = () => {
+    setSelected(allSelected ? new Set() : new Set(items.map((i) => i.id)));
   };
   return (
     <section>
@@ -1279,24 +1307,18 @@ function MultiSelectGroup({
         <h4 className="text-sm font-semibold">
           {title}{" "}
           <span className="text-xs font-normal text-muted-foreground">
-            ({allSelected ? `ทั้งหมด ${items.length}` : `${selected.size}/${items.length}`})
+            ({noneSelected ? `ไม่ได้เลือก` : allSelected ? `ทั้งหมด ${items.length}` : `${selected.size}/${items.length}`})
           </span>
         </h4>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setSelected(new Set())}
-          disabled={allSelected}
-        >
-          เลือกทั้งหมด
+        <Button type="button" variant="ghost" size="sm" onClick={toggleAll}>
+          {allSelected ? "ล้างทั้งหมด" : "เลือกทั้งหมด"}
         </Button>
       </div>
       <div className="grid max-h-40 grid-cols-2 gap-1 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 sm:grid-cols-3">
         {items.map((it) => (
           <label key={it.id} className="flex cursor-pointer items-center gap-2 text-sm">
             <Checkbox
-              checked={allSelected || selected.has(it.id)}
+              checked={selected.has(it.id)}
               onCheckedChange={() => handleToggle(it.id)}
             />
             <span className="truncate">{it.name}</span>
