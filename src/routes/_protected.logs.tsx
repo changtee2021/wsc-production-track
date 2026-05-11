@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/_protected/logs")({
-  head: () => ({ meta: [{ title: "Production Logs — ProductionTrack" }] }),
+  head: () => ({ meta: [{ title: "Production Logs — WSC ProductionTrack" }] }),
   component: LogsPage,
 });
 

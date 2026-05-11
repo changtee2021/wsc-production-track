@@ -19,7 +19,7 @@ export const Route = createFileRoute("/admin")({
   ),
   head: () => ({
     meta: [
-      { title: "Admin Login — ProductionTrack" },
+      { title: "Admin Login — WSC ProductionTrack" },
       { name: "description", content: "Sign in to manage employees, steps, and view production reports." },
     ],
   }),

@@ -7,7 +7,7 @@ import heroImage from "@/assets/welcome-hero.png";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ยินดีต้อนรับ — ProductionTrack" },
+      { title: "ยินดีต้อนรับ — WSC ProductionTrack" },
       {
         name: "description",
         content:
@@ -40,7 +40,7 @@ function WelcomePage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/20">
             <Factory className="h-5 w-5" />
           </div>
-          <span className="font-bold tracking-tight">ProductionTrack</span>
+          <span className="font-bold tracking-tight">WSC ProductionTrack</span>
         </div>
         <Link to="/admin">
           <Button

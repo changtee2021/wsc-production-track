@@ -60,7 +60,7 @@ function showError(err: unknown) {
 }
 
 export const Route = createFileRoute("/_protected/manage")({
-  head: () => ({ meta: [{ title: "จัดการ — ProductionTrack" }] }),
+  head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
   component: Manage,
 });
 

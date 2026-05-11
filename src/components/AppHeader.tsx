@@ -9,7 +9,7 @@ export function AppHeader({ children }: { children?: React.ReactNode }) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/20 backdrop-blur-md">
             <Factory className="h-4 w-4" />
           </div>
-          <span>ProductionTrack</span>
+          <span>WSC ProductionTrack</span>
         </Link>
         <div className="flex items-center gap-2 text-sm">{children}</div>
       </div>
