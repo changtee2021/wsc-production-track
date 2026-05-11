@@ -184,16 +184,19 @@ function ScanPage() {
   };
 
   const uploadNoteImage = async (file: File) => {
+    if (!ALLOWED_NOTE_MIME.includes(file.type)) {
+      toast.error("รองรับเฉพาะรูปภาพ JPG, PNG, WEBP, GIF");
+      return;
+    }
+    if (file.size > MAX_NOTE_BYTES) {
+      toast.error("ไฟล์ใหญ่เกิน 5MB");
+      return;
+    }
     setUploadingNote(true);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage
-        .from("log-notes")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (error) throw error;
-      const { data } = supabase.storage.from("log-notes").getPublicUrl(path);
-      setNoteImageUrl(data.publicUrl);
+      const dataBase64 = await fileToBase64(file);
+      const { url } = await uploadNote({ data: { dataBase64 } });
+      setNoteImageUrl(url);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "upload failed");
     } finally {
