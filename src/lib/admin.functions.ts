@@ -190,7 +190,7 @@ export const adminCreateUploadUrl = createServerFn({ method: "POST" })
     z
       .object({
         token: tokenStr,
-        bucket: z.enum(["avatars", "step-images"]),
+        bucket: z.enum(["avatars", "step-images", "banners"]),
         ext: z.string().regex(/^[a-zA-Z0-9]{1,8}$/),
       })
       .parse(d),
@@ -204,4 +204,66 @@ export const adminCreateUploadUrl = createServerFn({ method: "POST" })
     if (error || !signed) throw new Error(error?.message || "Could not sign upload");
     const { data: pub } = supabaseAdmin.storage.from(data.bucket).getPublicUrl(path);
     return { path, token: signed.token, publicUrl: pub.publicUrl };
+  });
+
+// ---- Home banners --------------------------------------------------------
+
+export const adminInsertBanner = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        image_path: z.string().min(1).max(500),
+        sort_order: z.number().int().min(0).max(10000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await supabaseAdmin.from("home_banners").insert({
+      image_path: data.image_path,
+      sort_order: data.sort_order ?? 0,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminUpdateBanner = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        id: z.string().uuid(),
+        active: z.boolean().optional(),
+        sort_order: z.number().int().min(0).max(10000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const row: { active?: boolean; sort_order?: number } = {};
+    if (data.active !== undefined) row.active = data.active;
+    if (data.sort_order !== undefined) row.sort_order = data.sort_order;
+    if (Object.keys(row).length === 0) return { ok: true };
+    const { error } = await supabaseAdmin
+      .from("home_banners")
+      .update(row)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteBanner = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, id: z.string().uuid(), image_path: z.string().min(1).max(500) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    await supabaseAdmin.storage.from("banners").remove([data.image_path]);
+    const { error } = await supabaseAdmin
+      .from("home_banners")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

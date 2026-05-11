@@ -52,7 +52,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/_protected/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — ProductionTrack" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — WSC ProductionTrack" }] }),
   component: Dashboard,
 });
 

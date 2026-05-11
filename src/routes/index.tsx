@@ -1,13 +1,29 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Factory, ShieldCheck, ScanLine } from "lucide-react";
+import { useEffect, useState } from "react";
+import Autoplay from "embla-carousel-autoplay";
+import {
+  ArrowRight,
+  Factory,
+  ShieldCheck,
+  ScanLine,
+  UserCheck,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SlideToConfirm } from "@/components/SlideToConfirm";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi,
+} from "@/components/ui/carousel";
+import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/welcome-hero.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ยินดีต้อนรับ — ProductionTrack" },
+      { title: "ยินดีต้อนรับ — WSC ProductionTrack" },
       {
         name: "description",
         content:
@@ -18,97 +34,170 @@ export const Route = createFileRoute("/")({
   component: WelcomePage,
 });
 
+const STEPS = [
+  {
+    icon: ScanLine,
+    title: "สแกน QR",
+    desc: "สแกนรหัสงานบนใบสั่งผลิต",
+  },
+  {
+    icon: UserCheck,
+    title: "เลือกพนักงาน/ขั้นตอน",
+    desc: "ระบุผู้ปฏิบัติงานและขั้นตอน",
+  },
+  {
+    icon: CheckCircle2,
+    title: "เลื่อนเพื่อยืนยัน",
+    desc: "ยืนยันเริ่ม/เสร็จงานแบบเรียลไทม์",
+  },
+] as const;
+
 function WelcomePage() {
   const navigate = useNavigate({ from: "/" });
   const goToScan = () => navigate({ to: "/scan", search: { job_id: "" } });
 
+  const [banners, setBanners] = useState<string[]>([]);
+  const [api, setApi] = useState<CarouselApi | null>(null);
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("home_banners")
+        .select("image_path")
+        .eq("active", true)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      const urls = (data ?? [])
+        .map((r) => {
+          const { data: pub } = supabase.storage
+            .from("banners")
+            .getPublicUrl(r.image_path);
+          return pub.publicUrl;
+        })
+        .filter(Boolean);
+      setBanners(urls);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrent(api.selectedScrollSnap());
+    const onSelect = () => setCurrent(api.selectedScrollSnap());
+    api.on("select", onSelect);
+    return () => {
+      api.off("select", onSelect);
+    };
+  }, [api]);
+
+  const slides = banners.length > 0 ? banners : [heroImage];
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-primary">
-      {/* Background image */}
-      <img
-        src={heroImage}
-        alt="พนักงานกำลังประกอบงานในสายการผลิต"
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-      {/* Blue gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/80 via-primary/55 to-primary/95" />
-      <div className="absolute inset-0 bg-gradient-to-tr from-secondary/40 via-transparent to-transparent" />
-
-      {/* Top bar */}
-      <header className="relative z-10 flex items-center justify-between px-5 pt-6">
-        <div className="flex items-center gap-2 text-primary-foreground">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/20">
-            <Factory className="h-5 w-5" />
-          </div>
-          <span className="font-bold tracking-tight">ProductionTrack</span>
-        </div>
-        <Link to="/admin">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1 rounded-full bg-white/15 text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/25 hover:text-primary-foreground"
-          >
-            <ShieldCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">แอดมิน</span>
-          </Button>
-        </Link>
-      </header>
-
-      {/* Content */}
-      <main className="relative z-10 flex min-h-[calc(100vh-72px)] flex-col px-6 pb-10 pt-16">
-        <div className="flex-1 animate-fade-in">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-primary-foreground backdrop-blur-md ring-1 ring-white/20">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-secondary opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-secondary" />
-            </span>
-            ระบบพร้อมใช้งาน
-          </div>
-
-          <h1 className="mt-6 text-5xl font-bold leading-tight text-primary-foreground">
-            ยินดีต้อนรับ
-            <span className="mt-1 block bg-gradient-to-r from-white to-secondary-foreground/90 bg-clip-text text-transparent">
-              สู่สายการผลิต
-            </span>
-          </h1>
-
-          <p className="mt-4 max-w-sm text-base leading-relaxed text-primary-foreground/85">
-            สแกน QR code เพื่อบันทึกเวลาเริ่มและเสร็จงาน
-            ติดตามประสิทธิภาพได้แบบเรียลไทม์
-          </p>
-
-          {/* Highlight card */}
-          <div className="mt-8 rounded-3xl border border-white/20 bg-white/10 p-5 backdrop-blur-xl shadow-2xl shadow-primary/40">
-            <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg shadow-secondary/40">
-                <ScanLine className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-primary-foreground">
-                  เริ่มต้นง่ายๆ ใน 3 ขั้นตอน
+    <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-background">
+      {/* ── Top: banner carousel (2/3) ── */}
+      <section className="relative h-2/3 w-full overflow-hidden bg-primary">
+        <Carousel
+          className="h-full w-full"
+          opts={{ loop: true, align: "start" }}
+          plugins={
+            slides.length > 1
+              ? [Autoplay({ delay: 5000, stopOnInteraction: false })]
+              : []
+          }
+          setApi={setApi}
+        >
+          <CarouselContent className="ml-0 h-full">
+            {slides.map((src, i) => (
+              <CarouselItem key={i} className="relative h-full pl-0 basis-full">
+                <div className="relative h-[66.67dvh] w-full">
+                  <img
+                    src={src}
+                    alt={`แบนเนอร์ ${i + 1}`}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-primary/40 via-transparent to-background/95" />
                 </div>
-                <div className="mt-1 text-xs leading-relaxed text-primary-foreground/80">
-                  สแกน QR → เลือกพนักงาน/ขั้นตอน → เลื่อนเพื่อยืนยัน
-                </div>
-              </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+
+        {/* Floating header */}
+        <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-5 pt-6">
+          <div className="flex items-center gap-2 text-primary-foreground">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/20">
+              <Factory className="h-5 w-5" />
             </div>
+            <span className="font-bold tracking-tight drop-shadow">
+              WSC ProductionTrack
+            </span>
           </div>
+          <Link to="/admin">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 rounded-full bg-white/15 text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/25 hover:text-primary-foreground"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">แอดมิน</span>
+            </Button>
+          </Link>
+        </header>
+
+        {/* Dots */}
+        {slides.length > 1 && (
+          <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center gap-1.5">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => api?.scrollTo(i)}
+                aria-label={`ไปที่แบนเนอร์ ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === current
+                    ? "w-6 bg-white"
+                    : "w-1.5 bg-white/50 hover:bg-white/80"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Bottom: 3 steps + slide-to-start (1/3) ── */}
+      <section className="relative flex h-1/3 w-full flex-col justify-between gap-3 px-5 pb-5 pt-4">
+        <div className="grid grid-cols-3 gap-2">
+          {STEPS.map((s, i) => {
+            const Icon = s.icon;
+            return (
+              <div
+                key={i}
+                className="flex flex-col items-center rounded-2xl border bg-card p-2.5 text-center shadow-sm"
+              >
+                <div className="relative mb-1.5 flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground shadow-md shadow-secondary/30">
+                  <Icon className="h-5 w-5" />
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    {i + 1}
+                  </span>
+                </div>
+                <div className="text-[11px] font-semibold leading-tight">
+                  {s.title}
+                </div>
+                <div className="mt-0.5 text-[10px] leading-tight text-muted-foreground line-clamp-2">
+                  {s.desc}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Slide to enter */}
-        <div className="mt-8 space-y-3">
-          <SlideToConfirm
-            label="เริ่มงาน"
-            icon={ArrowRight}
-            onConfirm={goToScan}
-            colorClass="bg-white/15 text-primary-foreground backdrop-blur-xl ring-1 ring-white/30"
-            thumbClass="bg-secondary text-secondary-foreground"
-          />
-          <p className="text-center text-xs text-primary-foreground/70">
-            เลื่อนปุ่มไปทางขวาเพื่อเข้าหน้าสแกน
-          </p>
-        </div>
-      </main>
+        <SlideToConfirm
+          label="เริ่มงาน"
+          icon={ArrowRight}
+          onConfirm={goToScan}
+          colorClass="bg-primary text-primary-foreground"
+          thumbClass="bg-secondary text-secondary-foreground"
+        />
+      </section>
     </div>
   );
 }

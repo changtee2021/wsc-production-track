@@ -64,7 +64,7 @@ export const Route = createFileRoute("/scan")({
   validateSearch: zodValidator(scanSearchSchema),
   head: () => ({
     meta: [
-      { title: "สแกนงาน — ProductionTrack" },
+      { title: "สแกนงาน — WSC ProductionTrack" },
       {
         name: "description",
         content:

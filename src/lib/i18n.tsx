@@ -4,7 +4,7 @@
 type Vars = Record<string, string | number>;
 
 const dict: Record<string, string> = {
-  "page.title": "สแกนงาน — ProductionTrack",
+  "page.title": "สแกนงาน — WSC ProductionTrack",
   "page.desc":
     "สแกน QR code เพื่อบันทึกเวลาเริ่มและเสร็จงานในสายการผลิต ใช้งานง่ายบนมือถือ",
   "header.admin": "ผู้ดูแล",
