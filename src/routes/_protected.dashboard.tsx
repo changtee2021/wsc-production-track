@@ -360,25 +360,86 @@ function Dashboard() {
       .sort((a, b) => b.over - a.over);
   }, [sessions, scope, day, month]);
 
-  const exportSummaryCSV = () => {
-    const rows = ranking.map((r, i) => ({
-      อันดับ: i + 1,
-      พนักงาน: r.name,
-      "งานที่ทำเสร็จ": r.jobs,
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const csv = XLSX.utils.sheet_to_csv(ws);
-    download(csv, `summary_${scope === "day" ? day : month}.csv`, "text/csv");
-  };
-
   const exportSummaryXLSX = () => {
     const wb = XLSX.utils.book_new();
-    const summary = ranking.map((r, i) => ({
-      Rank: i + 1,
-      Employee: r.name,
-      Jobs_Finished: r.jobs,
-    }));
-    const over = overStandard.map((s) => ({
+    const scopeLabel = scope === "day" ? day : month;
+
+    // In-scope logs (respect day/month + filters)
+    const inScopeLogs = filtered;
+
+    // ---- Meta sheet ----
+    const meta = [
+      { Field: "ช่วงเวลา", Value: scope === "day" ? `รายวัน ${day}` : `รายเดือน ${month}` },
+      { Field: "หมวดหมู่", Value: categoryFilter === "all" ? "ทุกหมวดหมู่" : categories.find((c) => c.id === categoryFilter)?.name ?? categoryFilter },
+      { Field: "พนักงาน (ฟิลเตอร์)", Value: employeeFilter === "all" ? "ทั้งหมด" : employees.find((e) => e.id === employeeFilter)?.name ?? employeeFilter },
+      { Field: "ขั้นตอน (ฟิลเตอร์)", Value: stepFilter === "all" ? "ทั้งหมด" : steps.find((s) => s.id === stepFilter)?.name ?? stepFilter },
+      { Field: "จำนวน log ในช่วง", Value: inScopeLogs.length },
+      { Field: "จำนวน log ทั้งหมดที่ดึง", Value: logs.length },
+      { Field: "วันที่ส่งออก", Value: new Date().toLocaleString("th-TH") },
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meta), "Info");
+
+    // ---- Ranking — base on ALL active employees so no one disappears ----
+    const finishCountByEmp = new Map<string, number>();
+    const seen = new Set<string>();
+    for (const l of inScopeLogs) {
+      if (l.action !== "finish") continue;
+      const k = `${l.employee_id}|${l.job_id}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      finishCountByEmp.set(l.employee_id, (finishCountByEmp.get(l.employee_id) ?? 0) + 1);
+    }
+    const empNameById = new Map(employees.map((e) => [e.id, e.name]));
+    // include any employee_id present in logs but not in the active employees list
+    for (const id of finishCountByEmp.keys()) {
+      if (!empNameById.has(id)) {
+        const found = inScopeLogs.find((l) => l.employee_id === id);
+        empNameById.set(id, found?.employees?.name ?? "—");
+      }
+    }
+    const rankingRows = Array.from(empNameById.entries())
+      .map(([id, name]) => ({ id, name, jobs: finishCountByEmp.get(id) ?? 0 }))
+      .sort((a, b) => b.jobs - a.jobs)
+      .map((r, i) => ({ Rank: i + 1, Employee: r.name, Jobs_Finished: r.jobs }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rankingRows), "Ranking");
+
+    // ---- MoM — base on ALL active employees ----
+    const momById = new Map(mom.map((r) => [r.id, r]));
+    const momRows = Array.from(empNameById.entries()).map(([id, name]) => {
+      const r = momById.get(id);
+      return {
+        Employee: name,
+        Cur_Jobs: r?.curJobs ?? 0,
+        Prev_Jobs: r?.prevJobs ?? 0,
+        Jobs_MoM_Pct: r ? Math.round(r.jobsPct * 10) / 10 : "",
+        Cur_AvgMin: r?.curAvg != null ? Math.round(r.curAvg * 10) / 10 : "",
+        Prev_AvgMin: r?.prevAvg != null ? Math.round(r.prevAvg * 10) / 10 : "",
+        Speed_MoM_Pct: r?.speedPct == null ? "" : Math.round(r.speedPct * 10) / 10,
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(momRows), "MoM");
+
+    // ---- Sessions (start/finish pairs) in scope ----
+    const sessionRows = sessions
+      .filter((s) => {
+        if (scope === "day") return s.finish.toISOString().slice(0, 10) === day;
+        return s.finish.toISOString().slice(0, 7) === month;
+      })
+      .sort((a, b) => b.finish.getTime() - a.finish.getTime())
+      .map((s) => ({
+        Job_ID: s.job_id,
+        Employee: s.employee_name,
+        Step: s.step_name,
+        Std_Min: s.std ?? "",
+        Actual_Min: Math.round(s.durationMin * 10) / 10,
+        Over_Min: s.std == null ? "" : Math.round((s.durationMin - s.std) * 10) / 10,
+        Start: s.start.toLocaleString("th-TH"),
+        Finish: s.finish.toLocaleString("th-TH"),
+      }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sessionRows), "Sessions");
+
+    // ---- Over-standard subset ----
+    const overRows = overStandard.map((s) => ({
       Employee: s.employee_name,
       Step: s.step_name,
       Job_ID: s.job_id,
@@ -387,38 +448,52 @@ function Dashboard() {
       Over_Min: Math.round(s.over * 10) / 10,
       Finished_At: s.finish.toLocaleString("th-TH"),
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Ranking");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(over), "Over_Standard");
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.json_to_sheet(
-        mom.map((r) => ({
-          Employee: r.name,
-          Cur_Jobs: r.curJobs,
-          Prev_Jobs: r.prevJobs,
-          Jobs_MoM_Pct: Math.round(r.jobsPct * 10) / 10,
-          Cur_AvgMin: r.curAvg ? Math.round(r.curAvg * 10) / 10 : "",
-          Prev_AvgMin: r.prevAvg ? Math.round(r.prevAvg * 10) / 10 : "",
-          Speed_MoM_Pct: r.speedPct == null ? "" : Math.round(r.speedPct * 10) / 10,
-        })),
-      ),
-      "MoM",
-    );
-    XLSX.writeFile(wb, `summary_${scope === "day" ? day : month}.xlsx`);
-  };
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(overRows), "Over_Standard");
 
-  const exportFullCSV = () => {
-    const rows = logs.map((l) => ({
-      รหัสงาน: l.job_id,
-      พนักงาน: l.employees?.name ?? "",
-      หมวดหมู่: (l as { categories?: { name?: string } | null }).categories?.name ?? "",
-      ขั้นตอน: l.steps?.step_name ?? "",
-      การกระทำ: l.action === "start" ? "เริ่มงาน" : l.action === "finish" ? "เสร็จงาน" : l.action,
-      เวลา: new Date(l.created_at).toLocaleString("th-TH"),
+    // ---- By Step (finish count per step) ----
+    const stepCount = new Map<string, number>();
+    const stepSeen = new Set<string>();
+    for (const l of inScopeLogs) {
+      if (l.action !== "finish") continue;
+      const k = `${l.step_id}|${l.job_id}`;
+      if (stepSeen.has(k)) continue;
+      stepSeen.add(k);
+      const name = l.steps?.step_name ?? "—";
+      stepCount.set(name, (stepCount.get(name) ?? 0) + 1);
+    }
+    const byStepRows = Array.from(stepCount.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([Step, Jobs_Finished]) => ({ Step, Jobs_Finished }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(byStepRows), "By_Step");
+
+    // ---- By Category (finish count per category) ----
+    const catCount = new Map<string, number>();
+    const catSeen = new Set<string>();
+    for (const l of inScopeLogs) {
+      if (l.action !== "finish") continue;
+      const k = `${l.category_id ?? "none"}|${l.job_id}`;
+      if (catSeen.has(k)) continue;
+      catSeen.add(k);
+      const name = l.categories?.name ?? "(ไม่ระบุ)";
+      catCount.set(name, (catCount.get(name) ?? 0) + 1);
+    }
+    const byCatRows = Array.from(catCount.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([Category, Jobs_Finished]) => ({ Category, Jobs_Finished }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(byCatRows), "By_Category");
+
+    // ---- Raw logs in scope ----
+    const logRows = inScopeLogs.map((l) => ({
+      Time: new Date(l.created_at).toLocaleString("th-TH"),
+      Job_ID: l.job_id,
+      Employee: l.employees?.name ?? "",
+      Category: l.categories?.name ?? "",
+      Step: l.steps?.step_name ?? "",
+      Action: l.action === "start" ? "เริ่มงาน" : l.action === "finish" ? "เสร็จงาน" : l.action,
     }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const csv = XLSX.utils.sheet_to_csv(ws);
-    download(csv, "production_logs.csv", "text/csv");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(logRows), "Logs");
+
+    XLSX.writeFile(wb, `summary_${scopeLabel}.xlsx`);
   };
 
   return (
