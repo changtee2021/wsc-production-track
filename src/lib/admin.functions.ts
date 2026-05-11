@@ -294,12 +294,12 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
           .order("created_at", { ascending: false })
           .range(from, from + PAGE - 1);
         if (error) throw new Error(error.message);
-        const chunk = (rows as Record<string, unknown>[] | null) ?? [];
+        const chunk = (rows ?? []) as unknown as Record<string, unknown>[];
         all.push(...chunk);
         if (chunk.length < PAGE) break;
         from += PAGE;
       }
-      return { rows: all };
+      return { rows: all as unknown as Array<Record<string, unknown>> };
     }
     const { data: rows, error } = await supabaseAdmin
       .from("production_logs")
@@ -307,7 +307,7 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(data.limit ?? 1000);
     if (error) throw new Error(error.message);
-    return { rows: ((rows as Record<string, unknown>[] | null) ?? []) };
+    return { rows: ((rows ?? []) as unknown as Array<Record<string, unknown>>) };
   });
 
 // ---- Announcements --------------------------------------------------------
