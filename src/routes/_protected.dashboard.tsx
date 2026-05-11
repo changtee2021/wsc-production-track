@@ -1255,18 +1255,30 @@ function MultiSelectGroup({
   title,
   items,
   selected,
-  onToggle,
-  onAll,
-  onClear,
+  setSelected,
 }: {
   title: string;
   items: { id: string; name: string }[];
   selected: Set<string>;
-  onToggle: (id: string) => void;
-  onAll: () => void;
-  onClear: () => void;
+  setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
 }) {
   const allSelected = selected.size === 0;
+  const handleToggle = (id: string) => {
+    setSelected((prev) => {
+      if (prev.size === 0) {
+        // currently "all" — uncheck this one means: select all-except-clicked
+        const next = new Set(items.map((i) => i.id));
+        next.delete(id);
+        return next;
+      }
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      // if everything is now selected, collapse back to "all"
+      if (next.size === items.length) return new Set();
+      return next;
+    });
+  };
   return (
     <section>
       <div className="mb-2 flex items-center justify-between">
@@ -1276,21 +1288,22 @@ function MultiSelectGroup({
             ({allSelected ? `ทั้งหมด ${items.length}` : `${selected.size}/${items.length}`})
           </span>
         </h4>
-        <div className="flex gap-1">
-          <Button type="button" variant="ghost" size="sm" onClick={onAll}>
-            ทั้งหมด
-          </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onClear}>
-            ล้าง
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setSelected(new Set())}
+          disabled={allSelected}
+        >
+          เลือกทั้งหมด
+        </Button>
       </div>
       <div className="grid max-h-40 grid-cols-2 gap-1 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 sm:grid-cols-3">
         {items.map((it) => (
           <label key={it.id} className="flex cursor-pointer items-center gap-2 text-sm">
             <Checkbox
               checked={allSelected || selected.has(it.id)}
-              onCheckedChange={() => onToggle(it.id)}
+              onCheckedChange={() => handleToggle(it.id)}
             />
             <span className="truncate">{it.name}</span>
           </label>
