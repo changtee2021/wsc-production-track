@@ -190,7 +190,7 @@ export const adminCreateUploadUrl = createServerFn({ method: "POST" })
     z
       .object({
         token: tokenStr,
-        bucket: z.enum(["avatars", "step-images"]),
+        bucket: z.enum(["avatars", "step-images", "banners"]),
         ext: z.string().regex(/^[a-zA-Z0-9]{1,8}$/),
       })
       .parse(d),
