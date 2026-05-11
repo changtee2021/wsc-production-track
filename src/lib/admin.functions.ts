@@ -267,3 +267,67 @@ export const adminDeleteBanner = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---- Announcements --------------------------------------------------------
+
+export const adminInsertAnnouncement = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        message: z.string().min(1).max(500),
+        sort_order: z.number().int().min(0).max(10000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await supabaseAdmin.from("announcements").insert({
+      message: data.message,
+      sort_order: data.sort_order ?? 0,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminUpdateAnnouncement = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        id: z.string().uuid(),
+        message: z.string().min(1).max(500).optional(),
+        active: z.boolean().optional(),
+        sort_order: z.number().int().min(0).max(10000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const row: { message?: string; active?: boolean; sort_order?: number; updated_at?: string } = {};
+    if (data.message !== undefined) row.message = data.message;
+    if (data.active !== undefined) row.active = data.active;
+    if (data.sort_order !== undefined) row.sort_order = data.sort_order;
+    if (Object.keys(row).length === 0) return { ok: true };
+    row.updated_at = new Date().toISOString();
+    const { error } = await supabaseAdmin
+      .from("announcements")
+      .update(row)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteAnnouncement = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await supabaseAdmin
+      .from("announcements")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
