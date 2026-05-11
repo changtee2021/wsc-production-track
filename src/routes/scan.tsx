@@ -4,6 +4,7 @@ import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { QrScannerDialog } from "@/components/QrScannerDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -241,6 +242,8 @@ function ScanPage() {
           </Button>
         </Link>
       </AppHeader>
+
+      <AnnouncementBar />
 
       <main className="mx-auto max-w-md px-4 py-6 pb-32">
         <h1 className="sr-only">{t("page.title")}</h1>

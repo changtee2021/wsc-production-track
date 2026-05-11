@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/carousel";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/welcome-hero.png";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -94,8 +95,9 @@ function WelcomePage() {
 
   return (
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-background">
-      {/* ── Top: banner carousel (2/3) ── */}
-      <section className="relative h-2/3 w-full overflow-hidden bg-primary">
+      <AnnouncementBar />
+      {/* ── Top: banner carousel ── */}
+      <section className="relative flex-[2] w-full overflow-hidden bg-primary">
         <Carousel
           className="h-full w-full"
           opts={{ loop: true, align: "start" }}
@@ -164,7 +166,7 @@ function WelcomePage() {
       </section>
 
       {/* ── Bottom: 3 steps + slide-to-start (1/3) ── */}
-      <section className="relative flex h-1/3 w-full flex-col justify-between gap-3 px-5 pb-5 pt-4">
+      <section className="relative flex flex-[1] w-full flex-col justify-between gap-3 px-5 pb-5 pt-4">
         <div className="grid grid-cols-3 gap-2">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
