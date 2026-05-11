@@ -107,6 +107,8 @@ interface Category {
 }
 
 function CategoriesPanel() {
+  const upsert = useServerFn(adminUpsertCategory);
+  const del = useServerFn(adminDeleteCategory);
   const [items, setItems] = useState<Category[]>([]);
   const [name, setName] = useState("");
   const [editing, setEditing] = useState<Category | null>(null);
@@ -125,31 +127,31 @@ function CategoriesPanel() {
 
   const add = async () => {
     if (!name.trim()) return toast.error("กรุณากรอกชื่อหมวดหมู่");
-    const { error } = await supabase.from("categories").insert({ name: name.trim() });
-    if (error) return toast.error(error.message);
-    setName("");
-    toast.success("เพิ่มหมวดหมู่แล้ว");
-    load();
+    try {
+      await upsert({ data: { token: requireToken(), name: name.trim() } });
+      setName("");
+      toast.success("เพิ่มหมวดหมู่แล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const save = async () => {
     if (!editing) return;
-    const { error } = await supabase
-      .from("categories")
-      .update({ name: editing.name })
-      .eq("id", editing.id);
-    if (error) return toast.error(error.message);
-    setEditing(null);
-    toast.success("บันทึกแล้ว");
-    load();
+    try {
+      await upsert({ data: { token: requireToken(), id: editing.id, name: editing.name } });
+      setEditing(null);
+      toast.success("บันทึกแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   const remove = async (id: string) => {
     if (!confirm("ลบหมวดหมู่นี้?")) return;
-    const { error } = await supabase.from("categories").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("ลบแล้ว");
-    load();
+    try {
+      await del({ data: { token: requireToken(), id } });
+      toast.success("ลบแล้ว");
+      load();
+    } catch (e) { showError(e); }
   };
 
   return (
