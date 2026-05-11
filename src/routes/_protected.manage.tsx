@@ -563,7 +563,7 @@ function StepsPanel() {
   const handleUpload = async (file: File, target: "new" | "edit") => {
     setUploading(true);
     try {
-      const url = await adminUpload("step-images", file, createUrl);
+      const { publicUrl: url } = await adminUpload("step-images", file, createUrl);
       if (target === "new") setImageUrl(url);
       else if (editing) setEditing({ ...editing, image_url: url });
       toast.success("อัปโหลดรูปสำเร็จ");
