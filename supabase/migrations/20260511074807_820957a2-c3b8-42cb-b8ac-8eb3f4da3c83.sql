@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Public insert log-notes" ON storage.objects;

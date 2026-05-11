@@ -37,6 +37,24 @@ import {
 } from "lucide-react";
 import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 import { SlideToConfirm } from "@/components/SlideToConfirm";
+import { useServerFn } from "@tanstack/react-start";
+import { uploadWorkerNoteImage } from "@/lib/worker-upload.functions";
+
+const ALLOWED_NOTE_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_NOTE_BYTES = 5 * 1024 * 1024;
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const result = r.result as string;
+      const idx = result.indexOf(",");
+      resolve(idx >= 0 ? result.slice(idx + 1) : result);
+    };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
 
 const scanSearchSchema = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -96,6 +114,7 @@ function ScanPage() {
   const [uploadingNote, setUploadingNote] = useState(false);
   const noteFileRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
+  const uploadNote = useServerFn(uploadWorkerNoteImage);
 
   useEffect(() => {
     (async () => {
@@ -165,16 +184,19 @@ function ScanPage() {
   };
 
   const uploadNoteImage = async (file: File) => {
+    if (!ALLOWED_NOTE_MIME.includes(file.type)) {
+      toast.error("รองรับเฉพาะรูปภาพ JPG, PNG, WEBP, GIF");
+      return;
+    }
+    if (file.size > MAX_NOTE_BYTES) {
+      toast.error("ไฟล์ใหญ่เกิน 5MB");
+      return;
+    }
     setUploadingNote(true);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage
-        .from("log-notes")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (error) throw error;
-      const { data } = supabase.storage.from("log-notes").getPublicUrl(path);
-      setNoteImageUrl(data.publicUrl);
+      const dataBase64 = await fileToBase64(file);
+      const { url } = await uploadNote({ data: { dataBase64 } });
+      setNoteImageUrl(url);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "upload failed");
     } finally {
