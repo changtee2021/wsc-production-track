@@ -1153,7 +1153,21 @@ function Dashboard() {
 
             {/* Sheets */}
             <section>
-              <h4 className="mb-2 text-sm font-semibold">ชีตที่ต้องการ</h4>
+              <div className="mb-2 flex items-center justify-between">
+                <h4 className="text-sm font-semibold">ชีตที่ต้องการ</h4>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setExSheets((prev) =>
+                      prev.size === ALL_SHEETS.length ? new Set() : new Set(ALL_SHEETS),
+                    )
+                  }
+                >
+                  {exSheets.size === ALL_SHEETS.length ? "ล้างทั้งหมด" : "เลือกทั้งหมด"}
+                </Button>
+              </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {ALL_SHEETS.map((s) => (
                   <label key={s} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -1161,11 +1175,11 @@ function Dashboard() {
                       checked={exSheets.has(s)}
                       onCheckedChange={() => toggleInSet(setExSheets, s)}
                     />
-                    {s}
+                    {SHEET_LABELS[s] ?? s}
                   </label>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">ชีต Info จะถูกใส่ให้เสมอ</p>
+              <p className="mt-1 text-xs text-muted-foreground">ชีต "ข้อมูลทั่วไป" จะถูกใส่ให้เสมอ</p>
             </section>
           </div>
 
