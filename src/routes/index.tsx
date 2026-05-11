@@ -72,12 +72,8 @@ function WelcomePage() {
     <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-background">
       <AnnouncementBar />
       {/* ── Fullscreen banner carousel (tap to start) ── */}
-      <section
-        className="relative flex-1 w-full overflow-hidden bg-primary"
-        onClick={goToScan}
-        role="button"
-        aria-label="เริ่มงาน"
-      >
+      <section className="relative flex-1 w-full overflow-hidden bg-primary">
+
         <Carousel
           className="h-full w-full"
           opts={{ loop: true, align: "start" }}
