@@ -947,7 +947,7 @@ function BannersPanel() {
           />
           <Button
             size="sm"
-            disabled={uploading}
+            disabled={uploading || items.length >= MAX_BANNERS}
             onClick={() => fileRef.current?.click()}
           >
             {uploading ? (
@@ -955,7 +955,7 @@ function BannersPanel() {
             ) : (
               <Plus className="h-4 w-4" />
             )}
-            เพิ่มแบนเนอร์
+            เพิ่มแบนเนอร์ ({items.length}/{MAX_BANNERS})
           </Button>
         </div>
       </div>
