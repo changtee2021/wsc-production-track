@@ -782,7 +782,7 @@ function Dashboard() {
             </Button>
           )}
           <Button
-            onClick={exportSummaryXLSX}
+            onClick={() => setExportOpen(true)}
             size="sm"
             className="gap-2 bg-secondary hover:bg-secondary/90"
           >
