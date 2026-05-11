@@ -1,48 +1,56 @@
 ## เป้าหมาย
-ปรับปุ่ม "สรุป Excel" ให้เปิด dialog ตั้งค่าก่อน export ผู้ใช้เลือกได้ว่าจะเอาข้อมูลส่วนไหน, กรองพนักงานคนไหน/หลายคน, ขั้นตอนไหน/หลายขั้นตอน, หมวดหมู่ และระบุช่วงเวลาเอง (from–to)
+1. เปลี่ยนชื่อแอป `ProductionTrack` → `WSC ProductionTrack` ทั้งระบบ
+2. ออกแบบหน้าแรก (`/`) ใหม่ แบ่งเป็น 2 ส่วน: แบนเนอร์สไลด์โชว์ (2/3) + ส่วนเริ่มงาน + 3 ขั้นตอน (1/3)
+3. เพิ่มหน้าจัดการแบนเนอร์ในหน้าแอดมิน (จัดการข้อมูล) เพื่ออัปโหลด/ลบ/เรียงรูปแบนเนอร์ได้
 
-## UI ใหม่ (Dialog "ตั้งค่าการส่งออก")
+## Backend (Lovable Cloud)
 
-เปิดด้วยปุ่ม `สรุป Excel` (แทนการ export ทันที) ภายใน dialog มี:
+**Storage bucket ใหม่: `banners`** (public read)
+- นโยบาย: ทุกคนดูได้ / เฉพาะผู้ใช้ที่ล็อกอินแล้วอัปโหลด/ลบได้
 
-1. **ช่วงเวลา** — radio 3 แบบ
-   - ใช้ช่วงปัจจุบันบนหน้า Dashboard (วัน/เดือนที่เลือกอยู่)
-   - ระบุช่วงเอง: input `เริ่ม` และ `สิ้นสุด` (date)
-   - ทั้งหมด (ไม่จำกัดช่วง)
+**ตารางใหม่: `home_banners`**
+- `id`, `image_path` (path ใน bucket), `sort_order` (int), `active` (bool), `created_at`
+- RLS: select = ทุกคน, insert/update/delete = authenticated เท่านั้น
 
-2. **พนักงาน** — multi-select (checkbox list + ปุ่ม เลือกทั้งหมด/ล้าง)
+## Frontend
 
-3. **ขั้นตอน** — multi-select แบบเดียวกัน
+### `src/routes/index.tsx` — หน้าแรกใหม่
+Layout เต็มจอแบ่งเป็น 2 ส่วนด้วย flex:
+```text
+┌─────────────────────────┐
+│                         │
+│   Banner Carousel       │  2/3 ของจอ (h-[66.67vh])
+│   (auto-slide ทุก 5s)   │
+│   • • •  (dots)         │
+├─────────────────────────┤
+│  3 ขั้นตอน + ไอคอน      │  1/3 ของจอ (h-[33.33vh])
+│  ① สแกน ② เลือก ③ ยืนยัน│
+│  [ เลื่อนเพื่อเริ่มงาน → ]│
+└─────────────────────────┘
+```
+- Carousel: ใช้ `embla-carousel-react` (มีอยู่แล้วใน `components/ui/carousel`) + `embla-carousel-autoplay`
+- โหลดรูปจาก `home_banners` ที่ `active = true` เรียงตาม `sort_order`
+- ถ้าไม่มีรูป → fallback เป็น `welcome-hero.png`
+- ส่วนล่าง: 3 ไอคอน (ScanLine, Users, CheckCircle2) เรียงแนวนอนพร้อมคำอธิบายสั้น + `SlideToConfirm` "เริ่มงาน"
+- Header เล็กลง (logo + ปุ่มแอดมิน) ลอยทับแบนเนอร์ (absolute, glass effect)
 
-4. **หมวดหมู่** — multi-select แบบเดียวกัน
+### `src/routes/_protected.manage.tsx` — เพิ่มแท็บ/การ์ด "แบนเนอร์หน้าแรก"
+- รายการรูปแบนเนอร์ปัจจุบัน (thumbnail + ปุ่มลบ + toggle active + ปุ่มเลื่อนขึ้น/ลง)
+- ปุ่ม "อัปโหลดรูปแบนเนอร์" → upload เข้า bucket `banners` แล้ว insert row
+- แนะนำสัดส่วน 3:4 (portrait) หรือเตือนถ้ารูปเล็กเกินไป
 
-5. **ชีตที่ต้องการ** — checkbox list (ติ๊กเลือกได้)
-   - Info (เปิดไว้เสมอ)
-   - Ranking
-   - MoM
-   - Sessions
-   - Over_Standard
-   - By_Step
-   - By_Category
-   - Logs (raw)
+### เปลี่ยนชื่อแอป
+แทนที่ `ProductionTrack` → `WSC ProductionTrack` ใน:
+- `src/components/AppHeader.tsx`
+- `src/routes/index.tsx`, `scan.tsx`, `admin.tsx`, `_protected.logs.tsx`, `_protected.dashboard.tsx`, `_protected.manage.tsx`
+- `src/lib/i18n.tsx`
 
-ปุ่มท้าย dialog: `ยกเลิก` / `ส่งออก Excel`
+## ไฟล์ที่จะแก้ไข/สร้าง
+- ใหม่: migration สร้างตาราง `home_banners` + bucket `banners` + RLS
+- แก้: `src/routes/index.tsx` (รื้อ layout ใหม่)
+- แก้: `src/routes/_protected.manage.tsx` (เพิ่มส่วนจัดการแบนเนอร์)
+- แก้: ไฟล์ที่มีคำว่า `ProductionTrack` (8 ไฟล์)
 
-## Logic ที่จะแก้ใน `src/routes/_protected.dashboard.tsx`
-
-- เพิ่ม state: `exportOpen`, `exportRange` (`current` | `custom` | `all`), `exportFrom`, `exportTo`, `exportEmpIds: Set<string>`, `exportStepIds: Set<string>`, `exportCatIds: Set<string>`, `exportSheets: Set<string>`
-- ค่า default: range = current, multi-select = ทั้งหมด, sheets = ทุกชีต
-- รีแฟกเตอร์ `exportSummaryXLSX` ให้รับ "scope config" แทนการอ่าน state ตรงๆ:
-  - กรอง `logs` ตามช่วงเวลา + พนักงาน + ขั้นตอน + หมวดหมู่ ที่เลือกใน dialog (ไม่ผูกกับฟิลเตอร์บนหน้า dashboard)
-  - คำนวณ sessions, ranking, MoM, by-step, by-category ใหม่จาก subset นั้น
-  - เพิ่มชีต **Logs** (raw): job_id, employee, category, step, action, created_at
-  - สร้างเฉพาะชีตที่ผู้ใช้ติ๊ก
-  - Info sheet สรุปเงื่อนไขที่เลือกทั้งหมด
-- MoM ในโหมด custom range: เปรียบเทียบ "ช่วงที่เลือก" vs "ช่วงก่อนหน้าเท่ากัน" (ไม่ใช่เดือนปัจจุบัน vs เดือนก่อน) เพื่อให้ตรงกับ scope ที่ผู้ใช้กำหนด
-
-## ไฟล์ที่แก้
-- `src/routes/_protected.dashboard.tsx` (ไฟล์เดียว) — เพิ่ม dialog + รีแฟกเตอร์ฟังก์ชัน export
-
-## ไม่กระทบ
-- ไม่แตะ schema/RLS/edge function
-- ฟิลเตอร์/กราฟบนหน้า Dashboard ทำงานเหมือนเดิม dialog เป็นอิสระจากฟิลเตอร์หน้าจอ
+## คำถามสั้น ๆ ก่อนลงมือ
+- รูปแบนเนอร์ให้ auto-slide ไหม (ค่าเริ่มต้น: ใช่ ทุก 5 วินาที) — ถ้าไม่ตอบจะใช้ค่านี้
+- 3 ขั้นตอนใช้ข้อความเดิม: **สแกน QR → เลือกพนักงาน/ขั้นตอน → เลื่อนเพื่อยืนยัน** — ถ้าไม่ตอบจะใช้ข้อความนี้
