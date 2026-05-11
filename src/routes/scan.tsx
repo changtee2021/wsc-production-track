@@ -242,6 +242,8 @@ function ScanPage() {
         </Link>
       </AppHeader>
 
+      <AnnouncementBar />
+
       <main className="mx-auto max-w-md px-4 py-6 pb-32">
         <h1 className="sr-only">{t("page.title")}</h1>
 
