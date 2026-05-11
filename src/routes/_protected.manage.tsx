@@ -859,7 +859,13 @@ function BannersPanel() {
   const publicUrlOf = (path: string) =>
     supabase.storage.from("banners").getPublicUrl(path).data.publicUrl;
 
+  const MAX_BANNERS = 3;
+
   const onPick = async (file: File) => {
+    if (items.length >= MAX_BANNERS) {
+      toast.error(`เพิ่มแบนเนอร์ได้สูงสุด ${MAX_BANNERS} รูป`);
+      return;
+    }
     setUploading(true);
     try {
       const { path } = await adminUpload("banners", file, createUrl);
