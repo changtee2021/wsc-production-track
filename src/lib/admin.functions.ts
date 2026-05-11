@@ -241,7 +241,7 @@ export const adminUpdateBanner = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const row: Record<string, unknown> = {};
+    const row: { active?: boolean; sort_order?: number } = {};
     if (data.active !== undefined) row.active = data.active;
     if (data.sort_order !== undefined) row.sort_order = data.sort_order;
     if (Object.keys(row).length === 0) return { ok: true };
