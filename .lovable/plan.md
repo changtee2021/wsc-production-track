@@ -1,35 +1,48 @@
-## ปัญหาที่พบ
+## เป้าหมาย
+ปรับปุ่ม "สรุป Excel" ให้เปิด dialog ตั้งค่าก่อน export ผู้ใช้เลือกได้ว่าจะเอาข้อมูลส่วนไหน, กรองพนักงานคนไหน/หลายคน, ขั้นตอนไหน/หลายขั้นตอน, หมวดหมู่ และระบุช่วงเวลาเอง (from–to)
 
-1. **ปุ่มเยอะเกินไป** — มี `CSV ทั้งหมด`, `สรุป CSV`, `สรุป Excel` ผู้ใช้อยากเหลือแค่ Excel
-2. **ข้อมูลไม่ครบใน Excel** — สาเหตุหลักคือ:
-   - หน้า Dashboard ดึง `production_logs` แค่ `.limit(1000)` แต่ในฐานข้อมูลมี **6,679 records** → log เก่าๆ หายไปทั้งหมด ทำให้ ranking, MoM, over-standard ขาดข้อมูล
-   - `Ranking` sheet นับเฉพาะพนักงานที่มี action `finish` ในช่วงที่เลือก พนักงานที่ทำงานแต่ยังไม่กด finish หรือไม่ได้ทำงานในช่วงนั้น → หายไปจากรายงาน
-   - Excel ไม่มี sheet log ดิบสำหรับตรวจสอบ
+## UI ใหม่ (Dialog "ตั้งค่าการส่งออก")
 
-## สิ่งที่จะทำ
+เปิดด้วยปุ่ม `สรุป Excel` (แทนการ export ทันที) ภายใน dialog มี:
 
-### 1. ลบปุ่ม CSV ออก (`src/routes/_protected.dashboard.tsx`)
-- ลบปุ่ม `CSV ทั้งหมด` และ `สรุป CSV` ออกจาก toolbar
-- ลบฟังก์ชัน `exportFullCSV()` และ `exportSummaryCSV()`
-- ลบ import `Download`, `downloadFile` ที่ไม่ได้ใช้แล้ว
-- เหลือเฉพาะปุ่ม `สรุป Excel` (ใช้ไอคอน FileSpreadsheet ตามเดิม)
+1. **ช่วงเวลา** — radio 3 แบบ
+   - ใช้ช่วงปัจจุบันบนหน้า Dashboard (วัน/เดือนที่เลือกอยู่)
+   - ระบุช่วงเอง: input `เริ่ม` และ `สิ้นสุด` (date)
+   - ทั้งหมด (ไม่จำกัดช่วง)
 
-### 2. แก้ข้อมูลไม่ครบ
-- **ดึง logs ครบทุกแถว** ด้วยการ paginate (วนดึงทีละ 1000 rows ด้วย `.range(from, to)`) จนกว่าจะหมด แทนการใช้ `.limit(1000)` เดิม
-- เพิ่ม state แสดง "กำลังโหลดข้อมูล…" ระหว่างดึง
+2. **พนักงาน** — multi-select (checkbox list + ปุ่ม เลือกทั้งหมด/ล้าง)
 
-### 3. ปรับ Excel ให้ครอบคลุม
-- **Sheet `Ranking`**: ใช้ตาราง `employees` ทั้งหมด (active) เป็น base list — พนักงานที่ไม่มีงานเสร็จในช่วงจะแสดงเป็น 0 ไม่หายจากรายงาน
-- **Sheet `MoM`**: เช่นกัน base ด้วย employees ทั้งหมด
-- เพิ่ม **Sheet `Logs`** — log ดิบทุกแถวในช่วงที่เลือก (job_id, พนักงาน, หมวดหมู่, ขั้นตอน, action, เวลา) เพื่อให้ตรวจสอบ/รวบยอดเองได้
-- เพิ่ม **Sheet `Sessions`** — start/finish pair พร้อม duration, std, over (ครอบคลุมกว่า Over_Standard ที่กรองเฉพาะที่เกินมาตรฐาน)
-- เพิ่ม **Sheet `By_Step`** — สรุปจำนวนงานเสร็จต่อขั้นตอนในช่วง
-- เพิ่ม **Sheet `By_Category`** — สรุปจำนวนงานเสร็จต่อหมวดหมู่ในช่วง
-- ใส่ header สรุปช่วงเวลา/ฟิลเตอร์ที่ใช้ใน sheet แรก
+3. **ขั้นตอน** — multi-select แบบเดียวกัน
 
-### ไฟล์ที่แก้
-- `src/routes/_protected.dashboard.tsx` (ไฟล์เดียว)
+4. **หมวดหมู่** — multi-select แบบเดียวกัน
 
-### ไม่กระทบ
+5. **ชีตที่ต้องการ** — checkbox list (ติ๊กเลือกได้)
+   - Info (เปิดไว้เสมอ)
+   - Ranking
+   - MoM
+   - Sessions
+   - Over_Standard
+   - By_Step
+   - By_Category
+   - Logs (raw)
+
+ปุ่มท้าย dialog: `ยกเลิก` / `ส่งออก Excel`
+
+## Logic ที่จะแก้ใน `src/routes/_protected.dashboard.tsx`
+
+- เพิ่ม state: `exportOpen`, `exportRange` (`current` | `custom` | `all`), `exportFrom`, `exportTo`, `exportEmpIds: Set<string>`, `exportStepIds: Set<string>`, `exportCatIds: Set<string>`, `exportSheets: Set<string>`
+- ค่า default: range = current, multi-select = ทั้งหมด, sheets = ทุกชีต
+- รีแฟกเตอร์ `exportSummaryXLSX` ให้รับ "scope config" แทนการอ่าน state ตรงๆ:
+  - กรอง `logs` ตามช่วงเวลา + พนักงาน + ขั้นตอน + หมวดหมู่ ที่เลือกใน dialog (ไม่ผูกกับฟิลเตอร์บนหน้า dashboard)
+  - คำนวณ sessions, ranking, MoM, by-step, by-category ใหม่จาก subset นั้น
+  - เพิ่มชีต **Logs** (raw): job_id, employee, category, step, action, created_at
+  - สร้างเฉพาะชีตที่ผู้ใช้ติ๊ก
+  - Info sheet สรุปเงื่อนไขที่เลือกทั้งหมด
+- MoM ในโหมด custom range: เปรียบเทียบ "ช่วงที่เลือก" vs "ช่วงก่อนหน้าเท่ากัน" (ไม่ใช่เดือนปัจจุบัน vs เดือนก่อน) เพื่อให้ตรงกับ scope ที่ผู้ใช้กำหนด
+
+## ไฟล์ที่แก้
+- `src/routes/_protected.dashboard.tsx` (ไฟล์เดียว) — เพิ่ม dialog + รีแฟกเตอร์ฟังก์ชัน export
+
+## ไม่กระทบ
 - ไม่แตะ schema/RLS/edge function
-- ไม่เปลี่ยน UI ส่วนอื่นๆ ของ Dashboard
+- ฟิลเตอร์/กราฟบนหน้า Dashboard ทำงานเหมือนเดิม dialog เป็นอิสระจากฟิลเตอร์หน้าจอ
