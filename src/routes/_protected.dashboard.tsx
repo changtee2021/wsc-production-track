@@ -1114,29 +1114,23 @@ function Dashboard() {
 
             <MultiSelectGroup
               title="พนักงาน"
-              items={employees.map((e) => ({ id: e.id, name: e.name }))}
+              items={employees}
               selected={exEmpIds}
-              onToggle={(id) => toggleInSet(setExEmpIds, id)}
-              onAll={() => setExEmpIds(new Set())}
-              onClear={() => setExEmpIds(new Set(employees.map((e) => e.id)))}
+              setSelected={setExEmpIds}
             />
 
             <MultiSelectGroup
               title="ขั้นตอน"
               items={steps}
               selected={exStepIds}
-              onToggle={(id) => toggleInSet(setExStepIds, id)}
-              onAll={() => setExStepIds(new Set())}
-              onClear={() => setExStepIds(new Set(steps.map((s) => s.id)))}
+              setSelected={setExStepIds}
             />
 
             <MultiSelectGroup
               title="หมวดหมู่"
               items={categories}
               selected={exCatIds}
-              onToggle={(id) => toggleInSet(setExCatIds, id)}
-              onAll={() => setExCatIds(new Set())}
-              onClear={() => setExCatIds(new Set(categories.map((c) => c.id)))}
+              setSelected={setExCatIds}
             />
 
             {/* Sheets */}
