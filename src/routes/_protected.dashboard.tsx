@@ -677,6 +677,15 @@ function Dashboard() {
 
   // Export dialog state
   const ALL_SHEETS = ["Ranking", "MoM", "Sessions", "Over_Standard", "By_Step", "By_Category", "Logs"];
+  const SHEET_LABELS: Record<string, string> = {
+    Ranking: "อันดับพนักงาน",
+    MoM: "เทียบช่วงก่อน",
+    Sessions: "รายการงาน",
+    Over_Standard: "เกินมาตรฐาน",
+    By_Step: "สรุปตามขั้นตอน",
+    By_Category: "สรุปตามหมวดหมู่",
+    Logs: "บันทึกดิบ",
+  };
   const [exportOpen, setExportOpen] = useState(false);
   const [exRange, setExRange] = useState<"current" | "custom" | "all">("current");
   const [exFrom, setExFrom] = useState(() => new Date().toISOString().slice(0, 10));
@@ -685,6 +694,17 @@ function Dashboard() {
   const [exStepIds, setExStepIds] = useState<Set<string>>(new Set());
   const [exCatIds, setExCatIds] = useState<Set<string>>(new Set());
   const [exSheets, setExSheets] = useState<Set<string>>(() => new Set(ALL_SHEETS));
+
+  // Initialize "all selected" once data loads
+  useEffect(() => {
+    setExEmpIds((prev) => (prev.size === 0 ? new Set(employees.map((e) => e.id)) : prev));
+  }, [employees]);
+  useEffect(() => {
+    setExStepIds((prev) => (prev.size === 0 ? new Set(steps.map((s) => s.id)) : prev));
+  }, [steps]);
+  useEffect(() => {
+    setExCatIds((prev) => (prev.size === 0 ? new Set(categories.map((c) => c.id)) : prev));
+  }, [categories]);
 
   const toggleInSet = (
     setter: React.Dispatch<React.SetStateAction<Set<string>>>,
