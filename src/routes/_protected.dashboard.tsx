@@ -478,23 +478,23 @@ function Dashboard() {
     const empNameById = new Map(employees.map((e) => [e.id, e.name]));
     const stepNameById = new Map(steps.map((s) => [s.id, s.name]));
     const catNameById = new Map(categories.map((c) => [c.id, c.name]));
-    const namesOf = (ids: Set<string>, src: Map<string, string>) =>
-      ids.size === 0 ? "ทั้งหมด" : Array.from(ids).map((i) => src.get(i) ?? i).join(", ");
+    const namesOf = (ids: Set<string>, src: Map<string, string>, isAll: boolean) =>
+      isAll ? "ทั้งหมด" : Array.from(ids).map((i) => src.get(i) ?? i).join(", ");
     const meta = [
       {
-        Field: "ช่วงเวลา",
-        Value:
+        หัวข้อ: "ช่วงเวลา",
+        ค่า:
           cfg.rangeMode === "all"
             ? "ทั้งหมด"
             : `${fmtDate(rangeStart)} → ${fmtDate(rangeEnd)}`,
       },
-      { Field: "พนักงาน", Value: namesOf(cfg.empIds, empNameById) },
-      { Field: "ขั้นตอน", Value: namesOf(cfg.stepIds, stepNameById) },
-      { Field: "หมวดหมู่", Value: namesOf(cfg.catIds, catNameById) },
-      { Field: "จำนวน log ในช่วง", Value: inScopeLogs.length },
-      { Field: "วันที่ส่งออก", Value: new Date().toLocaleString("th-TH") },
+      { หัวข้อ: "พนักงาน", ค่า: namesOf(cfg.empIds, empNameById, isAllEmp) },
+      { หัวข้อ: "ขั้นตอน", ค่า: namesOf(cfg.stepIds, stepNameById, isAllStep) },
+      { หัวข้อ: "หมวดหมู่", ค่า: namesOf(cfg.catIds, catNameById, isAllCat) },
+      { หัวข้อ: "จำนวน log ในช่วง", ค่า: inScopeLogs.length },
+      { หัวข้อ: "วันที่ส่งออก", ค่า: new Date().toLocaleString("th-TH") },
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meta), "Info");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(meta), "ข้อมูลทั่วไป");
 
     // Ranking
     if (want("Ranking")) {
