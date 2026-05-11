@@ -561,14 +561,6 @@ function Dashboard() {
               ล้างฟิลเตอร์
             </Button>
           )}
-          <Button onClick={exportFullCSV} variant="outline" size="sm" className="gap-2">
-            <Download className="h-4 w-4" />
-            CSV ทั้งหมด
-          </Button>
-          <Button onClick={exportSummaryCSV} variant="outline" size="sm" className="gap-2">
-            <Download className="h-4 w-4" />
-            สรุป CSV
-          </Button>
           <Button
             onClick={exportSummaryXLSX}
             size="sm"
