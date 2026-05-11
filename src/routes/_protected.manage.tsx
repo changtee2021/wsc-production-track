@@ -967,11 +967,11 @@ function BannersPanel() {
           ยังไม่มีแบนเนอร์ — กดเพิ่มแบนเนอร์เพื่ออัปโหลดรูปแรก
         </div>
       ) : (
-        <ul className="flex gap-3 overflow-x-auto pb-2 snap-x">
+        <ul className="grid grid-cols-3 gap-2">
           {items.map((b, i) => (
             <li
               key={b.id}
-              className="shrink-0 w-32 snap-start overflow-hidden rounded-xl border bg-background"
+              className="overflow-hidden rounded-xl border bg-background"
             >
               <div className="relative aspect-[3/4] w-full bg-muted">
                 <img
