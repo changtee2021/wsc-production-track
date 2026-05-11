@@ -961,11 +961,11 @@ function BannersPanel() {
           ยังไม่มีแบนเนอร์ — กดเพิ่มแบนเนอร์เพื่ออัปโหลดรูปแรก
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+        <ul className="flex gap-3 overflow-x-auto pb-2 snap-x">
           {items.map((b, i) => (
             <li
               key={b.id}
-              className="overflow-hidden rounded-xl border bg-background"
+              className="shrink-0 w-32 snap-start overflow-hidden rounded-xl border bg-background"
             >
               <div className="relative aspect-[3/4] w-full bg-muted">
                 <img
@@ -976,7 +976,7 @@ function BannersPanel() {
                   }`}
                 />
               </div>
-              <div className="flex items-center justify-between gap-1 p-2">
+              <div className="flex items-center justify-between gap-1 p-1.5">
                 <span className="text-xs text-muted-foreground">
                   อันดับ {b.sort_order}
                 </span>
