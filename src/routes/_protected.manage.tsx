@@ -100,6 +100,7 @@ function Manage() {
         เพิ่ม แก้ไข ลบหมวดหมู่งานม่าน พนักงาน และขั้นตอนการผลิต พร้อมอัปโหลดรูปและตั้งเวลามาตรฐาน
       </p>
       <div className="grid gap-6 lg:grid-cols-2">
+        <BannersPanel />
         <CategoriesPanel />
         <EmployeesPanel />
         <StepsPanel />
