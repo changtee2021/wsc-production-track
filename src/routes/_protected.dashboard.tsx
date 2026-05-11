@@ -507,10 +507,7 @@ function Dashboard() {
         seen.add(k);
         finishCountByEmp.set(l.employee_id, (finishCountByEmp.get(l.employee_id) ?? 0) + 1);
       }
-      const baseEmps =
-        cfg.empIds.size === 0
-          ? employees
-          : employees.filter((e) => cfg.empIds.has(e.id));
+      const baseEmps = employees.filter((e) => cfg.empIds.has(e.id));
       const baseMap = new Map(baseEmps.map((e) => [e.id, e.name]));
       for (const id of finishCountByEmp.keys()) {
         if (!baseMap.has(id)) {
@@ -521,8 +518,8 @@ function Dashboard() {
       const rows = Array.from(baseMap.entries())
         .map(([id, name]) => ({ id, name, jobs: finishCountByEmp.get(id) ?? 0 }))
         .sort((a, b) => b.jobs - a.jobs)
-        .map((r, i) => ({ Rank: i + 1, Employee: r.name, Jobs_Finished: r.jobs }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Ranking");
+        .map((r, i) => ({ อันดับ: i + 1, พนักงาน: r.name, "งานที่เสร็จ": r.jobs }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "อันดับพนักงาน");
     }
 
     // MoM — current range vs equivalent previous range
