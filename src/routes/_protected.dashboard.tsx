@@ -134,14 +134,18 @@ function Dashboard() {
         supabase.from("steps").select("id,step_name").eq("active", true).order("step_name"),
       ]);
       setLogs(all);
-      setCategories((catData as CategoryRow[]) ?? []);
-      setEmployees((empData as NamedRow[]) ?? []);
-      setSteps(
-        ((stepData as { id: string; step_name: string }[]) ?? []).map((s) => ({
-          id: s.id,
-          name: s.step_name,
-        })),
-      );
+      const cats = (catData as CategoryRow[]) ?? [];
+      const emps = (empData as NamedRow[]) ?? [];
+      const stps = ((stepData as { id: string; step_name: string }[]) ?? []).map((s) => ({
+        id: s.id,
+        name: s.step_name,
+      }));
+      setCategories(cats);
+      setEmployees(emps);
+      setSteps(stps);
+      setExEmpIds(new Set(emps.map((e) => e.id)));
+      setExStepIds(new Set(stps.map((s) => s.id)));
+      setExCatIds(new Set(cats.map((c) => c.id)));
       setLoading(false);
     })();
   }, []);
