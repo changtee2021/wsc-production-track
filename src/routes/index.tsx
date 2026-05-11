@@ -108,7 +108,7 @@ function WelcomePage() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2 text-primary-foreground">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur-md ring-1 ring-white/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.07] backdrop-blur-md ring-1 ring-white/20">
               <Factory className="h-5 w-5" />
             </div>
             <span className="font-bold tracking-tight drop-shadow">
@@ -119,7 +119,7 @@ function WelcomePage() {
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1 rounded-full bg-white/15 text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/25 hover:text-primary-foreground"
+              className="gap-1 rounded-full bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
             >
               <ShieldCheck className="h-4 w-4" />
               <span className="hidden sm:inline">แอดมิน</span>
