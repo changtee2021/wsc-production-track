@@ -557,8 +557,7 @@ function Dashboard() {
       };
       const cur = stat(rangeStart, rangeEnd);
       const prev = stat(prevStart, prevEnd);
-      const baseEmps =
-        cfg.empIds.size === 0 ? employees : employees.filter((e) => cfg.empIds.has(e.id));
+      const baseEmps = employees.filter((e) => cfg.empIds.has(e.id));
       const ids = new Set<string>([
         ...baseEmps.map((e) => e.id),
         ...cur.keys(),
@@ -577,16 +576,16 @@ function Dashboard() {
         const pa = avg(p?.durations ?? []);
         const speedPct = ca == null || pa == null || pa === 0 ? null : ((ca - pa) / pa) * 100;
         return {
-          Employee: name,
-          Cur_Jobs: curJ,
-          Prev_Jobs: prevJ,
-          Jobs_MoM_Pct: Math.round(jobsPct * 10) / 10,
-          Cur_AvgMin: ca != null ? Math.round(ca * 10) / 10 : "",
-          Prev_AvgMin: pa != null ? Math.round(pa * 10) / 10 : "",
-          Speed_MoM_Pct: speedPct == null ? "" : Math.round(speedPct * 10) / 10,
+          พนักงาน: name,
+          "งานช่วงนี้": curJ,
+          "งานช่วงก่อน": prevJ,
+          "% เปลี่ยนแปลงงาน": Math.round(jobsPct * 10) / 10,
+          "เฉลี่ยช่วงนี้ (นาที)": ca != null ? Math.round(ca * 10) / 10 : "",
+          "เฉลี่ยช่วงก่อน (นาที)": pa != null ? Math.round(pa * 10) / 10 : "",
+          "% เปลี่ยนแปลงเวลา": speedPct == null ? "" : Math.round(speedPct * 10) / 10,
         };
       });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "MoM");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "เทียบช่วงก่อน");
     }
 
     // Sessions
@@ -594,16 +593,16 @@ function Dashboard() {
       const rows = inScopeSessions
         .sort((a, b) => b.finish.getTime() - a.finish.getTime())
         .map((s) => ({
-          Job_ID: s.job_id,
-          Employee: s.employee_name,
-          Step: s.step_name,
-          Std_Min: s.std ?? "",
-          Actual_Min: Math.round(s.durationMin * 10) / 10,
-          Over_Min: s.std == null ? "" : Math.round((s.durationMin - s.std) * 10) / 10,
-          Start: s.start.toLocaleString("th-TH"),
-          Finish: s.finish.toLocaleString("th-TH"),
+          "รหัสงาน": s.job_id,
+          พนักงาน: s.employee_name,
+          ขั้นตอน: s.step_name,
+          "มาตรฐาน (นาที)": s.std ?? "",
+          "ใช้จริง (นาที)": Math.round(s.durationMin * 10) / 10,
+          "เกินมาตรฐาน (นาที)": s.std == null ? "" : Math.round((s.durationMin - s.std) * 10) / 10,
+          "เริ่ม": s.start.toLocaleString("th-TH"),
+          "เสร็จ": s.finish.toLocaleString("th-TH"),
         }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Sessions");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "รายการงาน");
     }
 
     // Over_Standard
@@ -611,16 +610,16 @@ function Dashboard() {
       const rows = inScopeSessions
         .filter((s) => s.std != null && s.durationMin > (s.std ?? 0))
         .map((s) => ({
-          Employee: s.employee_name,
-          Step: s.step_name,
-          Job_ID: s.job_id,
-          Std_Min: s.std,
-          Actual_Min: Math.round(s.durationMin * 10) / 10,
-          Over_Min: Math.round((s.durationMin - (s.std ?? 0)) * 10) / 10,
-          Finished_At: s.finish.toLocaleString("th-TH"),
+          พนักงาน: s.employee_name,
+          ขั้นตอน: s.step_name,
+          "รหัสงาน": s.job_id,
+          "มาตรฐาน (นาที)": s.std,
+          "ใช้จริง (นาที)": Math.round(s.durationMin * 10) / 10,
+          "เกิน (นาที)": Math.round((s.durationMin - (s.std ?? 0)) * 10) / 10,
+          "เวลาเสร็จ": s.finish.toLocaleString("th-TH"),
         }))
-        .sort((a, b) => (b.Over_Min as number) - (a.Over_Min as number));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Over_Standard");
+        .sort((a, b) => (b["เกิน (นาที)"] as number) - (a["เกิน (นาที)"] as number));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "เกินมาตรฐาน");
     }
 
     // By_Step
@@ -637,8 +636,8 @@ function Dashboard() {
       }
       const rows = Array.from(m.entries())
         .sort((a, b) => b[1] - a[1])
-        .map(([Step, Jobs_Finished]) => ({ Step, Jobs_Finished }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "By_Step");
+        .map(([step, jobs]) => ({ ขั้นตอน: step, "งานที่เสร็จ": jobs }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "ตามขั้นตอน");
     }
 
     // By_Category
@@ -655,24 +654,24 @@ function Dashboard() {
       }
       const rows = Array.from(m.entries())
         .sort((a, b) => b[1] - a[1])
-        .map(([Category, Jobs_Finished]) => ({ Category, Jobs_Finished }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "By_Category");
+        .map(([cat, jobs]) => ({ หมวดหมู่: cat, "งานที่เสร็จ": jobs }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "ตามหมวดหมู่");
     }
 
     // Logs (raw)
     if (want("Logs")) {
       const rows = inScopeLogs.map((l) => ({
-        Time: new Date(l.created_at).toLocaleString("th-TH"),
-        Job_ID: l.job_id,
-        Employee: l.employees?.name ?? "",
-        Category: l.categories?.name ?? "",
-        Step: l.steps?.step_name ?? "",
-        Action: l.action === "start" ? "เริ่มงาน" : l.action === "finish" ? "เสร็จงาน" : l.action,
+        "เวลา": new Date(l.created_at).toLocaleString("th-TH"),
+        "รหัสงาน": l.job_id,
+        พนักงาน: l.employees?.name ?? "",
+        หมวดหมู่: l.categories?.name ?? "",
+        ขั้นตอน: l.steps?.step_name ?? "",
+        "การกระทำ": l.action === "start" ? "เริ่มงาน" : l.action === "finish" ? "เสร็จงาน" : l.action,
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Logs");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "บันทึกดิบ");
     }
 
-    XLSX.writeFile(wb, `summary_${scopeLabel}.xlsx`);
+    XLSX.writeFile(wb, `สรุปการผลิต_${scopeLabel}.xlsx`);
     toast.success("ส่งออก Excel สำเร็จ");
   };
 
