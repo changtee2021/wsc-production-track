@@ -285,7 +285,7 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
     assertAdmin(data.token);
     if (data.paginate) {
       const PAGE = 1000;
-      const all: unknown[] = [];
+      const all: Record<string, unknown>[] = [];
       let from = 0;
       for (let p = 0; p < 100; p++) {
         const { data: rows, error } = await supabaseAdmin
