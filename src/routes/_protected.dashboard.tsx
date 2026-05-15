@@ -1240,21 +1240,31 @@ function Dashboard() {
           {stepBreakdown.length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               {stepBreakdown.map((st) => (
-                <div key={st.stepId} className="rounded-xl border border-border bg-background p-3">
+                <div key={st.stepId} className="rounded-xl border border-border bg-background p-4">
                   <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="font-medium">{st.stepName}</span>
                     <span className="text-xs text-muted-foreground">รวม {st.totalJobs} งาน</span>
                   </div>
-                  <ResponsiveContainer width="100%" height={Math.max(180, st.jobsData.length * 32)}>
-                    <BarChart data={st.jobsData} layout="vertical" margin={{ left: 8, right: 16 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" allowDecimals={false} fontSize={11} />
-                      <YAxis type="category" dataKey="name" width={110} fontSize={11} />
+                  <ResponsiveContainer width="100%" height={420}>
+                    <PieChart>
+                      <Pie
+                        data={st.jobsData}
+                        dataKey="jobs"
+                        nameKey="name"
+                        outerRadius={150}
+                        label={(e: { name?: string; value?: number }) =>
+                          `${e.name ?? ""}: ${e.value ?? 0}`
+                        }
+                      >
+                        {st.jobsData.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
                       <Tooltip formatter={(v) => [`${v} งาน`, "จำนวน"]} />
-                      <Bar dataKey="jobs" fill="oklch(0.60 0.20 256)" radius={[0, 6, 6, 0]} />
-                    </BarChart>
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                    </PieChart>
                   </ResponsiveContainer>
                 </div>
               ))}
