@@ -1045,8 +1045,8 @@ function Dashboard() {
             ) : (
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie data={scopeStepPie} dataKey="value" nameKey="name" outerRadius={90} label>
-                    {scopeStepPie.map((_, i) => (
+                  <Pie data={stepPie} dataKey="value" nameKey="name" outerRadius={90} label>
+                    {stepPie.map((_, i) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
