@@ -1144,6 +1144,115 @@ function Dashboard() {
           )}
         </div>
 
+        {/* 3A. Pie: total finished jobs per step */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <Activity className="h-4 w-4 text-secondary" />
+            สัดส่วนงานต่อขั้นตอน (รวมทุกพนักงาน)
+          </h3>
+          {scopeStepPie.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={scopeStepPie}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={110}
+                  label={(e: { name: string; value: number }) => `${e.name}: ${e.value}`}
+                >
+                  {scopeStepPie.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* 3B. Per-employee: category × step pie */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+            <CheckSquare className="h-4 w-4 text-secondary" />
+            สัดส่วนงานรายพนักงาน — แยกตามหมวดหมู่ × ขั้นตอน
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            แต่ละ slice = "หมวดหมู่ — ขั้นตอน" นับจำนวนงาน (unique job) ที่เสร็จ
+          </p>
+          {empCategoryStepPie.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {empCategoryStepPie.map((emp) => (
+                <div
+                  key={emp.id}
+                  className="rounded-xl border border-border bg-background p-3"
+                >
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-medium">{emp.name}</span>
+                    <span className="text-xs text-muted-foreground">{emp.total} งาน</span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={emp.data}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={70}
+                      >
+                        {emp.data.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 3C. Pie: avg minutes per piece per employee */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+            <TrendingUp className="h-4 w-4 text-secondary" />
+            เวลาผลิตเฉลี่ย (นาที/ชุด) รายพนักงาน
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            คำนวณจากผลรวมเวลาทุกขั้นตอนของงานเดียวกัน เฉพาะงานที่มีทั้ง start และ finish ในช่วงเวลา
+          </p>
+          {avgPerJobPie.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <PieChart>
+                <Pie
+                  data={avgPerJobPie}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={120}
+                  label={(e: { name: string; value: number }) => `${e.name}: ${e.value} น.`}
+                >
+                  {avgPerJobPie.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v: number, _n: string, p: { payload: { jobs: number } }) =>
+                    [`${v} นาที (เฉลี่ยจาก ${p.payload.jobs} ชุด)`, "เวลา/ชุด"]
+                  }
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
         {/* 4. MoM */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
