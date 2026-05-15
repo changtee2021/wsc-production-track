@@ -37,7 +37,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
-import { SlideToConfirm } from "@/components/SlideToConfirm";
+
 import { useServerFn } from "@tanstack/react-start";
 import { uploadWorkerNoteImage } from "@/lib/worker-upload.functions";
 
