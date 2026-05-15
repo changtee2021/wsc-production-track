@@ -197,7 +197,15 @@ function ScanPage() {
     }
     const at = new Date().toLocaleString("th-TH");
     setLastSubmit({ action, at });
+    if (action === "start" && activeKey) {
+      const ts = Date.now();
+      localStorage.setItem(activeKey, String(ts));
+      setActiveStartAt(ts);
+      setNow(ts);
+    }
     if (action === "finish") {
+      if (activeKey) localStorage.removeItem(activeKey);
+      setActiveStartAt(null);
       setHasIssue(false);
       setNote("");
       setNoteImageUrl(null);
