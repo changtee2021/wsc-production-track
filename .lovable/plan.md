@@ -1,42 +1,38 @@
 ## เป้าหมาย
-ปรับเซกชัน "รายงานรายพนักงาน × ขั้นตอน" ในหน้า `/dashboard` ให้เห็นภาพง่ายขึ้นด้วยกราฟวงกลม + เพิ่มรายงานเวลาเฉลี่ยต่อชุด
+เพิ่มชาร์ต 2 ชุด ใต้เซกชัน "รายงานรายพนักงาน × ขั้นตอน" ในหน้า `/dashboard` — มองจากมุมขั้นตอนเป็นหลัก
 
-## สิ่งที่จะเพิ่ม (เรียงต่อจากตาราง matrix เดิม)
+## สิ่งที่จะเพิ่ม
 
-### A. Pie chart — งานรวมต่อขั้นตอน
-- รวมจำนวนงาน (`finish`) ของทุกพนักงาน แยกตามขั้นตอน
-- ใช้ข้อมูลจาก `empStepReport.stepCols` + `empStepReport.colTotals` ที่มีอยู่แล้ว
-- Tooltip + legend แสดงชื่อขั้นตอน + จำนวน + %
+### D. Bar chart รายขั้นตอน — จำนวนงานที่พนักงานแต่ละคนทำ
+- การ์ด grid (responsive sm:2 lg:2) หนึ่งใบต่อ 1 ขั้นตอน
+- แต่ละใบมี horizontal BarChart: แกน Y = ชื่อพนักงาน, แกน X = จำนวนงาน (unique `job_id` ที่ `action="finish"`)
+- เรียงพนักงานจากมากไปน้อย
+- หัวการ์ด: ชื่อขั้นตอน + ยอดรวมงานของขั้นตอนนั้น
 
-### B. Pie chart รายพนักงาน — สัดส่วนหมวดหมู่ × ขั้นตอน
-- การ์ด grid (responsive) หนึ่งใบต่อพนักงาน 1 คน
-- แต่ละใบมี pie chart แสดง breakdown ของพนักงานคนนั้น โดย slice = "หมวดหมู่ — ขั้นตอน" (เช่น "เสื้อ — ตัด", "เสื้อ — เย็บ")
-- ค่า = จำนวน unique `job_id` ที่ `action = "finish"` ของคู่นั้น
-- ใต้กราฟแสดงชื่อ + จำนวนงานรวมของพนักงาน
-- ใช้ `filtered` (มี scope + ฟิลเตอร์ครบแล้ว) — ต้อง derive ใหม่ใน `useMemo` เพราะ matrix เดิมไม่มีมิติ category
+### E. Bar chart รายขั้นตอน — เวลาเฉลี่ยพนักงานแต่ละคน
+- การ์ด grid เดียวกับ D หนึ่งใบต่อ 1 ขั้นตอน
+- horizontal BarChart: แกน Y = ชื่อพนักงาน, แกน X = เวลาเฉลี่ย (นาที) ที่คนนั้นใช้กับขั้นตอนนั้น
+- คำนวณจาก `scopedSessions` (start→finish pairs ที่อยู่ในช่วงเวลา) — เฉลี่ยข้ามทุก session ของคู่ employee×step
+- ถ้ามี `std_duration_minutes` ของขั้นตอน → วาดเส้น ReferenceLine สีแดงตรงค่ามาตรฐาน + tooltip บอกว่าเกิน/ต่ำกว่ากี่นาที
+- เรียงพนักงานจากเร็วสุดไปช้าสุด
 
-### C. Pie chart — เวลาผลิตเฉลี่ยต่อชุด รายพนักงาน
-- ใช้ `scopedSessions` (start→finish pairs) จัดกลุ่มตาม `employee_id` × `job_id`
-- "เวลาต่อชุด" = ผลรวมเวลาทุก step ของ job เดียวกันที่พนักงานคนนั้นทำ (นาที)
-- ค่าเฉลี่ยต่อพนักงาน = เฉลี่ยข้าม jobs
-- Pie slice ขนาด = ค่าเฉลี่ยนาที (คนเฉลี่ยช้า slice ใหญ่), tooltip บอกชื่อ + นาทีจริง + จำนวน job ที่นับเฉลี่ย
-- มีหมายเหตุเล็ก ๆ บอกว่าคำนวณจากงานที่มีทั้ง start และ finish ในช่วงเวลา
-
-## โครงหลังปรับ (เซกชัน 3 เดิม)
+## โครงเซกชันหลังปรับ
 ```text
 รายงานรายพนักงาน × ขั้นตอน
 ├─ ตาราง matrix (เดิม)
-├─ A. Pie: งานรวมต่อขั้นตอน           [full width]
-├─ B. Pie grid รายพนักงาน × หมวด-ขั้นตอน [grid sm:2 lg:3]
-└─ C. Pie: เวลาเฉลี่ยต่อชุด รายพนักงาน  [full width]
+├─ A. Pie งานต่อขั้นตอน (เดิม)
+├─ B. Pie หมวด×ขั้นตอน รายคน (เดิม)
+├─ C. Pie เวลาเฉลี่ย/ชุด รายคน (เดิม)
+├─ D. Bar รายขั้นตอน — จำนวนงานต่อพนักงาน  (ใหม่)
+└─ E. Bar รายขั้นตอน — เวลาเฉลี่ยต่อพนักงาน (ใหม่)
 ```
 
 ## ส่วนที่ไม่แตะ
-- โลจิกโหลดข้อมูล / `sessions` / `scopedSessions` / ฟิลเตอร์บาร์
-- ตาราง matrix เดิม / MoM / over-standard / กิจกรรมล่าสุด / Export
+- โลจิกโหลดข้อมูล / `filtered` / `sessions` / `scopedSessions` / `empStepReport` / ฟิลเตอร์
+- เซกชันอื่น (MoM, over-standard, กิจกรรมล่าสุด, Export)
 
 ## ไฟล์ที่แก้
 - `src/routes/_protected.dashboard.tsx` ไฟล์เดียว
-  - เพิ่ม `useMemo` 3 ตัว: `stepPie`, `empCategoryStepPie` (array per employee), `avgPerJobPie`
-  - เพิ่ม JSX 3 ก้อนต่อจากตาราง matrix
-  - ใช้ `PieChart`, `Pie`, `Cell`, `Tooltip`, `Legend`, `ResponsiveContainer` จาก `recharts` ที่ import อยู่แล้ว
+  - เพิ่ม `useMemo` 2 ตัว: `stepEmpJobs` (per step → array of {emp, jobs}) และ `stepEmpAvg` (per step → array of {emp, avgMin, std})
+  - เพิ่ม JSX 2 ก้อนต่อจากเซกชัน C
+  - ใช้ `BarChart`, `Bar`, `XAxis`, `YAxis`, `Tooltip`, `ResponsiveContainer`, `ReferenceLine` จาก `recharts` (เพิ่ม import `ReferenceLine`)
