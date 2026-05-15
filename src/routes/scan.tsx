@@ -417,15 +417,18 @@ function ScanPage() {
 
         {/* Actions */}
         <div className="mt-6 space-y-3">
-          <SlideToConfirm
-            label={t("action.start")}
-            icon={Play}
-            loading={submitting === "start"}
+          <Button
+            onClick={() => submit("start")}
             disabled={submitting !== null}
-            onConfirm={() => submit("start")}
-            colorClass="bg-secondary text-secondary-foreground"
-            thumbClass="bg-white text-secondary"
-          />
+            className="h-16 w-full rounded-2xl bg-secondary text-lg font-bold text-secondary-foreground shadow-md hover:bg-secondary/90"
+          >
+            {submitting === "start" ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <Play className="mr-2 h-5 w-5 fill-current" />
+            )}
+            {t("action.start")}
+          </Button>
 
           <div className="rounded-2xl border border-border bg-card p-4">
             <label className="flex items-center gap-2 cursor-pointer">
