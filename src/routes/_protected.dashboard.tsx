@@ -451,6 +451,68 @@ function Dashboard() {
     return { stepCols, rows, colTotals, grandTotal };
   }, [filtered, scopedSessions]);
 
+  // F. Per-category report (day scope): per step finish count + avg minutes
+  const categoryDayReport = useMemo(() => {
+    type StepAgg = { stepId: string; stepName: string; finishCount: number; durations: number[] };
+    type CatAgg = { id: string; name: string; perStep: Map<string, StepAgg>; totalFinish: number };
+    const cats = new Map<string, CatAgg>();
+    // session lookup: emp|step|job → category_id (resolved from finish log)
+    const sessionCat = new Map<string, string>();
+    for (const l of filtered) {
+      if (l.action !== "finish") continue;
+      const catId = l.category_id ?? "__none__";
+      const catName = l.categories?.name ?? "(ไม่ระบุหมวด)";
+      let cat = cats.get(catId);
+      if (!cat) {
+        cat = { id: catId, name: catName, perStep: new Map(), totalFinish: 0 };
+        cats.set(catId, cat);
+      }
+      let st = cat.perStep.get(l.step_id);
+      if (!st) {
+        st = {
+          stepId: l.step_id,
+          stepName: l.steps?.step_name ?? "—",
+          finishCount: 0,
+          durations: [],
+        };
+        cat.perStep.set(l.step_id, st);
+      }
+      st.finishCount += 1;
+      cat.totalFinish += 1;
+      sessionCat.set(`${l.employee_id}|${l.step_id}|${l.job_id}`, catId);
+    }
+    for (const s of scopedSessions) {
+      const catId = sessionCat.get(`${s.employee_id}|${s.step_id}|${s.job_id}`);
+      if (!catId) continue;
+      const cat = cats.get(catId);
+      const st = cat?.perStep.get(s.step_id);
+      if (st) st.durations.push(s.durationMin);
+    }
+    return Array.from(cats.values())
+      .map((c) => {
+        const steps = Array.from(c.perStep.values()).sort((a, b) =>
+          a.stepName.localeCompare(b.stepName, "th"),
+        );
+        return {
+          id: c.id,
+          name: c.name,
+          totalFinish: c.totalFinish,
+          jobsData: steps
+            .filter((s) => s.finishCount > 0)
+            .map((s) => ({ name: s.stepName, value: s.finishCount })),
+          avgData: steps
+            .filter((s) => s.durations.length > 0)
+            .map((s) => ({
+              name: s.stepName,
+              value: Number(
+                (s.durations.reduce((a, b) => a + b, 0) / s.durations.length).toFixed(1),
+              ),
+            })),
+        };
+      })
+      .sort((a, b) => b.totalFinish - a.totalFinish);
+  }, [filtered, scopedSessions]);
+
   // A. Pie: total finished jobs per step (across all employees, in scope)
   const scopeStepPie = useMemo(() => {
     return empStepReport.stepCols
