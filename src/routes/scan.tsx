@@ -513,15 +513,18 @@ function ScanPage() {
             )}
           </div>
 
-          <SlideToConfirm
-            label={t("action.finish")}
-            icon={Square}
-            loading={submitting === "finish"}
+          <Button
+            onClick={() => submit("finish")}
             disabled={submitting !== null || uploadingNote}
-            onConfirm={() => submit("finish")}
-            colorClass="bg-primary text-primary-foreground"
-            thumbClass="bg-white text-primary"
-          />
+            className="h-16 w-full rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-md hover:bg-primary/90"
+          >
+            {submitting === "finish" ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <Square className="mr-2 h-5 w-5 fill-current" />
+            )}
+            {t("action.finish")}
+          </Button>
         </div>
 
         {lastSubmit && (
