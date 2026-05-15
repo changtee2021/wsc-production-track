@@ -1382,7 +1382,68 @@ function Dashboard() {
           </div>
         </div>
 
-
+        {/* F. Per-category daily pies */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+            <CheckSquare className="h-4 w-4 text-secondary" />
+            รายงานรายหมวดหมู่ — จำนวนชุด + เวลาเฉลี่ย/ขั้นตอน (รายวัน)
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            แต่ละการ์ด = 1 หมวดหมู่ ของวันที่เลือก — pie ซ้าย = จำนวนชุด, pie ขวา = เวลาเฉลี่ย (นาที)
+          </p>
+          {scope !== "day" ? (
+            <p className="text-sm text-muted-foreground">
+              เปลี่ยนเป็นโหมดรายวันเพื่อดูรายงานนี้
+            </p>
+          ) : categoryDayReport.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในวันที่เลือก</p>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {categoryDayReport.map((cat) => (
+                <div key={cat.id} className="rounded-xl border border-border bg-background p-3">
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">{cat.name}</span>
+                    <span className="text-xs text-muted-foreground">รวม {cat.totalFinish} ชุด</span>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <div className="mb-1 text-center text-xs text-muted-foreground">จำนวนชุด/ขั้นตอน</div>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie data={cat.jobsData} dataKey="value" nameKey="name" outerRadius={70} label={(e: { value?: number }) => `${e.value ?? 0}`}>
+                            {cat.jobsData.map((_, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v) => [`${v} ชุด`, "จำนวน"]} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-center text-xs text-muted-foreground">เวลาเฉลี่ย (นาที)/ขั้นตอน</div>
+                      {cat.avgData.length === 0 ? (
+                        <div className="flex h-[220px] items-center justify-center text-xs text-muted-foreground">ไม่มี session ที่จับคู่ start–finish</div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={220}>
+                          <PieChart>
+                            <Pie data={cat.avgData} dataKey="value" nameKey="name" outerRadius={70} label={(e: { value?: number }) => `${e.value ?? 0} น.`}>
+                              {cat.avgData.map((_, i) => (
+                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [`${v} นาที`, "เฉลี่ย"]} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
