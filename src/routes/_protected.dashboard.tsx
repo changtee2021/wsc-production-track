@@ -657,8 +657,96 @@ function Dashboard() {
           avgData,
         };
       })
-      .filter((s) => s.totalJobs > 0)
-      .sort((a, b) => a.stepName.localeCompare(b.stepName, "th"));
+  }, [filtered, scopedSessions]);
+
+  // D2 & E2. Per-category → per-step breakdown by employee
+  const stepBreakdownByCategory = useMemo(() => {
+    type EmpAgg = { empId: string; name: string; jobs: Set<string>; durations: number[] };
+    type StepAgg = { stepId: string; stepName: string; std: number | null; emps: Map<string, EmpAgg> };
+    type CatAgg = { catId: string; catName: string; steps: Map<string, StepAgg> };
+    const cats = new Map<string, CatAgg>();
+    // resolve session category via finish log lookup
+    const sessionCat = new Map<string, string>();
+
+    for (const l of filtered) {
+      if (l.action !== "finish") continue;
+      const catId = l.category_id ?? "__none__";
+      const catName = l.categories?.name ?? "(ไม่ระบุหมวด)";
+      let cat = cats.get(catId);
+      if (!cat) {
+        cat = { catId, catName, steps: new Map() };
+        cats.set(catId, cat);
+      }
+      let st = cat.steps.get(l.step_id);
+      if (!st) {
+        st = {
+          stepId: l.step_id,
+          stepName: l.steps?.step_name ?? "—",
+          std: l.steps?.std_duration_minutes ?? null,
+          emps: new Map(),
+        };
+        cat.steps.set(l.step_id, st);
+      }
+      let e = st.emps.get(l.employee_id);
+      if (!e) {
+        e = {
+          empId: l.employee_id,
+          name: l.employees?.name ?? "—",
+          jobs: new Set(),
+          durations: [],
+        };
+        st.emps.set(l.employee_id, e);
+      }
+      e.jobs.add(l.job_id);
+      sessionCat.set(`${l.employee_id}|${l.step_id}|${l.job_id}`, catId);
+    }
+
+    for (const s of scopedSessions) {
+      const catId = sessionCat.get(`${s.employee_id}|${s.step_id}|${s.job_id}`);
+      if (!catId) continue;
+      const cat = cats.get(catId);
+      const st = cat?.steps.get(s.step_id);
+      const e = st?.emps.get(s.employee_id);
+      if (e) e.durations.push(s.durationMin);
+    }
+
+    return Array.from(cats.values())
+      .map((cat) => {
+        const steps = Array.from(cat.steps.values())
+          .map((st) => {
+            const emps = Array.from(st.emps.values()).map((e) => {
+              const avg =
+                e.durations.length > 0
+                  ? e.durations.reduce((a, b) => a + b, 0) / e.durations.length
+                  : null;
+              return {
+                empId: e.empId,
+                name: e.name,
+                jobs: e.jobs.size,
+                avg: avg != null ? Math.round(avg * 10) / 10 : null,
+              };
+            });
+            const jobsData = [...emps].sort((a, b) => b.jobs - a.jobs);
+            const avgData = emps
+              .filter((e) => e.avg != null)
+              .sort((a, b) => (a.avg ?? 0) - (b.avg ?? 0));
+            const totalJobs = emps.reduce((a, b) => a + b.jobs, 0);
+            return {
+              stepId: st.stepId,
+              stepName: st.stepName,
+              std: st.std,
+              totalJobs,
+              jobsData,
+              avgData,
+            };
+          })
+          .filter((s) => s.totalJobs > 0)
+          .sort((a, b) => a.stepName.localeCompare(b.stepName, "th"));
+        const catTotal = steps.reduce((a, s) => a + s.totalJobs, 0);
+        return { catId: cat.catId, catName: cat.catName, totalJobs: catTotal, steps };
+      })
+      .filter((c) => c.steps.length > 0)
+      .sort((a, b) => b.totalJobs - a.totalJobs);
   }, [filtered, scopedSessions]);
 
   type ExportConfig = {
@@ -1235,37 +1323,54 @@ function Dashboard() {
             จำนวนงานต่อพนักงาน — แยกตามขั้นตอน
           </h3>
           <p className="mb-3 text-xs text-muted-foreground">
-            แต่ละการ์ด = 1 ขั้นตอน, แสดงว่าพนักงานคนไหนทำขั้นตอนนั้นไปกี่ชุด
+            จัดกลุ่มตามหมวดหมู่ → แต่ละขั้นตอนแสดงว่าพนักงานคนไหนทำไปกี่ชุด
           </p>
-          {stepBreakdown.length === 0 ? (
+          {stepBreakdownByCategory.length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
           ) : (
-            <div className="grid gap-4">
-              {stepBreakdown.map((st) => (
-                <div key={st.stepId} className="rounded-xl border border-border bg-background p-4">
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="font-medium">{st.stepName}</span>
-                    <span className="text-xs text-muted-foreground">รวม {st.totalJobs} งาน</span>
+            <div className="space-y-6">
+              {stepBreakdownByCategory.map((cat) => (
+                <div key={cat.catId} className="rounded-xl border border-border bg-muted/20 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-base font-semibold text-primary">{cat.catName}</h4>
+                    <span className="text-xs text-muted-foreground">
+                      รวม {cat.totalJobs} งาน · {cat.steps.length} ขั้นตอน
+                    </span>
                   </div>
-                  <ResponsiveContainer width="100%" height={420}>
-                    <PieChart>
-                      <Pie
-                        data={st.jobsData}
-                        dataKey="jobs"
-                        nameKey="name"
-                        outerRadius={150}
-                        label={(e: { name?: string; value?: number }) =>
-                          `${e.name ?? ""}: ${e.value ?? 0}`
-                        }
+                  <div className="grid gap-4">
+                    {cat.steps.map((st) => (
+                      <div
+                        key={st.stepId}
+                        className="rounded-xl border border-border bg-background p-4"
                       >
-                        {st.jobsData.map((_, i) => (
-                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v) => [`${v} งาน`, "จำนวน"]} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                        <div className="mb-2 flex items-center justify-between text-sm">
+                          <span className="font-medium">{st.stepName}</span>
+                          <span className="text-xs text-muted-foreground">
+                            รวม {st.totalJobs} งาน
+                          </span>
+                        </div>
+                        <ResponsiveContainer width="100%" height={420}>
+                          <PieChart>
+                            <Pie
+                              data={st.jobsData}
+                              dataKey="jobs"
+                              nameKey="name"
+                              outerRadius={150}
+                              label={(e: { name?: string; value?: number }) =>
+                                `${e.name ?? ""}: ${e.value ?? 0}`
+                              }
+                            >
+                              {st.jobsData.map((_, i) => (
+                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [`${v} งาน`, "จำนวน"]} />
+                            <Legend wrapperStyle={{ fontSize: 12 }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1279,56 +1384,72 @@ function Dashboard() {
             เวลาเฉลี่ยต่อพนักงาน — แยกตามขั้นตอน
           </h3>
           <p className="mb-3 text-xs text-muted-foreground">
-            หน่วยเป็นนาที — เส้นแดงคือเวลามาตรฐานของขั้นตอน (ถ้ามี)
+            จัดกลุ่มตามหมวดหมู่ → เวลาเฉลี่ย (นาที) ของพนักงานแต่ละคนต่อขั้นตอน
           </p>
-          {stepBreakdown.filter((s) => s.avgData.length > 0).length === 0 ? (
+          {stepBreakdownByCategory.flatMap((c) => c.steps).filter((s) => s.avgData.length > 0).length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
           ) : (
-            <div className="grid gap-4">
-              {stepBreakdown
-                .filter((s) => s.avgData.length > 0)
-                .map((st) => (
-                  <div
-                    key={st.stepId}
-                    className="rounded-xl border border-border bg-background p-4"
-                  >
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                      <span className="font-medium">{st.stepName}</span>
+            <div className="space-y-6">
+              {stepBreakdownByCategory
+                .map((cat) => ({
+                  ...cat,
+                  steps: cat.steps.filter((s) => s.avgData.length > 0),
+                }))
+                .filter((cat) => cat.steps.length > 0)
+                .map((cat) => (
+                  <div key={cat.catId} className="rounded-xl border border-border bg-muted/20 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="text-base font-semibold text-primary">{cat.catName}</h4>
                       <span className="text-xs text-muted-foreground">
-                        {st.std != null ? `มาตรฐาน ${st.std} น.` : "ไม่มีมาตรฐาน"}
+                        {cat.steps.length} ขั้นตอน
                       </span>
                     </div>
-                    <ResponsiveContainer width="100%" height={420}>
-                      <PieChart>
-                        <Pie
-                          data={st.avgData}
-                          dataKey="avg"
-                          nameKey="name"
-                          outerRadius={150}
-                          label={(e: { name?: string; value?: number }) =>
-                            `${e.name ?? ""}: ${e.value ?? 0} น.`
-                          }
+                    <div className="grid gap-4">
+                      {cat.steps.map((st) => (
+                        <div
+                          key={st.stepId}
+                          className="rounded-xl border border-border bg-background p-4"
                         >
-                          {st.avgData.map((_, i) => (
-                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(v) => {
-                            const num = typeof v === "number" ? v : Number(v);
-                            const diff = st.std != null ? num - st.std : null;
-                            const note =
-                              diff == null
-                                ? ""
-                                : diff > 0
-                                  ? ` (เกิน ${diff.toFixed(1)} น.)`
-                                  : ` (เร็วกว่า ${Math.abs(diff).toFixed(1)} น.)`;
-                            return [`${num} นาที${note}`, "เฉลี่ย"];
-                          }}
-                        />
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                          <div className="mb-2 flex items-center justify-between text-sm">
+                            <span className="font-medium">{st.stepName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {st.std != null ? `มาตรฐาน ${st.std} น.` : "ไม่มีมาตรฐาน"}
+                            </span>
+                          </div>
+                          <ResponsiveContainer width="100%" height={420}>
+                            <PieChart>
+                              <Pie
+                                data={st.avgData}
+                                dataKey="avg"
+                                nameKey="name"
+                                outerRadius={150}
+                                label={(e: { name?: string; value?: number }) =>
+                                  `${e.name ?? ""}: ${e.value ?? 0} น.`
+                                }
+                              >
+                                {st.avgData.map((_, i) => (
+                                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(v) => {
+                                  const num = typeof v === "number" ? v : Number(v);
+                                  const diff = st.std != null ? num - st.std : null;
+                                  const note =
+                                    diff == null
+                                      ? ""
+                                      : diff > 0
+                                        ? ` (เกิน ${diff.toFixed(1)} น.)`
+                                        : ` (เร็วกว่า ${Math.abs(diff).toFixed(1)} น.)`;
+                                  return [`${num} นาที${note}`, "เฉลี่ย"];
+                                }}
+                              />
+                              <Legend wrapperStyle={{ fontSize: 12 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
             </div>
@@ -1400,42 +1521,60 @@ function Dashboard() {
           ) : categoryDayReport.length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในวันที่เลือก</p>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-6">
               {categoryDayReport.map((cat) => (
-                <div key={cat.id} className="rounded-xl border border-border bg-background p-3">
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="font-medium">{cat.name}</span>
+                <div key={cat.id} className="rounded-xl border border-border bg-background p-4">
+                  <div className="mb-3 flex items-center justify-between text-base">
+                    <span className="font-semibold">{cat.name}</span>
                     <span className="text-xs text-muted-foreground">รวม {cat.totalFinish} ชุด</span>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-4 lg:grid-cols-2">
                     <div>
-                      <div className="mb-1 text-center text-xs text-muted-foreground">จำนวนชุด/ขั้นตอน</div>
-                      <ResponsiveContainer width="100%" height={220}>
+                      <div className="mb-1 text-center text-sm font-medium">จำนวนชุด/ขั้นตอน</div>
+                      <ResponsiveContainer width="100%" height={420}>
                         <PieChart>
-                          <Pie data={cat.jobsData} dataKey="value" nameKey="name" outerRadius={70} label={(e: { value?: number }) => `${e.value ?? 0}`}>
+                          <Pie
+                            data={cat.jobsData}
+                            dataKey="value"
+                            nameKey="name"
+                            outerRadius={140}
+                            label={(e: { name?: string; value?: number }) =>
+                              `${e.name ?? ""}: ${e.value ?? 0}`
+                            }
+                          >
                             {cat.jobsData.map((_, i) => (
                               <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                             ))}
                           </Pie>
                           <Tooltip formatter={(v) => [`${v} ชุด`, "จำนวน"]} />
-                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <Legend wrapperStyle={{ fontSize: 12 }} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
                     <div>
-                      <div className="mb-1 text-center text-xs text-muted-foreground">เวลาเฉลี่ย (นาที)/ขั้นตอน</div>
+                      <div className="mb-1 text-center text-sm font-medium">เวลาเฉลี่ย (นาที)/ขั้นตอน</div>
                       {cat.avgData.length === 0 ? (
-                        <div className="flex h-[220px] items-center justify-center text-xs text-muted-foreground">ไม่มี session ที่จับคู่ start–finish</div>
+                        <div className="flex h-[420px] items-center justify-center text-sm text-muted-foreground">
+                          ไม่มี session ที่จับคู่ start–finish
+                        </div>
                       ) : (
-                        <ResponsiveContainer width="100%" height={220}>
+                        <ResponsiveContainer width="100%" height={420}>
                           <PieChart>
-                            <Pie data={cat.avgData} dataKey="value" nameKey="name" outerRadius={70} label={(e: { value?: number }) => `${e.value ?? 0} น.`}>
+                            <Pie
+                              data={cat.avgData}
+                              dataKey="value"
+                              nameKey="name"
+                              outerRadius={140}
+                              label={(e: { name?: string; value?: number }) =>
+                                `${e.name ?? ""}: ${e.value ?? 0} น.`
+                              }
+                            >
                               {cat.avgData.map((_, i) => (
                                 <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                               ))}
                             </Pie>
                             <Tooltip formatter={(v) => [`${v} นาที`, "เฉลี่ย"]} />
-                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                            <Legend wrapperStyle={{ fontSize: 12 }} />
                           </PieChart>
                         </ResponsiveContainer>
                       )}
