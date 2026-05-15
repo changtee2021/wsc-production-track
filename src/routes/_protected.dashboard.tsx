@@ -1160,7 +1160,7 @@ function Dashboard() {
                   dataKey="value"
                   nameKey="name"
                   outerRadius={110}
-                  label={(e: { name: string; value: number }) => `${e.name}: ${e.value}`}
+                  label={(e: { name?: string; value?: number }) => `${e.name ?? ""}: ${e.value ?? 0}`}
                 >
                   {scopeStepPie.map((_, i) => (
                     <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -1236,7 +1236,7 @@ function Dashboard() {
                   dataKey="value"
                   nameKey="name"
                   outerRadius={120}
-                  label={(e: { name: string; value: number }) => `${e.name}: ${e.value} น.`}
+                  label={(e: { name?: string; value?: number }) => `${e.name ?? ""}: ${e.value ?? 0} น.`}
                 >
                   {avgPerJobPie.map((_, i) => (
                     <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
