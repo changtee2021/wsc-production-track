@@ -450,7 +450,7 @@ function Dashboard() {
     return { stepCols, rows, colTotals, grandTotal };
   }, [filtered, scopedSessions]);
 
-
+  type ExportConfig = {
     rangeMode: "current" | "custom" | "all";
     fromDate: string; // yyyy-mm-dd
     toDate: string;
