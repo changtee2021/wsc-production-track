@@ -258,7 +258,7 @@ function Dashboard() {
   }, [scopedLogs]);
 
   // Step pie (last 30 days starts)
-  const scopeStepPie = useMemo(() => {
+  const stepPie = useMemo(() => {
     const now = new Date();
     const cutoff = new Date(now);
     cutoff.setDate(cutoff.getDate() - 30);
@@ -1040,7 +1040,7 @@ function Dashboard() {
           </ChartCard>
 
           <ChartCard title="กิจกรรมรายขั้นตอน (30 วัน)" icon={<Activity className="h-4 w-4" />}>
-            {scopeStepPie.length === 0 ? (
+            {stepPie.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height={260}>
