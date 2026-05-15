@@ -450,8 +450,8 @@ function ScanPage() {
         <div className="mt-6 space-y-3">
           <Button
             onClick={() => submit("start")}
-            disabled={submitting !== null}
-            className="h-16 w-full rounded-2xl bg-secondary text-lg font-bold text-secondary-foreground shadow-md hover:bg-secondary/90"
+            disabled={submitting !== null || activeStartAt !== null}
+            className="h-16 w-full rounded-2xl bg-secondary text-lg font-bold text-secondary-foreground shadow-md hover:bg-secondary/90 disabled:opacity-60"
           >
             {submitting === "start" ? (
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -460,6 +460,39 @@ function ScanPage() {
             )}
             {t("action.start")}
           </Button>
+
+          {activeStartAt !== null && (() => {
+            const elapsed = Math.max(0, Math.floor((now - activeStartAt) / 1000));
+            const limit = selectedStep?.std_duration_minutes
+              ? selectedStep.std_duration_minutes * 60
+              : null;
+            const over = limit != null && elapsed >= limit;
+            const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+            const ss = String(elapsed % 60).padStart(2, "0");
+            return (
+              <div
+                className={`flex items-center justify-between rounded-2xl border-2 p-4 ${
+                  over
+                    ? "border-destructive/50 bg-destructive/10 text-destructive animate-pulse"
+                    : "border-success/40 bg-success/10 text-success"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {over ? (
+                    <AlertTriangle className="h-6 w-6" />
+                  ) : (
+                    <Timer className="h-6 w-6" />
+                  )}
+                  <span className="text-sm font-semibold">
+                    {over ? "เกินเวลามาตรฐาน" : "กำลังจับเวลา"}
+                  </span>
+                </div>
+                <div className="font-mono text-3xl font-bold tabular-nums">
+                  {mm}:{ss}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="rounded-2xl border border-border bg-card p-4">
             <label className="flex items-center gap-2 cursor-pointer">
