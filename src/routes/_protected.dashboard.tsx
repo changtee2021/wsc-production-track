@@ -370,7 +370,87 @@ function Dashboard() {
       .sort((a, b) => b.over - a.over);
   }, [sessions, scope, day, month]);
 
-  type ExportConfig = {
+  // Sessions in current scope (for avg duration per employee × step)
+  const scopedSessions = useMemo(() => {
+    return sessions.filter((s) => {
+      if (scope === "day") return s.finish.toISOString().slice(0, 10) === day;
+      return s.finish.toISOString().slice(0, 7) === month;
+    });
+  }, [sessions, scope, day, month]);
+
+  // Employee × Step matrix (jobs finished count + avg duration)
+  const empStepReport = useMemo(() => {
+    // employee_id -> { name, perStep: Map<step_id, {name, jobs:Set<job_id>, durations:number[]}> }
+    type Cell = { stepName: string; jobs: Set<string>; durations: number[] };
+    type EmpRow = { id: string; name: string; perStep: Map<string, Cell>; total: Set<string> };
+    const map = new Map<string, EmpRow>();
+    const stepOrder = new Map<string, string>(); // step_id -> step_name
+
+    for (const l of filtered) {
+      if (l.action !== "finish") continue;
+      const empId = l.employee_id;
+      const empName = l.employees?.name ?? "—";
+      const stepId = l.step_id;
+      const stepName = l.steps?.step_name ?? "—";
+      stepOrder.set(stepId, stepName);
+      let row = map.get(empId);
+      if (!row) {
+        row = { id: empId, name: empName, perStep: new Map(), total: new Set() };
+        map.set(empId, row);
+      }
+      let cell = row.perStep.get(stepId);
+      if (!cell) {
+        cell = { stepName, jobs: new Set(), durations: [] };
+        row.perStep.set(stepId, cell);
+      }
+      cell.jobs.add(l.job_id);
+      row.total.add(l.job_id);
+    }
+
+    // Attach durations from sessions in scope
+    for (const s of scopedSessions) {
+      const row = map.get(s.employee_id);
+      if (!row) continue;
+      const cell = row.perStep.get(s.step_id);
+      if (!cell) continue;
+      cell.durations.push(s.durationMin);
+    }
+
+    const stepCols = Array.from(stepOrder.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "th"));
+
+    const rows = Array.from(map.values())
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        total: r.total.size,
+        cells: stepCols.map((c) => {
+          const cell = r.perStep.get(c.id);
+          const jobs = cell?.jobs.size ?? 0;
+          const avg =
+            cell && cell.durations.length > 0
+              ? cell.durations.reduce((a, b) => a + b, 0) / cell.durations.length
+              : null;
+          return { stepId: c.id, stepName: c.name, jobs, avg };
+        }),
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    const colTotals = stepCols.map((c) => {
+      let sum = 0;
+      for (const r of rows) {
+        const cell = r.cells.find((x) => x.stepId === c.id);
+        sum += cell?.jobs ?? 0;
+      }
+      return sum;
+    });
+    const grandTotal = rows.reduce((a, r) => a + r.total, 0);
+
+    return { stepCols, rows, colTotals, grandTotal };
+  }, [filtered, scopedSessions]);
+
+
     rangeMode: "current" | "custom" | "all";
     fromDate: string; // yyyy-mm-dd
     toDate: string;
