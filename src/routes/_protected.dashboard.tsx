@@ -910,14 +910,49 @@ function Dashboard() {
         />
       </div>
 
-      <Tabs defaultValue="overview" className="mt-6">
-        <TabsList>
-          <TabsTrigger value="overview">ภาพรวม</TabsTrigger>
-          <TabsTrigger value="performance">ประสิทธิภาพ</TabsTrigger>
-          <TabsTrigger value="activity">กิจกรรมล่าสุด</TabsTrigger>
-        </TabsList>
+      <div className="mt-6 space-y-6">
+        {/* Scope picker (day/month) — applies to ranking, employee × step, over-standard */}
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-foreground">ช่วงเวลารายงาน:</span>
+            <div className="flex rounded-lg border border-border bg-muted p-1">
+              <button
+                onClick={() => setScope("day")}
+                className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+                  scope === "day" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                รายวัน
+              </button>
+              <button
+                onClick={() => setScope("month")}
+                className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+                  scope === "month" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                รายเดือน
+              </button>
+            </div>
+            {scope === "day" ? (
+              <Input
+                type="date"
+                value={day}
+                onChange={(e) => setDay(e.target.value)}
+                className="max-w-[180px]"
+              />
+            ) : (
+              <Input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="max-w-[180px]"
+              />
+            )}
+          </div>
+        </div>
 
-        <TabsContent value="overview" className="mt-4 grid gap-4 lg:grid-cols-2">
+        {/* 1. 14-day overview + step pie */}
+        <div className="grid gap-4 lg:grid-cols-2">
           <ChartCard
             title="14 วันล่าสุด — เริ่มงาน vs เสร็จงาน"
             icon={<TrendingUp className="h-4 w-4" />}
@@ -952,211 +987,235 @@ function Dashboard() {
               </ResponsiveContainer>
             )}
           </ChartCard>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="performance" className="mt-4 space-y-6">
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              <div className="flex rounded-lg border border-border bg-muted p-1">
-                <button
-                  onClick={() => setScope("day")}
-                  className={`rounded-md px-3 py-1 text-sm font-medium transition ${
-                    scope === "day"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  รายวัน
-                </button>
-                <button
-                  onClick={() => setScope("month")}
-                  className={`rounded-md px-3 py-1 text-sm font-medium transition ${
-                    scope === "month"
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  รายเดือน
-                </button>
+        {/* 2. Ranking */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <Trophy className="h-4 w-4 text-secondary" />
+            อันดับพนักงาน — งานที่ทำเสร็จ
+          </h3>
+          {ranking.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(180, ranking.length * 36)}>
+              <BarChart data={ranking} layout="vertical" margin={{ left: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.90 0.01 247)" />
+                <XAxis type="number" allowDecimals={false} fontSize={11} />
+                <YAxis type="category" dataKey="name" fontSize={11} width={120} />
+                <Tooltip />
+                <Bar dataKey="jobs" fill="oklch(0.60 0.20 256)" name="งานเสร็จ" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* 3. Employee × Step report */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+            <CheckSquare className="h-4 w-4 text-secondary" />
+            รายงานรายพนักงาน × ขั้นตอน
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            จำนวนงานที่เสร็จ และเวลาเฉลี่ย (นาที) ต่อขั้นตอน — ในช่วงเวลาที่เลือก
+          </p>
+          {empStepReport.rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="sticky left-0 bg-card pb-2 pr-3">พนักงาน</th>
+                      {empStepReport.stepCols.map((c) => (
+                        <th key={c.id} className="pb-2 pr-3 text-right">
+                          {c.name}
+                        </th>
+                      ))}
+                      <th className="pb-2 pr-3 text-right">รวม</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {empStepReport.rows.map((r) => (
+                      <tr key={r.id}>
+                        <td className="sticky left-0 bg-card py-2 pr-3 font-medium">{r.name}</td>
+                        {r.cells.map((c) => (
+                          <td key={c.stepId} className="py-2 pr-3 text-right">
+                            {c.jobs === 0 ? (
+                              <span className="text-muted-foreground">—</span>
+                            ) : (
+                              <div className="leading-tight">
+                                <div className="font-semibold text-foreground">{c.jobs}</div>
+                                {c.avg != null && (
+                                  <div className="text-[10px] text-muted-foreground">
+                                    {c.avg.toFixed(1)} น.
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        ))}
+                        <td className="py-2 pr-3 text-right font-bold text-primary">{r.total}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-border bg-muted/40 font-semibold">
+                      <td className="sticky left-0 bg-muted/40 py-2 pr-3">รวมทั้งหมด</td>
+                      {empStepReport.colTotals.map((t, i) => (
+                        <td key={i} className="py-2 pr-3 text-right">
+                          {t}
+                        </td>
+                      ))}
+                      <td className="py-2 pr-3 text-right text-primary">{empStepReport.grandTotal}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              {scope === "day" ? (
-                <Input
-                  type="date"
-                  value={day}
-                  onChange={(e) => setDay(e.target.value)}
-                  className="max-w-[180px]"
-                />
-              ) : (
-                <Input
-                  type="month"
-                  value={month}
-                  onChange={(e) => setMonth(e.target.value)}
-                  className="max-w-[180px]"
-                />
-              )}
-            </div>
+            </>
+          )}
+        </div>
 
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-              <Trophy className="h-4 w-4 text-secondary" />
-              อันดับพนักงาน — งานที่ทำเสร็จ
-            </h3>
-            {ranking.length === 0 ? (
-              <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={Math.max(180, ranking.length * 36)}>
-                <BarChart data={ranking} layout="vertical" margin={{ left: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.90 0.01 247)" />
-                  <XAxis type="number" allowDecimals={false} fontSize={11} />
-                  <YAxis type="category" dataKey="name" fontSize={11} width={120} />
-                  <Tooltip />
-                  <Bar dataKey="jobs" fill="oklch(0.60 0.20 256)" name="งานเสร็จ" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+        {/* 4. MoM */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <TrendingUp className="h-4 w-4 text-secondary" />
+            เปรียบเทียบเดือนนี้ vs เดือนก่อน (MoM)
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="pb-2 pr-3">พนักงาน</th>
+                  <th className="pb-2 pr-3 text-right">งาน (เดือนนี้)</th>
+                  <th className="pb-2 pr-3 text-right">งาน MoM %</th>
+                  <th className="pb-2 pr-3 text-right">เวลาเฉลี่ย (นาที)</th>
+                  <th className="pb-2 text-right">ความเร็ว MoM %</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {mom.map((r) => (
+                  <tr key={r.id}>
+                    <td className="py-2 pr-3 font-medium">{r.name}</td>
+                    <td className="py-2 pr-3 text-right">{r.curJobs}</td>
+                    <td className="py-2 pr-3 text-right">
+                      <PctBadge value={r.jobsPct} higherIsBetter />
+                    </td>
+                    <td className="py-2 pr-3 text-right text-muted-foreground">
+                      {r.curAvg != null ? r.curAvg.toFixed(1) : "—"}
+                    </td>
+                    <td className="py-2 text-right">
+                      {r.speedPct == null ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : (
+                        <PctBadge value={-r.speedPct} higherIsBetter />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {mom.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-muted-foreground">
+                      ยังไม่มีข้อมูล
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-              <TrendingUp className="h-4 w-4 text-secondary" />
-              เปรียบเทียบเดือนนี้ vs เดือนก่อน (MoM)
-            </h3>
+        {/* 5. Over standard */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            งานที่เกินเวลามาตรฐาน
+          </h3>
+          {overStandard.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              ไม่มีงานเกินเวลามาตรฐานในช่วงเวลาที่เลือก 🎉
+            </p>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="pb-2 pr-3">พนักงาน</th>
-                    <th className="pb-2 pr-3 text-right">งาน (เดือนนี้)</th>
-                    <th className="pb-2 pr-3 text-right">งาน MoM %</th>
-                    <th className="pb-2 pr-3 text-right">เวลาเฉลี่ย (นาที)</th>
-                    <th className="pb-2 text-right">ความเร็ว MoM %</th>
+                    <th className="pb-2 pr-3">ขั้นตอน</th>
+                    <th className="pb-2 pr-3">Job</th>
+                    <th className="pb-2 pr-3 text-right">มาตรฐาน</th>
+                    <th className="pb-2 pr-3 text-right">จริง</th>
+                    <th className="pb-2 text-right">เกิน</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {mom.map((r) => (
-                    <tr key={r.id}>
-                      <td className="py-2 pr-3 font-medium">{r.name}</td>
-                      <td className="py-2 pr-3 text-right">{r.curJobs}</td>
-                      <td className="py-2 pr-3 text-right">
-                        <PctBadge value={r.jobsPct} higherIsBetter />
-                      </td>
-                      <td className="py-2 pr-3 text-right text-muted-foreground">
-                        {r.curAvg != null ? r.curAvg.toFixed(1) : "—"}
-                      </td>
-                      <td className="py-2 text-right">
-                        {r.speedPct == null ? (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        ) : (
-                          <PctBadge value={-r.speedPct} higherIsBetter />
-                        )}
+                  {overStandard.map((s, i) => (
+                    <tr key={i} className="bg-destructive/5">
+                      <td className="py-2 pr-3 font-medium">{s.employee_name}</td>
+                      <td className="py-2 pr-3">{s.step_name}</td>
+                      <td className="py-2 pr-3 font-mono text-xs text-primary">{s.job_id}</td>
+                      <td className="py-2 pr-3 text-right text-muted-foreground">{s.std} น.</td>
+                      <td className="py-2 pr-3 text-right">{s.durationMin.toFixed(1)} น.</td>
+                      <td className="py-2 text-right font-bold text-destructive">
+                        +{s.over.toFixed(1)} น.
                       </td>
                     </tr>
                   ))}
-                  {mom.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-4 text-center text-muted-foreground">
-                        ยังไม่มีข้อมูล
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
-          </div>
+          )}
+        </div>
 
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-              งานที่เกินเวลามาตรฐาน
-            </h3>
-            {overStandard.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                ไม่มีงานเกินเวลามาตรฐานในช่วงเวลาที่เลือก 🎉
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <tr>
-                      <th className="pb-2 pr-3">พนักงาน</th>
-                      <th className="pb-2 pr-3">ขั้นตอน</th>
-                      <th className="pb-2 pr-3">Job</th>
-                      <th className="pb-2 pr-3 text-right">มาตรฐาน</th>
-                      <th className="pb-2 pr-3 text-right">จริง</th>
-                      <th className="pb-2 text-right">เกิน</th>
+        {/* 6. Recent activity */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h2 className="mb-3 font-semibold text-foreground">กิจกรรมล่าสุด</h2>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">กำลังโหลด…</p>
+          ) : scopedLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ยังไม่มีบันทึก</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="pb-2 pr-3">เวลา</th>
+                    <th className="pb-2 pr-3">Job</th>
+                    <th className="pb-2 pr-3">พนักงาน</th>
+                    <th className="pb-2 pr-3">ขั้นตอน</th>
+                    <th className="pb-2">การกระทำ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {scopedLogs.slice(0, 30).map((l) => (
+                    <tr key={l.id}>
+                      <td className="py-2 pr-3 text-muted-foreground">
+                        {new Date(l.created_at).toLocaleString("th-TH")}
+                      </td>
+                      <td className="py-2 pr-3 font-mono font-semibold text-primary">
+                        {l.job_id}
+                      </td>
+                      <td className="py-2 pr-3">{l.employees?.name ?? "—"}</td>
+                      <td className="py-2 pr-3">{l.steps?.step_name ?? "—"}</td>
+                      <td className="py-2">
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
+                            l.action === "finish"
+                              ? "bg-primary/10 text-primary"
+                              : "bg-secondary/15 text-secondary"
+                          }`}
+                        >
+                          {l.action === "finish" ? "เสร็จ" : "เริ่ม"}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {overStandard.map((s, i) => (
-                      <tr key={i} className="bg-destructive/5">
-                        <td className="py-2 pr-3 font-medium">{s.employee_name}</td>
-                        <td className="py-2 pr-3">{s.step_name}</td>
-                        <td className="py-2 pr-3 font-mono text-xs text-primary">{s.job_id}</td>
-                        <td className="py-2 pr-3 text-right text-muted-foreground">
-                          {s.std} น.
-                        </td>
-                        <td className="py-2 pr-3 text-right">{s.durationMin.toFixed(1)} น.</td>
-                        <td className="py-2 text-right font-bold text-destructive">
-                          +{s.over.toFixed(1)} น.
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </TabsContent>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
 
-        <TabsContent value="activity" className="mt-4">
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <h2 className="mb-3 font-semibold text-foreground">กิจกรรมล่าสุด</h2>
-            {loading ? (
-              <p className="text-sm text-muted-foreground">กำลังโหลด…</p>
-            ) : scopedLogs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">ยังไม่มีบันทึก</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <tr>
-                      <th className="pb-2 pr-3">เวลา</th>
-                      <th className="pb-2 pr-3">Job</th>
-                      <th className="pb-2 pr-3">พนักงาน</th>
-                      <th className="pb-2 pr-3">ขั้นตอน</th>
-                      <th className="pb-2">การกระทำ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {scopedLogs.slice(0, 30).map((l) => (
-                      <tr key={l.id}>
-                        <td className="py-2 pr-3 text-muted-foreground">
-                          {new Date(l.created_at).toLocaleString("th-TH")}
-                        </td>
-                        <td className="py-2 pr-3 font-mono font-semibold text-primary">
-                          {l.job_id}
-                        </td>
-                        <td className="py-2 pr-3">{l.employees?.name ?? "—"}</td>
-                        <td className="py-2 pr-3">{l.steps?.step_name ?? "—"}</td>
-                        <td className="py-2">
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
-                              l.action === "finish"
-                                ? "bg-primary/10 text-primary"
-                                : "bg-secondary/15 text-secondary"
-                            }`}
-                          >
-                            {l.action === "finish" ? "เสร็จ" : "เริ่ม"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
