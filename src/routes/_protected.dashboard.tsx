@@ -36,6 +36,7 @@ import {
   Pie,
   Cell,
   Legend,
+  ReferenceLine,
 } from "recharts";
 import {
   Calendar,
@@ -518,6 +519,85 @@ function Dashboard() {
       .filter((d) => d.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [scopedSessions]);
+
+  // D & E. Per-step breakdown by employee — jobs count + avg minutes
+  const stepBreakdown = useMemo(() => {
+    type EmpAgg = {
+      empId: string;
+      name: string;
+      jobs: Set<string>;
+      durations: number[];
+    };
+    type StepAgg = {
+      stepId: string;
+      stepName: string;
+      std: number | null;
+      emps: Map<string, EmpAgg>;
+    };
+    const map = new Map<string, StepAgg>();
+
+    for (const l of filtered) {
+      if (l.action !== "finish") continue;
+      const stepId = l.step_id;
+      const stepName = l.steps?.step_name ?? "—";
+      const std = l.steps?.std_duration_minutes ?? null;
+      let st = map.get(stepId);
+      if (!st) {
+        st = { stepId, stepName, std, emps: new Map() };
+        map.set(stepId, st);
+      }
+      let e = st.emps.get(l.employee_id);
+      if (!e) {
+        e = {
+          empId: l.employee_id,
+          name: l.employees?.name ?? "—",
+          jobs: new Set(),
+          durations: [],
+        };
+        st.emps.set(l.employee_id, e);
+      }
+      e.jobs.add(l.job_id);
+    }
+
+    for (const s of scopedSessions) {
+      const st = map.get(s.step_id);
+      if (!st) continue;
+      const e = st.emps.get(s.employee_id);
+      if (!e) continue;
+      e.durations.push(s.durationMin);
+    }
+
+    return Array.from(map.values())
+      .map((st) => {
+        const emps = Array.from(st.emps.values()).map((e) => {
+          const avg =
+            e.durations.length > 0
+              ? e.durations.reduce((a, b) => a + b, 0) / e.durations.length
+              : null;
+          return {
+            empId: e.empId,
+            name: e.name,
+            jobs: e.jobs.size,
+            avg: avg != null ? Math.round(avg * 10) / 10 : null,
+          };
+        });
+        const jobsData = [...emps].sort((a, b) => b.jobs - a.jobs);
+        const avgData = emps
+          .filter((e) => e.avg != null)
+          .sort((a, b) => (a.avg ?? 0) - (b.avg ?? 0));
+        const totalJobs = emps.reduce((a, b) => a + b.jobs, 0);
+        return {
+          stepId: st.stepId,
+          stepName: st.stepName,
+          std: st.std,
+          totalJobs,
+          jobsData,
+          avgData,
+        };
+      })
+      .filter((s) => s.totalJobs > 0)
+      .sort((a, b) => a.stepName.localeCompare(b.stepName, "th"));
+  }, [filtered, scopedSessions]);
 
   type ExportConfig = {
     rangeMode: "current" | "custom" | "all";
@@ -1251,6 +1331,111 @@ function Dashboard() {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* 3D. Per-step: jobs by employee */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+            <Trophy className="h-4 w-4 text-secondary" />
+            จำนวนงานต่อพนักงาน — แยกตามขั้นตอน
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            แต่ละการ์ด = 1 ขั้นตอน, แสดงว่าพนักงานคนไหนทำขั้นตอนนั้นไปกี่ชุด
+          </p>
+          {stepBreakdown.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {stepBreakdown.map((st) => (
+                <div key={st.stepId} className="rounded-xl border border-border bg-background p-3">
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">{st.stepName}</span>
+                    <span className="text-xs text-muted-foreground">รวม {st.totalJobs} งาน</span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={Math.max(180, st.jobsData.length * 32)}>
+                    <BarChart data={st.jobsData} layout="vertical" margin={{ left: 8, right: 16 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" allowDecimals={false} fontSize={11} />
+                      <YAxis type="category" dataKey="name" width={110} fontSize={11} />
+                      <Tooltip formatter={(v) => [`${v} งาน`, "จำนวน"]} />
+                      <Bar dataKey="jobs" fill="oklch(0.60 0.20 256)" radius={[0, 6, 6, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 3E. Per-step: avg minutes by employee */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+            <TrendingUp className="h-4 w-4 text-secondary" />
+            เวลาเฉลี่ยต่อพนักงาน — แยกตามขั้นตอน
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            หน่วยเป็นนาที — เส้นแดงคือเวลามาตรฐานของขั้นตอน (ถ้ามี)
+          </p>
+          {stepBreakdown.filter((s) => s.avgData.length > 0).length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {stepBreakdown
+                .filter((s) => s.avgData.length > 0)
+                .map((st) => (
+                  <div
+                    key={st.stepId}
+                    className="rounded-xl border border-border bg-background p-3"
+                  >
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="font-medium">{st.stepName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {st.std != null ? `มาตรฐาน ${st.std} น.` : "ไม่มีมาตรฐาน"}
+                      </span>
+                    </div>
+                    <ResponsiveContainer
+                      width="100%"
+                      height={Math.max(180, st.avgData.length * 32)}
+                    >
+                      <BarChart
+                        data={st.avgData}
+                        layout="vertical"
+                        margin={{ left: 8, right: 16 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" fontSize={11} />
+                        <YAxis type="category" dataKey="name" width={110} fontSize={11} />
+                        <Tooltip
+                          formatter={(v) => {
+                            const num = typeof v === "number" ? v : Number(v);
+                            const diff = st.std != null ? num - st.std : null;
+                            const note =
+                              diff == null
+                                ? ""
+                                : diff > 0
+                                  ? ` (เกิน ${diff.toFixed(1)} น.)`
+                                  : ` (เร็วกว่า ${Math.abs(diff).toFixed(1)} น.)`;
+                            return [`${num} นาที${note}`, "เฉลี่ย"];
+                          }}
+                        />
+                        <Bar
+                          dataKey="avg"
+                          fill="oklch(0.65 0.18 145)"
+                          radius={[0, 6, 6, 0]}
+                        />
+                        {st.std != null && (
+                          <ReferenceLine
+                            x={st.std}
+                            stroke="oklch(0.58 0.24 27)"
+                            strokeDasharray="4 4"
+                          />
+                        )}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ))}
+            </div>
           )}
         </div>
 
