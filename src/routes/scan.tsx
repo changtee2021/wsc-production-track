@@ -332,7 +332,7 @@ function ScanPage() {
                 className="h-11 gap-1"
                 title={t("job.confirmTitle")}
               >
-                <RotateCcw className="h-4 w-4" />
+                <Check className="h-4 w-4" />
               </Button>
             )}
           </div>
