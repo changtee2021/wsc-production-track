@@ -657,8 +657,96 @@ function Dashboard() {
           avgData,
         };
       })
-      .filter((s) => s.totalJobs > 0)
-      .sort((a, b) => a.stepName.localeCompare(b.stepName, "th"));
+  }, [filtered, scopedSessions]);
+
+  // D2 & E2. Per-category → per-step breakdown by employee
+  const stepBreakdownByCategory = useMemo(() => {
+    type EmpAgg = { empId: string; name: string; jobs: Set<string>; durations: number[] };
+    type StepAgg = { stepId: string; stepName: string; std: number | null; emps: Map<string, EmpAgg> };
+    type CatAgg = { catId: string; catName: string; steps: Map<string, StepAgg> };
+    const cats = new Map<string, CatAgg>();
+    // resolve session category via finish log lookup
+    const sessionCat = new Map<string, string>();
+
+    for (const l of filtered) {
+      if (l.action !== "finish") continue;
+      const catId = l.category_id ?? "__none__";
+      const catName = l.categories?.name ?? "(ไม่ระบุหมวด)";
+      let cat = cats.get(catId);
+      if (!cat) {
+        cat = { catId, catName, steps: new Map() };
+        cats.set(catId, cat);
+      }
+      let st = cat.steps.get(l.step_id);
+      if (!st) {
+        st = {
+          stepId: l.step_id,
+          stepName: l.steps?.step_name ?? "—",
+          std: l.steps?.std_duration_minutes ?? null,
+          emps: new Map(),
+        };
+        cat.steps.set(l.step_id, st);
+      }
+      let e = st.emps.get(l.employee_id);
+      if (!e) {
+        e = {
+          empId: l.employee_id,
+          name: l.employees?.name ?? "—",
+          jobs: new Set(),
+          durations: [],
+        };
+        st.emps.set(l.employee_id, e);
+      }
+      e.jobs.add(l.job_id);
+      sessionCat.set(`${l.employee_id}|${l.step_id}|${l.job_id}`, catId);
+    }
+
+    for (const s of scopedSessions) {
+      const catId = sessionCat.get(`${s.employee_id}|${s.step_id}|${s.job_id}`);
+      if (!catId) continue;
+      const cat = cats.get(catId);
+      const st = cat?.steps.get(s.step_id);
+      const e = st?.emps.get(s.employee_id);
+      if (e) e.durations.push(s.durationMin);
+    }
+
+    return Array.from(cats.values())
+      .map((cat) => {
+        const steps = Array.from(cat.steps.values())
+          .map((st) => {
+            const emps = Array.from(st.emps.values()).map((e) => {
+              const avg =
+                e.durations.length > 0
+                  ? e.durations.reduce((a, b) => a + b, 0) / e.durations.length
+                  : null;
+              return {
+                empId: e.empId,
+                name: e.name,
+                jobs: e.jobs.size,
+                avg: avg != null ? Math.round(avg * 10) / 10 : null,
+              };
+            });
+            const jobsData = [...emps].sort((a, b) => b.jobs - a.jobs);
+            const avgData = emps
+              .filter((e) => e.avg != null)
+              .sort((a, b) => (a.avg ?? 0) - (b.avg ?? 0));
+            const totalJobs = emps.reduce((a, b) => a + b.jobs, 0);
+            return {
+              stepId: st.stepId,
+              stepName: st.stepName,
+              std: st.std,
+              totalJobs,
+              jobsData,
+              avgData,
+            };
+          })
+          .filter((s) => s.totalJobs > 0)
+          .sort((a, b) => a.stepName.localeCompare(b.stepName, "th"));
+        const catTotal = steps.reduce((a, s) => a + s.totalJobs, 0);
+        return { catId: cat.catId, catName: cat.catName, totalJobs: catTotal, steps };
+      })
+      .filter((c) => c.steps.length > 0)
+      .sort((a, b) => b.totalJobs - a.totalJobs);
   }, [filtered, scopedSessions]);
 
   type ExportConfig = {
