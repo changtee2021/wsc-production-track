@@ -450,6 +450,75 @@ function Dashboard() {
     return { stepCols, rows, colTotals, grandTotal };
   }, [filtered, scopedSessions]);
 
+  // A. Pie: total finished jobs per step (across all employees, in scope)
+  const scopeStepPie = useMemo(() => {
+    return empStepReport.stepCols
+      .map((c, i) => ({ name: c.name, value: empStepReport.colTotals[i] ?? 0 }))
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [empStepReport]);
+
+  // B. Per-employee pie: category × step breakdown (unique job_id finished)
+  const empCategoryStepPie = useMemo(() => {
+    type Slice = { name: string; jobs: Set<string> };
+    const byEmp = new Map<string, { name: string; slices: Map<string, Slice> }>();
+    for (const l of filtered) {
+      if (l.action !== "finish") continue;
+      const empId = l.employee_id;
+      const empName = l.employees?.name ?? "—";
+      const cat = l.categories?.name ?? "(ไม่ระบุหมวด)";
+      const step = l.steps?.step_name ?? "—";
+      const key = `${cat} — ${step}`;
+      let row = byEmp.get(empId);
+      if (!row) {
+        row = { name: empName, slices: new Map() };
+        byEmp.set(empId, row);
+      }
+      let s = row.slices.get(key);
+      if (!s) {
+        s = { name: key, jobs: new Set() };
+        row.slices.set(key, s);
+      }
+      s.jobs.add(l.job_id);
+    }
+    return Array.from(byEmp.entries())
+      .map(([id, r]) => {
+        const data = Array.from(r.slices.values())
+          .map((s) => ({ name: s.name, value: s.jobs.size }))
+          .sort((a, b) => b.value - a.value);
+        const total = data.reduce((acc, d) => acc + d.value, 0);
+        return { id, name: r.name, total, data };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [filtered]);
+
+  // C. Pie: avg minutes per piece per employee
+  // "per piece" = sum of all step durations for the same job_id by that employee
+  const avgPerJobPie = useMemo(() => {
+    const byEmp = new Map<
+      string,
+      { name: string; jobs: Map<string, number> }
+    >();
+    for (const s of scopedSessions) {
+      let row = byEmp.get(s.employee_id);
+      if (!row) {
+        row = { name: s.employee_name, jobs: new Map() };
+        byEmp.set(s.employee_id, row);
+      }
+      row.jobs.set(s.job_id, (row.jobs.get(s.job_id) ?? 0) + s.durationMin);
+    }
+    return Array.from(byEmp.entries())
+      .map(([id, r]) => {
+        const totals = Array.from(r.jobs.values());
+        const avg = totals.length
+          ? totals.reduce((a, b) => a + b, 0) / totals.length
+          : 0;
+        return { id, name: r.name, value: Math.round(avg * 10) / 10, jobs: totals.length };
+      })
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [scopedSessions]);
+
   type ExportConfig = {
     rangeMode: "current" | "custom" | "all";
     fromDate: string; // yyyy-mm-dd
@@ -1072,6 +1141,116 @@ function Dashboard() {
                 </table>
               </div>
             </>
+          )}
+        </div>
+
+        {/* 3A. Pie: total finished jobs per step */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <Activity className="h-4 w-4 text-secondary" />
+            สัดส่วนงานต่อขั้นตอน (รวมทุกพนักงาน)
+          </h3>
+          {scopeStepPie.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={scopeStepPie}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={110}
+                  label={(e: { name?: string; value?: number }) => `${e.name ?? ""}: ${e.value ?? 0}`}
+                >
+                  {scopeStepPie.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* 3B. Per-employee: category × step pie */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+            <CheckSquare className="h-4 w-4 text-secondary" />
+            สัดส่วนงานรายพนักงาน — แยกตามหมวดหมู่ × ขั้นตอน
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            แต่ละ slice = "หมวดหมู่ — ขั้นตอน" นับจำนวนงาน (unique job) ที่เสร็จ
+          </p>
+          {empCategoryStepPie.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {empCategoryStepPie.map((emp) => (
+                <div
+                  key={emp.id}
+                  className="rounded-xl border border-border bg-background p-3"
+                >
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-medium">{emp.name}</span>
+                    <span className="text-xs text-muted-foreground">{emp.total} งาน</span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={emp.data}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={70}
+                      >
+                        {emp.data.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 3C. Pie: avg minutes per piece per employee */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+            <TrendingUp className="h-4 w-4 text-secondary" />
+            เวลาผลิตเฉลี่ย (นาที/ชุด) รายพนักงาน
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            คำนวณจากผลรวมเวลาทุกขั้นตอนของงานเดียวกัน เฉพาะงานที่มีทั้ง start และ finish ในช่วงเวลา
+          </p>
+          {avgPerJobPie.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <PieChart>
+                <Pie
+                  data={avgPerJobPie}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={120}
+                  label={(e: { name?: string; value?: number }) => `${e.name ?? ""}: ${e.value ?? 0} น.`}
+                >
+                  {avgPerJobPie.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v, _n, p) => {
+                    const jobs = (p?.payload as { jobs?: number } | undefined)?.jobs ?? 0;
+                    return [`${v} นาที (เฉลี่ยจาก ${jobs} ชุด)`, "เวลา/ชุด"];
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           )}
         </div>
 
