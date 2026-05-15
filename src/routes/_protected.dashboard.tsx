@@ -1243,9 +1243,10 @@ function Dashboard() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(v: number, _n: string, p: { payload: { jobs: number } }) =>
-                    [`${v} นาที (เฉลี่ยจาก ${p.payload.jobs} ชุด)`, "เวลา/ชุด"]
-                  }
+                  formatter={(v, _n, p) => {
+                    const jobs = (p?.payload as { jobs?: number } | undefined)?.jobs ?? 0;
+                    return [`${v} นาที (เฉลี่ยจาก ${jobs} ชุด)`, "เวลา/ชุด"];
+                  }}
                 />
                 <Legend />
               </PieChart>
