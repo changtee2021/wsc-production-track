@@ -119,6 +119,27 @@ function ScanPage() {
   const { t } = useI18n();
   const uploadNote = useServerFn(uploadWorkerNoteImage);
 
+  const activeKey = job_id && employeeId && stepId
+    ? `wsc:active-start:${job_id}:${stepId}:${employeeId}`
+    : null;
+  const [activeStartAt, setActiveStartAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!activeKey) {
+      setActiveStartAt(null);
+      return;
+    }
+    const v = localStorage.getItem(activeKey);
+    setActiveStartAt(v ? Number(v) : null);
+  }, [activeKey]);
+
+  useEffect(() => {
+    if (activeStartAt == null) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [activeStartAt]);
+
   useEffect(() => {
     (async () => {
       const [e, s, c] = await Promise.all([
