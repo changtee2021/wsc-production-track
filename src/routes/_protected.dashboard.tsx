@@ -1384,56 +1384,72 @@ function Dashboard() {
             เวลาเฉลี่ยต่อพนักงาน — แยกตามขั้นตอน
           </h3>
           <p className="mb-3 text-xs text-muted-foreground">
-            หน่วยเป็นนาที — เส้นแดงคือเวลามาตรฐานของขั้นตอน (ถ้ามี)
+            จัดกลุ่มตามหมวดหมู่ → เวลาเฉลี่ย (นาที) ของพนักงานแต่ละคนต่อขั้นตอน
           </p>
-          {stepBreakdown.filter((s) => s.avgData.length > 0).length === 0 ? (
+          {stepBreakdownByCategory.flatMap((c) => c.steps).filter((s) => s.avgData.length > 0).length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
           ) : (
-            <div className="grid gap-4">
-              {stepBreakdown
-                .filter((s) => s.avgData.length > 0)
-                .map((st) => (
-                  <div
-                    key={st.stepId}
-                    className="rounded-xl border border-border bg-background p-4"
-                  >
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                      <span className="font-medium">{st.stepName}</span>
+            <div className="space-y-6">
+              {stepBreakdownByCategory
+                .map((cat) => ({
+                  ...cat,
+                  steps: cat.steps.filter((s) => s.avgData.length > 0),
+                }))
+                .filter((cat) => cat.steps.length > 0)
+                .map((cat) => (
+                  <div key={cat.catId} className="rounded-xl border border-border bg-muted/20 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="text-base font-semibold text-primary">{cat.catName}</h4>
                       <span className="text-xs text-muted-foreground">
-                        {st.std != null ? `มาตรฐาน ${st.std} น.` : "ไม่มีมาตรฐาน"}
+                        {cat.steps.length} ขั้นตอน
                       </span>
                     </div>
-                    <ResponsiveContainer width="100%" height={420}>
-                      <PieChart>
-                        <Pie
-                          data={st.avgData}
-                          dataKey="avg"
-                          nameKey="name"
-                          outerRadius={150}
-                          label={(e: { name?: string; value?: number }) =>
-                            `${e.name ?? ""}: ${e.value ?? 0} น.`
-                          }
+                    <div className="grid gap-4">
+                      {cat.steps.map((st) => (
+                        <div
+                          key={st.stepId}
+                          className="rounded-xl border border-border bg-background p-4"
                         >
-                          {st.avgData.map((_, i) => (
-                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(v) => {
-                            const num = typeof v === "number" ? v : Number(v);
-                            const diff = st.std != null ? num - st.std : null;
-                            const note =
-                              diff == null
-                                ? ""
-                                : diff > 0
-                                  ? ` (เกิน ${diff.toFixed(1)} น.)`
-                                  : ` (เร็วกว่า ${Math.abs(diff).toFixed(1)} น.)`;
-                            return [`${num} นาที${note}`, "เฉลี่ย"];
-                          }}
-                        />
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                          <div className="mb-2 flex items-center justify-between text-sm">
+                            <span className="font-medium">{st.stepName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {st.std != null ? `มาตรฐาน ${st.std} น.` : "ไม่มีมาตรฐาน"}
+                            </span>
+                          </div>
+                          <ResponsiveContainer width="100%" height={420}>
+                            <PieChart>
+                              <Pie
+                                data={st.avgData}
+                                dataKey="avg"
+                                nameKey="name"
+                                outerRadius={150}
+                                label={(e: { name?: string; value?: number }) =>
+                                  `${e.name ?? ""}: ${e.value ?? 0} น.`
+                                }
+                              >
+                                {st.avgData.map((_, i) => (
+                                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(v) => {
+                                  const num = typeof v === "number" ? v : Number(v);
+                                  const diff = st.std != null ? num - st.std : null;
+                                  const note =
+                                    diff == null
+                                      ? ""
+                                      : diff > 0
+                                        ? ` (เกิน ${diff.toFixed(1)} น.)`
+                                        : ` (เร็วกว่า ${Math.abs(diff).toFixed(1)} น.)`;
+                                  return [`${num} นาที${note}`, "เฉลี่ย"];
+                                }}
+                              />
+                              <Legend wrapperStyle={{ fontSize: 12 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
             </div>
