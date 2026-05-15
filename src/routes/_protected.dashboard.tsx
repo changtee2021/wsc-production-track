@@ -451,6 +451,68 @@ function Dashboard() {
     return { stepCols, rows, colTotals, grandTotal };
   }, [filtered, scopedSessions]);
 
+  // F. Per-category report (day scope): per step finish count + avg minutes
+  const categoryDayReport = useMemo(() => {
+    type StepAgg = { stepId: string; stepName: string; finishCount: number; durations: number[] };
+    type CatAgg = { id: string; name: string; perStep: Map<string, StepAgg>; totalFinish: number };
+    const cats = new Map<string, CatAgg>();
+    // session lookup: emp|step|job → category_id (resolved from finish log)
+    const sessionCat = new Map<string, string>();
+    for (const l of filtered) {
+      if (l.action !== "finish") continue;
+      const catId = l.category_id ?? "__none__";
+      const catName = l.categories?.name ?? "(ไม่ระบุหมวด)";
+      let cat = cats.get(catId);
+      if (!cat) {
+        cat = { id: catId, name: catName, perStep: new Map(), totalFinish: 0 };
+        cats.set(catId, cat);
+      }
+      let st = cat.perStep.get(l.step_id);
+      if (!st) {
+        st = {
+          stepId: l.step_id,
+          stepName: l.steps?.step_name ?? "—",
+          finishCount: 0,
+          durations: [],
+        };
+        cat.perStep.set(l.step_id, st);
+      }
+      st.finishCount += 1;
+      cat.totalFinish += 1;
+      sessionCat.set(`${l.employee_id}|${l.step_id}|${l.job_id}`, catId);
+    }
+    for (const s of scopedSessions) {
+      const catId = sessionCat.get(`${s.employee_id}|${s.step_id}|${s.job_id}`);
+      if (!catId) continue;
+      const cat = cats.get(catId);
+      const st = cat?.perStep.get(s.step_id);
+      if (st) st.durations.push(s.durationMin);
+    }
+    return Array.from(cats.values())
+      .map((c) => {
+        const steps = Array.from(c.perStep.values()).sort((a, b) =>
+          a.stepName.localeCompare(b.stepName, "th"),
+        );
+        return {
+          id: c.id,
+          name: c.name,
+          totalFinish: c.totalFinish,
+          jobsData: steps
+            .filter((s) => s.finishCount > 0)
+            .map((s) => ({ name: s.stepName, value: s.finishCount })),
+          avgData: steps
+            .filter((s) => s.durations.length > 0)
+            .map((s) => ({
+              name: s.stepName,
+              value: Number(
+                (s.durations.reduce((a, b) => a + b, 0) / s.durations.length).toFixed(1),
+              ),
+            })),
+        };
+      })
+      .sort((a, b) => b.totalFinish - a.totalFinish);
+  }, [filtered, scopedSessions]);
+
   // A. Pie: total finished jobs per step (across all employees, in scope)
   const scopeStepPie = useMemo(() => {
     return empStepReport.stepCols
@@ -1320,7 +1382,68 @@ function Dashboard() {
           </div>
         </div>
 
-
+        {/* F. Per-category daily pies */}
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+            <CheckSquare className="h-4 w-4 text-secondary" />
+            รายงานรายหมวดหมู่ — จำนวนชุด + เวลาเฉลี่ย/ขั้นตอน (รายวัน)
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            แต่ละการ์ด = 1 หมวดหมู่ ของวันที่เลือก — pie ซ้าย = จำนวนชุด, pie ขวา = เวลาเฉลี่ย (นาที)
+          </p>
+          {scope !== "day" ? (
+            <p className="text-sm text-muted-foreground">
+              เปลี่ยนเป็นโหมดรายวันเพื่อดูรายงานนี้
+            </p>
+          ) : categoryDayReport.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในวันที่เลือก</p>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {categoryDayReport.map((cat) => (
+                <div key={cat.id} className="rounded-xl border border-border bg-background p-3">
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">{cat.name}</span>
+                    <span className="text-xs text-muted-foreground">รวม {cat.totalFinish} ชุด</span>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <div className="mb-1 text-center text-xs text-muted-foreground">จำนวนชุด/ขั้นตอน</div>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie data={cat.jobsData} dataKey="value" nameKey="name" outerRadius={70} label={(e: { value?: number }) => `${e.value ?? 0}`}>
+                            {cat.jobsData.map((_, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v) => [`${v} ชุด`, "จำนวน"]} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-center text-xs text-muted-foreground">เวลาเฉลี่ย (นาที)/ขั้นตอน</div>
+                      {cat.avgData.length === 0 ? (
+                        <div className="flex h-[220px] items-center justify-center text-xs text-muted-foreground">ไม่มี session ที่จับคู่ start–finish</div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={220}>
+                          <PieChart>
+                            <Pie data={cat.avgData} dataKey="value" nameKey="name" outerRadius={70} label={(e: { value?: number }) => `${e.value ?? 0} น.`}>
+                              {cat.avgData.map((_, i) => (
+                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [`${v} นาที`, "เฉลี่ย"]} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
