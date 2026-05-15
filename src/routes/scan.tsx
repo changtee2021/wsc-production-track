@@ -35,6 +35,8 @@ import {
   X,
   ArrowLeft,
   RotateCcw,
+  Check,
+  Timer,
 } from "lucide-react";
 import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 
