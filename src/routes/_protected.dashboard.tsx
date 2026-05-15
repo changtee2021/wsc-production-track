@@ -450,6 +450,75 @@ function Dashboard() {
     return { stepCols, rows, colTotals, grandTotal };
   }, [filtered, scopedSessions]);
 
+  // A. Pie: total finished jobs per step (across all employees, in scope)
+  const stepPie = useMemo(() => {
+    return empStepReport.stepCols
+      .map((c, i) => ({ name: c.name, value: empStepReport.colTotals[i] ?? 0 }))
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [empStepReport]);
+
+  // B. Per-employee pie: category × step breakdown (unique job_id finished)
+  const empCategoryStepPie = useMemo(() => {
+    type Slice = { name: string; jobs: Set<string> };
+    const byEmp = new Map<string, { name: string; slices: Map<string, Slice> }>();
+    for (const l of filtered) {
+      if (l.action !== "finish") continue;
+      const empId = l.employee_id;
+      const empName = l.employees?.name ?? "—";
+      const cat = l.categories?.name ?? "(ไม่ระบุหมวด)";
+      const step = l.steps?.step_name ?? "—";
+      const key = `${cat} — ${step}`;
+      let row = byEmp.get(empId);
+      if (!row) {
+        row = { name: empName, slices: new Map() };
+        byEmp.set(empId, row);
+      }
+      let s = row.slices.get(key);
+      if (!s) {
+        s = { name: key, jobs: new Set() };
+        row.slices.set(key, s);
+      }
+      s.jobs.add(l.job_id);
+    }
+    return Array.from(byEmp.entries())
+      .map(([id, r]) => {
+        const data = Array.from(r.slices.values())
+          .map((s) => ({ name: s.name, value: s.jobs.size }))
+          .sort((a, b) => b.value - a.value);
+        const total = data.reduce((acc, d) => acc + d.value, 0);
+        return { id, name: r.name, total, data };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [filtered]);
+
+  // C. Pie: avg minutes per piece per employee
+  // "per piece" = sum of all step durations for the same job_id by that employee
+  const avgPerJobPie = useMemo(() => {
+    const byEmp = new Map<
+      string,
+      { name: string; jobs: Map<string, number> }
+    >();
+    for (const s of scopedSessions) {
+      let row = byEmp.get(s.employee_id);
+      if (!row) {
+        row = { name: s.employee_name, jobs: new Map() };
+        byEmp.set(s.employee_id, row);
+      }
+      row.jobs.set(s.job_id, (row.jobs.get(s.job_id) ?? 0) + s.durationMin);
+    }
+    return Array.from(byEmp.entries())
+      .map(([id, r]) => {
+        const totals = Array.from(r.jobs.values());
+        const avg = totals.length
+          ? totals.reduce((a, b) => a + b, 0) / totals.length
+          : 0;
+        return { id, name: r.name, value: Math.round(avg * 10) / 10, jobs: totals.length };
+      })
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [scopedSessions]);
+
   type ExportConfig = {
     rangeMode: "current" | "custom" | "all";
     fromDate: string; // yyyy-mm-dd
