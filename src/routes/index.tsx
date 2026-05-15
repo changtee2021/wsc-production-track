@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
 import { Factory, ShieldCheck, ScanLine } from "lucide-react";
-import { SlideToConfirm } from "@/components/SlideToConfirm";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -149,13 +148,13 @@ function WelcomePage() {
             </div>
           )}
           <div className="w-full max-w-md">
-            <SlideToConfirm
-              label="สแกน"
-              icon={ScanLine}
-              onConfirm={goToScan}
-              colorClass="bg-white/15 text-white backdrop-blur-md ring-1 ring-white/25"
-              thumbClass="bg-white text-primary"
-            />
+            <Button
+              onClick={goToScan}
+              className="h-16 w-full rounded-2xl bg-white text-lg font-bold text-primary shadow-lg hover:bg-white/90"
+            >
+              <ScanLine className="mr-2 h-5 w-5" />
+              สแกน
+            </Button>
           </div>
         </div>
       </section>

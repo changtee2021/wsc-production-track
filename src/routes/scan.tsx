@@ -37,7 +37,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
-import { SlideToConfirm } from "@/components/SlideToConfirm";
+
 import { useServerFn } from "@tanstack/react-start";
 import { uploadWorkerNoteImage } from "@/lib/worker-upload.functions";
 
@@ -417,15 +417,18 @@ function ScanPage() {
 
         {/* Actions */}
         <div className="mt-6 space-y-3">
-          <SlideToConfirm
-            label={t("action.start")}
-            icon={Play}
-            loading={submitting === "start"}
+          <Button
+            onClick={() => submit("start")}
             disabled={submitting !== null}
-            onConfirm={() => submit("start")}
-            colorClass="bg-secondary text-secondary-foreground"
-            thumbClass="bg-white text-secondary"
-          />
+            className="h-16 w-full rounded-2xl bg-secondary text-lg font-bold text-secondary-foreground shadow-md hover:bg-secondary/90"
+          >
+            {submitting === "start" ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <Play className="mr-2 h-5 w-5 fill-current" />
+            )}
+            {t("action.start")}
+          </Button>
 
           <div className="rounded-2xl border border-border bg-card p-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -510,15 +513,18 @@ function ScanPage() {
             )}
           </div>
 
-          <SlideToConfirm
-            label={t("action.finish")}
-            icon={Square}
-            loading={submitting === "finish"}
+          <Button
+            onClick={() => submit("finish")}
             disabled={submitting !== null || uploadingNote}
-            onConfirm={() => submit("finish")}
-            colorClass="bg-primary text-primary-foreground"
-            thumbClass="bg-white text-primary"
-          />
+            className="h-16 w-full rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-md hover:bg-primary/90"
+          >
+            {submitting === "finish" ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <Square className="mr-2 h-5 w-5 fill-current" />
+            )}
+            {t("action.finish")}
+          </Button>
         </div>
 
         {lastSubmit && (
