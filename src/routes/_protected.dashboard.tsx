@@ -258,7 +258,7 @@ function Dashboard() {
   }, [scopedLogs]);
 
   // Step pie (last 30 days starts)
-  const stepPie = useMemo(() => {
+  const scopeStepPie = useMemo(() => {
     const now = new Date();
     const cutoff = new Date(now);
     cutoff.setDate(cutoff.getDate() - 30);
@@ -451,7 +451,7 @@ function Dashboard() {
   }, [filtered, scopedSessions]);
 
   // A. Pie: total finished jobs per step (across all employees, in scope)
-  const stepPie = useMemo(() => {
+  const scopeStepPie = useMemo(() => {
     return empStepReport.stepCols
       .map((c, i) => ({ name: c.name, value: empStepReport.colTotals[i] ?? 0 }))
       .filter((d) => d.value > 0)
@@ -1040,13 +1040,13 @@ function Dashboard() {
           </ChartCard>
 
           <ChartCard title="กิจกรรมรายขั้นตอน (30 วัน)" icon={<Activity className="h-4 w-4" />}>
-            {stepPie.length === 0 ? (
+            {scopeStepPie.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie data={stepPie} dataKey="value" nameKey="name" outerRadius={90} label>
-                    {stepPie.map((_, i) => (
+                  <Pie data={scopeStepPie} dataKey="value" nameKey="name" outerRadius={90} label>
+                    {scopeStepPie.map((_, i) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
