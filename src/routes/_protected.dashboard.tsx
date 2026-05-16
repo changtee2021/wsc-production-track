@@ -1352,80 +1352,149 @@ function Dashboard() {
         </div>
 
 
+        {/* F. Per-category daily pies — moved above employee × step */}
+        <Section
+          icon={<CheckSquare className="h-4 w-4 text-secondary" />}
+          title="รายงานรายหมวดหมู่ — จำนวนชุด + เวลาเฉลี่ย/ขั้นตอน (รายวัน)"
+          description="แต่ละการ์ด = 1 หมวดหมู่ ของวันที่เลือก — pie ซ้าย = จำนวนชุด, pie ขวา = เวลาเฉลี่ย (นาที)"
+        >
+          {scope !== "day" ? (
+            <p className="text-sm text-muted-foreground">
+              เปลี่ยนเป็นโหมดรายวันเพื่อดูรายงานนี้
+            </p>
+          ) : categoryDayReport.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในวันที่เลือก</p>
+          ) : (
+            <div className="grid gap-6">
+              {categoryDayReport.map((cat) => (
+                <div key={cat.id} className="rounded-xl border border-border bg-background p-4">
+                  <div className="mb-3 flex items-center justify-between text-base">
+                    <span className="font-semibold">{cat.name}</span>
+                    <span className="text-xs text-muted-foreground">รวม {cat.totalFinish} ชุด</span>
+                  </div>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div>
+                      <div className="mb-1 text-center text-sm font-medium">จำนวนชุด/ขั้นตอน</div>
+                      <ResponsiveContainer width="100%" height={420}>
+                        <PieChart>
+                          <Pie
+                            data={cat.jobsData}
+                            dataKey="value"
+                            nameKey="name"
+                            outerRadius={140}
+                            label={pieLabelCount}
+                          >
+                            {cat.jobsData.map((_, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v) => [`${v} ชุด`, "จำนวน"]} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-center text-sm font-medium">เวลาเฉลี่ย (นาที)/ขั้นตอน</div>
+                      {cat.avgData.length === 0 ? (
+                        <div className="flex h-[420px] items-center justify-center text-sm text-muted-foreground">
+                          ไม่มี session ที่จับคู่ start–finish
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={420}>
+                          <PieChart>
+                            <Pie
+                              data={cat.avgData}
+                              dataKey="value"
+                              nameKey="name"
+                              outerRadius={140}
+                              label={pieLabelMin}
+                            >
+                              {cat.avgData.map((_, i) => (
+                                <Cell
+                                  key={i}
+                                  fill={CHART_COLORS[(i + 3) % CHART_COLORS.length]}
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => [`${v} นาที`, "เฉลี่ย"]} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
         {/* 3. Employee × Step report */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
-            <CheckSquare className="h-4 w-4 text-secondary" />
-            รายงานรายพนักงาน × ขั้นตอน
-          </h3>
-          <p className="mb-3 text-xs text-muted-foreground">
-            จำนวนงานที่เสร็จ และเวลาเฉลี่ย (นาที) ต่อขั้นตอน — ในช่วงเวลาที่เลือก
-          </p>
+        <Section
+          icon={<CheckSquare className="h-4 w-4 text-secondary" />}
+          title="รายงานรายพนักงาน × ขั้นตอน"
+          description="จำนวนงานที่เสร็จ และเวลาเฉลี่ย (นาที) ต่อขั้นตอน — ในช่วงเวลาที่เลือก"
+        >
           {empStepReport.rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
           ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <tr>
-                      <th className="sticky left-0 bg-card pb-2 pr-3">พนักงาน</th>
-                      {empStepReport.stepCols.map((c) => (
-                        <th key={c.id} className="pb-2 pr-3 text-right">
-                          {c.name}
-                        </th>
-                      ))}
-                      <th className="pb-2 pr-3 text-right">รวม</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {empStepReport.rows.map((r) => (
-                      <tr key={r.id}>
-                        <td className="sticky left-0 bg-card py-2 pr-3 font-medium">{r.name}</td>
-                        {r.cells.map((c) => (
-                          <td key={c.stepId} className="py-2 pr-3 text-right">
-                            {c.jobs === 0 ? (
-                              <span className="text-muted-foreground">—</span>
-                            ) : (
-                              <div className="leading-tight">
-                                <div className="font-semibold text-foreground">{c.jobs}</div>
-                                {c.avg != null && (
-                                  <div className="text-[10px] text-muted-foreground">
-                                    {c.avg.toFixed(1)} น.
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        ))}
-                        <td className="py-2 pr-3 text-right font-bold text-primary">{r.total}</td>
-                      </tr>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="sticky left-0 bg-card pb-2 pr-3">พนักงาน</th>
+                    {empStepReport.stepCols.map((c) => (
+                      <th key={c.id} className="pb-2 pr-3 text-right">
+                        {c.name}
+                      </th>
                     ))}
-                    <tr className="border-t-2 border-border bg-muted/40 font-semibold">
-                      <td className="sticky left-0 bg-muted/40 py-2 pr-3">รวมทั้งหมด</td>
-                      {empStepReport.colTotals.map((t, i) => (
-                        <td key={i} className="py-2 pr-3 text-right">
-                          {t}
+                    <th className="pb-2 pr-3 text-right">รวม</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {empStepReport.rows.map((r) => (
+                    <tr key={r.id}>
+                      <td className="sticky left-0 bg-card py-2 pr-3 font-medium">{r.name}</td>
+                      {r.cells.map((c) => (
+                        <td key={c.stepId} className="py-2 pr-3 text-right">
+                          {c.jobs === 0 ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <div className="leading-tight">
+                              <div className="font-semibold text-foreground">{c.jobs}</div>
+                              {c.avg != null && (
+                                <div className="text-[10px] text-muted-foreground">
+                                  {c.avg.toFixed(1)} น.
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
                       ))}
-                      <td className="py-2 pr-3 text-right text-primary">{empStepReport.grandTotal}</td>
+                      <td className="py-2 pr-3 text-right font-bold text-primary">{r.total}</td>
                     </tr>
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  ))}
+                  <tr className="border-t-2 border-border bg-muted/40 font-semibold">
+                    <td className="sticky left-0 bg-muted/40 py-2 pr-3">รวมทั้งหมด</td>
+                    {empStepReport.colTotals.map((t, i) => (
+                      <td key={i} className="py-2 pr-3 text-right">
+                        {t}
+                      </td>
+                    ))}
+                    <td className="py-2 pr-3 text-right text-primary">{empStepReport.grandTotal}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
+        </Section>
 
         {/* 3D. Per-step: jobs by employee */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
-            <Trophy className="h-4 w-4 text-secondary" />
-            จำนวนงานต่อพนักงาน — แยกตามขั้นตอน
-          </h3>
-          <p className="mb-3 text-xs text-muted-foreground">
-            จัดกลุ่มตามหมวดหมู่ → แต่ละขั้นตอนแสดงว่าพนักงานคนไหนทำไปกี่ชุด
-          </p>
+        <Section
+          icon={<Trophy className="h-4 w-4 text-secondary" />}
+          title="จำนวนงานต่อพนักงาน — แยกตามขั้นตอน"
+          description="จัดกลุ่มตามหมวดหมู่ → แต่ละขั้นตอนแสดงว่าพนักงานคนไหนทำไปกี่ชุด"
+        >
           {stepBreakdownByCategory.length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
           ) : (
@@ -1439,7 +1508,7 @@ function Dashboard() {
                     </span>
                   </div>
                   <div className="grid gap-4">
-                    {cat.steps.map((st) => (
+                    {cat.steps.map((st, sIdx) => (
                       <div
                         key={st.stepId}
                         className="rounded-xl border border-border bg-background p-4"
@@ -1457,16 +1526,17 @@ function Dashboard() {
                               dataKey="jobs"
                               nameKey="name"
                               outerRadius={150}
-                              label={(e: { name?: string; value?: number }) =>
-                                `${e.name ?? ""}: ${e.value ?? 0}`
-                              }
+                              label={pieLabelCount}
                             >
                               {st.jobsData.map((_, i) => (
-                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                <Cell
+                                  key={i}
+                                  fill={CHART_COLORS[(i + sIdx * 2) % CHART_COLORS.length]}
+                                />
                               ))}
                             </Pie>
                             <Tooltip formatter={(v) => [`${v} งาน`, "จำนวน"]} />
-                            <Legend wrapperStyle={{ fontSize: 12 }} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -1476,17 +1546,14 @@ function Dashboard() {
               ))}
             </div>
           )}
-        </div>
+        </Section>
 
         {/* 3E. Per-step: avg minutes by employee */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
-            <TrendingUp className="h-4 w-4 text-secondary" />
-            เวลาเฉลี่ยต่อพนักงาน — แยกตามขั้นตอน
-          </h3>
-          <p className="mb-3 text-xs text-muted-foreground">
-            จัดกลุ่มตามหมวดหมู่ → เวลาเฉลี่ย (นาที) ของพนักงานแต่ละคนต่อขั้นตอน
-          </p>
+        <Section
+          icon={<TrendingUp className="h-4 w-4 text-secondary" />}
+          title="เวลาเฉลี่ยต่อพนักงาน — แยกตามขั้นตอน"
+          description="จัดกลุ่มตามหมวดหมู่ → เวลาเฉลี่ย (นาที) ของพนักงานแต่ละคนต่อขั้นตอน"
+        >
           {stepBreakdownByCategory.flatMap((c) => c.steps).filter((s) => s.avgData.length > 0).length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
           ) : (
@@ -1506,7 +1573,7 @@ function Dashboard() {
                       </span>
                     </div>
                     <div className="grid gap-4">
-                      {cat.steps.map((st) => (
+                      {cat.steps.map((st, sIdx) => (
                         <div
                           key={st.stepId}
                           className="rounded-xl border border-border bg-background p-4"
@@ -1524,12 +1591,13 @@ function Dashboard() {
                                 dataKey="avg"
                                 nameKey="name"
                                 outerRadius={150}
-                                label={(e: { name?: string; value?: number }) =>
-                                  `${e.name ?? ""}: ${e.value ?? 0} น.`
-                                }
+                                label={pieLabelMin}
                               >
                                 {st.avgData.map((_, i) => (
-                                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                                  <Cell
+                                    key={i}
+                                    fill={CHART_COLORS[(i + sIdx * 2 + 4) % CHART_COLORS.length]}
+                                  />
                                 ))}
                               </Pie>
                               <Tooltip
@@ -1545,7 +1613,7 @@ function Dashboard() {
                                   return [`${num} นาที${note}`, "เฉลี่ย"];
                                 }}
                               />
-                              <Legend wrapperStyle={{ fontSize: 12 }} />
+                              <Legend wrapperStyle={{ fontSize: 11 }} />
                             </PieChart>
                           </ResponsiveContainer>
                         </div>
@@ -1555,14 +1623,13 @@ function Dashboard() {
                 ))}
             </div>
           )}
-        </div>
+        </Section>
 
         {/* 4. MoM */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <TrendingUp className="h-4 w-4 text-secondary" />
-            เปรียบเทียบเดือนนี้ vs เดือนก่อน (MoM)
-          </h3>
+        <Section
+          icon={<TrendingUp className="h-4 w-4 text-secondary" />}
+          title="เปรียบเทียบเดือนนี้ vs เดือนก่อน (MoM)"
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -1604,91 +1671,8 @@ function Dashboard() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Section>
 
-        {/* F. Per-category daily pies */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
-            <CheckSquare className="h-4 w-4 text-secondary" />
-            รายงานรายหมวดหมู่ — จำนวนชุด + เวลาเฉลี่ย/ขั้นตอน (รายวัน)
-          </h3>
-          <p className="mb-3 text-xs text-muted-foreground">
-            แต่ละการ์ด = 1 หมวดหมู่ ของวันที่เลือก — pie ซ้าย = จำนวนชุด, pie ขวา = เวลาเฉลี่ย (นาที)
-          </p>
-          {scope !== "day" ? (
-            <p className="text-sm text-muted-foreground">
-              เปลี่ยนเป็นโหมดรายวันเพื่อดูรายงานนี้
-            </p>
-          ) : categoryDayReport.length === 0 ? (
-            <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในวันที่เลือก</p>
-          ) : (
-            <div className="grid gap-6">
-              {categoryDayReport.map((cat) => (
-                <div key={cat.id} className="rounded-xl border border-border bg-background p-4">
-                  <div className="mb-3 flex items-center justify-between text-base">
-                    <span className="font-semibold">{cat.name}</span>
-                    <span className="text-xs text-muted-foreground">รวม {cat.totalFinish} ชุด</span>
-                  </div>
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <div>
-                      <div className="mb-1 text-center text-sm font-medium">จำนวนชุด/ขั้นตอน</div>
-                      <ResponsiveContainer width="100%" height={420}>
-                        <PieChart>
-                          <Pie
-                            data={cat.jobsData}
-                            dataKey="value"
-                            nameKey="name"
-                            outerRadius={140}
-                            label={(e: { name?: string; value?: number }) =>
-                              `${e.name ?? ""}: ${e.value ?? 0}`
-                            }
-                          >
-                            {cat.jobsData.map((_, i) => (
-                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(v) => [`${v} ชุด`, "จำนวน"]} />
-                          <Legend wrapperStyle={{ fontSize: 12 }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div>
-                      <div className="mb-1 text-center text-sm font-medium">เวลาเฉลี่ย (นาที)/ขั้นตอน</div>
-                      {cat.avgData.length === 0 ? (
-                        <div className="flex h-[420px] items-center justify-center text-sm text-muted-foreground">
-                          ไม่มี session ที่จับคู่ start–finish
-                        </div>
-                      ) : (
-                        <ResponsiveContainer width="100%" height={420}>
-                          <PieChart>
-                            <Pie
-                              data={cat.avgData}
-                              dataKey="value"
-                              nameKey="name"
-                              outerRadius={140}
-                              label={(e: { name?: string; value?: number }) =>
-                                `${e.name ?? ""}: ${e.value ?? 0} น.`
-                              }
-                            >
-                              {cat.avgData.map((_, i) => (
-                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(v) => [`${v} นาที`, "เฉลี่ย"]} />
-                            <Legend wrapperStyle={{ fontSize: 12 }} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>ตั้งค่าการส่งออก Excel</DialogTitle>
