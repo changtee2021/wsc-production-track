@@ -1672,7 +1672,9 @@ function Dashboard() {
             </table>
           </div>
         </Section>
+      </div>
 
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>ตั้งค่าการส่งออก Excel</DialogTitle>
