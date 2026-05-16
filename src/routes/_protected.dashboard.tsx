@@ -89,13 +89,108 @@ interface NamedRow {
 }
 
 const CHART_COLORS = [
-  "oklch(0.32 0.10 256)",
-  "oklch(0.60 0.20 256)",
-  "oklch(0.65 0.18 145)",
-  "oklch(0.75 0.15 80)",
-  "oklch(0.55 0.20 30)",
-  "oklch(0.50 0.15 300)",
+  "oklch(0.55 0.22 256)", // blue
+  "oklch(0.65 0.20 145)", // green
+  "oklch(0.72 0.18 60)",  // amber
+  "oklch(0.60 0.24 25)",  // red-orange
+  "oklch(0.55 0.22 310)", // magenta
+  "oklch(0.65 0.18 190)", // teal
+  "oklch(0.62 0.20 95)",  // yellow-green
+  "oklch(0.50 0.22 280)", // purple
+  "oklch(0.62 0.22 15)",  // red
+  "oklch(0.58 0.18 220)", // sky
+  "oklch(0.60 0.20 170)", // emerald
+  "oklch(0.68 0.22 45)",  // orange
+  "oklch(0.55 0.22 340)", // pink
+  "oklch(0.60 0.20 125)", // lime
+  "oklch(0.45 0.18 265)", // indigo deep
+  "oklch(0.70 0.15 105)", // olive
+  "oklch(0.50 0.18 200)", // ocean
+  "oklch(0.65 0.22 75)",  // gold
 ];
+
+// Custom label renderer for pies — small font + wraps long names to 2 lines
+const makePieLabel = (suffix = "") => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Label = (props: any) => {
+    const { cx, cy, midAngle, outerRadius, name, value } = props;
+    const RAD = Math.PI / 180;
+    const r = (outerRadius ?? 100) + 14;
+    const x = cx + r * Math.cos(-midAngle * RAD);
+    const y = cy + r * Math.sin(-midAngle * RAD);
+    const anchor = x > cx ? "start" : "end";
+    const label = String(name ?? "");
+    const MAX = 14;
+    let lines: string[];
+    if (label.length > MAX) {
+      const mid = Math.floor(label.length / 2);
+      const spaceIdx = label.lastIndexOf(" ", mid + 3);
+      const cut = spaceIdx > 2 ? spaceIdx : mid;
+      lines = [label.slice(0, cut).trim(), label.slice(cut).trim()];
+    } else {
+      lines = [label];
+    }
+    return (
+      <text
+        x={x}
+        y={y}
+        fontSize={10}
+        textAnchor={anchor}
+        className="fill-foreground"
+      >
+        {lines.map((ln, i) => (
+          <tspan key={i} x={x} dy={i === 0 ? 0 : 11}>
+            {ln}
+          </tspan>
+        ))}
+        <tspan x={x} dy={11} className="fill-muted-foreground">
+          {value}
+          {suffix}
+        </tspan>
+      </text>
+    );
+  };
+  return Label;
+};
+
+const pieLabelCount = makePieLabel("");
+const pieLabelMin = makePieLabel(" น.");
+
+interface SectionProps {
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}
+
+function Section({ icon, title, description, defaultOpen = true, children }: SectionProps) {
+  return (
+    <Collapsible
+      defaultOpen={defaultOpen}
+      className="rounded-2xl border border-border bg-card shadow-sm"
+    >
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="group flex w-full items-start justify-between gap-3 p-5 text-left hover:bg-muted/30 transition rounded-2xl"
+        >
+          <div className="min-w-0 flex-1">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              {icon}
+              {title}
+            </h3>
+            {description && (
+              <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+            )}
+          </div>
+          <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="px-5 pb-5">{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 function Dashboard() {
   const [logs, setLogs] = useState<LogRow[]>([]);
