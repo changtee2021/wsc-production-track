@@ -1280,3 +1280,179 @@ function AnnouncementsPanel() {
     </section>
   );
 }
+
+interface QcEmp {
+  id: string;
+  name: string;
+  emp_code: string | null;
+  active: boolean;
+}
+
+function QcEmployeesPanel() {
+  const upsert = useServerFn(adminUpsertQcEmployee);
+  const del = useServerFn(adminDeleteQcEmployee);
+  const [items, setItems] = useState<QcEmp[]>([]);
+  const [name, setName] = useState("");
+  const [empCode, setEmpCode] = useState("");
+  const [editing, setEditing] = useState<QcEmp | null>(null);
+
+  const load = async () => {
+    const { data } = await supabase
+      .from("qc_employees")
+      .select("id, name, emp_code, active")
+      .order("name");
+    setItems((data ?? []) as QcEmp[]);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const submit = async () => {
+    if (!name.trim()) return;
+    try {
+      const token = requireToken();
+      if (editing) {
+        await upsert({
+          data: {
+            token,
+            id: editing.id,
+            name: name.trim(),
+            emp_code: empCode.trim() || null,
+            active: editing.active,
+          },
+        });
+        toast.success("บันทึกแล้ว");
+      } else {
+        await upsert({
+          data: { token, name: name.trim(), emp_code: empCode.trim() || null },
+        });
+        toast.success("เพิ่มพนักงาน QC แล้ว");
+      }
+      setName("");
+      setEmpCode("");
+      setEditing(null);
+      await load();
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const toggleActive = async (e: QcEmp) => {
+    try {
+      const token = requireToken();
+      await upsert({
+        data: {
+          token,
+          id: e.id,
+          name: e.name,
+          emp_code: e.emp_code,
+          active: !e.active,
+        },
+      });
+      await load();
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("ลบพนักงาน QC คนนี้?")) return;
+    try {
+      const token = requireToken();
+      await del({ data: { token, id } });
+      toast.success("ลบแล้ว");
+      await load();
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const startEdit = (e: QcEmp) => {
+    setEditing(e);
+    setName(e.name);
+    setEmpCode(e.emp_code ?? "");
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setName("");
+    setEmpCode("");
+  };
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <h2 className="mb-3 flex items-center gap-2 text-lg font-bold">
+        <ClipboardCheck className="h-5 w-5 text-secondary" /> พนักงาน QC
+      </h2>
+      <div className="space-y-2">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="ชื่อพนักงาน QC"
+        />
+        <Input
+          value={empCode}
+          onChange={(e) => setEmpCode(e.target.value)}
+          placeholder="รหัสพนักงาน (ถ้ามี)"
+        />
+        <div className="flex gap-2">
+          <Button onClick={submit} className="flex-1 gap-1">
+            {editing ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {editing ? "บันทึก" : "เพิ่ม"}
+          </Button>
+          {editing && (
+            <Button variant="outline" onClick={cancelEdit} className="gap-1">
+              <X className="h-4 w-4" /> ยกเลิก
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="mt-4 rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+          ยังไม่มีพนักงาน QC
+        </div>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {items.map((e) => (
+            <li
+              key={e.id}
+              className={`flex items-center justify-between rounded-lg border p-3 ${
+                e.active ? "border-border bg-background" : "border-dashed border-muted bg-muted/30"
+              }`}
+            >
+              <div>
+                <div className="font-semibold">{e.name}</div>
+                {e.emp_code && (
+                  <div className="font-mono text-xs text-muted-foreground">{e.emp_code}</div>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => toggleActive(e)}
+                  title={e.active ? "ปิดการใช้งาน" : "เปิดการใช้งาน"}
+                >
+                  {e.active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => startEdit(e)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => remove(e.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
