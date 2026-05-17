@@ -112,6 +112,7 @@ function Manage() {
         <CategoriesPanel />
         <EmployeesPanel />
         <StepsPanel />
+        <QcEmployeesPanel />
       </div>
     </main>
   );
