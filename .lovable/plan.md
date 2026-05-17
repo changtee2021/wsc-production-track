@@ -1,80 +1,77 @@
-## เป้าหมาย
-ปรับ `/dashboard` 4 จุด: ย้ายตำแหน่งเซกชัน, ลดขนาดตัวอักษรใน pie, ขยายชุดสี, เพิ่มความสามารถพับ/กางหัวข้อ
+## ภาพรวม
+สร้างระบบ QC แยกจากระบบสแกนพนักงานปกติ ประกอบด้วย 4 ส่วน:
+1) ปุ่มเข้า QC + รหัสผ่าน `wscqc123`
+2) หน้า `/qc` สำหรับสแกน-เลือกขั้นตอน-แนบรูป/วิดีโอ/ข้อความ-ส่งรายงาน
+3) หน้าแอดมินจัดการพนักงาน QC (popup แยก)
+4) หน้ารายงาน QC ในแอดมิน
 
-## รายละเอียด
+## 1. ฐานข้อมูล (migration)
+ตารางใหม่ + storage bucket ใหม่:
 
-### 1. ย้ายลำดับเซกชัน
-ย้าย **F. รายงานรายหมวดหมู่ — จำนวนชุด + เวลาเฉลี่ย/ขั้นตอน (รายวัน)** (บรรทัด ~1505–1600) ขึ้นไปไว้ **ก่อน** เซกชัน **รายงานรายพนักงาน × ขั้นตอน** (บรรทัด ~1258) — เลื่อน JSX block ทั้งก้อนไม่แก้ logic
+- **`qc_employees`** — `id, name, emp_code, active, created_at` (RLS: public read)
+- **`qc_reports`** — เก็บรายงาน QC
+  - `id, job_id, qc_employee_id, production_log_id (nullable), step_id, category_id, employee_id (พนักงานที่ทำขั้นตอนนั้น), note (text), media (jsonb array ของ {url, type:'image'|'video'}), status (text default 'open'), created_at`
+  - RLS: public INSERT (เหมือน production_logs), อ่านผ่าน server fn admin เท่านั้น
+- **Storage bucket `qc-media`** (public) สำหรับรูปและวิดีโอ
+- เพิ่ม secret ใหม่: `QC_PASSWORD = wscqc123` (หรือ hardcode ใน env)
 
-### 2. ขยายชุดสี (CHART_COLORS)
-ขยาย `CHART_COLORS` (บรรทัด 85–92) จาก 6 สี → 16+ สี ครอบคลุม hue ทั่ววงล้อ เพื่อไม่ให้ slice ซ้ำสีในชาร์ตที่มี step/พนักงาน 8–12 ตัว เช่น:
-```ts
-const CHART_COLORS = [
-  "oklch(0.55 0.22 256)", // blue
-  "oklch(0.65 0.20 145)", // green
-  "oklch(0.70 0.18 60)",  // amber
-  "oklch(0.60 0.24 25)",  // red-orange
-  "oklch(0.55 0.22 310)", // magenta
-  "oklch(0.65 0.18 190)", // teal
-  "oklch(0.60 0.20 90)",  // yellow-green
-  "oklch(0.50 0.22 280)", // purple
-  "oklch(0.65 0.20 15)",  // red
-  "oklch(0.55 0.18 220)", // sky
-  "oklch(0.60 0.20 170)", // emerald
-  "oklch(0.65 0.22 45)",  // orange
-  "oklch(0.50 0.20 340)", // pink
-  "oklch(0.55 0.18 130)", // lime
-  "oklch(0.45 0.15 260)", // indigo deep
-  "oklch(0.70 0.15 105)", // olive
-];
-```
+## 2. หน้าเข้า QC
+- เพิ่มปุ่ม **"QC"** ที่ `AppHeader` มุมบนขวาของหน้าแรก (`/`) ข้างปุ่ม Admin
+- สร้าง route `/qc-login` (หรือใช้ dialog) ที่รับรหัสผ่าน `wscqc123`
+- ใช้ pattern เดียวกับ admin: `verifyQcPassword` server fn + token เก็บใน localStorage (`ptrack_qc_token`)
+- เพิ่ม helper `qc-session.ts` คล้าย `admin-session.ts`
+- เพิ่ม layout route `_qc.tsx` หรือเช็คใน loader ของ `/qc`
 
-### 3. ปรับ font size ใน pie chart labels
-ทุก `<Pie label={...}>` ใน 4 เซกชัน (categoryDayReport ×2, stepBreakdownByCategory ×2):
-- เปลี่ยน label จาก string function → custom render function ที่คืน `<text>` ด้วย `fontSize={10}` (จาก default 12–14)
-- ตัด/wrap ชื่อยาวเป็น 2 บรรทัด: ถ้า name length > 12 → split เป็น 2 `<tspan>` (บรรทัดแรกชื่อ, บรรทัดสองค่า)
-- ตัวอย่าง:
-```tsx
-label={({ cx, cy, midAngle, outerRadius, name, value }) => {
-  const RAD = Math.PI / 180;
-  const r = outerRadius + 18;
-  const x = cx + r * Math.cos(-midAngle * RAD);
-  const y = cy + r * Math.sin(-midAngle * RAD);
-  return (
-    <text x={x} y={y} fontSize={10} textAnchor={x > cx ? "start" : "end"} fill="currentColor">
-      <tspan x={x} dy="0">{name}</tspan>
-      <tspan x={x} dy="12">{value}{suffix}</tspan>
-    </text>
-  );
-}}
-```
-ใช้ helper function เดียวสร้าง label renderer (รับ `suffix` เช่น `" น."` หรือ `""`) เพื่อ DRY
+## 3. หน้า `/qc`
+ใช้ UI ใกล้เคียง `/scan` แต่:
+- **สแกน QR / กรอก job_id** (เหมือนเดิม)
+- **เลือกพนักงาน QC** จาก `qc_employees`
+- เมื่อมี job_id แล้ว → query `production_logs` ของ job นั้น (action='finish') แสดง list:
+  - หมวดหมู่ + ขั้นตอน + ชื่อพนักงาน + เวลา
+  - แตะเลือก 1 รายการ → เปิดฟอร์มรายงาน
+- **ฟอร์มรายงาน**:
+  - กล่องข้อความ (note)
+  - ปุ่มถ่ายภาพ / เลือกรูป (หลายไฟล์)
+  - ปุ่มถ่ายวิดีโอ / เลือกวิดีโอ
+  - preview thumbnails + ลบได้
+  - ปุ่ม **"ส่งรายงานไปแอดมิน"**
+- ไม่มีปุ่ม start/finish
 
-### 4. หัวข้อพับ/กางได้
-ใช้ `Collapsible` (`@/components/ui/collapsible` — มีอยู่แล้ว) ครอบทุก `<Card>` ระดับเซกชัน:
-- เซกชันทั้งหมดที่จะครอบ: ตาราง ranking, Over-Standard, Histogram, By-Step matrix, 3D, 3E, MoM, F (categoryDayReport), และอื่นๆ ระดับเดียวกัน
-- pattern:
-  ```tsx
-  <Collapsible defaultOpen>
-    <Card>
-      <CollapsibleTrigger asChild>
-        <CardHeader className="cursor-pointer flex-row items-center justify-between">
-          <CardTitle>...</CardTitle>
-          <ChevronDown className="h-5 w-5 transition-transform data-[state=closed]:-rotate-90" />
-        </CardHeader>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <CardContent>...</CardContent>
-      </CollapsibleContent>
-    </Card>
-  </Collapsible>
-  ```
-- `defaultOpen` → กางทุกหัวข้อตอนเข้าหน้า, ผู้ใช้กดหุบเอง
-- import `ChevronDown` จาก `lucide-react` (น่าจะมีอยู่แล้ว)
+## 4. แอดมิน — จัดการพนักงาน QC
+ใน `/manage` เพิ่มแท็บใหม่ **"พนักงาน QC"** (หรือปุ่ม popup ตาม request)
+- CRUD พนักงาน QC (ชื่อ, รหัส, active)
+- ใช้ server fn ใหม่: `adminUpsertQcEmployee`, `adminDeleteQcEmployee`
 
-## ไฟล์ที่แก้
-- `src/routes/_protected.dashboard.tsx` (ไฟล์เดียว)
+## 5. แอดมิน — รายงาน QC
+หน้าใหม่ `/_protected.qc-reports.tsx` (ลิงก์จาก dashboard/manage)
+- ตารางรายงาน QC: วันที่, job_id, หมวดหมู่, ขั้นตอน, พนักงานที่ทำ, ผู้ตรวจ QC, note, สื่อ (คลิกดูได้)
+- ฟิลเตอร์: ช่วงวันที่, job_id, พนักงาน QC, สถานะ
+- ปุ่ม mark resolved/open
+- export Excel/CSV (optional ตาม pattern logs.tsx)
 
-## ไม่แตะ
-- โลจิกข้อมูล (`filtered`, `scopedSessions`, `categoryDayReport`, `stepBreakdownByCategory`)
-- ฟิลเตอร์, export Excel, header
+## 6. Server functions ใหม่ (`src/lib/qc.functions.ts`)
+- `verifyQcPassword(password)` → token
+- `checkQcToken(token)`
+- `qcFetchJobLogs(jobId)` — return finish logs ของ job
+- `qcSubmitReport({ token, job_id, qc_employee_id, step_id, category_id, employee_id, production_log_id, note, media })`
+- `qcCreateUploadUrl({ token, ext, kind })` — signed upload ไป bucket `qc-media`
+- `adminListQcEmployees(token)`, `adminUpsertQcEmployee`, `adminDeleteQcEmployee`
+- `adminFetchQcReports({ token, filters })`, `adminUpdateQcReportStatus`
+
+## ไฟล์ที่แก้ / สร้าง
+**สร้าง**
+- `supabase migration` (qc_employees, qc_reports, bucket qc-media + policies)
+- `src/lib/qc.functions.ts`, `src/lib/qc-session.ts`, `src/lib/qc-token.server.ts`
+- `src/routes/qc.tsx` (หน้าหลัก QC + login flow)
+- `src/routes/_protected.qc-reports.tsx`
+- เพิ่ม functions ใน `src/lib/admin.functions.ts` สำหรับ QC employees + reports
+
+**แก้**
+- `src/routes/index.tsx` หรือ `AppHeader` — เพิ่มปุ่ม QC มุมบนขวา
+- `src/routes/_protected.manage.tsx` — เพิ่มแท็บ "พนักงาน QC"
+- `src/routes/_protected.dashboard.tsx` — เพิ่มลิงก์ไปหน้ารายงาน QC (optional)
+
+## คำถามก่อนเริ่ม
+1. รหัส `wscqc123` ให้ hardcode ในโค้ดเลย หรือเก็บเป็น secret `QC_PASSWORD`?
+2. ขนาด/ระยะเวลาวิดีโอจำกัดเท่าไร (เช่น ≤ 30MB, ≤ 60 วินาที)?
+3. รายงาน QC ให้ปรากฏใน Dashboard เดิมด้วยไหม หรือแยกหน้าใหม่อย่างเดียวพอ?
