@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScanRouteImport } from './routes/scan'
+import { Route as QcRouteImport } from './routes/qc'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
@@ -20,6 +22,11 @@ import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dash
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
   path: '/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QcRoute = QcRouteImport.update({
+  id: '/qc',
+  path: '/qc',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -35,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProtectedQcReportsRoute = ProtectedQcReportsRouteImport.update({
+  id: '/qc-reports',
+  path: '/qc-reports',
+  getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedManageRoute = ProtectedManageRouteImport.update({
   id: '/manage',
@@ -55,49 +67,74 @@ const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/logs': typeof ProtectedLogsRoute
   '/manage': typeof ProtectedManageRoute
+  '/qc-reports': typeof ProtectedQcReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/logs': typeof ProtectedLogsRoute
   '/manage': typeof ProtectedManageRoute
+  '/qc-reports': typeof ProtectedQcReportsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_protected': typeof ProtectedRouteWithChildren
   '/admin': typeof AdminRoute
+  '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/manage': typeof ProtectedManageRoute
+  '/_protected/qc-reports': typeof ProtectedQcReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/scan' | '/dashboard' | '/logs' | '/manage'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/qc'
+    | '/scan'
+    | '/dashboard'
+    | '/logs'
+    | '/manage'
+    | '/qc-reports'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/scan' | '/dashboard' | '/logs' | '/manage'
+  to:
+    | '/'
+    | '/admin'
+    | '/qc'
+    | '/scan'
+    | '/dashboard'
+    | '/logs'
+    | '/manage'
+    | '/qc-reports'
   id:
     | '__root__'
     | '/'
     | '/_protected'
     | '/admin'
+    | '/qc'
     | '/scan'
     | '/_protected/dashboard'
     | '/_protected/logs'
     | '/_protected/manage'
+    | '/_protected/qc-reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProtectedRoute: typeof ProtectedRouteWithChildren
   AdminRoute: typeof AdminRoute
+  QcRoute: typeof QcRoute
   ScanRoute: typeof ScanRoute
 }
 
@@ -108,6 +145,13 @@ declare module '@tanstack/react-router' {
       path: '/scan'
       fullPath: '/scan'
       preLoaderRoute: typeof ScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qc': {
+      id: '/qc'
+      path: '/qc'
+      fullPath: '/qc'
+      preLoaderRoute: typeof QcRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -130,6 +174,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_protected/qc-reports': {
+      id: '/_protected/qc-reports'
+      path: '/qc-reports'
+      fullPath: '/qc-reports'
+      preLoaderRoute: typeof ProtectedQcReportsRouteImport
+      parentRoute: typeof ProtectedRoute
     }
     '/_protected/manage': {
       id: '/_protected/manage'
@@ -159,12 +210,14 @@ interface ProtectedRouteChildren {
   ProtectedDashboardRoute: typeof ProtectedDashboardRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedManageRoute: typeof ProtectedManageRoute
+  ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedDashboardRoute: ProtectedDashboardRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedManageRoute: ProtectedManageRoute,
+  ProtectedQcReportsRoute: ProtectedQcReportsRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
@@ -175,8 +228,18 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProtectedRoute: ProtectedRouteWithChildren,
   AdminRoute: AdminRoute,
+  QcRoute: QcRoute,
   ScanRoute: ScanRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
