@@ -17,6 +17,8 @@ import {
   adminInsertAnnouncement,
   adminUpdateAnnouncement,
   adminDeleteAnnouncement,
+  adminUpsertQcEmployee,
+  adminDeleteQcEmployee,
 } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
