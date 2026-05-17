@@ -33,6 +33,12 @@ function AdminLayout() {
             <span className="hidden sm:inline">History</span>
           </Button>
         </Link>
+        <Link to="/qc-reports">
+          <Button variant="secondary" size="sm" className="gap-1">
+            <ClipboardCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">QC</span>
+          </Button>
+        </Link>
         <Link to="/manage">
           <Button variant="secondary" size="sm" className="gap-1">
             <Users className="h-4 w-4" />
