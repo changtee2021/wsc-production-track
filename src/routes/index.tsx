@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
-import { Factory, ShieldCheck, ScanLine } from "lucide-react";
+import { Factory, ShieldCheck, ScanLine, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -117,16 +117,28 @@ function WelcomePage() {
               WSC ProductionTrack
             </span>
           </div>
-          <Link to="/admin">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1 rounded-full bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">แอดมิน</span>
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/qc" search={{ job_id: "" }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 rounded-full bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">QC</span>
+              </Button>
+            </Link>
+            <Link to="/admin">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 rounded-full bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">แอดมิน</span>
+              </Button>
+            </Link>
+          </div>
         </header>
 
         {/* Dots + Slide to scan */}

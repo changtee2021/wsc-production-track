@@ -174,6 +174,72 @@ export type Database = {
           },
         ]
       }
+      qc_employees: {
+        Row: {
+          active: boolean
+          created_at: string
+          emp_code: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          emp_code?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          emp_code?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      qc_reports: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          employee_id: string | null
+          id: string
+          job_id: string
+          media: Json
+          note: string | null
+          production_log_id: string | null
+          qc_employee_id: string
+          status: string
+          step_id: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          job_id: string
+          media?: Json
+          note?: string | null
+          production_log_id?: string | null
+          qc_employee_id: string
+          status?: string
+          step_id?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          job_id?: string
+          media?: Json
+          note?: string | null
+          production_log_id?: string | null
+          qc_employee_id?: string
+          status?: string
+          step_id?: string | null
+        }
+        Relationships: []
+      }
       steps: {
         Row: {
           active: boolean

@@ -373,3 +373,115 @@ export const adminDeleteAnnouncement = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---- QC Employees --------------------------------------------------------
+
+const qcEmployeePayload = z.object({
+  token: tokenStr,
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(100),
+  emp_code: z.string().trim().max(50).nullable().optional(),
+  active: z.boolean().optional(),
+});
+
+export const adminUpsertQcEmployee = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => qcEmployeePayload.parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const row = {
+      name: data.name,
+      emp_code: data.emp_code ?? null,
+      ...(data.active !== undefined ? { active: data.active } : {}),
+    };
+    if (data.id) {
+      const { error } = await supabaseAdmin
+        .from("qc_employees")
+        .update(row)
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin.from("qc_employees").insert(row);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const adminDeleteQcEmployee = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await supabaseAdmin
+      .from("qc_employees")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---- QC Reports (admin reads) --------------------------------------------
+
+export const adminFetchQcReports = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        from: z.string().optional(),
+        to: z.string().optional(),
+        job_id: z.string().trim().max(200).optional(),
+        status: z.enum(["open", "resolved", "all"]).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    let q = supabaseAdmin
+      .from("qc_reports")
+      .select(
+        "id, job_id, qc_employee_id, production_log_id, step_id, category_id, employee_id, note, media, status, created_at, qc_employees(name, emp_code), employees(name, emp_code), steps(step_name), categories(name)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (data.from) q = q.gte("created_at", data.from);
+    if (data.to) q = q.lte("created_at", data.to);
+    if (data.job_id) q = q.ilike("job_id", `%${data.job_id}%`);
+    if (data.status && data.status !== "all") q = q.eq("status", data.status);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+export const adminUpdateQcReportStatus = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        id: z.string().uuid(),
+        status: z.enum(["open", "resolved"]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await supabaseAdmin
+      .from("qc_reports")
+      .update({ status: data.status })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteQcReport = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await supabaseAdmin
+      .from("qc_reports")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
