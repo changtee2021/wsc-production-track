@@ -1,77 +1,50 @@
-## ภาพรวม
-สร้างระบบ QC แยกจากระบบสแกนพนักงานปกติ ประกอบด้วย 4 ส่วน:
-1) ปุ่มเข้า QC + รหัสผ่าน `wscqc123`
-2) หน้า `/qc` สำหรับสแกน-เลือกขั้นตอน-แนบรูป/วิดีโอ/ข้อความ-ส่งรายงาน
-3) หน้าแอดมินจัดการพนักงาน QC (popup แยก)
-4) หน้ารายงาน QC ในแอดมิน
+## 1) แก้บั๊ก: ส่ง QC report แล้วไม่ขึ้นในหน้ารายงาน
 
-## 1. ฐานข้อมูล (migration)
-ตารางใหม่ + storage bucket ใหม่:
+**สาเหตุ:** ตาราง `qc_reports` ไม่มี foreign key ไปยัง `qc_employees`, `employees`, `steps`, `categories`, `production_logs` ตอนสร้าง migration ครั้งก่อน — แต่หน้า admin (`adminFetchQcReports`) ใช้ embedded select `qc_employees(name, emp_code), employees(name), steps(step_name), categories(name)` ซึ่ง PostgREST ต้องมี FK ถึงจะ join ได้ จึง throw `Could not find a relationship between 'qc_reports' and 'qc_employees'` ทำให้ทั้งหน้ารายงานพังและดูเหมือนข้อมูลไม่เข้า (จริงๆ insert สำเร็จแล้ว)
 
-- **`qc_employees`** — `id, name, emp_code, active, created_at` (RLS: public read)
-- **`qc_reports`** — เก็บรายงาน QC
-  - `id, job_id, qc_employee_id, production_log_id (nullable), step_id, category_id, employee_id (พนักงานที่ทำขั้นตอนนั้น), note (text), media (jsonb array ของ {url, type:'image'|'video'}), status (text default 'open'), created_at`
-  - RLS: public INSERT (เหมือน production_logs), อ่านผ่าน server fn admin เท่านั้น
-- **Storage bucket `qc-media`** (public) สำหรับรูปและวิดีโอ
-- เพิ่ม secret ใหม่: `QC_PASSWORD = wscqc123` (หรือ hardcode ใน env)
+**แก้ด้วย migration:** เพิ่ม FK constraints บน `qc_reports`:
+- `qc_employee_id` → `qc_employees(id)` ON DELETE RESTRICT
+- `employee_id` → `employees(id)` ON DELETE SET NULL
+- `step_id` → `steps(id)` ON DELETE SET NULL
+- `category_id` → `categories(id)` ON DELETE SET NULL
+- (ไม่ทำ FK กับ `production_logs` เพราะ table นั้นไม่มี RLS SELECT — ไม่จำเป็น)
 
-## 2. หน้าเข้า QC
-- เพิ่มปุ่ม **"QC"** ที่ `AppHeader` มุมบนขวาของหน้าแรก (`/`) ข้างปุ่ม Admin
-- สร้าง route `/qc-login` (หรือใช้ dialog) ที่รับรหัสผ่าน `wscqc123`
-- ใช้ pattern เดียวกับ admin: `verifyQcPassword` server fn + token เก็บใน localStorage (`ptrack_qc_token`)
-- เพิ่ม helper `qc-session.ts` คล้าย `admin-session.ts`
-- เพิ่ม layout route `_qc.tsx` หรือเช็คใน loader ของ `/qc`
+หลัง migration PostgREST จะ refresh schema cache อัตโนมัติและ join ใช้ได้
 
-## 3. หน้า `/qc`
-ใช้ UI ใกล้เคียง `/scan` แต่:
-- **สแกน QR / กรอก job_id** (เหมือนเดิม)
-- **เลือกพนักงาน QC** จาก `qc_employees`
-- เมื่อมี job_id แล้ว → query `production_logs` ของ job นั้น (action='finish') แสดง list:
-  - หมวดหมู่ + ขั้นตอน + ชื่อพนักงาน + เวลา
-  - แตะเลือก 1 รายการ → เปิดฟอร์มรายงาน
-- **ฟอร์มรายงาน**:
-  - กล่องข้อความ (note)
-  - ปุ่มถ่ายภาพ / เลือกรูป (หลายไฟล์)
-  - ปุ่มถ่ายวิดีโอ / เลือกวิดีโอ
-  - preview thumbnails + ลบได้
-  - ปุ่ม **"ส่งรายงานไปแอดมิน"**
-- ไม่มีปุ่ม start/finish
+---
 
-## 4. แอดมิน — จัดการพนักงาน QC
-ใน `/manage` เพิ่มแท็บใหม่ **"พนักงาน QC"** (หรือปุ่ม popup ตาม request)
-- CRUD พนักงาน QC (ชื่อ, รหัส, active)
-- ใช้ server fn ใหม่: `adminUpsertQcEmployee`, `adminDeleteQcEmployee`
+## 2) AI Chatbot ผู้ช่วยแอดมิน (มุมขวาล่าง หน้า Dashboard)
 
-## 5. แอดมิน — รายงาน QC
-หน้าใหม่ `/_protected.qc-reports.tsx` (ลิงก์จาก dashboard/manage)
-- ตารางรายงาน QC: วันที่, job_id, หมวดหมู่, ขั้นตอน, พนักงานที่ทำ, ผู้ตรวจ QC, note, สื่อ (คลิกดูได้)
-- ฟิลเตอร์: ช่วงวันที่, job_id, พนักงาน QC, สถานะ
-- ปุ่ม mark resolved/open
-- export Excel/CSV (optional ตาม pattern logs.tsx)
+**ขอบเขต**
+- แสดงเฉพาะหน้า `/dashboard` (หลัง admin login)
+- ปุ่มลอยมุมขวาล่าง กดเปิด popover/sheet chat
+- ตอบเฉพาะเรื่องในแอป (พนักงาน, ขั้นตอน, หมวดหมู่, จำนวนชุด, เวลาเฉลี่ย, QC reports) — นอกเรื่องตอบปฏิเสธสั้นๆ
+- 2 โหมด: **ถาม-ตอบสรุป** และ **ช่วยวางแผนการทำงาน**
 
-## 6. Server functions ใหม่ (`src/lib/qc.functions.ts`)
-- `verifyQcPassword(password)` → token
-- `checkQcToken(token)`
-- `qcFetchJobLogs(jobId)` — return finish logs ของ job
-- `qcSubmitReport({ token, job_id, qc_employee_id, step_id, category_id, employee_id, production_log_id, note, media })`
-- `qcCreateUploadUrl({ token, ext, kind })` — signed upload ไป bucket `qc-media`
-- `adminListQcEmployees(token)`, `adminUpsertQcEmployee`, `adminDeleteQcEmployee`
-- `adminFetchQcReports({ token, filters })`, `adminUpdateQcReportStatus`
+**ควบคุม token / โควต้า**
+- ใช้ Lovable AI Gateway (`google/gemini-3-flash-preview` — ฟรีและถูก)
+- `max_tokens: 400` ต่อคำตอบ, system prompt บังคับให้สั้น กระชับ เป็น bullet
+- เก็บประวัติแชทใน memory (ไม่ persist) — ส่งแค่ 6 ข้อความล่าสุดเข้า context
+- จำกัด **20 ข้อความ/แอดมิน/วัน** (เก็บ count ใน localStorage + ตรวจที่ server ผ่าน in-memory counter เบาๆ)
+- จัดการ error 402 (เครดิตหมด) และ 429 (rate limit) แสดง toast ชัดเจน
 
-## ไฟล์ที่แก้ / สร้าง
-**สร้าง**
-- `supabase migration` (qc_employees, qc_reports, bucket qc-media + policies)
-- `src/lib/qc.functions.ts`, `src/lib/qc-session.ts`, `src/lib/qc-token.server.ts`
-- `src/routes/qc.tsx` (หน้าหลัก QC + login flow)
-- `src/routes/_protected.qc-reports.tsx`
-- เพิ่ม functions ใน `src/lib/admin.functions.ts` สำหรับ QC employees + reports
+**Data context (สำคัญ)**
+- ไม่ส่งทั้ง DB เข้า AI — server function `aiAdminAsk` จะดึง **สรุปย่อ** จาก Supabase ก่อน (เช่น top employees, totals ของ 30 วันล่าสุด, รายการ QC open) แล้วฝังเป็น context JSON สั้นๆ ใน system prompt
+- ถ้า user ถามถึงพนักงานคนใดเฉพาะ → query targeted แล้วใส่ใน context
 
-**แก้**
-- `src/routes/index.tsx` หรือ `AppHeader` — เพิ่มปุ่ม QC มุมบนขวา
-- `src/routes/_protected.manage.tsx` — เพิ่มแท็บ "พนักงาน QC"
-- `src/routes/_protected.dashboard.tsx` — เพิ่มลิงก์ไปหน้ารายงาน QC (optional)
+**ไฟล์ที่จะสร้าง/แก้**
+- migration ใหม่ — เพิ่ม FK บน `qc_reports`
+- `src/lib/ai-admin.functions.ts` — server fn `aiAdminAsk({ token, messages, mode })` เรียก Lovable AI Gateway + ดึง context จาก Supabase
+- `src/components/AdminAiAssistant.tsx` — floating button + chat panel (toggle, รายการข้อความ, input, mode switch "ถาม-ตอบ" / "วางแผน", react-markdown render)
+- แก้ `src/routes/_protected.dashboard.tsx` — mount `<AdminAiAssistant />`
 
-## คำถามก่อนเริ่ม
-1. รหัส `wscqc123` ให้ hardcode ในโค้ดเลย หรือเก็บเป็น secret `QC_PASSWORD`?
-2. ขนาด/ระยะเวลาวิดีโอจำกัดเท่าไร (เช่น ≤ 30MB, ≤ 60 วินาที)?
-3. รายงาน QC ให้ปรากฏใน Dashboard เดิมด้วยไหม หรือแยกหน้าใหม่อย่างเดียวพอ?
+**System prompt (ภาษาไทย)**
+> คุณคือผู้ช่วยแอดมินของระบบติดตามการผลิตม่าน WSC ตอบเฉพาะเรื่องเกี่ยวกับข้อมูลในแอปนี้เท่านั้น (พนักงาน, ขั้นตอนผลิต, จำนวนชุด, เวลา, QC) ตอบสั้น กระชับ ใช้ bullet ไม่เกิน 6 บรรทัด ถ้าถามนอกเรื่องให้ปฏิเสธสั้นๆ
+
+---
+
+## คำถามที่อยากยืนยันก่อนลงมือ
+
+1. Limit 20 ข้อความ/วัน ok ไหม? หรืออยากให้มากกว่านี้ / ไม่จำกัด?
+2. โหมด "วางแผน" — ให้ AI แนะนำการจัดคน/ลำดับงานจากข้อมูล 30 วันล่าสุดพอไหม หรืออยากให้เลือกช่วงเวลาเอง?
+3. แชทให้รีเซ็ตทุกครั้งที่ปิดหน้า (in-memory) หรือเก็บประวัติไว้ใน localStorage?
