@@ -238,7 +238,36 @@ export type Database = {
           status?: string
           step_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "qc_reports_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qc_reports_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qc_reports_qc_employee_id_fkey"
+            columns: ["qc_employee_id"]
+            isOneToOne: false
+            referencedRelation: "qc_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qc_reports_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "steps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       steps: {
         Row: {

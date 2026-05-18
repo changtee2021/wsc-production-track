@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { adminFetchLogs } from "@/lib/admin.functions";
 import { getAdminToken } from "@/lib/admin-session";
+import { AdminAiAssistant } from "@/components/AdminAiAssistant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -1790,6 +1791,7 @@ function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AdminAiAssistant />
     </main>
   );
 }
