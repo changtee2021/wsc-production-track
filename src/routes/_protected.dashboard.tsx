@@ -1791,6 +1791,7 @@ function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AdminAiAssistant />
     </main>
   );
 }
