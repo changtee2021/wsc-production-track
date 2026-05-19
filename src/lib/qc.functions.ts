@@ -58,6 +58,33 @@ const mediaItem = z.object({
   type: z.enum(["image", "video"]),
 });
 
+// Checklist for a category (active items, ordered).
+export const qcFetchChecklist = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, category_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertQc(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("qc_checklists")
+      .select("id, item_text, item_order")
+      .eq("category_id", data.category_id)
+      .eq("is_active", true)
+      .order("item_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+const reportItemInput = z.object({
+  checklist_id: z.string().uuid().nullable(),
+  item_text_snapshot: z.string().trim().min(1).max(500),
+  item_order: z.number().int().min(0).max(10000),
+  is_passed: z.boolean(),
+  remark: z.string().trim().max(2000).nullable().optional(),
+  media: z.array(mediaItem).max(20).default([]),
+});
+
 export const qcSubmitReport = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
@@ -71,24 +98,60 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
         employee_id: z.string().uuid().nullable().optional(),
         note: z.string().trim().max(2000).nullable().optional(),
         media: z.array(mediaItem).max(20).default([]),
+        overall_result: z.enum(["pass", "fail"]).nullable().optional(),
+        items: z.array(reportItemInput).max(100).default([]),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     assertQc(data.token);
-    const { error } = await supabaseAdmin.from("qc_reports").insert({
-      job_id: data.job_id,
-      qc_employee_id: data.qc_employee_id,
-      production_log_id: data.production_log_id ?? null,
-      step_id: data.step_id ?? null,
-      category_id: data.category_id ?? null,
-      employee_id: data.employee_id ?? null,
-      note: data.note ?? null,
-      media: data.media,
-    });
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    const passCount = data.items.filter((i) => i.is_passed).length;
+    const total = data.items.length;
+    const computedOverall =
+      data.overall_result ??
+      (total > 0 ? (passCount === total ? "pass" : "fail") : null);
+    const summary = total > 0 ? `ผ่าน ${passCount}/${total} ข้อ` : null;
+
+    const { data: inserted, error } = await supabaseAdmin
+      .from("qc_reports")
+      .insert({
+        job_id: data.job_id,
+        qc_employee_id: data.qc_employee_id,
+        production_log_id: data.production_log_id ?? null,
+        step_id: data.step_id ?? null,
+        category_id: data.category_id ?? null,
+        employee_id: data.employee_id ?? null,
+        note: data.note ?? null,
+        media: data.media,
+        overall_result: computedOverall,
+        summary,
+      })
+      .select("id")
+      .single();
+    if (error || !inserted) throw new Error(error?.message || "บันทึกไม่สำเร็จ");
+
+    if (data.items.length > 0) {
+      const itemsRows = data.items.map((it) => ({
+        qc_report_id: inserted.id,
+        checklist_id: it.checklist_id,
+        item_text_snapshot: it.item_text_snapshot,
+        item_order: it.item_order,
+        is_passed: it.is_passed,
+        remark: it.remark ?? null,
+        media: it.media,
+      }));
+      const { error: itemErr } = await supabaseAdmin
+        .from("qc_report_items")
+        .insert(itemsRows);
+      if (itemErr) {
+        // Rollback: best-effort delete of the parent report so we don't leave an orphan.
+        await supabaseAdmin.from("qc_reports").delete().eq("id", inserted.id);
+        throw new Error(itemErr.message);
+      }
+    }
+    return { ok: true, id: inserted.id };
   });
+
 
 // Signed upload URL for qc-media bucket (images + videos).
 const ALLOWED_EXT = [

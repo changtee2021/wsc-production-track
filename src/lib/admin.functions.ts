@@ -431,6 +431,7 @@ export const adminFetchQcReports = createServerFn({ method: "POST" })
         to: z.string().optional(),
         job_id: z.string().trim().max(200).optional(),
         status: z.enum(["open", "resolved", "all"]).optional(),
+        overall_result: z.enum(["pass", "fail", "all"]).optional(),
       })
       .parse(d),
   )
@@ -439,7 +440,7 @@ export const adminFetchQcReports = createServerFn({ method: "POST" })
     let q = supabaseAdmin
       .from("qc_reports")
       .select(
-        "id, job_id, qc_employee_id, production_log_id, step_id, category_id, employee_id, note, media, status, created_at, qc_employees(name, emp_code), employees(name, emp_code), steps(step_name), categories(name)",
+        "id, job_id, qc_employee_id, production_log_id, step_id, category_id, employee_id, note, media, status, overall_result, summary, created_at, qc_employees(name, emp_code), employees(name, emp_code), steps(step_name), categories(name), qc_report_items(id, item_text_snapshot, item_order, is_passed, remark, media)",
       )
       .order("created_at", { ascending: false })
       .limit(1000);
@@ -447,6 +448,8 @@ export const adminFetchQcReports = createServerFn({ method: "POST" })
     if (data.to) q = q.lte("created_at", data.to);
     if (data.job_id) q = q.ilike("job_id", `%${data.job_id}%`);
     if (data.status && data.status !== "all") q = q.eq("status", data.status);
+    if (data.overall_result && data.overall_result !== "all")
+      q = q.eq("overall_result", data.overall_result);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     return { rows: rows ?? [] };
@@ -485,3 +488,120 @@ export const adminDeleteQcReport = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---- QC Checklists -------------------------------------------------------
+
+export const adminFetchChecklists = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        category_id: z.string().uuid().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    let q = supabaseAdmin
+      .from("qc_checklists")
+      .select("id, category_id, item_text, item_order, is_active, created_at")
+      .order("item_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (data.category_id) q = q.eq("category_id", data.category_id);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+export const adminUpsertChecklistItem = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        id: z.string().uuid().optional(),
+        category_id: z.string().uuid(),
+        item_text: z.string().trim().min(1).max(500),
+        item_order: z.number().int().min(0).max(10000).optional(),
+        is_active: z.boolean().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    if (data.id) {
+      const row: Record<string, unknown> = {
+        item_text: data.item_text,
+        category_id: data.category_id,
+        updated_at: new Date().toISOString(),
+      };
+      if (data.item_order !== undefined) row.item_order = data.item_order;
+      if (data.is_active !== undefined) row.is_active = data.is_active;
+      const { error } = await supabaseAdmin
+        .from("qc_checklists")
+        .update(row)
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+    // Append at end if no item_order provided
+    let nextOrder = data.item_order ?? 0;
+    if (data.item_order === undefined) {
+      const { data: maxRow } = await supabaseAdmin
+        .from("qc_checklists")
+        .select("item_order")
+        .eq("category_id", data.category_id)
+        .order("item_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      nextOrder = (maxRow?.item_order ?? -1) + 1;
+    }
+    const { error } = await supabaseAdmin.from("qc_checklists").insert({
+      category_id: data.category_id,
+      item_text: data.item_text,
+      item_order: nextOrder,
+      is_active: data.is_active ?? true,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteChecklistItem = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await supabaseAdmin
+      .from("qc_checklists")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminReorderChecklist = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        category_id: z.string().uuid(),
+        ordered_ids: z.array(z.string().uuid()).max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    // Apply new orders sequentially. Small lists; no transaction primitive
+    // available via PostgREST so do best-effort updates.
+    for (let i = 0; i < data.ordered_ids.length; i++) {
+      const id = data.ordered_ids[i];
+      const { error } = await supabaseAdmin
+        .from("qc_checklists")
+        .update({ item_order: i })
+        .eq("id", id)
+        .eq("category_id", data.category_id);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
