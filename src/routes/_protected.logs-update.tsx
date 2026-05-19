@@ -6,6 +6,7 @@ import {
   adminInsertSystemLog,
   adminDeleteSystemLog,
 } from "@/lib/system-logs.functions";
+import { adminSendLineTest } from "@/lib/line.functions";
 import { requireToken, showError } from "@/lib/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { Plus, Trash2, Search, Clock, FileCode } from "lucide-react";
+import { Plus, Trash2, Search, Clock, FileCode, Send, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { markLogsSeen } from "@/lib/log-seen";
