@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getAdminToken, clearAdminSession } from "@/lib/admin-session";
 import {
   adminFetchQcReports,
   adminUpdateQcReportStatus,
   adminDeleteQcReport,
 } from "@/lib/admin.functions";
+import { requireToken, showError } from "@/lib/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,16 +61,6 @@ interface QcReportRow {
   steps: { step_name: string } | null;
   categories: { name: string } | null;
   qc_report_items: QcReportItem[] | null;
-}
-
-function requireToken(): string {
-  const t = getAdminToken();
-  if (!t) {
-    clearAdminSession();
-    if (typeof window !== "undefined") window.location.href = "/admin";
-    throw new Error("Unauthorized");
-  }
-  return t;
 }
 
 function QcReportsPage() {
