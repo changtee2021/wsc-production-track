@@ -209,8 +209,8 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const { job_id } = Route.useSearch();
   const navigate = useNavigate({ from: "/qc" });
   const [manualJob, setManualJob] = useState("");
-  const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
+  const scannerOpen = scannerStream !== null;
 
   const [qcEmployees, setQcEmployees] = useState<QcEmployee[]>([]);
   const [qcEmployeeId, setQcEmployeeId] = useState("");
@@ -559,7 +559,6 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                   return;
                 }
                 setScannerStream(result.stream);
-                setScannerOpen(true);
               }}
               className="h-11 flex-1 gap-1 bg-secondary hover:bg-secondary/90 shadow-md shadow-secondary/30"
             >
@@ -853,7 +852,6 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       <QrScannerDialog
         open={scannerOpen}
         onOpenChange={(v) => {
-          setScannerOpen(v);
           if (!v) setScannerStream(null);
         }}
         onScanned={handleScanned}
