@@ -29,18 +29,28 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Track manufacturing production steps and employee activity in real-time via a mobile-optimized web app." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Track manufacturing production steps and employee activity in real-time via a mobile-optimized web app." },
+      { title: "WSC ProductionTrack" },
+      {
+        name: "description",
+        content:
+          "ระบบติดตามการผลิตในโรงงาน บันทึกขั้นตอนงานและการตรวจ QC แบบเรียลไทม์ ใช้งานง่ายบนมือถือ",
+      },
+      { name: "author", content: "WSC ProductionTrack" },
+      { property: "og:site_name", content: "WSC ProductionTrack" },
+      { property: "og:title", content: "WSC ProductionTrack" },
+      {
+        property: "og:description",
+        content:
+          "ระบบติดตามการผลิตในโรงงาน บันทึกขั้นตอนงานและการตรวจ QC แบบเรียลไทม์ ใช้งานง่ายบนมือถือ",
+      },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Lovable App" },
-      { name: "twitter:description", content: "Track manufacturing production steps and employee activity in real-time via a mobile-optimized web app." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6760257f-2c5a-4d3c-93d2-3e92ea7fdc40/id-preview-3c828f4e--508931e8-d4fa-42b6-aff5-441481d0ac31.lovable.app-1777434143934.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6760257f-2c5a-4d3c-93d2-3e92ea7fdc40/id-preview-3c828f4e--508931e8-d4fa-42b6-aff5-441481d0ac31.lovable.app-1777434143934.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "WSC ProductionTrack" },
+      {
+        name: "twitter:description",
+        content:
+          "ระบบติดตามการผลิตในโรงงาน บันทึกขั้นตอนงานและการตรวจ QC แบบเรียลไทม์ ใช้งานง่ายบนมือถือ",
+      },
     ],
     links: [
       {
