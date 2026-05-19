@@ -396,7 +396,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
       }
 
       // Give the dialog time to lay out (iOS dislikes getUserMedia before container is sized)
-      await new Promise((r) => setTimeout(r, 300));
+      //await new Promise((r) => setTimeout(r, 300));
       if (cancelledRef.current) return;
 
       if (detectorRef.current) {
