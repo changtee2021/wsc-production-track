@@ -5,17 +5,11 @@ import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
-import { QrScannerDialog } from "@/components/QrScannerDialog";
+import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -70,20 +64,16 @@ export const Route = createFileRoute("/scan")({
       { title: "สแกนงาน — WSC ProductionTrack" },
       {
         name: "description",
-        content:
-          "สแกน QR code เพื่อบันทึกเวลาเริ่มและเสร็จงานในสายการผลิต ใช้งานง่ายบนมือถือ",
+        content: "สแกน QR code เพื่อบันทึกเวลาเริ่มและเสร็จงานในสายการผลิต ใช้งานง่ายบนมือถือ",
       },
       { property: "og:title", content: "สแกนงาน — WSC ProductionTrack" },
       {
         property: "og:description",
-        content:
-          "สแกน QR code เพื่อบันทึกเวลาเริ่ม–เสร็จงานในสายการผลิตอย่างรวดเร็ว",
+        content: "สแกน QR code เพื่อบันทึกเวลาเริ่ม–เสร็จงานในสายการผลิตอย่างรวดเร็ว",
       },
       { property: "og:url", content: "https://wsc-production-track.lovable.app/scan" },
     ],
-    links: [
-      { rel: "canonical", href: "https://wsc-production-track.lovable.app/scan" },
-    ],
+    links: [{ rel: "canonical", href: "https://wsc-production-track.lovable.app/scan" }],
   }),
   component: ScanPage,
 });
@@ -112,6 +102,7 @@ function ScanPage() {
   const navigate = useNavigate({ from: "/scan" });
   const [manualJob, setManualJob] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [steps, setSteps] = useState<Step[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -129,9 +120,7 @@ function ScanPage() {
   const { t } = useI18n();
   const uploadNote = useServerFn(uploadWorkerNoteImage);
 
-  const activeKey = job_id && employeeId && stepId
-    ? `wsc:active-start:${job_id}:${stepId}:${employeeId}`
-    : null;
+  const activeKey = job_id && employeeId && stepId ? `wsc:active-start:${job_id}:${stepId}:${employeeId}` : null;
   const [activeStartAt, setActiveStartAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -153,11 +142,7 @@ function ScanPage() {
   useEffect(() => {
     (async () => {
       const [e, s, c] = await Promise.all([
-        supabase
-          .from("employees")
-          .select("id,name,emp_code,nationality,avatar_url")
-          .eq("active", true)
-          .order("name"),
+        supabase.from("employees").select("id,name,emp_code,nationality,avatar_url").eq("active", true).order("name"),
         supabase
           .from("steps")
           .select("id,step_name,description,image_url,std_duration_minutes")
@@ -172,10 +157,7 @@ function ScanPage() {
     })();
   }, []);
 
-  const selectedStep = useMemo(
-    () => steps.find((s) => s.id === stepId) ?? null,
-    [steps, stepId],
-  );
+  const selectedStep = useMemo(() => steps.find((s) => s.id === stepId) ?? null, [steps, stepId]);
 
   const submit = async (action: "start" | "finish") => {
     if (!job_id) {
@@ -198,7 +180,7 @@ function ScanPage() {
       category_id: categoryId,
       action,
       note: action === "finish" && hasIssue ? note.trim() : null,
-      note_image_url: action === "finish" && hasIssue ? noteImage?.path ?? null : null,
+      note_image_url: action === "finish" && hasIssue ? (noteImage?.path ?? null) : null,
     });
     setSubmitting(null);
     if (error) {
@@ -220,9 +202,7 @@ function ScanPage() {
       setNote("");
       setNoteImage(null);
     }
-    toast.success(
-      action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }),
-    );
+    toast.success(action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }));
   };
 
   const uploadNoteImage = async (file: File) => {
@@ -239,7 +219,6 @@ function ScanPage() {
       const dataBase64 = await fileToBase64(file);
       const res = await uploadNote({ data: { dataBase64 } });
       setNoteImage({ path: res.path, previewUrl: res.previewUrl });
-
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "upload failed");
     } finally {
@@ -272,7 +251,11 @@ function ScanPage() {
       <Toaster richColors position="top-center" />
       <AppHeader>
         <Link to="/">
-          <Button variant="ghost" size="sm" className="gap-1 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">หน้าแรก</span>
           </Button>
@@ -307,7 +290,19 @@ function ScanPage() {
 
           <div className="mt-3 flex gap-2">
             <Button
-              onClick={() => setScannerOpen(true)}
+              onClick={async () => {
+                const result = await acquireCameraStream("environment");
+                if ("errorInfo" in result) {
+                  toast.error(
+                    result.errorInfo.hint
+                      ? `${result.errorInfo.message} — ${result.errorInfo.hint}`
+                      : result.errorInfo.message,
+                  );
+                  return;
+                }
+                setScannerStream(result.stream);
+                setScannerOpen(true);
+              }}
               className="h-11 flex-1 gap-1 bg-secondary hover:bg-secondary/90 shadow-md shadow-secondary/30"
             >
               <ScanLine className="h-4 w-4" />
@@ -394,11 +389,7 @@ function ScanPage() {
                     <span className="text-xl">{flagFor(e.nationality)}</span>
                     <div className="flex flex-col text-left">
                       <span className="text-base font-semibold leading-tight">{e.name}</span>
-                      {e.emp_code && (
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {e.emp_code}
-                        </span>
-                      )}
+                      {e.emp_code && <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>}
                     </div>
                   </div>
                 </SelectItem>
@@ -423,19 +414,13 @@ function ScanPage() {
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border-2 border-border bg-muted">
                       {s.image_url ? (
-                        <img
-                          src={s.image_url}
-                          alt={s.step_name}
-                          className="h-full w-full object-cover"
-                        />
+                        <img src={s.image_url} alt={s.step_name} className="h-full w-full object-cover" />
                       ) : (
                         <ListChecks className="h-6 w-6 text-secondary" />
                       )}
                     </div>
                     <div className="flex flex-col text-left">
-                      <span className="text-base font-semibold leading-tight">
-                        {s.step_name}
-                      </span>
+                      <span className="text-base font-semibold leading-tight">{s.step_name}</span>
                       {s.std_duration_minutes != null && (
                         <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-destructive">
                           <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} {t("step.minutes")}
@@ -474,38 +459,31 @@ function ScanPage() {
             {t("action.start")}
           </Button>
 
-          {activeStartAt !== null && (() => {
-            const elapsed = Math.max(0, Math.floor((now - activeStartAt) / 1000));
-            const limit = selectedStep?.std_duration_minutes
-              ? selectedStep.std_duration_minutes * 60
-              : null;
-            const over = limit != null && elapsed >= limit;
-            const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
-            const ss = String(elapsed % 60).padStart(2, "0");
-            return (
-              <div
-                className={`flex items-center justify-between rounded-2xl border-2 p-4 ${
-                  over
-                    ? "border-destructive/50 bg-destructive/10 text-destructive animate-pulse"
-                    : "border-success/40 bg-success/10 text-success"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {over ? (
-                    <AlertTriangle className="h-6 w-6" />
-                  ) : (
-                    <Timer className="h-6 w-6" />
-                  )}
-                  <span className="text-sm font-semibold">
-                    {over ? "เกินเวลามาตรฐาน" : "กำลังจับเวลา"}
-                  </span>
+          {activeStartAt !== null &&
+            (() => {
+              const elapsed = Math.max(0, Math.floor((now - activeStartAt) / 1000));
+              const limit = selectedStep?.std_duration_minutes ? selectedStep.std_duration_minutes * 60 : null;
+              const over = limit != null && elapsed >= limit;
+              const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+              const ss = String(elapsed % 60).padStart(2, "0");
+              return (
+                <div
+                  className={`flex items-center justify-between rounded-2xl border-2 p-4 ${
+                    over
+                      ? "border-destructive/50 bg-destructive/10 text-destructive animate-pulse"
+                      : "border-success/40 bg-success/10 text-success"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {over ? <AlertTriangle className="h-6 w-6" /> : <Timer className="h-6 w-6" />}
+                    <span className="text-sm font-semibold">{over ? "เกินเวลามาตรฐาน" : "กำลังจับเวลา"}</span>
+                  </div>
+                  <div className="font-mono text-3xl font-bold tabular-nums">
+                    {mm}:{ss}
+                  </div>
                 </div>
-                <div className="font-mono text-3xl font-bold tabular-nums">
-                  {mm}:{ss}
-                </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
 
           <div className="rounded-2xl border border-border bg-card p-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -552,7 +530,6 @@ function ScanPage() {
                     <button
                       type="button"
                       onClick={() => setNoteImage(null)}
-
                       aria-label="ลบรูปหมายเหตุ"
                       className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"
                     >
@@ -621,8 +598,12 @@ function ScanPage() {
 
       <QrScannerDialog
         open={scannerOpen}
-        onOpenChange={setScannerOpen}
+        onOpenChange={(v) => {
+          setScannerOpen(v);
+          if (!v) setScannerStream(null);
+        }}
         onScanned={handleScanned}
+        initialStream={scannerStream}
       />
     </div>
   );
