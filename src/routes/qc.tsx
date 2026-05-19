@@ -5,17 +5,11 @@ import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
-import { QrScannerDialog } from "@/components/QrScannerDialog";
+import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -45,12 +39,7 @@ import {
   qcUploadMedia,
   qcListEmployees,
 } from "@/lib/qc.functions";
-import {
-  isQcSession,
-  setQcToken,
-  getQcToken,
-  clearQcSession,
-} from "@/lib/qc-session";
+import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/qc-session";
 
 const qcSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -63,20 +52,16 @@ export const Route = createFileRoute("/qc")({
       { title: "QC — WSC ProductionTrack" },
       {
         name: "description",
-        content:
-          "หน้าตรวจสอบคุณภาพงาน (QC) แบบ checklist พร้อมแนบรูปและวิดีโอเป็นหลักฐาน",
+        content: "หน้าตรวจสอบคุณภาพงาน (QC) แบบ checklist พร้อมแนบรูปและวิดีโอเป็นหลักฐาน",
       },
       { property: "og:title", content: "QC — WSC ProductionTrack" },
       {
         property: "og:description",
-        content:
-          "ตรวจสอบคุณภาพงานแบบ checklist พร้อมแนบรูป/วิดีโอเป็นหลักฐาน บันทึกผลผ่าน–ไม่ผ่านแบบเรียลไทม์",
+        content: "ตรวจสอบคุณภาพงานแบบ checklist พร้อมแนบรูป/วิดีโอเป็นหลักฐาน บันทึกผลผ่าน–ไม่ผ่านแบบเรียลไทม์",
       },
       { property: "og:url", content: "https://wsc-production-track.lovable.app/qc" },
     ],
-    links: [
-      { rel: "canonical", href: "https://wsc-production-track.lovable.app/qc" },
-    ],
+    links: [{ rel: "canonical", href: "https://wsc-production-track.lovable.app/qc" }],
   }),
   component: QcPage,
 });
@@ -120,7 +105,11 @@ function QcLogin({ onSuccess }: { onSuccess: () => void }) {
       <Toaster richColors position="top-center" />
       <AppHeader>
         <Link to="/">
-          <Button variant="ghost" size="sm" className="gap-1 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">หน้าแรก</span>
           </Button>
@@ -136,7 +125,9 @@ function QcLogin({ onSuccess }: { onSuccess: () => void }) {
           onSubmit={onSubmit}
           className="mt-6 w-full rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)]"
         >
-          <Label htmlFor="qcpw" className="text-sm font-medium">รหัสผ่าน QC</Label>
+          <Label htmlFor="qcpw" className="text-sm font-medium">
+            รหัสผ่าน QC
+          </Label>
           <Input
             id="qcpw"
             type="password"
@@ -188,7 +179,6 @@ interface MediaItem {
   type: "image" | "video";
 }
 
-
 interface CategoryRow {
   id: string;
   name: string;
@@ -220,6 +210,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const navigate = useNavigate({ from: "/qc" });
   const [manualJob, setManualJob] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
 
   const [qcEmployees, setQcEmployees] = useState<QcEmployee[]>([]);
   const [qcEmployeeId, setQcEmployeeId] = useState("");
@@ -255,11 +246,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       const token = getQcToken();
       const tasks: Promise<unknown>[] = [
         (async () => {
-          const cat = await supabase
-            .from("categories")
-            .select("id, name")
-            .eq("active", true)
-            .order("name");
+          const cat = await supabase.from("categories").select("id, name").eq("active", true).order("name");
           if (cat.data) setCategories(cat.data);
         })(),
       ];
@@ -347,11 +334,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   };
 
   // Generic media uploader. target = "overall" or checklist item id
-  const uploadFiles = async (
-    files: FileList,
-    kind: "image" | "video",
-    target: "overall" | string,
-  ) => {
+  const uploadFiles = async (files: FileList, kind: "image" | "video", target: "overall" | string) => {
     const token = getQcToken();
     if (!token) {
       onLogout();
@@ -363,11 +346,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       for (const f of Array.from(files)) {
         const map = kind === "image" ? IMAGE_EXT_BY_MIME : VIDEO_EXT_BY_MIME;
         if (!map[f.type]) {
-          toast.error(
-            kind === "image"
-              ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF"
-              : "รองรับเฉพาะ MP4, WEBM, MOV, M4V",
-          );
+          toast.error(kind === "image" ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF" : "รองรับเฉพาะ MP4, WEBM, MOV, M4V");
           continue;
         }
         const max = kind === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
@@ -381,10 +360,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         const u8 = new Uint8Array(buf);
         const CHUNK = 0x8000;
         for (let i = 0; i < u8.length; i += CHUNK) {
-          binary += String.fromCharCode.apply(
-            null,
-            Array.from(u8.subarray(i, i + CHUNK)),
-          );
+          binary += String.fromCharCode.apply(null, Array.from(u8.subarray(i, i + CHUNK)));
         }
         const dataBase64 = btoa(binary);
         try {
@@ -444,11 +420,18 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   };
 
   const { passCount, failCount, answeredCount, total } = useMemo(() => {
-    let p = 0, f = 0, a = 0;
+    let p = 0,
+      f = 0,
+      a = 0;
     for (const it of checklist) {
       const s = itemStates[it.id];
-      if (s?.is_passed === true) { p++; a++; }
-      else if (s?.is_passed === false) { f++; a++; }
+      if (s?.is_passed === true) {
+        p++;
+        a++;
+      } else if (s?.is_passed === false) {
+        f++;
+        a++;
+      }
     }
     return { passCount: p, failCount: f, answeredCount: a, total: checklist.length };
   }, [checklist, itemStates]);
@@ -456,17 +439,14 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const submit = async () => {
     if (!job_id) return toast.error("ยังไม่ได้กรอก Job");
     if (!qcEmployeeId) return toast.error("กรุณาเลือกพนักงาน QC");
-    if (checklist.length === 0)
-      return toast.error("ไม่มีรายการ checklist สำหรับหมวดนี้ — แจ้งแอดมินเพิ่ม");
-    if (answeredCount < total)
-      return toast.error(`ยังตรวจไม่ครบ (${answeredCount}/${total})`);
+    if (checklist.length === 0) return toast.error("ไม่มีรายการ checklist สำหรับหมวดนี้ — แจ้งแอดมินเพิ่ม");
+    if (answeredCount < total) return toast.error(`ยังตรวจไม่ครบ (${answeredCount}/${total})`);
     // Every failed item must have a remark AND at least one media
     for (let idx = 0; idx < checklist.length; idx++) {
       const it = checklist[idx];
       const s = itemStates[it.id];
       if (s?.is_passed === false) {
-        if (!s.remark.trim())
-          return toast.error(`ข้อ ${idx + 1}: กรุณากรอกหมายเหตุเหตุผลที่ไม่ผ่าน`);
+        if (!s.remark.trim()) return toast.error(`ข้อ ${idx + 1}: กรุณากรอกหมายเหตุเหตุผลที่ไม่ผ่าน`);
         if (!s.media || s.media.length === 0)
           return toast.error(`ข้อ ${idx + 1}: ต้องแนบรูป/วิดีโอหลักฐานอย่างน้อย 1 รายการ`);
       }
@@ -503,7 +483,6 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               media: (s?.media ?? []).map((m) => ({ url: m.url, type: m.type })),
             };
           }),
-
         },
       });
       toast.success(
@@ -530,7 +509,11 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       <Toaster richColors position="top-center" />
       <AppHeader>
         <Link to="/">
-          <Button variant="ghost" size="sm" className="gap-1 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">หน้าแรก</span>
           </Button>
@@ -565,7 +548,19 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
 
           <div className="mt-3 flex gap-2">
             <Button
-              onClick={() => setScannerOpen(true)}
+              onClick={async () => {
+                const result = await acquireCameraStream("environment");
+                if ("errorInfo" in result) {
+                  toast.error(
+                    result.errorInfo.hint
+                      ? `${result.errorInfo.message} — ${result.errorInfo.hint}`
+                      : result.errorInfo.message,
+                  );
+                  return;
+                }
+                setScannerStream(result.stream);
+                setScannerOpen(true);
+              }}
               className="h-11 flex-1 gap-1 bg-secondary hover:bg-secondary/90 shadow-md shadow-secondary/30"
             >
               <ScanLine className="h-4 w-4" /> สแกน QR
@@ -625,9 +620,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                 <SelectItem key={e.id} value={e.id} className="py-2">
                   <div className="flex flex-col text-left">
                     <span className="text-base font-semibold leading-tight">{e.name}</span>
-                    {e.emp_code && (
-                      <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>
-                    )}
+                    {e.emp_code && <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>}
                   </div>
                 </SelectItem>
               ))}
@@ -666,9 +659,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                   <div className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
                     <User className="h-3.5 w-3.5" />
                     <span>{l.employees?.name ?? "—"}</span>
-                    {l.employees?.emp_code && (
-                      <span className="font-mono text-xs">({l.employees.emp_code})</span>
-                    )}
+                    {l.employees?.emp_code && <span className="font-mono text-xs">({l.employees.emp_code})</span>}
                   </div>
                 </div>
               ))}
@@ -687,13 +678,21 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                 </span>
               )}
             </h2>
-            <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setCategoryAutoSet(false); }}>
+            <Select
+              value={categoryId}
+              onValueChange={(v) => {
+                setCategoryId(v);
+                setCategoryAutoSet(false);
+              }}
+            >
               <SelectTrigger className="h-12 w-full rounded-2xl text-base">
                 <SelectValue placeholder="เลือกหมวดสินค้า" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -806,7 +805,10 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
             {media.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
                 {media.map((m, i) => (
-                  <div key={i} className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
+                  <div
+                    key={i}
+                    className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+                  >
                     {m.type === "image" ? (
                       <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" />
                     ) : (
@@ -832,8 +834,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         {job_id && categoryId && checklist.length > 0 && (
           <section className="mt-5">
             <div className="mb-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">
-              <span className="font-semibold">สรุป:</span>{" "}
-              <span className="text-success">ผ่าน {passCount}</span> /{" "}
+              <span className="font-semibold">สรุป:</span> <span className="text-success">ผ่าน {passCount}</span> /{" "}
               <span className="text-destructive">ไม่ผ่าน {failCount}</span> /{" "}
               <span className="text-muted-foreground">ทั้งหมด {total}</span>
             </div>
@@ -849,7 +850,15 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         )}
       </main>
 
-      <QrScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onScanned={handleScanned} />
+      <QrScannerDialog
+        open={scannerOpen}
+        onOpenChange={(v) => {
+          setScannerOpen(v);
+          if (!v) setScannerStream(null);
+        }}
+        onScanned={handleScanned}
+        initialStream={scannerStream}
+      />
     </div>
   );
 }
@@ -880,11 +889,11 @@ function ChecklistRow({
   const passed = state.is_passed === true;
 
   return (
-    <div className={`rounded-2xl border-2 bg-card p-3 transition-colors ${
-      passed ? "border-success/40 bg-success/5"
-      : failed ? "border-destructive/40 bg-destructive/5"
-      : "border-border"
-    }`}>
+    <div
+      className={`rounded-2xl border-2 bg-card p-3 transition-colors ${
+        passed ? "border-success/40 bg-success/5" : failed ? "border-destructive/40 bg-destructive/5" : "border-border"
+      }`}
+    >
       <div className="flex items-start gap-2">
         <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground">
           {index}
@@ -953,22 +962,37 @@ function ChecklistRow({
           />
 
           <div className="grid grid-cols-2 gap-2">
-            <Button type="button" size="sm" variant="outline" className="gap-1" disabled={uploading} onClick={() => imgRef.current?.click()}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              disabled={uploading}
+              onClick={() => imgRef.current?.click()}
+            >
               <Camera className="h-4 w-4" /> รูป
             </Button>
-            <Button type="button" size="sm" variant="outline" className="gap-1" disabled={uploading} onClick={() => vidRef.current?.click()}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              disabled={uploading}
+              onClick={() => vidRef.current?.click()}
+            >
               <VideoIcon className="h-4 w-4" /> วิดีโอ
             </Button>
           </div>
 
           {state.media.length === 0 ? (
-            <p className="text-xs font-medium text-destructive">
-              * ต้องแนบรูปหรือวิดีโอหลักฐานอย่างน้อย 1 รายการ
-            </p>
+            <p className="text-xs font-medium text-destructive">* ต้องแนบรูปหรือวิดีโอหลักฐานอย่างน้อย 1 รายการ</p>
           ) : (
             <div className="grid grid-cols-4 gap-1.5">
               {state.media.map((m, i) => (
-                <div key={i} className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
+                <div
+                  key={i}
+                  className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
+                >
                   {m.type === "image" ? (
                     <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" />
                   ) : (
