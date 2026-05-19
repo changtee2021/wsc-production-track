@@ -237,8 +237,9 @@ function ScanPage() {
     setUploadingNote(true);
     try {
       const dataBase64 = await fileToBase64(file);
-      const { url } = await uploadNote({ data: { dataBase64 } });
-      setNoteImageUrl(url);
+      const res = await uploadNote({ data: { dataBase64 } });
+      setNoteImage({ path: res.path, previewUrl: res.previewUrl });
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "upload failed");
     } finally {
