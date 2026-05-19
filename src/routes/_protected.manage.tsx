@@ -1259,6 +1259,7 @@ interface QcEmp {
 function QcEmployeesPanel() {
   const upsert = useServerFn(adminUpsertQcEmployee);
   const del = useServerFn(adminDeleteQcEmployee);
+  const list = useServerFn(adminListQcEmployees);
   const createUrl = useServerFn(adminCreateUploadUrl);
   const [items, setItems] = useState<QcEmp[]>([]);
   const [name, setName] = useState("");
@@ -1269,15 +1270,17 @@ function QcEmployeesPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    const { data } = await supabase
-      .from("qc_employees")
-      .select("id, name, emp_code, avatar_url, active")
-      .order("name");
-    setItems((data ?? []) as QcEmp[]);
+    try {
+      const res = await list({ data: { token: requireToken() } });
+      setItems((res.rows ?? []) as QcEmp[]);
+    } catch (err) {
+      showError(err);
+    }
   };
 
   useEffect(() => {
     load();
+     
   }, []);
 
   const handleUpload = async (file: File, target: "new" | "edit") => {
