@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { adminFetchLogs } from "@/lib/admin.functions";
 import { getAdminToken } from "@/lib/admin-session";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -18,10 +19,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Image as ImageIcon, Search, Filter } from "lucide-react";
+import { FileText, Image as ImageIcon, Search, Filter, CalendarIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/_protected/logs")({
   head: () => ({ meta: [{ title: "Production Logs — WSC ProductionTrack" }] }),
