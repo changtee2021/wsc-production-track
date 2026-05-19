@@ -1,42 +1,38 @@
 # Plan
 
-## 1. QC employee avatar upload (`src/routes/_protected.manage.tsx`)
+## 1. แก้ปัญหาลบพนักงานติด FK constraint
 
-Mirror the pattern already used in the regular Employees panel (line ~247):
+**สาเหตุ:** `production_logs.employee_id` ใช้ `ON DELETE RESTRICT` (และตั้ง `NOT NULL`) ทำให้ลบพนักงานที่เคยมี log ไม่ได้
 
-- Add `avatar_url` column to `qc_employees` table via migration (nullable text).
-- Extend `adminUpsertQcEmployee` server fn in `src/lib/admin.functions.ts` to accept optional `avatar_url`.
-- In `QcEmployeesPanel`:
-  - Add `avatarUrl` state + file input that calls `adminUpload("avatars", file, createUrl)` (reuses existing `avatars` bucket and `adminCreateUploadUrl`).
-  - Show `<Avatar>` preview next to the inputs (same UX as Employees panel).
-  - Pass `avatar_url` on insert/update; populate on edit.
-  - Render avatar thumbnail in the list rows.
-- Update `QcEmp` type to include `avatar_url`.
+**วิธีแก้:** เก็บประวัติงานไว้เสมอ แต่ให้ลบพนักงานได้ โดยเปลี่ยน FK เป็น `ON DELETE SET NULL` และอนุญาตให้ `employee_id` เป็น NULL
 
-## 2. Dashboard report layout (`src/routes/_protected.dashboard.tsx`, lines ~1493–1625)
-
-Two affected `Section`s:
-- "จำนวนงานต่อพนักงาน — แยกตามขั้นตอน"
-- "เวลาเฉลี่ยต่อพนักงาน — แยกตามขั้นตอน"
-
-Inside each category card, the steps list currently uses `grid gap-4` (single column). Change to:
+### Migration
+```sql
+ALTER TABLE public.production_logs ALTER COLUMN employee_id DROP NOT NULL;
+ALTER TABLE public.production_logs DROP CONSTRAINT IF EXISTS production_logs_employee_id_fkey;
+ALTER TABLE public.production_logs
+  ADD CONSTRAINT production_logs_employee_id_fkey
+  FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE SET NULL;
 ```
-grid gap-4 md:grid-cols-1 lg:grid-cols-2
-```
-so PC (≥1024px) shows 2 columns side-by-side, tablet/mobile stays single column.
+(ทำแบบเดียวกันกับ `qc_employees` ใน `qc_reports.qc_employee_id` — ปัจจุบันเป็น RESTRICT — เพื่อให้ลบพนักงาน QC ได้ด้วย)
 
-## 3. Mobile UI tightening (same two sections + their wrappers)
+### Frontend
+- `src/routes/_protected.logs.tsx` และจุดอื่นที่อ่าน `l.employees?.name`: แสดง "— (พนักงานถูกลบ)" เมื่อ `employees` เป็น null
+- `src/routes/_protected.dashboard.tsx`: เวลา group ตามพนักงาน ให้ข้าม/รวมเป็น "ไม่ระบุ" สำหรับ row ที่ employee_id เป็น null
 
-- Reduce chart height on mobile: `height={420}` → use responsive value (e.g. `h-[280px] sm:h-[360px] lg:h-[420px]` via wrapper div instead of fixed `height` prop, or branch via `useIsMobile`). Use a wrapper `<div className="h-[280px] sm:h-[380px] lg:h-[420px]">` with `ResponsiveContainer width="100%" height="100%"`.
-- Reduce pie `outerRadius` on mobile (110 mobile / 150 desktop) by reading `useIsMobile()` already imported in dashboard if present, else add it.
-- Tighten paddings on mobile: `p-4` → `p-3 sm:p-4` on the category wrapper and inner step card; `gap-4` → `gap-3 sm:gap-4`.
-- Make the per-category header stack on small screens: `flex items-center justify-between` → `flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between`.
-- Shrink legend font on mobile via `wrapperStyle={{ fontSize: 10 }}` (already 11).
+## 2. เพิ่มตัวเลือกช่วงวันที่ในหน้าประวัติงาน
 
-No business-logic changes; only layout/styling and one schema column + serverFn field.
+ไฟล์: `src/routes/_protected.logs.tsx`
+
+เพิ่ม state `dateFrom`, `dateTo` (Date | undefined) และ:
+- เพิ่มแถบฟิลเตอร์ใหม่ "ช่วงวันที่" ใต้ filter grid ปัจจุบัน ใช้ shadcn Popover + Calendar (date range) — ปุ่ม 2 ปุ่ม "ตั้งแต่" / "ถึง"
+- เพิ่ม preset ปุ่มเร็ว: วันนี้ / 7 วัน / 30 วัน / ทั้งหมด
+- กรองใน `useMemo` filtered: เทียบ `new Date(l.created_at)` กับช่วง (รวมทั้งวันของ `dateTo`)
+- ปุ่ม "ล้างช่วงวันที่" เมื่อมีค่า
+
+ใช้ `@/components/ui/calendar` + `popover` + `date-fns` (มีอยู่แล้วในโปรเจ็กต์)
 
 ## Files to edit
-- `supabase/migrations/<new>.sql` — `ALTER TABLE qc_employees ADD COLUMN avatar_url text;`
-- `src/lib/admin.functions.ts` — add `avatar_url` to `qcEmployeePayload`, include in upsert row.
-- `src/routes/_protected.manage.tsx` — avatar upload UI in `QcEmployeesPanel`.
-- `src/routes/_protected.dashboard.tsx` — `lg:grid-cols-2` + responsive heights/paddings in the two report sections.
+- `supabase/migrations/<new>.sql` — เปลี่ยน FK เป็น SET NULL + ทำคอลัมน์ employee_id เป็น nullable (ทั้ง production_logs และ qc_reports.qc_employee_id ที่ปัจจุบันยัง RESTRICT)
+- `src/routes/_protected.logs.tsx` — เพิ่ม date range filter + render fallback ชื่อพนักงานที่ถูกลบ
+- `src/routes/_protected.dashboard.tsx` — handle employee null (แสดง "ไม่ระบุ")

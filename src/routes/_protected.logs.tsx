@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { adminFetchLogs } from "@/lib/admin.functions";
 import { getAdminToken } from "@/lib/admin-session";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -18,10 +19,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Image as ImageIcon, Search, Filter } from "lucide-react";
+import { FileText, Image as ImageIcon, Search, Filter, CalendarIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/_protected/logs")({
   head: () => ({ meta: [{ title: "Production Logs — WSC ProductionTrack" }] }),
@@ -54,9 +60,12 @@ function LogsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [onlyNotes, setOnlyNotes] = useState(false);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [selected, setSelected] = useState<LogRow | null>(null);
 
   const fetchLogs = useServerFn(adminFetchLogs);
+
 
   useEffect(() => {
     (async () => {
@@ -88,17 +97,25 @@ function LogsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const fromTs = dateFrom ? new Date(dateFrom.setHours(0, 0, 0, 0)).getTime() : null;
+    const toTs = dateTo ? new Date(dateTo.setHours(23, 59, 59, 999)).getTime() : null;
     return logs.filter((l) => {
       if (categoryFilter !== "all" && l.category_id !== categoryFilter) return false;
       if (actionFilter !== "all" && l.action !== actionFilter) return false;
       if (onlyNotes && !l.note && !l.note_image_url) return false;
+      if (fromTs || toTs) {
+        const ts = new Date(l.created_at).getTime();
+        if (fromTs && ts < fromTs) return false;
+        if (toTs && ts > toTs) return false;
+      }
       if (q) {
         const hay = `${l.job_id} ${l.employees?.name ?? ""} ${l.steps?.step_name ?? ""} ${l.note ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [logs, search, categoryFilter, actionFilter, onlyNotes]);
+  }, [logs, search, categoryFilter, actionFilter, onlyNotes, dateFrom, dateTo]);
+
 
   const notesCount = useMemo(
     () => logs.filter((l) => l.note || l.note_image_url).length,
@@ -162,6 +179,107 @@ function LogsPage() {
         </label>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3 shadow-sm">
+        <span className="text-sm font-medium text-muted-foreground">ช่วงวันที่:</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("gap-2", !dateFrom && "text-muted-foreground")}
+            >
+              <CalendarIcon className="h-4 w-4" />
+              {dateFrom ? format(dateFrom, "dd MMM yyyy") : "ตั้งแต่"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateFrom}
+              onSelect={setDateFrom}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+        <span className="text-muted-foreground">—</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("gap-2", !dateTo && "text-muted-foreground")}
+            >
+              <CalendarIcon className="h-4 w-4" />
+              {dateTo ? format(dateTo, "dd MMM yyyy") : "ถึง"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateTo}
+              onSelect={setDateTo}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+
+        <div className="ml-auto flex flex-wrap items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const t = new Date();
+              setDateFrom(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
+              setDateTo(new Date());
+            }}
+          >
+            วันนี้
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const t = new Date();
+              const f = new Date();
+              f.setDate(t.getDate() - 6);
+              setDateFrom(f);
+              setDateTo(t);
+            }}
+          >
+            7 วัน
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const t = new Date();
+              const f = new Date();
+              f.setDate(t.getDate() - 29);
+              setDateFrom(f);
+              setDateTo(t);
+            }}
+          >
+            30 วัน
+          </Button>
+          {(dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-destructive hover:text-destructive"
+              onClick={() => {
+                setDateFrom(undefined);
+                setDateTo(undefined);
+              }}
+            >
+              <X className="h-3.5 w-3.5" /> ล้าง
+            </Button>
+          )}
+        </div>
+      </div>
+
+
       <div className="rounded-2xl border border-border bg-card shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-muted-foreground">กำลังโหลด…</p>
@@ -203,7 +321,14 @@ function LogsPage() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-2">{l.employees?.name ?? "—"}</td>
+                      <td className="px-4 py-2">
+                        {l.employees?.name ?? (
+                          <span className="text-xs italic text-muted-foreground">
+                            พนักงานถูกลบ
+                          </span>
+                        )}
+                      </td>
+
                       <td className="px-4 py-2">{l.steps?.step_name ?? "—"}</td>
                       <td className="px-4 py-2">
                         <span
@@ -253,7 +378,7 @@ function LogsPage() {
                   label="เวลา"
                   value={new Date(selected.created_at).toLocaleString("th-TH")}
                 />
-                <Info label="พนักงาน" value={selected.employees?.name ?? "—"} />
+                <Info label="พนักงาน" value={selected.employees?.name ?? "พนักงานถูกลบ"} />
                 <Info label="ขั้นตอน" value={selected.steps?.step_name ?? "—"} />
                 <Info label="หมวดหมู่" value={selected.categories?.name ?? "—"} />
                 <Info

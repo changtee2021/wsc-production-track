@@ -121,7 +121,7 @@ export type Database = {
           action: string
           category_id: string | null
           created_at: string
-          employee_id: string
+          employee_id: string | null
           id: string
           job_id: string
           note: string | null
@@ -132,7 +132,7 @@ export type Database = {
           action: string
           category_id?: string | null
           created_at?: string
-          employee_id: string
+          employee_id?: string | null
           id?: string
           job_id: string
           note?: string | null
@@ -143,7 +143,7 @@ export type Database = {
           action?: string
           category_id?: string | null
           created_at?: string
-          employee_id?: string
+          employee_id?: string | null
           id?: string
           job_id?: string
           note?: string | null
@@ -301,7 +301,7 @@ export type Database = {
           note: string | null
           overall_result: string | null
           production_log_id: string | null
-          qc_employee_id: string
+          qc_employee_id: string | null
           status: string
           step_id: string | null
           summary: string | null
@@ -316,7 +316,7 @@ export type Database = {
           note?: string | null
           overall_result?: string | null
           production_log_id?: string | null
-          qc_employee_id: string
+          qc_employee_id?: string | null
           status?: string
           step_id?: string | null
           summary?: string | null
@@ -331,7 +331,7 @@ export type Database = {
           note?: string | null
           overall_result?: string | null
           production_log_id?: string | null
-          qc_employee_id?: string
+          qc_employee_id?: string | null
           status?: string
           step_id?: string | null
           summary?: string | null
