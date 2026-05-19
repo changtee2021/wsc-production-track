@@ -60,9 +60,12 @@ function LogsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [onlyNotes, setOnlyNotes] = useState(false);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [selected, setSelected] = useState<LogRow | null>(null);
 
   const fetchLogs = useServerFn(adminFetchLogs);
+
 
   useEffect(() => {
     (async () => {
