@@ -275,6 +275,32 @@ function LogsUpdatePage() {
         </Dialog>
       </div>
 
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Send className="h-4 w-4 text-primary" />
+            ทดสอบการแจ้งเตือน LINE
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            กดปุ่มเพื่อส่งสรุปภาพรวมประจำวันไปยังกลุ่ม LINE ที่ตั้งค่าไว้
+          </p>
+        </div>
+        <Button
+          onClick={handleSendLineTest}
+          disabled={lineSending}
+          size="sm"
+          className="mt-3 gap-2 sm:mt-0"
+        >
+          {lineSending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+          {lineSending ? "กำลังส่ง..." : "ส่งข้อความทดสอบ"}
+        </Button>
+      </div>
+
+
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
