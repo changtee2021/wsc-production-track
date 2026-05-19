@@ -250,14 +250,14 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     (async () => {
       const token = getQcToken();
       const tasks: Promise<unknown>[] = [
-        supabase
-          .from("categories")
-          .select("id, name")
-          .eq("active", true)
-          .order("name")
-          .then((cat) => {
-            if (cat.data) setCategories(cat.data);
-          }),
+        (async () => {
+          const cat = await supabase
+            .from("categories")
+            .select("id, name")
+            .eq("active", true)
+            .order("name");
+          if (cat.data) setCategories(cat.data);
+        })(),
       ];
       if (token) {
         tasks.push(
