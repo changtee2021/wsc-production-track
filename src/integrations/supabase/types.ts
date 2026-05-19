@@ -174,6 +174,44 @@ export type Database = {
           },
         ]
       }
+      qc_checklists: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          item_order: number
+          item_text: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_order?: number
+          item_text: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_order?: number
+          item_text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qc_checklists_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qc_employees: {
         Row: {
           active: boolean
@@ -198,6 +236,57 @@ export type Database = {
         }
         Relationships: []
       }
+      qc_report_items: {
+        Row: {
+          checklist_id: string | null
+          created_at: string
+          id: string
+          is_passed: boolean
+          item_order: number
+          item_text_snapshot: string
+          media: Json
+          qc_report_id: string
+          remark: string | null
+        }
+        Insert: {
+          checklist_id?: string | null
+          created_at?: string
+          id?: string
+          is_passed: boolean
+          item_order?: number
+          item_text_snapshot: string
+          media?: Json
+          qc_report_id: string
+          remark?: string | null
+        }
+        Update: {
+          checklist_id?: string | null
+          created_at?: string
+          id?: string
+          is_passed?: boolean
+          item_order?: number
+          item_text_snapshot?: string
+          media?: Json
+          qc_report_id?: string
+          remark?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qc_report_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "qc_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qc_report_items_qc_report_id_fkey"
+            columns: ["qc_report_id"]
+            isOneToOne: false
+            referencedRelation: "qc_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qc_reports: {
         Row: {
           category_id: string | null
@@ -207,10 +296,12 @@ export type Database = {
           job_id: string
           media: Json
           note: string | null
+          overall_result: string | null
           production_log_id: string | null
           qc_employee_id: string
           status: string
           step_id: string | null
+          summary: string | null
         }
         Insert: {
           category_id?: string | null
@@ -220,10 +311,12 @@ export type Database = {
           job_id: string
           media?: Json
           note?: string | null
+          overall_result?: string | null
           production_log_id?: string | null
           qc_employee_id: string
           status?: string
           step_id?: string | null
+          summary?: string | null
         }
         Update: {
           category_id?: string | null
@@ -233,10 +326,12 @@ export type Database = {
           job_id?: string
           media?: Json
           note?: string | null
+          overall_result?: string | null
           production_log_id?: string | null
           qc_employee_id?: string
           status?: string
           step_id?: string | null
+          summary?: string | null
         }
         Relationships: [
           {
