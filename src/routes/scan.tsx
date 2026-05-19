@@ -321,6 +321,7 @@ function ScanPage() {
                 }}
                 variant="outline"
                 className="h-11 gap-1"
+                aria-label={t("job.resetTitle")}
                 title={t("job.resetTitle")}
               >
                 <RotateCcw className="h-4 w-4" />
@@ -330,6 +331,7 @@ function ScanPage() {
                 onClick={applyManualJob}
                 variant="outline"
                 className="h-11 gap-1"
+                aria-label={t("job.confirmTitle")}
                 title={t("job.confirmTitle")}
               >
                 <Check className="h-4 w-4" />
