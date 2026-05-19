@@ -3,10 +3,47 @@
 // `log-notes` bucket using the service-role client, so the bucket can keep
 // its public INSERT policy disabled.
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
+// In-memory sliding-window rate limit (per worker instance).
+// Limit: 20 uploads / minute per IP.
+const RATE_LIMIT_MAX = 20;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const rateBuckets = new Map<string, number[]>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const arr = (rateBuckets.get(ip) ?? []).filter((t) => t > cutoff);
+  if (arr.length >= RATE_LIMIT_MAX) {
+    rateBuckets.set(ip, arr);
+    return false;
+  }
+  arr.push(now);
+  rateBuckets.set(ip, arr);
+  // Opportunistic cleanup
+  if (rateBuckets.size > 5000) {
+    for (const [k, v] of rateBuckets) {
+      const kept = v.filter((t) => t > cutoff);
+      if (kept.length === 0) rateBuckets.delete(k);
+      else rateBuckets.set(k, kept);
+    }
+  }
+  return true;
+}
+
+function clientIp(): string {
+  return (
+    getRequestHeader("cf-connecting-ip") ||
+    getRequestHeader("x-real-ip") ||
+    (getRequestHeader("x-forwarded-for") || "").split(",")[0].trim() ||
+    "unknown"
+  );
+}
 
 type Allowed = { mime: string; ext: string };
 
