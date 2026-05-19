@@ -63,6 +63,20 @@ function LogsUpdatePage() {
   const fetchLogs = useServerFn(adminFetchSystemLogs);
   const insertLog = useServerFn(adminInsertSystemLog);
   const deleteLog = useServerFn(adminDeleteSystemLog);
+  const sendLineTest = useServerFn(adminSendLineTest);
+  const [lineSending, setLineSending] = useState(false);
+
+  const handleSendLineTest = async () => {
+    setLineSending(true);
+    try {
+      await sendLineTest({ data: { token: requireToken() } });
+      toast.success("ส่งข้อความทดสอบ LINE สำเร็จ ✅");
+    } catch (e) {
+      showError(e, "ส่งข้อความทดสอบ LINE ไม่สำเร็จ");
+    } finally {
+      setLineSending(false);
+    }
+  };
 
   const [rows, setRows] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
