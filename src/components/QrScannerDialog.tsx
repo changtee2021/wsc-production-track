@@ -238,6 +238,8 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
   const [usingNative, setUsingNative] = useState(false);
   const [legacyMode, setLegacyMode] = useState(false);
   const [errorInfo, setErrorInfo] = useState<CameraErrorInfo | null>(null);
+  // Temporary on-screen diagnostic; remove after the iOS issue is solved.
+  const [diag, setDiag] = useState<string | null>(null);
 
   const stopAll = async () => {
     if (rafRef.current != null) {
@@ -389,15 +391,42 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
     streamRef.current = stream;
     pendingStreamRef.current = null;
 
+    let playError = "";
     try {
       await video.play();
-    } catch {
+    } catch (e) {
+      playError = (e as Error)?.name || "playError";
       // iOS may need a beat after srcObject; retry once.
       await new Promise((r) => setTimeout(r, 50));
       try {
         await video.play();
-      } catch {}
+        playError = "";
+      } catch (e2) {
+        playError = (e2 as Error)?.name || "playError2";
+      }
     }
+
+    // Snapshot video state ~600ms after play() to expose what iOS is doing.
+    setTimeout(() => {
+      const tracks = stream.getVideoTracks();
+      const settings = tracks[0]?.getSettings?.() ?? {};
+      const snap = {
+        play: playError || "ok",
+        ready: video.readyState,
+        vw: video.videoWidth,
+        vh: video.videoHeight,
+        cw: video.clientWidth,
+        ch: video.clientHeight,
+        paused: video.paused,
+        srcObj: !!video.srcObject,
+        active: stream.active,
+        tracks: tracks.length,
+        live: tracks[0]?.readyState,
+        w: settings.width,
+        h: settings.height,
+      };
+      setDiag(JSON.stringify(snap));
+    }, 600);
 
     // scanFile decoder — reuses REGION_ID but with showImage=false it does
     // not add or render anything in there.
@@ -591,6 +620,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
     cancelledRef.current = false;
     setErrorInfo(null);
     setLegacyMode(false);
+    setDiag(null);
     pendingStreamRef.current = initialStream ?? null;
 
     (async () => {
@@ -655,7 +685,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[100dvh] max-w-full gap-2 rounded-none p-3 sm:h-auto sm:max-w-lg sm:rounded-lg">
+      <DialogContent className="flex h-[100dvh] max-w-full flex-col gap-2 rounded-none p-3 sm:h-auto sm:max-w-lg sm:rounded-lg">
         <DialogHeader className="space-y-1">
           <DialogTitle>สแกน QR Code</DialogTitle>
           <DialogDescription>
@@ -678,7 +708,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
           </div>
         )}
 
-        <div className="relative w-full flex-1 overflow-hidden rounded-xl bg-black sm:aspect-square sm:flex-none">
+        <div className="relative w-full flex-1 min-h-[55vh] overflow-hidden rounded-xl bg-black sm:aspect-square sm:flex-none sm:min-h-0">
           <div id={REGION_ID} className="h-full w-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover" />
           {starting && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white">
@@ -689,6 +719,11 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 p-4 text-center text-white">
               <Camera className="h-10 w-10 opacity-80" />
               <p className="text-sm">กล้องยังไม่พร้อมใช้งาน</p>
+            </div>
+          )}
+          {diag && (
+            <div className="absolute bottom-1 left-1 right-1 break-all rounded bg-black/70 p-2 text-[10px] leading-tight text-white">
+              {diag}
             </div>
           )}
         </div>
