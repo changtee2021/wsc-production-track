@@ -33,6 +33,15 @@ export const Route = createFileRoute("/_protected/qc-reports")({
   component: QcReportsPage,
 });
 
+interface QcReportItem {
+  id: string;
+  item_text_snapshot: string;
+  item_order: number;
+  is_passed: boolean;
+  remark: string | null;
+  media: Array<{ url: string; type: "image" | "video" }>;
+}
+
 interface QcReportRow {
   id: string;
   job_id: string;
@@ -44,11 +53,14 @@ interface QcReportRow {
   note: string | null;
   media: Array<{ url: string; type: "image" | "video" }>;
   status: "open" | "resolved";
+  overall_result: "pass" | "fail" | null;
+  summary: string | null;
   created_at: string;
   qc_employees: { name: string; emp_code: string | null } | null;
   employees: { name: string; emp_code: string | null } | null;
   steps: { step_name: string } | null;
   categories: { name: string } | null;
+  qc_report_items: QcReportItem[] | null;
 }
 
 function requireToken(): string {
