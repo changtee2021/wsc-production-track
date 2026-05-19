@@ -7,6 +7,7 @@ import {
   adminDeleteSystemLog,
 } from "@/lib/system-logs.functions";
 import { adminSendLineTest } from "@/lib/line.functions";
+import { adminGetLineSchedule, adminSetLineSchedule } from "@/lib/line-schedule.functions";
 import { requireToken, showError } from "@/lib/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +65,30 @@ function LogsUpdatePage() {
   const insertLog = useServerFn(adminInsertSystemLog);
   const deleteLog = useServerFn(adminDeleteSystemLog);
   const sendLineTest = useServerFn(adminSendLineTest);
+  const getSchedule = useServerFn(adminGetLineSchedule);
+  const setSchedule = useServerFn(adminSetLineSchedule);
   const [lineSending, setLineSending] = useState(false);
+  const [schedTime, setSchedTime] = useState("08:30");
+  const [schedEnabled, setSchedEnabled] = useState(true);
+  const [schedLastSent, setSchedLastSent] = useState<string | null>(null);
+  const [schedLoading, setSchedLoading] = useState(true);
+  const [schedSaving, setSchedSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await getSchedule({ data: { token: requireToken() } });
+        setSchedTime(s.time);
+        setSchedEnabled(s.enabled);
+        setSchedLastSent(s.lastSentDate);
+      } catch (e) {
+        showError(e, "โหลดค่าตั้งเวลาไม่สำเร็จ");
+      } finally {
+        setSchedLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSendLineTest = async () => {
     setLineSending(true);
@@ -75,6 +99,20 @@ function LogsUpdatePage() {
       showError(e, "ส่งข้อความทดสอบ LINE ไม่สำเร็จ");
     } finally {
       setLineSending(false);
+    }
+  };
+
+  const handleSaveSchedule = async () => {
+    setSchedSaving(true);
+    try {
+      await setSchedule({
+        data: { token: requireToken(), time: schedTime, enabled: schedEnabled },
+      });
+      toast.success("บันทึกเวลาส่งอัตโนมัติแล้ว");
+    } catch (e) {
+      showError(e, "บันทึกไม่สำเร็จ");
+    } finally {
+      setSchedSaving(false);
     }
   };
 
@@ -299,6 +337,53 @@ function LogsUpdatePage() {
           {lineSending ? "กำลังส่ง..." : "ส่งข้อความทดสอบ"}
         </Button>
       </div>
+
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex items-start gap-2">
+          <Clock className="mt-0.5 h-4 w-4 text-primary" />
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-foreground">
+              ตั้งเวลาส่งสรุปอัตโนมัติ (รายวัน)
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              ระบบจะส่งสรุปเข้ากลุ่ม LINE ตามเวลาที่ตั้งไว้ (เวลาไทย){" "}
+              {schedLastSent ? `· ส่งล่าสุด: ${schedLastSent}` : "· ยังไม่เคยส่งโดยอัตโนมัติ"}
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-muted-foreground">เวลา</label>
+            <Input
+              type="time"
+              value={schedTime}
+              onChange={(e) => setSchedTime(e.target.value)}
+              disabled={schedLoading}
+              className="w-32"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={schedEnabled}
+              onChange={(e) => setSchedEnabled(e.target.checked)}
+              disabled={schedLoading}
+              className="h-4 w-4 accent-primary"
+            />
+            เปิดใช้งานการส่งอัตโนมัติ
+          </label>
+          <Button
+            onClick={handleSaveSchedule}
+            disabled={schedLoading || schedSaving}
+            size="sm"
+            className="sm:ml-auto gap-2"
+          >
+            {schedSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+            {schedSaving ? "กำลังบันทึก..." : "บันทึกเวลา"}
+          </Button>
+        </div>
+      </div>
+
 
 
       <div className="flex flex-col sm:flex-row gap-2">

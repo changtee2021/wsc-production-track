@@ -21,6 +21,7 @@ import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
 import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
+import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -81,6 +82,12 @@ const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ApiPublicHooksLineDailySendRoute =
+  ApiPublicHooksLineDailySendRouteImport.update({
+    id: '/api/public/hooks/line-daily-send',
+    path: '/api/public/hooks/line-daily-send',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/manage': typeof ProtectedManageRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/storage': typeof ProtectedStorageRoute
+  '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/manage': typeof ProtectedManageRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/storage': typeof ProtectedStorageRoute
+  '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_protected/manage': typeof ProtectedManageRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/storage': typeof ProtectedStorageRoute
+  '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/manage'
     | '/qc-reports'
     | '/storage'
+    | '/api/public/hooks/line-daily-send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/manage'
     | '/qc-reports'
     | '/storage'
+    | '/api/public/hooks/line-daily-send'
   id:
     | '__root__'
     | '/'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/_protected/manage'
     | '/_protected/qc-reports'
     | '/_protected/storage'
+    | '/api/public/hooks/line-daily-send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -173,6 +186,7 @@ export interface RootRouteChildren {
   QcRoute: typeof QcRoute
   ScanRoute: typeof ScanRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -261,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedDashboardRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/api/public/hooks/line-daily-send': {
+      id: '/api/public/hooks/line-daily-send'
+      path: '/api/public/hooks/line-daily-send'
+      fullPath: '/api/public/hooks/line-daily-send'
+      preLoaderRoute: typeof ApiPublicHooksLineDailySendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -293,6 +314,7 @@ const rootRouteChildren: RootRouteChildren = {
   QcRoute: QcRoute,
   ScanRoute: ScanRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
