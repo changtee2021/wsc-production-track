@@ -168,6 +168,7 @@ function buildConstraintLadder(mode: FacingMode): MediaStreamConstraints[] {
       audio: false,
       video: { facingMode: mode },
     },
+    { audio: false, video: {} },
     { audio: false, video: true },
   ];
 }
@@ -187,6 +188,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
   const [usingNative, setUsingNative] = useState(false);
   const [legacyMode, setLegacyMode] = useState(false);
   const [errorInfo, setErrorInfo] = useState<CameraErrorInfo | null>(null);
+  const [awaitingIOSGesture, setAwaitingIOSGesture] = useState(false);
 
   const stopAll = async () => {
     if (rafRef.current != null) {
@@ -245,12 +247,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
         lastErr = e;
         const name = (e as { name?: string })?.name;
         // Permission/secure errors → don't retry the ladder
-        if (
-          name === "NotAllowedError" ||
-          name === "PermissionDeniedError" ||
-          name === "SecurityError" ||
-          name === "NotFoundError"
-        ) {
+        if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
           throw e;
         }
       }
@@ -346,6 +343,10 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
         camera: { facingMode: "environment" },
         config: { fps: 5, disableFlip: false },
       },
+      {
+        camera: {} as MediaTrackConstraints,
+        config: { fps: 5, disableFlip: false },
+      },
     ];
 
     let lastErr: unknown = null;
@@ -363,12 +364,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
       } catch (e) {
         lastErr = e;
         const name = (e as { name?: string })?.name;
-        if (
-          name === "NotAllowedError" ||
-          name === "PermissionDeniedError" ||
-          name === "SecurityError" ||
-          name === "NotFoundError"
-        ) {
+        if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
           throw e;
         }
       }
@@ -396,7 +392,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
       }
 
       // Give the dialog time to lay out (iOS dislikes getUserMedia before container is sized)
-      //await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 300));
       if (cancelledRef.current) return;
 
       if (detectorRef.current) {
@@ -432,6 +428,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
     cancelledRef.current = false;
     setErrorInfo(null);
     setLegacyMode(false);
+    setAwaitingIOSGesture(false);
 
     (async () => {
       if (await hasNativeQrDetector()) {
@@ -439,6 +436,10 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
         detectorRef.current = new Ctor({ formats: ["qr_code"] });
       } else {
         detectorRef.current = null;
+      }
+      if (isIOS()) {
+        setAwaitingIOSGesture(true);
+        return;
       }
       await startWith("environment");
     })();
@@ -452,12 +453,19 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
 
   const switchCamera = async () => {
     const next: FacingMode = facing === "environment" ? "user" : "environment";
+    setAwaitingIOSGesture(false);
     await startWith(next);
   };
 
   const retryCamera = async () => {
     setLegacyMode(false);
+    setAwaitingIOSGesture(false);
     await startWith(facing);
+  };
+
+  const startIOSCamera = async () => {
+    setAwaitingIOSGesture(false);
+    await startWith("environment");
   };
 
   const onFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -531,6 +539,16 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
               <p className="text-sm">กล้องยังไม่พร้อมใช้งาน</p>
             </div>
           )}
+          {awaitingIOSGesture && !starting && !errorInfo && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 p-4 text-center text-white">
+              <Camera className="h-10 w-10 opacity-80" />
+              <p className="text-sm">แตะเพื่ออนุญาตและเปิดกล้อง</p>
+              <Button onClick={startIOSCamera} className="h-11 gap-2">
+                <Camera className="h-4 w-4" />
+                เปิดกล้อง
+              </Button>
+            </div>
+          )}
         </div>
 
         {errorInfo?.showRetry && (
@@ -541,7 +559,12 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={switchCamera} disabled={starting} className="h-11 gap-2">
+          <Button
+            variant="outline"
+            onClick={switchCamera}
+            disabled={starting || awaitingIOSGesture}
+            className="h-11 gap-2"
+          >
             <SwitchCamera className="h-4 w-4" />
             สลับกล้อง
           </Button>
