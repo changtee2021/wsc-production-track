@@ -103,21 +103,76 @@ export const adminSendLineTest = createServerFn({ method: "POST" })
 
     const alertSection =
       qcFailed > 0
-        ? `\n⚠️ แจ้งเตือนพิเศษ:\n${failedDetails.join("\n")}`
-        : `\n⚠️ แจ้งเตือนพิเศษ: ไม่มี`;
+        ? `⚠️ แจ้งเตือนพิเศษ:\n${failedDetails.join("\n")}`
+        : `⚠️ แจ้งเตือนพิเศษ: ไม่มี`;
+
+    // --- AI Daily Analysis (Lovable AI Gateway) ---
+    let aiAnalysis = "";
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    if (lovableKey) {
+      try {
+        const stats = {
+          date: dateStr,
+          production: { newJobs: newJobsCount, inProgress: inProgressCount, finished: finishedCount },
+          qc: { total: qcTotal, passed: qcPassed, failed: qcFailed },
+          failedDetails,
+        };
+        const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "คุณเป็นผู้ช่วยวิเคราะห์ข้อมูลการผลิตและ QC ให้สรุปภาพรวมประจำวันแบบกระชับ 2-4 บรรทัด ภาษาไทย เน้นข้อสังเกต/แนวโน้ม/คำแนะนำเชิงปฏิบัติ ห้ามใส่หัวข้อ ห้ามใส่ markdown",
+              },
+              {
+                role: "user",
+                content: `ข้อมูลวันนี้: ${JSON.stringify(stats)}`,
+              },
+            ],
+          }),
+        });
+        if (aiRes.ok) {
+          const j = (await aiRes.json()) as { choices?: Array<{ message?: { content?: string } }> };
+          aiAnalysis = j.choices?.[0]?.message?.content?.trim() ?? "";
+        }
+      } catch {
+        // AI optional - skip on error
+      }
+    }
+
+    const aiSection = aiAnalysis ? `\n\n🧠 บทวิเคราะห์ประจำวัน (AI)\n${aiAnalysis}` : "";
 
     const text =
-      `🚀 [Blacksmith SAAS] สรุปภาพรวมประจำวันที่ ${dateStr}\n\n` +
+      `🚀 [WSC Production]\n` +
+      `สรุปภาพรวมประจำวันที่ ${dateStr}\n` +
+      `\n` +
       `📦 หมวดการผลิต (Production)\n` +
+      `\n` +
       `- งานใหม่วันนี้: ${newJobsCount} รายการ\n` +
+      `\n` +
       `- กำลังดำเนินการ: ${inProgressCount} รายการ\n` +
-      `- ผลิตเสร็จสิ้น: ${finishedCount} รายการ\n\n` +
+      `\n` +
+      `- ผลิตเสร็จสิ้น: ${finishedCount} รายการ\n` +
+      `\n` +
       `🔍 หมวดตรวจสอบ (QC)\n` +
+      `\n` +
       `- ตรวจสอบแล้ว: ${qcTotal} รายการ\n` +
+      `\n` +
       `- ✅ ผ่านมาตรฐาน: ${qcPassed}\n` +
+      `\n` +
       `- ❌ พบจุดบกพร่อง: ${qcFailed}\n` +
-      `${alertSection}\n\n` +
-      `📱 ลิงก์เข้าดูระบบ: ${appUrl}`;
+      `\n` +
+      `${alertSection}\n` +
+      `\n` +
+      `📱 ลิงก์เข้าดูระบบ: ${appUrl}` +
+      aiSection;
 
     const res = await fetch("https://api.line.me/v2/bot/message/push", {
       method: "POST",
