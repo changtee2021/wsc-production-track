@@ -1329,9 +1329,8 @@ function Dashboard() {
         />
       </div>
 
-      </div>
-
       <div className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4">
+
         <div className="min-w-0">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Send className="h-4 w-4 text-primary" />
