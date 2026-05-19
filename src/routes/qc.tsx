@@ -786,6 +786,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                     <button
                       type="button"
                       onClick={() => setMedia((prev) => prev.filter((_, j) => j !== i))}
+                      aria-label="ลบไฟล์หลักฐาน"
                       className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"
                     >
                       <X className="h-3.5 w-3.5" />
