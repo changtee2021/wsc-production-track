@@ -119,8 +119,11 @@ export const uploadWorkerNoteImage = createServerFn({ method: "POST" })
       });
     if (error) throw new Error(error.message);
 
-    const { data: pub } = supabaseAdmin.storage
+    // Bucket is private — return the storage path (for DB persistence) and
+    // a short-lived signed URL for immediate preview in the UI.
+    const { data: signed } = await supabaseAdmin.storage
       .from("log-notes")
-      .getPublicUrl(path);
-    return { url: pub.publicUrl };
+      .createSignedUrl(path, 60 * 60);
+    return { path, previewUrl: signed?.signedUrl ?? "" };
   });
+

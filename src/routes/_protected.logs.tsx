@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { adminFetchLogs } from "@/lib/admin.functions";
+import { adminSignMediaUrls } from "@/lib/media.functions";
 import { getAdminToken } from "@/lib/admin-session";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,8 +65,11 @@ function LogsPage() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [selected, setSelected] = useState<LogRow | null>(null);
+  const [signedMap, setSignedMap] = useState<Record<string, string>>({});
+
 
   const fetchLogs = useServerFn(adminFetchLogs);
+  const signUrls = useServerFn(adminSignMediaUrls);
 
 
   useEffect(() => {
@@ -86,14 +91,31 @@ function LogsPage() {
           }),
           supabase.from("categories").select("id,name").eq("active", true).order("name"),
         ]);
-        setLogs((logResp.rows as unknown as LogRow[]) ?? []);
+        const rows = (logResp.rows as unknown as LogRow[]) ?? [];
+        setLogs(rows);
         setCategories((catData as Category[]) ?? []);
+        const refs = Array.from(
+          new Set(rows.map((r) => r.note_image_url).filter((u): u is string => !!u)),
+        );
+        if (refs.length > 0) {
+          try {
+            const { urlMap } = await signUrls({
+              data: { token, refs, defaultBucket: "log-notes" },
+            });
+            setSignedMap(urlMap);
+          } catch {
+            // Display will fall back to the raw value (legacy public URLs)
+          }
+        }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "โหลดข้อมูลไม่สำเร็จ");
       }
       setLoading(false);
     })();
-  }, [fetchLogs]);
+  }, [fetchLogs, signUrls]);
+
+  const signedSrc = (ref: string) => signedMap[ref] ?? ref;
+
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -402,15 +424,16 @@ function LogsPage() {
                     รูปภาพแนบ
                   </div>
                   <a
-                    href={selected.note_image_url}
+                    href={signedSrc(selected.note_image_url)}
                     target="_blank"
                     rel="noreferrer"
                     className="block overflow-hidden rounded-lg border border-border"
                   >
                     <img
-                      src={selected.note_image_url}
+                      src={signedSrc(selected.note_image_url)}
                       alt="note"
                       className="max-h-96 w-full object-contain bg-muted"
+
                     />
                   </a>
                 </div>

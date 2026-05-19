@@ -6,8 +6,10 @@ import {
   adminUpdateQcReportStatus,
   adminDeleteQcReport,
 } from "@/lib/admin.functions";
+import { adminSignMediaUrls } from "@/lib/media.functions";
 import { requireToken, showError } from "@/lib/admin-helpers";
 import { downloadQcReportsCsv } from "@/lib/qc-export";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,6 +85,7 @@ function QcReportsPage() {
   const fetchReports = useServerFn(adminFetchQcReports);
   const updateStatus = useServerFn(adminUpdateQcReportStatus);
   const del = useServerFn(adminDeleteQcReport);
+  const signUrls = useServerFn(adminSignMediaUrls);
 
   const [rows, setRows] = useState<QcReportRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,6 +94,7 @@ function QcReportsPage() {
   const [jobId, setJobId] = useState("");
   const [status, setStatus] = useState<"open" | "resolved" | "all">("all");
   const [lightbox, setLightbox] = useState<MediaItem | null>(null);
+  const [signedMap, setSignedMap] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
@@ -105,13 +109,36 @@ function QcReportsPage() {
           status,
         },
       });
-      setRows((res.rows ?? []) as unknown as QcReportRow[]);
+      const fetched = (res.rows ?? []) as unknown as QcReportRow[];
+      setRows(fetched);
+      const refs = new Set<string>();
+      for (const r of fetched) {
+        for (const m of r.media ?? []) if (m.url) refs.add(m.url);
+        for (const it of r.qc_report_items ?? []) {
+          for (const m of it.media ?? []) if (m.url) refs.add(m.url);
+        }
+      }
+      if (refs.size > 0) {
+        try {
+          const { urlMap } = await signUrls({
+            data: { token, refs: Array.from(refs), defaultBucket: "qc-media" },
+          });
+          setSignedMap(urlMap);
+        } catch {
+          // Fall back to raw values for legacy public URLs
+        }
+      } else {
+        setSignedMap({});
+      }
     } catch (err) {
       showError(err, "โหลดไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
   };
+
+  const signedSrc = (ref: string) => signedMap[ref] ?? ref;
+
 
   useEffect(() => {
     load();
@@ -337,10 +364,10 @@ function QcReportsPage() {
                                     className="group relative block aspect-square overflow-hidden rounded-md border border-border bg-muted"
                                   >
                                     {m.type === "image" ? (
-                                      <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                                      <img src={signedSrc(m.url)} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                                     ) : (
                                       <>
-                                        <video src={m.url} muted className="h-full w-full object-cover" />
+                                        <video src={signedSrc(m.url)} muted className="h-full w-full object-cover" />
                                         <span className="absolute inset-0 flex items-center justify-center bg-black/30">
                                           <VideoIcon className="h-6 w-6 text-white" />
                                         </span>
@@ -383,10 +410,10 @@ function QcReportsPage() {
                         className="relative block aspect-square overflow-hidden rounded-lg border border-border bg-muted"
                       >
                         {m.type === "image" ? (
-                          <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                          <img src={signedSrc(m.url)} alt="" loading="lazy" className="h-full w-full object-cover" />
                         ) : (
                           <>
-                            <video src={m.url} muted className="h-full w-full object-cover" />
+                            <video src={signedSrc(m.url)} muted className="h-full w-full object-cover" />
                             <span className="absolute inset-0 flex items-center justify-center bg-black/30">
                               <VideoIcon className="h-6 w-6 text-white" />
                             </span>
@@ -421,9 +448,9 @@ function QcReportsPage() {
         <DialogContent className="max-w-4xl border-0 bg-black/95 p-2 sm:p-4">
           {lightbox && (
             lightbox.type === "image" ? (
-              <img src={lightbox.url} alt="" className="mx-auto max-h-[85vh] w-auto object-contain" />
+              <img src={signedSrc(lightbox.url)} alt="" className="mx-auto max-h-[85vh] w-auto object-contain" />
             ) : (
-              <video src={lightbox.url} controls autoPlay className="mx-auto max-h-[85vh] w-auto" />
+              <video src={signedSrc(lightbox.url)} controls autoPlay className="mx-auto max-h-[85vh] w-auto" />
             )
           )}
         </DialogContent>

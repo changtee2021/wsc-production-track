@@ -123,7 +123,7 @@ function ScanPage() {
   const [loading, setLoading] = useState(true);
   const [hasIssue, setHasIssue] = useState(false);
   const [note, setNote] = useState("");
-  const [noteImageUrl, setNoteImageUrl] = useState<string | null>(null);
+  const [noteImage, setNoteImage] = useState<{ path: string; previewUrl: string } | null>(null);
   const [uploadingNote, setUploadingNote] = useState(false);
   const noteFileRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
@@ -198,7 +198,7 @@ function ScanPage() {
       category_id: categoryId,
       action,
       note: action === "finish" && hasIssue ? note.trim() : null,
-      note_image_url: action === "finish" && hasIssue ? noteImageUrl : null,
+      note_image_url: action === "finish" && hasIssue ? noteImage?.path ?? null : null,
     });
     setSubmitting(null);
     if (error) {
@@ -218,7 +218,7 @@ function ScanPage() {
       setActiveStartAt(null);
       setHasIssue(false);
       setNote("");
-      setNoteImageUrl(null);
+      setNoteImage(null);
     }
     toast.success(
       action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }),
@@ -237,8 +237,9 @@ function ScanPage() {
     setUploadingNote(true);
     try {
       const dataBase64 = await fileToBase64(file);
-      const { url } = await uploadNote({ data: { dataBase64 } });
-      setNoteImageUrl(url);
+      const res = await uploadNote({ data: { dataBase64 } });
+      setNoteImage({ path: res.path, previewUrl: res.previewUrl });
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "upload failed");
     } finally {
@@ -541,16 +542,17 @@ function ScanPage() {
                     if (f) uploadNoteImage(f);
                   }}
                 />
-                {noteImageUrl ? (
+                {noteImage ? (
                   <div className="relative">
                     <img
-                      src={noteImageUrl}
+                      src={noteImage.previewUrl}
                       alt="note"
                       className="h-40 w-full rounded-lg object-cover border border-border"
                     />
                     <button
                       type="button"
-                      onClick={() => setNoteImageUrl(null)}
+                      onClick={() => setNoteImage(null)}
+
                       aria-label="ลบรูปหมายเหตุ"
                       className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"
                     >

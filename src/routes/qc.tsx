@@ -181,9 +181,13 @@ interface ChecklistItem {
 }
 
 interface MediaItem {
+  // `url` is the persisted storage reference (path inside qc-media bucket).
   url: string;
+  // Short-lived signed URL used only for in-session preview before submit.
+  previewUrl?: string;
   type: "image" | "video";
 }
+
 
 interface CategoryRow {
   id: string;
@@ -387,7 +391,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           const res = await uploadMedia({
             data: { token, kind, dataBase64 },
           });
-          items.push({ url: res.publicUrl, type: kind });
+          items.push({ url: res.path, previewUrl: res.previewUrl, type: kind });
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
           continue;
@@ -486,7 +490,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           category_id: categoryId || null,
           employee_id: repLog?.employee_id ?? null,
           note: note.trim() || null,
-          media,
+          media: media.map((m) => ({ url: m.url, type: m.type })),
           overall_result: overallResult,
           items: checklist.map((it) => {
             const s = itemStates[it.id];
@@ -496,9 +500,10 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               item_order: it.item_order,
               is_passed: s?.is_passed === true,
               remark: s?.remark?.trim() || null,
-              media: s?.media ?? [],
+              media: (s?.media ?? []).map((m) => ({ url: m.url, type: m.type })),
             };
           }),
+
         },
       });
       toast.success(
@@ -803,10 +808,11 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                 {media.map((m, i) => (
                   <div key={i} className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
                     {m.type === "image" ? (
-                      <img src={m.url} alt="" className="h-full w-full object-cover" />
+                      <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <video src={m.url} className="h-full w-full object-cover" muted />
+                      <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" muted />
                     )}
+
                     <button
                       type="button"
                       onClick={() => setMedia((prev) => prev.filter((_, j) => j !== i))}
@@ -964,10 +970,11 @@ function ChecklistRow({
               {state.media.map((m, i) => (
                 <div key={i} className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
                   {m.type === "image" ? (
-                    <img src={m.url} alt="" className="h-full w-full object-cover" />
+                    <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <video src={m.url} className="h-full w-full object-cover" muted />
+                    <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" muted />
                   )}
+
                   <button
                     type="button"
                     onClick={() => onRemoveMedia(i)}
