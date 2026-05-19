@@ -539,6 +539,7 @@ function ScanPage() {
                     <button
                       type="button"
                       onClick={() => setNoteImageUrl(null)}
+                      aria-label="ลบรูปหมายเหตุ"
                       className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"
                     >
                       <X className="h-4 w-4" />
