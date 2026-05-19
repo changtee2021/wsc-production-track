@@ -101,8 +101,8 @@ function ScanPage() {
   const { job_id } = Route.useSearch();
   const navigate = useNavigate({ from: "/scan" });
   const [manualJob, setManualJob] = useState("");
-  const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
+  const scannerOpen = scannerStream !== null;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [steps, setSteps] = useState<Step[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -301,7 +301,6 @@ function ScanPage() {
                   return;
                 }
                 setScannerStream(result.stream);
-                setScannerOpen(true);
               }}
               className="h-11 flex-1 gap-1 bg-secondary hover:bg-secondary/90 shadow-md shadow-secondary/30"
             >
@@ -599,7 +598,6 @@ function ScanPage() {
       <QrScannerDialog
         open={scannerOpen}
         onOpenChange={(v) => {
-          setScannerOpen(v);
           if (!v) setScannerStream(null);
         }}
         onScanned={handleScanned}
