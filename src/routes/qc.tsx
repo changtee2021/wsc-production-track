@@ -42,7 +42,8 @@ import {
   qcFetchJobLogs,
   qcFetchChecklist,
   qcSubmitReport,
-  qcCreateUploadUrl,
+  qcUploadMedia,
+  qcListEmployees,
 } from "@/lib/qc.functions";
 import {
   isQcSession,
