@@ -1329,6 +1329,33 @@ function Dashboard() {
         />
       </div>
 
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Send className="h-4 w-4 text-primary" />
+            ทดสอบการแจ้งเตือน LINE
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            กดปุ่มเพื่อส่งข้อความทดสอบไปยังปลายทาง LINE ที่ตั้งค่าไว้
+          </p>
+        </div>
+        <Button
+          onClick={handleSendLineTest}
+          disabled={lineSending}
+          size="sm"
+          className="mt-3 gap-2 sm:mt-0"
+        >
+          {lineSending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+          {lineSending ? "กำลังส่ง..." : "ส่งข้อความทดสอบ"}
+        </Button>
+      </div>
+
       <div className="mt-6 space-y-6">
         {/* Scope picker (day/month) — applies to ranking, employee × step, over-standard */}
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
