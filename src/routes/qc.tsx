@@ -947,6 +947,7 @@ function ChecklistRow({
                   <button
                     type="button"
                     onClick={() => onRemoveMedia(i)}
+                    aria-label="ลบไฟล์หลักฐานของรายการนี้"
                     className="absolute top-0.5 right-0.5 rounded-full bg-background/90 p-0.5 shadow"
                   >
                     <X className="h-3 w-3" />
