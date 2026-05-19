@@ -242,8 +242,6 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
   const [usingNative, setUsingNative] = useState(false);
   const [legacyMode, setLegacyMode] = useState(false);
   const [errorInfo, setErrorInfo] = useState<CameraErrorInfo | null>(null);
-  // Temporary on-screen diagnostic; remove after the iOS issue is solved.
-  const [diag, setDiag] = useState<string | null>(null);
 
   const stopAll = async () => {
     if (rafRef.current != null) {
@@ -400,42 +398,15 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
     streamRef.current = stream;
     pendingStreamRef.current = null;
 
-    let playError = "";
     try {
       await video.play();
-    } catch (e) {
-      playError = (e as Error)?.name || "playError";
+    } catch {
       // iOS may need a beat after srcObject; retry once.
       await new Promise((r) => setTimeout(r, 50));
       try {
         await video.play();
-        playError = "";
-      } catch (e2) {
-        playError = (e2 as Error)?.name || "playError2";
-      }
+      } catch {}
     }
-
-    // Snapshot video state ~600ms after play() to expose what iOS is doing.
-    setTimeout(() => {
-      const tracks = stream.getVideoTracks();
-      const settings = tracks[0]?.getSettings?.() ?? {};
-      const snap = {
-        play: playError || "ok",
-        ready: video.readyState,
-        vw: video.videoWidth,
-        vh: video.videoHeight,
-        cw: video.clientWidth,
-        ch: video.clientHeight,
-        paused: video.paused,
-        srcObj: !!video.srcObject,
-        active: stream.active,
-        tracks: tracks.length,
-        live: tracks[0]?.readyState,
-        w: settings.width,
-        h: settings.height,
-      };
-      setDiag(JSON.stringify(snap));
-    }, 600);
 
     // scanFile decoder needs its own hidden offscreen host — every scanFile
     // call internally does `element.innerHTML = ""` and would otherwise erase
@@ -636,8 +607,6 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
     } catch (err) {
       const info = formatCameraError(err);
       setErrorInfo(info);
-      const e = err as { name?: string; message?: string };
-      setDiag(`ERR name=${e?.name || "?"} msg=${String(e?.message || err).slice(0, 200)}`);
     } finally {
       setStarting(false);
     }
@@ -648,7 +617,6 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
     cancelledRef.current = false;
     setErrorInfo(null);
     setLegacyMode(false);
-    setDiag(null);
     pendingStreamRef.current = initialStream ?? null;
 
     (async () => {
@@ -761,12 +729,6 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
               <p className="font-medium text-destructive">{errorInfo.message}</p>
               {errorInfo.hint && <p className="text-xs text-muted-foreground">{errorInfo.hint}</p>}
             </div>
-          </div>
-        )}
-
-        {diag && (
-          <div className="rounded border border-yellow-400/60 bg-yellow-50 p-2 text-[11px] leading-tight text-yellow-900 break-all">
-            <span className="font-bold">DIAG:</span> {diag}
           </div>
         )}
 
