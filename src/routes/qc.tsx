@@ -181,9 +181,13 @@ interface ChecklistItem {
 }
 
 interface MediaItem {
+  // `url` is the persisted storage reference (path inside qc-media bucket).
   url: string;
+  // Short-lived signed URL used only for in-session preview before submit.
+  previewUrl?: string;
   type: "image" | "video";
 }
+
 
 interface CategoryRow {
   id: string;
