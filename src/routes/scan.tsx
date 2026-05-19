@@ -123,7 +123,7 @@ function ScanPage() {
   const [loading, setLoading] = useState(true);
   const [hasIssue, setHasIssue] = useState(false);
   const [note, setNote] = useState("");
-  const [noteImageUrl, setNoteImageUrl] = useState<string | null>(null);
+  const [noteImage, setNoteImage] = useState<{ path: string; previewUrl: string } | null>(null);
   const [uploadingNote, setUploadingNote] = useState(false);
   const noteFileRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
