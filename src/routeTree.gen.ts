@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QcRouteImport } from './routes/qc'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -20,6 +21,11 @@ import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
   path: '/scan',
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/logs': typeof ProtectedLogsRoute
   '/manage': typeof ProtectedManageRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/logs': typeof ProtectedLogsRoute
   '/manage': typeof ProtectedManageRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/manage': typeof ProtectedManageRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/qc'
     | '/scan'
+    | '/sitemap.xml'
     | '/dashboard'
     | '/logs'
     | '/manage'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/qc'
     | '/scan'
+    | '/sitemap.xml'
     | '/dashboard'
     | '/logs'
     | '/manage'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/qc'
     | '/scan'
+    | '/sitemap.xml'
     | '/_protected/dashboard'
     | '/_protected/logs'
     | '/_protected/manage'
@@ -148,10 +160,18 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   QcRoute: typeof QcRoute
   ScanRoute: typeof ScanRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scan': {
       id: '/scan'
       path: '/scan'
@@ -251,6 +271,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   QcRoute: QcRoute,
   ScanRoute: ScanRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
