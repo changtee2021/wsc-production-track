@@ -674,11 +674,35 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
 
   const switchCamera = async () => {
     const next: FacingMode = facing === "environment" ? "user" : "environment";
+    // Acquire the new camera WITHIN the click handler so iOS keeps transient
+    // activation. The first await must be getUserMedia — same pattern as the
+    // outer "scan" button. Without this the iOS path drops to startHtml5 and
+    // throws "Cannot transition" on retry.
+    setStarting(true);
+    setErrorInfo(null);
+    const result = await acquireCameraStream(next);
+    if ("errorInfo" in result) {
+      setErrorInfo(result.errorInfo);
+      setStarting(false);
+      return;
+    }
+    pendingStreamRef.current = result.stream;
     await startWith(next);
   };
 
   const retryCamera = async () => {
+    // Same iOS user-gesture requirement applies to retry — re-acquire the
+    // stream here so startWith can use the pre-acquired-stream path.
     setLegacyMode(false);
+    setStarting(true);
+    setErrorInfo(null);
+    const result = await acquireCameraStream(facing);
+    if ("errorInfo" in result) {
+      setErrorInfo(result.errorInfo);
+      setStarting(false);
+      return;
+    }
+    pendingStreamRef.current = result.stream;
     await startWith(facing);
   };
 
