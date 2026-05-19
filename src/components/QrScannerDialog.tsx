@@ -232,6 +232,10 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
   // first use; camera switches / retries fall back to getUserMedia (which
   // works without a gesture because permission is now cached).
   const pendingStreamRef = useRef<MediaStream | null>(null);
+  // Hidden offscreen div used as the host for html5-qrcode's scanFile decoder.
+  // Must NOT share REGION_ID, because scanFile() calls clearElement() which
+  // wipes the host's innerHTML — removing our visible <video>.
+  const decoderRegionRef = useRef<HTMLDivElement | null>(null);
 
   const [facing, setFacing] = useState<FacingMode>("environment");
   const [starting, setStarting] = useState(false);
@@ -271,6 +275,10 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
         if (s.isScanning) await s.stop();
         s.clear();
       } catch {}
+    }
+    if (decoderRegionRef.current) {
+      decoderRegionRef.current.remove();
+      decoderRegionRef.current = null;
     }
   };
 
@@ -384,7 +392,8 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
     video.muted = true;
     video.autoplay = true;
     video.playsInline = true;
-    video.className = "h-full w-full object-cover";
+    video.className = "block h-full w-full object-cover";
+    video.style.display = "block";
     region.appendChild(video);
     video.srcObject = stream;
     videoRef.current = video;
@@ -428,9 +437,23 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
       setDiag(JSON.stringify(snap));
     }, 600);
 
-    // scanFile decoder — reuses REGION_ID but with showImage=false it does
-    // not add or render anything in there.
-    const decoder = new Html5Qrcode(REGION_ID, {
+    // scanFile decoder needs its own hidden offscreen host — every scanFile
+    // call internally does `element.innerHTML = ""` and would otherwise erase
+    // our visible <video>.
+    const decoderRegionId = `qr-decoder-${Math.random().toString(36).slice(2, 8)}`;
+    const decoderRegion = document.createElement("div");
+    decoderRegion.id = decoderRegionId;
+    decoderRegion.style.position = "absolute";
+    decoderRegion.style.left = "-99999px";
+    decoderRegion.style.top = "-99999px";
+    decoderRegion.style.width = "1px";
+    decoderRegion.style.height = "1px";
+    decoderRegion.style.overflow = "hidden";
+    decoderRegion.setAttribute("aria-hidden", "true");
+    document.body.appendChild(decoderRegion);
+    decoderRegionRef.current = decoderRegion;
+
+    const decoder = new Html5Qrcode(decoderRegionId, {
       verbose: false,
       formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
     });
