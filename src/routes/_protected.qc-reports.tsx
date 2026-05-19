@@ -33,6 +33,15 @@ export const Route = createFileRoute("/_protected/qc-reports")({
   component: QcReportsPage,
 });
 
+interface QcReportItem {
+  id: string;
+  item_text_snapshot: string;
+  item_order: number;
+  is_passed: boolean;
+  remark: string | null;
+  media: Array<{ url: string; type: "image" | "video" }>;
+}
+
 interface QcReportRow {
   id: string;
   job_id: string;
@@ -44,11 +53,14 @@ interface QcReportRow {
   note: string | null;
   media: Array<{ url: string; type: "image" | "video" }>;
   status: "open" | "resolved";
+  overall_result: "pass" | "fail" | null;
+  summary: string | null;
   created_at: string;
   qc_employees: { name: string; emp_code: string | null } | null;
   employees: { name: string; emp_code: string | null } | null;
   steps: { step_name: string } | null;
   categories: { name: string } | null;
+  qc_report_items: QcReportItem[] | null;
 }
 
 function requireToken(): string {
@@ -203,12 +215,28 @@ function QcReportsPage() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {r.overall_result && (
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      r.overall_result === "pass"
+                        ? "bg-success/15 text-success"
+                        : "bg-destructive/15 text-destructive"
+                    }`}
+                  >
+                    {r.overall_result === "pass" ? "✓ ผ่าน" : "✗ ไม่ผ่าน"}
+                  </span>
+                )}
+                {r.summary && (
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+                    {r.summary}
+                  </span>
+                )}
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                     r.status === "resolved"
                       ? "bg-success/15 text-success"
-                      : "bg-destructive/15 text-destructive"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {r.status === "resolved" ? "แก้ไขแล้ว" : "ยังไม่แก้"}
@@ -216,10 +244,57 @@ function QcReportsPage() {
               </div>
             </div>
 
+            {r.qc_report_items && r.qc_report_items.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {[...r.qc_report_items]
+                  .sort((a, b) => a.item_order - b.item_order)
+                  .map((it) => (
+                    <div
+                      key={it.id}
+                      className={`rounded-lg border p-2.5 ${
+                        it.is_passed
+                          ? "border-success/30 bg-success/5"
+                          : "border-destructive/40 bg-destructive/5"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className={`mt-0.5 text-xs font-bold ${it.is_passed ? "text-success" : "text-destructive"}`}>
+                          {it.is_passed ? "✓" : "✗"}
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium leading-snug">{it.item_text_snapshot}</p>
+                          {it.remark && (
+                            <p className="mt-1 text-xs text-destructive whitespace-pre-wrap">
+                              หมายเหตุ: {it.remark}
+                            </p>
+                          )}
+                          {it.media && it.media.length > 0 && (
+                            <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                              {it.media.map((m, i) =>
+                                m.type === "image" ? (
+                                  <a key={i} href={m.url} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded border border-border bg-muted">
+                                    <img src={m.url} alt="" className="h-full w-full object-cover" />
+                                  </a>
+                                ) : (
+                                  <video key={i} src={m.url} controls className="aspect-square w-full rounded border border-border bg-black object-contain" />
+                                ),
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+
             {r.note && (
-              <p className="mt-3 whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm">
-                {r.note}
-              </p>
+              <div className="mt-3">
+                <div className="text-xs font-semibold text-muted-foreground mb-1">หมายเหตุภาพรวม</div>
+                <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm">
+                  {r.note}
+                </p>
+              </div>
             )}
 
             {r.media && r.media.length > 0 && (

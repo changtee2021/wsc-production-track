@@ -53,6 +53,7 @@ import {
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/i18n";
+import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
 
 function requireToken(): string {
   const t = getAdminToken();
@@ -113,6 +114,7 @@ function Manage() {
         <EmployeesPanel />
         <StepsPanel />
         <QcEmployeesPanel />
+        <QcChecklistsPanel />
       </div>
     </main>
   );
