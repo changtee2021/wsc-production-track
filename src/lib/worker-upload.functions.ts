@@ -99,6 +99,10 @@ export const uploadWorkerNoteImage = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    const ip = clientIp();
+    if (!checkRateLimit(ip))
+      throw new Error("อัปโหลดบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่");
+
     const bytes = Uint8Array.from(Buffer.from(data.dataBase64, "base64"));
     if (bytes.length === 0) throw new Error("ไฟล์ว่างเปล่า");
     if (bytes.length > MAX_BYTES) throw new Error("ไฟล์ใหญ่เกิน 5MB");
