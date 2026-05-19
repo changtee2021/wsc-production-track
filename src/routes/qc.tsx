@@ -432,11 +432,16 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       return toast.error("ไม่มีรายการ checklist สำหรับหมวดนี้ — แจ้งแอดมินเพิ่ม");
     if (answeredCount < total)
       return toast.error(`ยังตรวจไม่ครบ (${answeredCount}/${total})`);
-    // Every failed item must have a remark
-    for (const it of checklist) {
+    // Every failed item must have a remark AND at least one media
+    for (let idx = 0; idx < checklist.length; idx++) {
+      const it = checklist[idx];
       const s = itemStates[it.id];
-      if (s?.is_passed === false && !s.remark.trim())
-        return toast.error(`กรุณากรอกเหตุผลข้อ "${it.item_text.slice(0, 40)}"`);
+      if (s?.is_passed === false) {
+        if (!s.remark.trim())
+          return toast.error(`ข้อ ${idx + 1}: กรุณากรอกหมายเหตุเหตุผลที่ไม่ผ่าน`);
+        if (!s.media || s.media.length === 0)
+          return toast.error(`ข้อ ${idx + 1}: ต้องแนบรูป/วิดีโอหลักฐานอย่างน้อย 1 รายการ`);
+      }
     }
     const token = getQcToken();
     if (!token) return onLogout();
