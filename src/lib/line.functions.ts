@@ -1,5 +1,6 @@
 // Admin-only: send a comprehensive daily business overview via LINE Messaging
-// API push to a group. Aggregates Production + QC stats for today (Bangkok TZ).
+// API push to a group. Aggregates Production (overall + per category) + QC stats
+// for today (Bangkok TZ).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -27,6 +28,18 @@ function formatBangkokDate(): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+type ProdStats = { newJobs: number; inProgress: number; finished: number };
+
+// Friendly display name (Thai) — strips leading "1." numbering and
+// Burmese translation that may follow in the categories.name column.
+function prettyCategoryName(raw: string): string {
+  let s = raw.trim();
+  s = s.replace(/^\d+\.\s*/, "");
+  // Take the first whitespace-delimited Thai chunk
+  const parts = s.split(/\s+/);
+  return parts[0] || s;
+}
+
 export const adminSendLineTest = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: z.string() }).parse(d))
   .handler(async ({ data }) => {
@@ -39,39 +52,63 @@ export const adminSendLineTest = createServerFn({ method: "POST" })
 
     const since = startOfTodayBangkokISO();
 
-    // --- Production: fetch today's logs (start/finish) ---
+    // --- Categories ---
+    const { data: catRows, error: catErr } = await supabaseAdmin
+      .from("categories")
+      .select("id, name, active")
+      .eq("active", true)
+      .order("name");
+    if (catErr) throw new Error(`DB error (categories): ${catErr.message}`);
+    const categories = (catRows ?? []).map((c) => ({
+      id: c.id as string,
+      name: prettyCategoryName(String(c.name)),
+    }));
+
+    // --- Production: today's logs (start/finish) ---
     const { data: prodRows, error: prodErr } = await supabaseAdmin
       .from("production_logs")
-      .select("job_id, action, created_at")
+      .select("job_id, action, created_at, category_id")
       .gte("created_at", since);
     if (prodErr) throw new Error(`DB error (production_logs): ${prodErr.message}`);
 
-    const startedJobs = new Set<string>();
-    const finishedJobs = new Set<string>();
-    for (const r of prodRows ?? []) {
-      if (!r.job_id) continue;
-      if (r.action === "start") startedJobs.add(r.job_id);
-      else if (r.action === "finish") finishedJobs.add(r.job_id);
-    }
-
-    // "งานใหม่วันนี้" = job_ids that appear today but never existed before today
-    const todayJobIds = Array.from(new Set([...startedJobs, ...finishedJobs]));
-    let newJobsCount = 0;
-    if (todayJobIds.length > 0) {
+    // Compute prior job_ids in one query (only for today's job_ids)
+    const todayAllJobs = Array.from(
+      new Set((prodRows ?? []).map((r) => r.job_id).filter(Boolean) as string[]),
+    );
+    let priorJobSet = new Set<string>();
+    if (todayAllJobs.length > 0) {
       const { data: priorRows, error: priorErr } = await supabaseAdmin
         .from("production_logs")
         .select("job_id")
-        .in("job_id", todayJobIds)
+        .in("job_id", todayAllJobs)
         .lt("created_at", since);
       if (priorErr) throw new Error(`DB error (prior jobs): ${priorErr.message}`);
-      const priorSet = new Set((priorRows ?? []).map((r) => r.job_id));
-      newJobsCount = todayJobIds.filter((j) => !priorSet.has(j)).length;
+      priorJobSet = new Set((priorRows ?? []).map((r) => r.job_id as string));
     }
-    const finishedCount = finishedJobs.size;
-    // In-progress = started today (or new) but not finished today
-    const inProgressCount = Array.from(startedJobs).filter(
-      (j) => !finishedJobs.has(j),
-    ).length;
+
+    function computeStats(rows: typeof prodRows): ProdStats {
+      const started = new Set<string>();
+      const finished = new Set<string>();
+      for (const r of rows ?? []) {
+        if (!r.job_id) continue;
+        if (r.action === "start") started.add(r.job_id);
+        else if (r.action === "finish") finished.add(r.job_id);
+      }
+      const todayJobs = Array.from(new Set([...started, ...finished]));
+      const newJobs = todayJobs.filter((j) => !priorJobSet.has(j)).length;
+      const finishedCount = finished.size;
+      const inProgress = Array.from(started).filter((j) => !finished.has(j)).length;
+      return { newJobs, inProgress, finished: finishedCount };
+    }
+
+    // Overall
+    const overallStats = computeStats(prodRows);
+
+    // Per-category (filter the same prodRows we already loaded)
+    const perCategory: Array<{ name: string; stats: ProdStats }> = categories.map((c) => ({
+      name: c.name,
+      stats: computeStats((prodRows ?? []).filter((r) => r.category_id === c.id)),
+    }));
 
     // --- QC: today's reports ---
     const { data: qcRows, error: qcErr } = await supabaseAdmin
@@ -113,7 +150,8 @@ export const adminSendLineTest = createServerFn({ method: "POST" })
       try {
         const stats = {
           date: dateStr,
-          production: { newJobs: newJobsCount, inProgress: inProgressCount, finished: finishedCount },
+          overall: overallStats,
+          perCategory,
           qc: { total: qcTotal, passed: qcPassed, failed: qcFailed },
           failedDetails,
         };
@@ -129,7 +167,7 @@ export const adminSendLineTest = createServerFn({ method: "POST" })
               {
                 role: "system",
                 content:
-                  "คุณเป็นผู้ช่วยวิเคราะห์ข้อมูลการผลิตและ QC ให้สรุปภาพรวมประจำวันแบบกระชับ 2-4 บรรทัด ภาษาไทย เน้นข้อสังเกต/แนวโน้ม/คำแนะนำเชิงปฏิบัติ ห้ามใส่หัวข้อ ห้ามใส่ markdown",
+                  "คุณเป็นผู้ช่วยวิเคราะห์ข้อมูลการผลิตและ QC ของโรงงานม่าน/มู่ลี่ ให้สรุปภาพรวมประจำวันแบบกระชับ 3-5 บรรทัด ภาษาไทย เน้น: (1) ภาพรวมโดยรวม (2) ข้อสังเกตหมวดที่โดดเด่นหรือน่าห่วง (3) คำแนะนำเชิงปฏิบัติสั้นๆ ห้ามใส่หัวข้อ ห้ามใส่ markdown ห้ามใส่ bullet",
               },
               {
                 role: "user",
@@ -149,24 +187,31 @@ export const adminSendLineTest = createServerFn({ method: "POST" })
 
     const aiSection = aiAnalysis ? `\n\n🧠 บทวิเคราะห์ประจำวัน (AI)\n${aiAnalysis}` : "";
 
+    // Per-category sections
+    const categorySections = perCategory
+      .map(
+        (c) =>
+          `📦 การผลิตหมวด${c.name}\n` +
+          `- งานใหม่วันนี้: ${c.stats.newJobs} รายการ\n` +
+          `- กำลังดำเนินการ: ${c.stats.inProgress} รายการ\n` +
+          `- ผลิตเสร็จสิ้น: ${c.stats.finished} รายการ`,
+      )
+      .join("\n\n");
+
     const text =
       `🚀 [WSC Production]\n` +
       `สรุปภาพรวมประจำวันที่ ${dateStr}\n` +
       `\n` +
-      `📦 หมวดการผลิต (Production)\n` +
+      `📦 ภาพรวมการผลิต (Production)\n` +
+      `- งานใหม่วันนี้: ${overallStats.newJobs} รายการ\n` +
+      `- กำลังดำเนินการ: ${overallStats.inProgress} รายการ\n` +
+      `- ผลิตเสร็จสิ้น: ${overallStats.finished} รายการ\n` +
       `\n` +
-      `- งานใหม่วันนี้: ${newJobsCount} รายการ\n` +
-      `\n` +
-      `- กำลังดำเนินการ: ${inProgressCount} รายการ\n` +
-      `\n` +
-      `- ผลิตเสร็จสิ้น: ${finishedCount} รายการ\n` +
+      `${categorySections}\n` +
       `\n` +
       `🔍 หมวดตรวจสอบ (QC)\n` +
-      `\n` +
       `- ตรวจสอบแล้ว: ${qcTotal} รายการ\n` +
-      `\n` +
       `- ✅ ผ่านมาตรฐาน: ${qcPassed}\n` +
-      `\n` +
       `- ❌ พบจุดบกพร่อง: ${qcFailed}\n` +
       `\n` +
       `${alertSection}\n` +
@@ -199,7 +244,8 @@ export const adminSendLineTest = createServerFn({ method: "POST" })
     return {
       ok: true as const,
       sentAt: new Date().toISOString(),
-      production: { newJobs: newJobsCount, inProgress: inProgressCount, finished: finishedCount },
+      overall: overallStats,
+      perCategory,
       qc: { total: qcTotal, passed: qcPassed, failed: qcFailed },
     };
   });
