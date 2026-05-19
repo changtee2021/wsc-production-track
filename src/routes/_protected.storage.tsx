@@ -2,11 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getStorageUsage } from "@/lib/storage-usage.functions";
-import { getAdminToken, clearAdminSession } from "@/lib/admin-session";
+import { formatBytes, requireToken, showError } from "@/lib/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Database, HardDrive, RefreshCw, Loader2, Folder } from "lucide-react";
-import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/_protected/storage")({
@@ -26,42 +25,19 @@ interface Usage {
   };
 }
 
-function formatBytes(n: number): string {
-  if (!n || n < 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let i = 0;
-  let v = n;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
-    i++;
-  }
-  return `${v.toFixed(v >= 100 || i === 0 ? 0 : v >= 10 ? 1 : 2)} ${units[i]}`;
-}
-
 function StoragePage() {
   const [data, setData] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
   const fetchUsage = useServerFn(getStorageUsage);
 
   const load = useCallback(async () => {
-    const token = getAdminToken();
-    if (!token) {
-      clearAdminSession();
-      if (typeof window !== "undefined") window.location.href = "/admin";
-      return;
-    }
     setLoading(true);
     try {
+      const token = requireToken();
       const res = await fetchUsage({ data: { token } });
       setData(res as Usage);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "โหลดข้อมูลไม่สำเร็จ";
-      if (msg === "Unauthorized") {
-        clearAdminSession();
-        if (typeof window !== "undefined") window.location.href = "/admin";
-        return;
-      }
-      toast.error(msg);
+      showError(e, "โหลดข้อมูลไม่สำเร็จ");
     } finally {
       setLoading(false);
     }

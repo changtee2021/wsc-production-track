@@ -1,8 +1,9 @@
-import { createFileRoute, Outlet, redirect, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { isAdminSession, clearAdminSession } from "@/lib/admin-session";
-import { AppHeader } from "@/components/AppHeader";
+import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, LogOut, FileText, ClipboardCheck, HardDrive } from "lucide-react";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_protected")({
   beforeLoad: ({ location }) => {
@@ -16,55 +17,49 @@ export const Route = createFileRoute("/_protected")({
   component: AdminLayout,
 });
 
+const PAGE_TITLES: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/logs": "ประวัติงาน",
+  "/qc-reports": "รายงาน QC",
+  "/manage": "จัดการข้อมูล",
+  "/storage": "พื้นที่จัดเก็บ",
+};
+
 function AdminLayout() {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const title = PAGE_TITLES[pathname] ?? "แอดมิน";
+
   return (
-    <div className="min-h-screen bg-muted/30">
-      <AppHeader>
-        <Link to="/dashboard">
-          <Button variant="secondary" size="sm" className="gap-1">
-            <LayoutDashboard className="h-4 w-4" />
-            <span className="hidden sm:inline">Dashboard</span>
-          </Button>
-        </Link>
-        <Link to="/logs">
-          <Button variant="secondary" size="sm" className="gap-1">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">History</span>
-          </Button>
-        </Link>
-        <Link to="/qc-reports">
-          <Button variant="secondary" size="sm" className="gap-1">
-            <ClipboardCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">QC</span>
-          </Button>
-        </Link>
-        <Link to="/manage">
-          <Button variant="secondary" size="sm" className="gap-1">
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Manage</span>
-          </Button>
-        </Link>
-        <Link to="/storage">
-          <Button variant="secondary" size="sm" className="gap-1">
-            <HardDrive className="h-4 w-4" />
-            <span className="hidden sm:inline">Storage</span>
-          </Button>
-        </Link>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="gap-1"
-          onClick={() => {
-            clearAdminSession();
-            navigate({ to: "/admin" });
-          }}
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">Logout</span>
-        </Button>
-      </AppHeader>
-      <Outlet />
-    </div>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-muted/30">
+        <AdminSidebar />
+        <SidebarInset>
+          <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <div className="flex items-center gap-2 min-w-0">
+              <SidebarTrigger />
+              <h1 className="truncate text-sm font-semibold text-foreground sm:text-base">
+                {title}
+              </h1>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => {
+                clearAdminSession();
+                navigate({ to: "/admin" });
+              }}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
+          </header>
+          <main className="flex-1">
+            <Outlet />
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 }

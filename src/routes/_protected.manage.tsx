@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getAdminToken, clearAdminSession } from "@/lib/admin-session";
 import {
   adminUpsertCategory,
   adminDeleteCategory,
@@ -20,6 +19,7 @@ import {
   adminUpsertQcEmployee,
   adminDeleteQcEmployee,
 } from "@/lib/admin.functions";
+import { adminUpload, requireToken, showError } from "@/lib/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,26 +54,6 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/i18n";
 import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
-
-function requireToken(): string {
-  const t = getAdminToken();
-  if (!t) {
-    clearAdminSession();
-    if (typeof window !== "undefined") window.location.href = "/admin";
-    throw new Error("Unauthorized");
-  }
-  return t;
-}
-
-function showError(err: unknown) {
-  const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
-  if (msg === "Unauthorized") {
-    clearAdminSession();
-    if (typeof window !== "undefined") window.location.href = "/admin";
-    return;
-  }
-  toast.error(msg);
-}
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
@@ -235,22 +215,6 @@ function CategoriesPanel() {
   );
 }
 
-async function adminUpload(
-  bucket: "avatars" | "step-images" | "banners",
-  file: File,
-  createUrl: (args: { data: { token: string; bucket: "avatars" | "step-images" | "banners"; ext: string } }) => Promise<{ path: string; token: string; publicUrl: string }>,
-): Promise<{ path: string; publicUrl: string }> {
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-  const signed = await createUrl({ data: { token: requireToken(), bucket, ext } });
-  const { error } = await supabase.storage
-    .from(bucket)
-    .uploadToSignedUrl(signed.path, signed.token, file, {
-      contentType: file.type,
-      upsert: false,
-    });
-  if (error) throw error;
-  return { path: signed.path, publicUrl: signed.publicUrl };
-}
 
 function EmployeesPanel() {
   const upsert = useServerFn(adminUpsertEmployee);
