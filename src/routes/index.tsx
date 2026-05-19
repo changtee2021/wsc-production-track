@@ -22,6 +22,16 @@ export const Route = createFileRoute("/")({
         content:
           "ระบบติดตามการผลิตในโรงงาน บันทึกเวลาเริ่ม–เสร็จงานด้วย QR code อย่างรวดเร็ว",
       },
+      { property: "og:title", content: "WSC ProductionTrack — ระบบติดตามการผลิต" },
+      {
+        property: "og:description",
+        content:
+          "บันทึกเวลาเริ่ม–เสร็จงานในสายการผลิตด้วย QR code พร้อมระบบ QC แบบ checklist บนมือถือ",
+      },
+      { property: "og:url", content: "https://wsc-production-track.lovable.app/" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://wsc-production-track.lovable.app/" },
     ],
   }),
   component: WelcomePage,
