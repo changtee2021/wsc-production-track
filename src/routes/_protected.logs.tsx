@@ -97,17 +97,25 @@ function LogsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const fromTs = dateFrom ? new Date(dateFrom.setHours(0, 0, 0, 0)).getTime() : null;
+    const toTs = dateTo ? new Date(dateTo.setHours(23, 59, 59, 999)).getTime() : null;
     return logs.filter((l) => {
       if (categoryFilter !== "all" && l.category_id !== categoryFilter) return false;
       if (actionFilter !== "all" && l.action !== actionFilter) return false;
       if (onlyNotes && !l.note && !l.note_image_url) return false;
+      if (fromTs || toTs) {
+        const ts = new Date(l.created_at).getTime();
+        if (fromTs && ts < fromTs) return false;
+        if (toTs && ts > toTs) return false;
+      }
       if (q) {
         const hay = `${l.job_id} ${l.employees?.name ?? ""} ${l.steps?.step_name ?? ""} ${l.note ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [logs, search, categoryFilter, actionFilter, onlyNotes]);
+  }, [logs, search, categoryFilter, actionFilter, onlyNotes, dateFrom, dateTo]);
+
 
   const notesCount = useMemo(
     () => logs.filter((l) => l.note || l.note_image_url).length,
