@@ -65,7 +65,30 @@ function LogsUpdatePage() {
   const insertLog = useServerFn(adminInsertSystemLog);
   const deleteLog = useServerFn(adminDeleteSystemLog);
   const sendLineTest = useServerFn(adminSendLineTest);
+  const getSchedule = useServerFn(adminGetLineSchedule);
+  const setSchedule = useServerFn(adminSetLineSchedule);
   const [lineSending, setLineSending] = useState(false);
+  const [schedTime, setSchedTime] = useState("08:30");
+  const [schedEnabled, setSchedEnabled] = useState(true);
+  const [schedLastSent, setSchedLastSent] = useState<string | null>(null);
+  const [schedLoading, setSchedLoading] = useState(true);
+  const [schedSaving, setSchedSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await getSchedule({ data: { token: requireToken() } });
+        setSchedTime(s.time);
+        setSchedEnabled(s.enabled);
+        setSchedLastSent(s.lastSentDate);
+      } catch (e) {
+        showError(e, "โหลดค่าตั้งเวลาไม่สำเร็จ");
+      } finally {
+        setSchedLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSendLineTest = async () => {
     setLineSending(true);
@@ -76,6 +99,20 @@ function LogsUpdatePage() {
       showError(e, "ส่งข้อความทดสอบ LINE ไม่สำเร็จ");
     } finally {
       setLineSending(false);
+    }
+  };
+
+  const handleSaveSchedule = async () => {
+    setSchedSaving(true);
+    try {
+      await setSchedule({
+        data: { token: requireToken(), time: schedTime, enabled: schedEnabled },
+      });
+      toast.success("บันทึกเวลาส่งอัตโนมัติแล้ว");
+    } catch (e) {
+      showError(e, "บันทึกไม่สำเร็จ");
+    } finally {
+      setSchedSaving(false);
     }
   };
 
