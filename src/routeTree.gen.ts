@@ -14,6 +14,7 @@ import { Route as QcRouteImport } from './routes/qc'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
@@ -42,6 +43,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProtectedStorageRoute = ProtectedStorageRouteImport.update({
+  id: '/storage',
+  path: '/storage',
+  getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedQcReportsRoute = ProtectedQcReportsRouteImport.update({
   id: '/qc-reports',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/logs': typeof ProtectedLogsRoute
   '/manage': typeof ProtectedManageRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
+  '/storage': typeof ProtectedStorageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/logs': typeof ProtectedLogsRoute
   '/manage': typeof ProtectedManageRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
+  '/storage': typeof ProtectedStorageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/manage': typeof ProtectedManageRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
+  '/_protected/storage': typeof ProtectedStorageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/manage'
     | '/qc-reports'
+    | '/storage'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/manage'
     | '/qc-reports'
+    | '/storage'
   id:
     | '__root__'
     | '/'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_protected/logs'
     | '/_protected/manage'
     | '/_protected/qc-reports'
+    | '/_protected/storage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -175,6 +187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_protected/storage': {
+      id: '/_protected/storage'
+      path: '/storage'
+      fullPath: '/storage'
+      preLoaderRoute: typeof ProtectedStorageRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/qc-reports': {
       id: '/_protected/qc-reports'
       path: '/qc-reports'
@@ -211,6 +230,7 @@ interface ProtectedRouteChildren {
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedManageRoute: typeof ProtectedManageRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
+  ProtectedStorageRoute: typeof ProtectedStorageRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
@@ -218,6 +238,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedManageRoute: ProtectedManageRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
+  ProtectedStorageRoute: ProtectedStorageRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(

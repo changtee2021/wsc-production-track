@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect, Link, useNavigate } from "@tanstack/
 import { isAdminSession, clearAdminSession } from "@/lib/admin-session";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, LogOut, FileText, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, FileText, ClipboardCheck, HardDrive } from "lucide-react";
 
 export const Route = createFileRoute("/_protected")({
   beforeLoad: ({ location }) => {
@@ -43,6 +43,12 @@ function AdminLayout() {
           <Button variant="secondary" size="sm" className="gap-1">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Manage</span>
+          </Button>
+        </Link>
+        <Link to="/storage">
+          <Button variant="secondary" size="sm" className="gap-1">
+            <HardDrive className="h-4 w-4" />
+            <span className="hidden sm:inline">Storage</span>
           </Button>
         </Link>
         <Button
