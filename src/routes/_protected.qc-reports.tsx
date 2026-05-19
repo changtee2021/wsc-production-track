@@ -85,6 +85,7 @@ function QcReportsPage() {
   const fetchReports = useServerFn(adminFetchQcReports);
   const updateStatus = useServerFn(adminUpdateQcReportStatus);
   const del = useServerFn(adminDeleteQcReport);
+  const signUrls = useServerFn(adminSignMediaUrls);
 
   const [rows, setRows] = useState<QcReportRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,6 +94,7 @@ function QcReportsPage() {
   const [jobId, setJobId] = useState("");
   const [status, setStatus] = useState<"open" | "resolved" | "all">("all");
   const [lightbox, setLightbox] = useState<MediaItem | null>(null);
+  const [signedMap, setSignedMap] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
@@ -107,13 +109,36 @@ function QcReportsPage() {
           status,
         },
       });
-      setRows((res.rows ?? []) as unknown as QcReportRow[]);
+      const fetched = (res.rows ?? []) as unknown as QcReportRow[];
+      setRows(fetched);
+      const refs = new Set<string>();
+      for (const r of fetched) {
+        for (const m of r.media ?? []) if (m.url) refs.add(m.url);
+        for (const it of r.qc_report_items ?? []) {
+          for (const m of it.media ?? []) if (m.url) refs.add(m.url);
+        }
+      }
+      if (refs.size > 0) {
+        try {
+          const { urlMap } = await signUrls({
+            data: { token, refs: Array.from(refs), defaultBucket: "qc-media" },
+          });
+          setSignedMap(urlMap);
+        } catch {
+          // Fall back to raw values for legacy public URLs
+        }
+      } else {
+        setSignedMap({});
+      }
     } catch (err) {
       showError(err, "โหลดไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
   };
+
+  const signedSrc = (ref: string) => signedMap[ref] ?? ref;
+
 
   useEffect(() => {
     load();
