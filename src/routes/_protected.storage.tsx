@@ -47,6 +47,14 @@ function StoragePage() {
     load();
   }, [load]);
 
+  const DB_LIMIT_MB = 500;
+  const STORAGE_LIMIT_MB = 1024;
+  const BYTES_PER_MB = 1_048_576;
+  const dbUsedMB = (data?.database.total_bytes ?? 0) / BYTES_PER_MB;
+  const stUsedMB = (data?.storage.total_bytes ?? 0) / BYTES_PER_MB;
+  const dbPct = Math.min(100, (dbUsedMB / DB_LIMIT_MB) * 100);
+  const stPct = Math.min(100, (stUsedMB / STORAGE_LIMIT_MB) * 100);
+
   const dbMax = Math.max(1, ...(data?.database.tables.map((t) => t.size_bytes) ?? [1]));
   const stMax = Math.max(1, ...(data?.storage.buckets.map((b) => b.size_bytes) ?? [1]));
   const grandTotal = (data?.database.total_bytes ?? 0) + (data?.storage.total_bytes ?? 0);
