@@ -610,6 +610,8 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
     } catch (err) {
       const info = formatCameraError(err);
       setErrorInfo(info);
+      const e = err as { name?: string; message?: string };
+      setDiag(`ERR name=${e?.name || "?"} msg=${String(e?.message || err).slice(0, 200)}`);
     } finally {
       setStarting(false);
     }
@@ -708,6 +710,12 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
           </div>
         )}
 
+        {diag && (
+          <div className="rounded border border-yellow-400/60 bg-yellow-50 p-2 text-[11px] leading-tight text-yellow-900 break-all">
+            <span className="font-bold">DIAG:</span> {diag}
+          </div>
+        )}
+
         <div className="relative w-full flex-1 min-h-[55vh] overflow-hidden rounded-xl bg-black sm:aspect-square sm:flex-none sm:min-h-0">
           <div id={REGION_ID} className="h-full w-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover" />
           {starting && (
@@ -719,11 +727,6 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 p-4 text-center text-white">
               <Camera className="h-10 w-10 opacity-80" />
               <p className="text-sm">กล้องยังไม่พร้อมใช้งาน</p>
-            </div>
-          )}
-          {diag && (
-            <div className="absolute bottom-1 left-1 right-1 break-all rounded bg-black/70 p-2 text-[10px] leading-tight text-white">
-              {diag}
             </div>
           )}
         </div>
