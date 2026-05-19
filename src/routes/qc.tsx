@@ -241,28 +241,34 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
 
   const fetchLogs = useServerFn(qcFetchJobLogs);
   const fetchChecklist = useServerFn(qcFetchChecklist);
-  const createUpload = useServerFn(qcCreateUploadUrl);
+  const uploadMedia = useServerFn(qcUploadMedia);
+  const listQcEmployees = useServerFn(qcListEmployees);
   const submitReport = useServerFn(qcSubmitReport);
 
-  // Load QC employees and categories
+  // Load QC employees (token-gated) and categories (public)
   useEffect(() => {
     (async () => {
-      const [emp, cat] = await Promise.all([
-        supabase
-          .from("qc_employees")
-          .select("id, name, emp_code")
-          .eq("active", true)
-          .order("name"),
+      const token = getQcToken();
+      const tasks: Promise<unknown>[] = [
         supabase
           .from("categories")
           .select("id, name")
           .eq("active", true)
-          .order("name"),
-      ]);
-      if (emp.data) setQcEmployees(emp.data);
-      if (cat.data) setCategories(cat.data);
+          .order("name")
+          .then((cat) => {
+            if (cat.data) setCategories(cat.data);
+          }),
+      ];
+      if (token) {
+        tasks.push(
+          listQcEmployees({ data: { token } })
+            .then((res) => setQcEmployees(res.rows as QcEmployee[]))
+            .catch(() => {}),
+        );
+      }
+      await Promise.all(tasks);
     })();
-  }, []);
+  }, [listQcEmployees]);
 
   // Load job logs when job_id changes
   useEffect(() => {
