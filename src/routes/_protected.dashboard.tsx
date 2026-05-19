@@ -1499,20 +1499,20 @@ function Dashboard() {
           {stepBreakdownByCategory.length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {stepBreakdownByCategory.map((cat) => (
-                <div key={cat.catId} className="rounded-xl border border-border bg-muted/20 p-4">
-                  <div className="mb-3 flex items-center justify-between">
+                <div key={cat.catId} className="rounded-xl border border-border bg-muted/20 p-3 sm:p-4">
+                  <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <h4 className="text-base font-semibold text-primary">{cat.catName}</h4>
                     <span className="text-xs text-muted-foreground">
                       รวม {cat.totalJobs} งาน · {cat.steps.length} ขั้นตอน
                     </span>
                   </div>
-                  <div className="grid gap-4">
+                  <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
                     {cat.steps.map((st, sIdx) => (
                       <div
                         key={st.stepId}
-                        className="rounded-xl border border-border bg-background p-4"
+                        className="rounded-xl border border-border bg-background p-3 sm:p-4"
                       >
                         <div className="mb-2 flex items-center justify-between text-sm">
                           <span className="font-medium">{st.stepName}</span>
@@ -1520,32 +1520,35 @@ function Dashboard() {
                             รวม {st.totalJobs} งาน
                           </span>
                         </div>
-                        <ResponsiveContainer width="100%" height={420}>
-                          <PieChart>
-                            <Pie
-                              data={st.jobsData}
-                              dataKey="jobs"
-                              nameKey="name"
-                              outerRadius={150}
-                              label={pieLabelCount}
-                            >
-                              {st.jobsData.map((_, i) => (
-                                <Cell
-                                  key={i}
-                                  fill={CHART_COLORS[(i + sIdx * 2) % CHART_COLORS.length]}
-                                />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(v) => [`${v} งาน`, "จำนวน"]} />
-                            <Legend wrapperStyle={{ fontSize: 11 }} />
-                          </PieChart>
-                        </ResponsiveContainer>
+                        <div className="h-[280px] sm:h-[360px] lg:h-[400px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={st.jobsData}
+                                dataKey="jobs"
+                                nameKey="name"
+                                outerRadius="70%"
+                                label={pieLabelCount}
+                              >
+                                {st.jobsData.map((_, i) => (
+                                  <Cell
+                                    key={i}
+                                    fill={CHART_COLORS[(i + sIdx * 2) % CHART_COLORS.length]}
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip formatter={(v) => [`${v} งาน`, "จำนวน"]} />
+                              <Legend wrapperStyle={{ fontSize: 10 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
+
           )}
         </Section>
 
