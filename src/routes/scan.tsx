@@ -198,7 +198,7 @@ function ScanPage() {
       category_id: categoryId,
       action,
       note: action === "finish" && hasIssue ? note.trim() : null,
-      note_image_url: action === "finish" && hasIssue ? noteImageUrl : null,
+      note_image_url: action === "finish" && hasIssue ? noteImage?.path ?? null : null,
     });
     setSubmitting(null);
     if (error) {
