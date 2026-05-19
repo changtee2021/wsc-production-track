@@ -1,37 +1,68 @@
-# LINE Notification Test (Admin)
+# แผนงาน: ย้ายปุ่ม LINE + ปรับรูปแบบข้อความ
 
-## เป้าหมาย
-ปุ่มทดสอบส่งข้อความเข้า LINE จากหน้า Admin Dashboard เพื่อยืนยันว่า LINE Messaging API เชื่อมต่อสำเร็จ
+## 1. ย้ายปุ่ม "ทดสอบการแจ้งเตือน LINE"
+- **ลบ** การ์ดปุ่ม LINE ออกจาก `src/routes/_protected.dashboard.tsx` (บรรทัด 1332–1356) พร้อม state `lineSending`, handler `handleSendLineTest`, import `adminSendLineTest`, `useServerFn`, `Send` ที่ไม่ใช้แล้ว
+- **เพิ่ม** การ์ดเดียวกันใน `src/routes/_protected.logs-update.tsx` วางไว้ส่วนบน (ใต้หัวข้อ "บันทึกการอัปเดตแอป") พร้อม state + handler + import ที่จำเป็น
 
-## 1. Secrets (ต้องใส่ก่อนใช้งาน)
-ขอเพิ่ม 2 ค่าใน Lovable Cloud secrets:
-- `LINE_CHANNEL_ACCESS_TOKEN` — Channel access token (long-lived) จาก LINE Developers Console
-- `LINE_TARGET_USER_ID` — userId / groupId ปลายทาง (ขึ้นต้นด้วย `U...` หรือ `C...`)
+## 2. อัปเดตข้อความ LINE ใน `src/lib/line.functions.ts`
 
-จะเรียก `secrets--add_secret` ก่อนเขียนโค้ดที่ใช้ค่าเหล่านี้
+### Query เพิ่ม breakdown per-category
+ใน `production_logs` มี column `category_id` อยู่แล้ว → ขยาย select เป็น `job_id, action, created_at, category_id` แล้ว aggregate แยกตามหมวด
 
-## 2. Server function — `src/lib/line.functions.ts`
-สร้าง `adminSendLineTest({ token })`:
-- ใช้ `assertAdmin(token)` (pattern เดียวกับ admin functions อื่น)
-- อ่าน env ภายใน `.handler()` — ถ้าไม่มีโยน error ภาษาไทยที่อ่านง่าย
-- `fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: \`Bearer ${LINE_CHANNEL_ACCESS_TOKEN}\` }, body: JSON.stringify({ to: LINE_TARGET_USER_ID, messages: [{ type: 'text', text: '🎯 Test Notification from WSC Production Track App! Your LINE integration is working 100% perfectly.' }] }) })`
-- ถ้า `!res.ok` → อ่าน body แล้ว throw `LINE API ${status}: ${message}`
-- คืน `{ ok: true, sentAt: new Date().toISOString() }`
+Categories จาก DB (active):
+- `339900cc...` → ม่านปรับแสง
+- `7d54b73b...` → ม่านม้วน
+- `0a07e9ba...` → มู่ลี่ไม้
+- `27dd1ef7...` → มู่ลี่อลูมิเนียม
 
-## 3. UI — เพิ่มการ์ดในหน้า Dashboard
-แก้ `src/routes/_protected.dashboard.tsx` เพิ่ม section "ทดสอบการแจ้งเตือน LINE":
-- ปุ่ม "ส่งข้อความทดสอบ" (`Button` + icon `Send` จาก lucide)
-- ระหว่างกดแสดง `Loader2` หมุน + disabled
-- สำเร็จ → `toast.success("ส่งข้อความทดสอบสำเร็จ ✅")`
-- ล้มเหลว → `toast.error(msg)` (ใช้ `showError` จาก `admin-helpers.ts`)
+แนวทาง: query `categories` (id, name) → สำหรับแต่ละหมวด คำนวณ `newJobs / inProgress / finished` ด้วย logic เดียวกับยอดรวม (กรองจาก `category_id`) — สำหรับ "งานใหม่" ต้องตรวจ prior logs ของ job_id ที่กรองตามหมวดด้วย
 
-## 4. Auto system_logs (กฎโปรเจกต์)
-แนบ INSERT log เข้า `system_logs` ผ่าน `supabase--insert`:
-- title: "เพิ่มฟีเจอร์ทดสอบส่ง LINE Notification"
-- category: `feature`
-- paths: `["src/lib/line.functions.ts","src/routes/_protected.dashboard.tsx"]`
+### Format ข้อความใหม่
+```
+🚀 [WSC Production]
+สรุปภาพรวมประจำวันที่ {dateStr}
 
-## ขอบเขตที่ไม่ทำ
-- ไม่ทำหน้าตั้งค่า token ผ่าน UI (ใช้ secret อย่างเดียว)
-- ไม่ทำ webhook รับข้อความขาเข้า
-- ไม่รองรับ multicast/broadcast — push เดี่ยวเท่านั้น
+📦 ภาพรวมการผลิต (Production)
+- งานใหม่วันนี้: {n} รายการ
+- กำลังดำเนินการ: {n} รายการ
+- ผลิตเสร็จสิ้น: {n} รายการ
+
+📦 การผลิตหมวดมู่ลี่ไม้
+- งานใหม่วันนี้: {n} รายการ
+- กำลังดำเนินการ: {n} รายการ
+- ผลิตเสร็จสิ้น: {n} รายการ
+
+📦 การผลิตหมวดมู่ลี่อลูมิเนียม
+... (เหมือนกัน)
+
+📦 การผลิตหมวดม่านม้วน
+... 
+
+📦 การผลิตหมวดม่านปรับแสง
+... 
+
+🔍 หมวดตรวจสอบ (QC)
+- ตรวจสอบแล้ว: {qcTotal} รายการ
+- ✅ ผ่านมาตรฐาน: {qcPassed}
+- ❌ พบจุดบกพร่อง: {qcFailed}
+
+⚠️ แจ้งเตือนพิเศษ: {รายการ failed หรือ "ไม่มี"}
+
+📱 ลิงก์เข้าดูระบบ: https://wsc-production-track.lovable.app
+
+🧠 บทวิเคราะห์ประจำวัน (AI)
+{สรุป AI วิเคราะห์ภาพรวม + แต่ละหมวด}
+```
+
+### AI Analysis
+- ส่ง stats ทั้งภาพรวม + breakdown per-category เข้า Lovable AI Gateway (`google/gemini-2.5-flash`)
+- Prompt ให้สรุป 3-5 บรรทัด: ภาพรวม + ข้อสังเกตหมวดที่โดดเด่น/น่าห่วง + คำแนะนำ
+
+## 3. บันทึก system_logs
+INSERT log: "ย้ายปุ่มทดสอบ LINE ไป LogUpdate + เพิ่ม breakdown หมวดผลิตในข้อความ" (category: feature)
+
+## ไฟล์ที่เปลี่ยน
+- `src/routes/_protected.dashboard.tsx` (ลบ section LINE)
+- `src/routes/_protected.logs-update.tsx` (เพิ่ม section LINE)
+- `src/lib/line.functions.ts` (query per-category + format ใหม่ + AI prompt ใหม่)
+- `system_logs` INSERT
