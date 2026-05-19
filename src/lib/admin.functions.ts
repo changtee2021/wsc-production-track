@@ -529,7 +529,13 @@ export const adminUpsertChecklistItem = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     if (data.id) {
-      const row: Record<string, unknown> = {
+      const row: {
+        item_text: string;
+        category_id: string;
+        updated_at: string;
+        item_order?: number;
+        is_active?: boolean;
+      } = {
         item_text: data.item_text,
         category_id: data.category_id,
         updated_at: new Date().toISOString(),
