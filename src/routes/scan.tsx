@@ -73,6 +73,16 @@ export const Route = createFileRoute("/scan")({
         content:
           "สแกน QR code เพื่อบันทึกเวลาเริ่มและเสร็จงานในสายการผลิต ใช้งานง่ายบนมือถือ",
       },
+      { property: "og:title", content: "สแกนงาน — WSC ProductionTrack" },
+      {
+        property: "og:description",
+        content:
+          "สแกน QR code เพื่อบันทึกเวลาเริ่ม–เสร็จงานในสายการผลิตอย่างรวดเร็ว",
+      },
+      { property: "og:url", content: "https://wsc-production-track.lovable.app/scan" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://wsc-production-track.lovable.app/scan" },
     ],
   }),
   component: ScanPage,
