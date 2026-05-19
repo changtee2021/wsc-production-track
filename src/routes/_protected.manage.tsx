@@ -215,22 +215,6 @@ function CategoriesPanel() {
   );
 }
 
-async function adminUpload(
-  bucket: "avatars" | "step-images" | "banners",
-  file: File,
-  createUrl: (args: { data: { token: string; bucket: "avatars" | "step-images" | "banners"; ext: string } }) => Promise<{ path: string; token: string; publicUrl: string }>,
-): Promise<{ path: string; publicUrl: string }> {
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-  const signed = await createUrl({ data: { token: requireToken(), bucket, ext } });
-  const { error } = await supabase.storage
-    .from(bucket)
-    .uploadToSignedUrl(signed.path, signed.token, file, {
-      contentType: file.type,
-      upsert: false,
-    });
-  if (error) throw error;
-  return { path: signed.path, publicUrl: signed.publicUrl };
-}
 
 function EmployeesPanel() {
   const upsert = useServerFn(adminUpsertEmployee);
