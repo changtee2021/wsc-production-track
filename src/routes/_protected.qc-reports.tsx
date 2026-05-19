@@ -90,7 +90,7 @@ function QcReportsPage() {
       });
       setRows((res.rows ?? []) as unknown as QcReportRow[]);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "โหลดไม่สำเร็จ");
+      showError(err, "โหลดไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ function QcReportsPage() {
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: s } : r)));
       toast.success("อัปเดตสถานะแล้ว");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "ผิดพลาด");
+      showError(err, "ผิดพลาด");
     }
   };
 
@@ -120,7 +120,7 @@ function QcReportsPage() {
       setRows((prev) => prev.filter((r) => r.id !== id));
       toast.success("ลบแล้ว");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "ผิดพลาด");
+      showError(err, "ผิดพลาด");
     }
   };
 
