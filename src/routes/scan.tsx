@@ -218,7 +218,7 @@ function ScanPage() {
       setActiveStartAt(null);
       setHasIssue(false);
       setNote("");
-      setNoteImageUrl(null);
+      setNoteImage(null);
     }
     toast.success(
       action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }),
