@@ -490,7 +490,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           category_id: categoryId || null,
           employee_id: repLog?.employee_id ?? null,
           note: note.trim() || null,
-          media,
+          media: media.map((m) => ({ url: m.url, type: m.type })),
           overall_result: overallResult,
           items: checklist.map((it) => {
             const s = itemStates[it.id];
@@ -500,9 +500,10 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               item_order: it.item_order,
               is_passed: s?.is_passed === true,
               remark: s?.remark?.trim() || null,
-              media: s?.media ?? [],
+              media: (s?.media ?? []).map((m) => ({ url: m.url, type: m.type })),
             };
           }),
+
         },
       });
       toast.success(
