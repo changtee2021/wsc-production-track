@@ -47,6 +47,14 @@ function StoragePage() {
     load();
   }, [load]);
 
+  const DB_LIMIT_MB = 500;
+  const STORAGE_LIMIT_MB = 1024;
+  const BYTES_PER_MB = 1_048_576;
+  const dbUsedMB = (data?.database.total_bytes ?? 0) / BYTES_PER_MB;
+  const stUsedMB = (data?.storage.total_bytes ?? 0) / BYTES_PER_MB;
+  const dbPct = Math.min(100, (dbUsedMB / DB_LIMIT_MB) * 100);
+  const stPct = Math.min(100, (stUsedMB / STORAGE_LIMIT_MB) * 100);
+
   const dbMax = Math.max(1, ...(data?.database.tables.map((t) => t.size_bytes) ?? [1]));
   const stMax = Math.max(1, ...(data?.storage.buckets.map((b) => b.size_bytes) ?? [1]));
   const grandTotal = (data?.database.total_bytes ?? 0) + (data?.storage.total_bytes ?? 0);
@@ -66,6 +74,32 @@ function StoragePage() {
           รีเฟรช
         </Button>
       </div>
+
+      {/* Summary */}
+      {/* Usage vs Free Tier limits */}
+      <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <header className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">ภาพรวมเทียบเพดาน (Free Tier)</h2>
+        </header>
+        <div className="space-y-5">
+          <UsageBar
+            icon={<Database className="h-4 w-4" />}
+            label="Database"
+            usedMB={dbUsedMB}
+            limitMB={DB_LIMIT_MB}
+            pct={dbPct}
+            loading={loading && !data}
+          />
+          <UsageBar
+            icon={<HardDrive className="h-4 w-4" />}
+            label="Storage"
+            usedMB={stUsedMB}
+            limitMB={STORAGE_LIMIT_MB}
+            pct={stPct}
+            loading={loading && !data}
+          />
+        </div>
+      </section>
 
       {/* Summary */}
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
@@ -178,6 +212,62 @@ function SkeletonRows() {
           <div className="h-1.5 w-full animate-pulse rounded bg-muted" />
         </div>
       ))}
+    </div>
+  );
+}
+
+function UsageBar({
+  icon,
+  label,
+  usedMB,
+  limitMB,
+  pct,
+  loading,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  usedMB: number;
+  limitMB: number;
+  pct: number;
+  loading: boolean;
+}) {
+  const level = pct > 90 ? "danger" : pct >= 70 ? "warn" : "ok";
+  const barColor =
+    level === "danger"
+      ? "bg-destructive"
+      : level === "warn"
+        ? "bg-yellow-500"
+        : "bg-primary";
+  const badge =
+    level === "danger"
+      ? { text: "วิกฤติ", cls: "bg-destructive/10 text-destructive" }
+      : level === "warn"
+        ? { text: "ใกล้เต็ม", cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" }
+        : { text: "ปกติ", cls: "bg-primary/10 text-primary" };
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-2 text-sm">
+        <div className="flex items-center gap-2 font-medium">
+          {icon}
+          {label}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>
+            {badge.text}
+          </span>
+          <span className="tabular-nums text-muted-foreground">
+            {loading ? "—" : `${usedMB.toFixed(1)} / ${limitMB} MB`}
+            <span className="ml-1 font-semibold text-foreground">({pct.toFixed(1)}%)</span>
+          </span>
+        </div>
+      </div>
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full transition-all ${barColor}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
     </div>
   );
 }

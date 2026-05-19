@@ -1,38 +1,40 @@
-## ปรับปรุงฟีเจอร์ QC
+## ปรับปรุงหน้า Storage — Usage Tracker เทียบเพดาน Free Tier
 
-### 1. บังคับกฎ "ไม่ผ่าน" (frontend `src/routes/qc.tsx`)
-- เพิ่ม validation ใน `handleSubmit`: ทุกข้อที่ `is_passed === false` ต้อง
-  - มี `remark.trim()` (มีอยู่แล้ว) **และ**
-  - มี `media.length >= 1` (รูปหรือวิดีโออย่างน้อย 1)
-- แสดง toast พร้อมระบุข้อที่ขาด (เลขลำดับ)
-- ใน `ChecklistItemCard` เมื่อกด "ไม่ผ่าน":
-  - เพิ่ม helper text สีแดงใต้ช่องสื่อ "ต้องแนบรูป/วิดีโออย่างน้อย 1 รายการ" เมื่อ `media.length === 0`
-  - ทำกรอบช่องอัปโหลด/textarea เป็นสี destructive เมื่อยังไม่ครบ
-- ปุ่มส่งรายงาน disable เมื่อมีข้อ fail ที่ยังขาด remark หรือ media (เพิ่มเงื่อนไขใน `useMemo` ที่คำนวณ submit-ready)
+### เป้าหมาย
+แสดงสัดส่วนการใช้พื้นที่เทียบกับเพดาน Free Tier (DB 500 MB, Storage 1024 MB) พร้อม progress bar เปลี่ยนสีตามระดับการใช้งาน
 
-### 2. ส่งออก CSV/Excel ใน `src/routes/_protected.qc-reports.tsx`
-- เพิ่มปุ่ม "ส่งออก CSV" ที่ header (ใช้ข้อมูล `reports` ที่กรองแล้วในปัจจุบัน)
-- สร้าง helper `src/lib/qc-export.ts` ฟังก์ชัน `exportQcReportsCsv(reports)`:
-  - 1 แถว = 1 รายการเช็คลิสต์ (flatten `items`)
-  - คอลัมน์: `report_id`, `created_at`, `job_id`, `category`, `step`, `qc_employee`, `overall_result`, `overall_summary`, `item_order`, `item_text`, `item_result(ผ่าน/ไม่ผ่าน)`, `item_remark`, `item_media_count`, `item_media_urls` (คั่นด้วย `;`)
-  - Encode UTF-8 + BOM (`\uFEFF`) เพื่อให้ Excel อ่านภาษาไทยถูก
-  - escape เครื่องหมาย `"` และ `,` ตามมาตรฐาน CSV
-  - ชื่อไฟล์: `qc-reports-YYYYMMDD-HHmm.csv`
-- ไม่ต้องเพิ่ม dependency (CSV ล้วน, Excel เปิดได้ตรง ๆ)
+### สิ่งที่จะทำ
 
-### 3. UI รายการรายข้อแบบขยาย/ยุบ (mobile-friendly) ใน `_protected.qc-reports.tsx`
-- ใช้ shadcn `Accordion` (`type="multiple"`) ครอบ `items` ในแต่ละ report
-- หัว accordion: ลำดับ + ไอคอน ✓/✗ + ข้อความเช็คลิสต์ (truncate) + badge จำนวนสื่อ
-- ยุบเริ่มต้น; ของที่ `is_passed === false` ให้ขยายอัตโนมัติ (`defaultValue`)
-- เนื้อหา: หมายเหตุ + grid สื่อ (รูปกดเปิด lightbox/วิดีโอเล่นในตัว)
-- ปรับ grid สื่อจาก 4 คอลัมน์ → `grid-cols-3 sm:grid-cols-4` และเพิ่ม `aspect-square object-cover` ให้ thumbnail สม่ำเสมอบนมือถือ
-- เพิ่ม simple lightbox: คลิกรูป → เปิด `Dialog` แสดงเต็มจอ (reuse shadcn `Dialog`)
+**1. เพิ่มค่าคงที่เพดานในแอป** (`src/routes/_protected.storage.tsx`)
+- `DB_LIMIT_MB = 500`
+- `STORAGE_LIMIT_MB = 1024`
 
-### ไฟล์ที่แก้
-- `src/routes/qc.tsx` — validation + UI hint
-- `src/routes/_protected.qc-reports.tsx` — ปุ่ม export + accordion + lightbox
-- `src/lib/qc-export.ts` (ใหม่) — CSV builder
+**2. เพิ่มการ์ดสรุป "ภาพรวมเทียบเพดาน" ด้านบน**
+แสดง 2 progress bar เด่นๆ:
+- **Database Usage**: `{usedMB} / 500 MB` + `%`
+- **Storage Usage**: `{usedMB} / 1024 MB` + `%`
 
-### นอกขอบเขต
-- ไม่มีการเปลี่ยน schema ฐานข้อมูล (กฎบังคับเป็น client-side; ของเดิม server ก็รับ media array อยู่แล้ว)
-- ไม่แตะ admin panel/sidebar
+แปลง bytes → MB โดยหารด้วย `1,048,576`
+
+**3. สีตามระดับการใช้งาน**
+- `< 70%` — เขียว (สีปกติ/primary)
+- `70–90%` — เหลือง (warning)
+- `> 90%` — แดง (destructive)
+
+ทำผ่าน CSS variant ของ `<Progress>` (ส่ง className สีพื้น indicator) หรือสร้าง wrapper `<UsageBar value max />` ที่เลือกสีให้อัตโนมัติ + badge สถานะ ("ปกติ / ใกล้เต็ม / วิกฤติ")
+
+**4. คงส่วนเดิม**
+รายการ "ฐานข้อมูลต่อตาราง" และ "Storage ต่อ bucket" ที่มีอยู่ยังคงไว้ด้านล่าง — ใช้เป็น breakdown รายละเอียด
+
+### หมายเหตุเรื่อง RPC
+
+ผู้ใช้เสนอให้สร้าง RPC `get_storage_used_bytes()` และ `get_db_size_bytes()` ใหม่ — แต่ระบบมีอยู่แล้ว:
+- `getStorageUsage` server function คืน `database.total_bytes` (จาก `pg_database_size`) และ `storage.total_bytes` (รวมจาก `storage.objects.metadata->>'size'`)
+- ครอบคลุมข้อมูลเดียวกับ RPC ที่เสนอ ไม่ต้องสร้าง RPC ใหม่หรือ migration เพิ่ม
+
+จะใช้ข้อมูล `total_bytes` ที่ server function ส่งกลับมาอยู่แล้วเทียบกับเพดานที่ตั้งไว้ในโค้ด
+
+### ไฟล์ที่จะแก้
+- `src/routes/_protected.storage.tsx` — เพิ่ม constants, การ์ด Usage vs Limit, สีตามระดับ
+
+ไม่แตะ backend/database/migrations
