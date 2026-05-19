@@ -250,10 +250,10 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
       observerCleanupRef.current();
       observerCleanupRef.current = null;
     }
-    if (pendingStreamRef.current) {
-      pendingStreamRef.current.getTracks().forEach((t) => t.stop());
-      pendingStreamRef.current = null;
-    }
+    // NB: do NOT stop pendingStreamRef here. stopAll is called at the top of
+    // startWith() to reset mid-flow state, and we must preserve the
+    // pre-acquired stream so the iOS path can consume it. The pending stream
+    // is stopped by the useEffect cleanup when the dialog actually closes.
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -601,9 +601,12 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
         return;
       }
 
-      // No pre-acquired stream available — let html5-qrcode try on its own.
-      // (Permission is cached for this origin if it was granted earlier, so
-      // no user-gesture is required for the internal getUserMedia.)
+      // No usable pre-acquired stream — release any leftover before letting
+      // html5-qrcode manage its own getUserMedia.
+      if (pendingStreamRef.current) {
+        pendingStreamRef.current.getTracks().forEach((t) => t.stop());
+        pendingStreamRef.current = null;
+      }
       await startHtml5(mode);
       setUsingNative(false);
       setFacing(mode);
@@ -637,6 +640,10 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
 
     return () => {
       cancelledRef.current = true;
+      if (pendingStreamRef.current) {
+        pendingStreamRef.current.getTracks().forEach((t) => t.stop());
+        pendingStreamRef.current = null;
+      }
       stopAll();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
