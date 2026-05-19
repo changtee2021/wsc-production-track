@@ -424,15 +424,16 @@ function LogsPage() {
                     รูปภาพแนบ
                   </div>
                   <a
-                    href={selected.note_image_url}
+                    href={signedSrc(selected.note_image_url)}
                     target="_blank"
                     rel="noreferrer"
                     className="block overflow-hidden rounded-lg border border-border"
                   >
                     <img
-                      src={selected.note_image_url}
+                      src={signedSrc(selected.note_image_url)}
                       alt="note"
                       className="max-h-96 w-full object-contain bg-muted"
+
                     />
                   </a>
                 </div>
