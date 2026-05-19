@@ -381,6 +381,7 @@ const qcEmployeePayload = z.object({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(100),
   emp_code: z.string().trim().max(50).nullable().optional(),
+  avatar_url: z.string().url().max(2000).nullable().optional(),
   active: z.boolean().optional(),
 });
 
@@ -391,6 +392,7 @@ export const adminUpsertQcEmployee = createServerFn({ method: "POST" })
     const row = {
       name: data.name,
       emp_code: data.emp_code ?? null,
+      avatar_url: data.avatar_url ?? null,
       ...(data.active !== undefined ? { active: data.active } : {}),
     };
     if (data.id) {

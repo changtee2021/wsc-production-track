@@ -1,0 +1,1 @@
+ALTER TABLE public.qc_employees ADD COLUMN IF NOT EXISTS avatar_url text;

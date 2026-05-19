@@ -1,40 +1,42 @@
-## ปรับปรุงหน้า Storage — Usage Tracker เทียบเพดาน Free Tier
+# Plan
 
-### เป้าหมาย
-แสดงสัดส่วนการใช้พื้นที่เทียบกับเพดาน Free Tier (DB 500 MB, Storage 1024 MB) พร้อม progress bar เปลี่ยนสีตามระดับการใช้งาน
+## 1. QC employee avatar upload (`src/routes/_protected.manage.tsx`)
 
-### สิ่งที่จะทำ
+Mirror the pattern already used in the regular Employees panel (line ~247):
 
-**1. เพิ่มค่าคงที่เพดานในแอป** (`src/routes/_protected.storage.tsx`)
-- `DB_LIMIT_MB = 500`
-- `STORAGE_LIMIT_MB = 1024`
+- Add `avatar_url` column to `qc_employees` table via migration (nullable text).
+- Extend `adminUpsertQcEmployee` server fn in `src/lib/admin.functions.ts` to accept optional `avatar_url`.
+- In `QcEmployeesPanel`:
+  - Add `avatarUrl` state + file input that calls `adminUpload("avatars", file, createUrl)` (reuses existing `avatars` bucket and `adminCreateUploadUrl`).
+  - Show `<Avatar>` preview next to the inputs (same UX as Employees panel).
+  - Pass `avatar_url` on insert/update; populate on edit.
+  - Render avatar thumbnail in the list rows.
+- Update `QcEmp` type to include `avatar_url`.
 
-**2. เพิ่มการ์ดสรุป "ภาพรวมเทียบเพดาน" ด้านบน**
-แสดง 2 progress bar เด่นๆ:
-- **Database Usage**: `{usedMB} / 500 MB` + `%`
-- **Storage Usage**: `{usedMB} / 1024 MB` + `%`
+## 2. Dashboard report layout (`src/routes/_protected.dashboard.tsx`, lines ~1493–1625)
 
-แปลง bytes → MB โดยหารด้วย `1,048,576`
+Two affected `Section`s:
+- "จำนวนงานต่อพนักงาน — แยกตามขั้นตอน"
+- "เวลาเฉลี่ยต่อพนักงาน — แยกตามขั้นตอน"
 
-**3. สีตามระดับการใช้งาน**
-- `< 70%` — เขียว (สีปกติ/primary)
-- `70–90%` — เหลือง (warning)
-- `> 90%` — แดง (destructive)
+Inside each category card, the steps list currently uses `grid gap-4` (single column). Change to:
+```
+grid gap-4 md:grid-cols-1 lg:grid-cols-2
+```
+so PC (≥1024px) shows 2 columns side-by-side, tablet/mobile stays single column.
 
-ทำผ่าน CSS variant ของ `<Progress>` (ส่ง className สีพื้น indicator) หรือสร้าง wrapper `<UsageBar value max />` ที่เลือกสีให้อัตโนมัติ + badge สถานะ ("ปกติ / ใกล้เต็ม / วิกฤติ")
+## 3. Mobile UI tightening (same two sections + their wrappers)
 
-**4. คงส่วนเดิม**
-รายการ "ฐานข้อมูลต่อตาราง" และ "Storage ต่อ bucket" ที่มีอยู่ยังคงไว้ด้านล่าง — ใช้เป็น breakdown รายละเอียด
+- Reduce chart height on mobile: `height={420}` → use responsive value (e.g. `h-[280px] sm:h-[360px] lg:h-[420px]` via wrapper div instead of fixed `height` prop, or branch via `useIsMobile`). Use a wrapper `<div className="h-[280px] sm:h-[380px] lg:h-[420px]">` with `ResponsiveContainer width="100%" height="100%"`.
+- Reduce pie `outerRadius` on mobile (110 mobile / 150 desktop) by reading `useIsMobile()` already imported in dashboard if present, else add it.
+- Tighten paddings on mobile: `p-4` → `p-3 sm:p-4` on the category wrapper and inner step card; `gap-4` → `gap-3 sm:gap-4`.
+- Make the per-category header stack on small screens: `flex items-center justify-between` → `flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between`.
+- Shrink legend font on mobile via `wrapperStyle={{ fontSize: 10 }}` (already 11).
 
-### หมายเหตุเรื่อง RPC
+No business-logic changes; only layout/styling and one schema column + serverFn field.
 
-ผู้ใช้เสนอให้สร้าง RPC `get_storage_used_bytes()` และ `get_db_size_bytes()` ใหม่ — แต่ระบบมีอยู่แล้ว:
-- `getStorageUsage` server function คืน `database.total_bytes` (จาก `pg_database_size`) และ `storage.total_bytes` (รวมจาก `storage.objects.metadata->>'size'`)
-- ครอบคลุมข้อมูลเดียวกับ RPC ที่เสนอ ไม่ต้องสร้าง RPC ใหม่หรือ migration เพิ่ม
-
-จะใช้ข้อมูล `total_bytes` ที่ server function ส่งกลับมาอยู่แล้วเทียบกับเพดานที่ตั้งไว้ในโค้ด
-
-### ไฟล์ที่จะแก้
-- `src/routes/_protected.storage.tsx` — เพิ่ม constants, การ์ด Usage vs Limit, สีตามระดับ
-
-ไม่แตะ backend/database/migrations
+## Files to edit
+- `supabase/migrations/<new>.sql` — `ALTER TABLE qc_employees ADD COLUMN avatar_url text;`
+- `src/lib/admin.functions.ts` — add `avatar_url` to `qcEmployeePayload`, include in upsert row.
+- `src/routes/_protected.manage.tsx` — avatar upload UI in `QcEmployeesPanel`.
+- `src/routes/_protected.dashboard.tsx` — `lg:grid-cols-2` + responsive heights/paddings in the two report sections.

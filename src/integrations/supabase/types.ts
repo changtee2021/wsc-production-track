@@ -215,6 +215,7 @@ export type Database = {
       qc_employees: {
         Row: {
           active: boolean
+          avatar_url: string | null
           created_at: string
           emp_code: string | null
           id: string
@@ -222,6 +223,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          avatar_url?: string | null
           created_at?: string
           emp_code?: string | null
           id?: string
@@ -229,6 +231,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          avatar_url?: string | null
           created_at?: string
           emp_code?: string | null
           id?: string
