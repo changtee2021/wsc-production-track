@@ -1,74 +1,38 @@
-## เป้าหมาย
-1. เปลี่ยน Top-nav ของหน้าแอดมินเป็น **Sidebar ซ้าย** (ย่อเป็นไอคอนได้)
-2. **แตกไฟล์ใหญ่** ที่เริ่มบวมและ **รวมโค้ดซ้ำ** เพื่อให้ดูแลง่ายเมื่อข้อมูล/ฟีเจอร์โต
-3. ไม่เปลี่ยนพฤติกรรม/business logic เลย — refactor ล้วน
+## ปรับปรุงฟีเจอร์ QC
 
----
+### 1. บังคับกฎ "ไม่ผ่าน" (frontend `src/routes/qc.tsx`)
+- เพิ่ม validation ใน `handleSubmit`: ทุกข้อที่ `is_passed === false` ต้อง
+  - มี `remark.trim()` (มีอยู่แล้ว) **และ**
+  - มี `media.length >= 1` (รูปหรือวิดีโออย่างน้อย 1)
+- แสดง toast พร้อมระบุข้อที่ขาด (เลขลำดับ)
+- ใน `ChecklistItemCard` เมื่อกด "ไม่ผ่าน":
+  - เพิ่ม helper text สีแดงใต้ช่องสื่อ "ต้องแนบรูป/วิดีโออย่างน้อย 1 รายการ" เมื่อ `media.length === 0`
+  - ทำกรอบช่องอัปโหลด/textarea เป็นสี destructive เมื่อยังไม่ครบ
+- ปุ่มส่งรายงาน disable เมื่อมีข้อ fail ที่ยังขาด remark หรือ media (เพิ่มเงื่อนไขใน `useMemo` ที่คำนวณ submit-ready)
 
-## ส่วนที่ 1 — Admin Sidebar
+### 2. ส่งออก CSV/Excel ใน `src/routes/_protected.qc-reports.tsx`
+- เพิ่มปุ่ม "ส่งออก CSV" ที่ header (ใช้ข้อมูล `reports` ที่กรองแล้วในปัจจุบัน)
+- สร้าง helper `src/lib/qc-export.ts` ฟังก์ชัน `exportQcReportsCsv(reports)`:
+  - 1 แถว = 1 รายการเช็คลิสต์ (flatten `items`)
+  - คอลัมน์: `report_id`, `created_at`, `job_id`, `category`, `step`, `qc_employee`, `overall_result`, `overall_summary`, `item_order`, `item_text`, `item_result(ผ่าน/ไม่ผ่าน)`, `item_remark`, `item_media_count`, `item_media_urls` (คั่นด้วย `;`)
+  - Encode UTF-8 + BOM (`\uFEFF`) เพื่อให้ Excel อ่านภาษาไทยถูก
+  - escape เครื่องหมาย `"` และ `,` ตามมาตรฐาน CSV
+  - ชื่อไฟล์: `qc-reports-YYYYMMDD-HHmm.csv`
+- ไม่ต้องเพิ่ม dependency (CSV ล้วน, Excel เปิดได้ตรง ๆ)
 
-ไฟล์ใหม่:
-- `src/components/AdminSidebar.tsx` — ใช้ shadcn `Sidebar` (collapsible="icon"), เมนู: Dashboard, History, QC, Manage, Storage. ไฮไลต์เมนูปัจจุบันด้วย `useRouterState`, แสดง tooltip ตอนย่อ
+### 3. UI รายการรายข้อแบบขยาย/ยุบ (mobile-friendly) ใน `_protected.qc-reports.tsx`
+- ใช้ shadcn `Accordion` (`type="multiple"`) ครอบ `items` ในแต่ละ report
+- หัว accordion: ลำดับ + ไอคอน ✓/✗ + ข้อความเช็คลิสต์ (truncate) + badge จำนวนสื่อ
+- ยุบเริ่มต้น; ของที่ `is_passed === false` ให้ขยายอัตโนมัติ (`defaultValue`)
+- เนื้อหา: หมายเหตุ + grid สื่อ (รูปกดเปิด lightbox/วิดีโอเล่นในตัว)
+- ปรับ grid สื่อจาก 4 คอลัมน์ → `grid-cols-3 sm:grid-cols-4` และเพิ่ม `aspect-square object-cover` ให้ thumbnail สม่ำเสมอบนมือถือ
+- เพิ่ม simple lightbox: คลิกรูป → เปิด `Dialog` แสดงเต็มจอ (reuse shadcn `Dialog`)
 
-แก้:
-- `src/routes/_protected.tsx`
-  - ห่อด้วย `SidebarProvider` + `AdminSidebar` + `SidebarInset`
-  - Header เหลือ: `SidebarTrigger` (ซ้าย) + ชื่อหน้าปัจจุบัน + ปุ่ม **Logout** (ขวา)
-  - ลบปุ่มเมนูทั้งหมดออกจาก `AppHeader`
+### ไฟล์ที่แก้
+- `src/routes/qc.tsx` — validation + UI hint
+- `src/routes/_protected.qc-reports.tsx` — ปุ่ม export + accordion + lightbox
+- `src/lib/qc-export.ts` (ใหม่) — CSV builder
 
-มือถือ: shadcn sidebar เปิดเป็น drawer อัตโนมัติเมื่อจอเล็ก
-
----
-
-## ส่วนที่ 2 — Refactor โครงไฟล์
-
-### 2.1 แตก `_protected.manage.tsx` (1460 บรรทัด)
-ย้าย panel แต่ละตัวเป็นไฟล์ใน `src/components/manage/`:
-- `CategoriesPanel.tsx`
-- `EmployeesPanel.tsx` (+ `EmployeeEditor`)
-- `StepsPanel.tsx` (+ `StepEditor`)
-- `BannersPanel.tsx`
-- `AnnouncementsPanel.tsx`
-- `QcEmployeesPanel.tsx`
-
-`_protected.manage.tsx` เหลือเฉพาะ route + Tabs ที่ประกอบ panel เหล่านี้
-
-### 2.2 แตก `_protected.dashboard.tsx` (1931 บรรทัด)
-- `src/components/dashboard/` — `StatCard.tsx`, `ChartCard.tsx`, `PctBadge.tsx`, `EmptyChart.tsx`, `MultiSelectGroup.tsx`, `Section.tsx`
-- `src/lib/dashboard-utils.ts` — `CHART_COLORS`, `makePieLabel`, helpers คำนวณ aggregation
-- `_protected.dashboard.tsx` เหลือเฉพาะ container + state + composition
-
-### 2.3 รวมโค้ดซ้ำ → `src/lib/admin-helpers.ts`
-ย้าย `requireToken()` + `showError()` ที่ซ้ำกันใน manage/dashboard/qc-reports/storage มาไฟล์เดียว, รวม `formatBytes()` (จาก storage), `formatDuration()`, badge ตัวช่วยต่างๆ
-
-### 2.4 แตก `src/lib/admin.functions.ts` (613 บรรทัด)
-แบ่งตามโดเมน — *แค่ย้ายฟังก์ชัน ไม่แก้ลายเซ็น* เพื่อไม่กระทบฝั่ง client:
-- `src/lib/admin/auth.functions.ts` — verifyAdminPassword, checkAdminToken
-- `src/lib/admin/categories.functions.ts`
-- `src/lib/admin/employees.functions.ts`
-- `src/lib/admin/steps.functions.ts`
-- `src/lib/admin/banners.functions.ts`
-- `src/lib/admin/announcements.functions.ts`
-- `src/lib/admin/qc.functions.ts` — qc employees + checklists + reports
-- `src/lib/admin/logs.functions.ts` — adminFetchLogs
-
-`src/lib/admin.functions.ts` กลายเป็น **barrel re-export** เพื่อ import path เดิมยังใช้ได้ (ไม่ต้องแก้ทุกหน้าจอ)
-
-### 2.5 จัด type
-สร้าง `src/lib/admin-types.ts` รวบ interface ที่ใช้ร่วมกัน (Employee, Step, Category, Banner, Announcement, QcEmp) แทนการประกาศซ้ำในแต่ละไฟล์
-
----
-
-## ขอบเขตที่ "ไม่ทำ" ในรอบนี้
-- ไม่แก้ schema / index ฐานข้อมูล (ถ้าต้องการตอนหลังค่อยทำแยก migration)
-- ไม่เปลี่ยน business logic, request/response, RLS
-- ไม่แตะ `qc.tsx` (mobile inspector) เพราะเป็นหน้าผู้ใช้ ไม่ใช่ admin
-
----
-
-## ผลลัพธ์ที่คาดหวัง
-- หน้า admin มี sidebar ซ้ายตามภาพมาตรฐาน shadcn — toggle ได้, มือถือเป็น drawer
-- ไม่มีไฟล์ route ใหญ่เกิน ~400 บรรทัด
-- ลด duplicate ของ `requireToken` / `showError` / format helpers
-- Import path เดิม (`@/lib/admin.functions`) ยังใช้ได้เพราะมี barrel
-- Type-check และ build ผ่าน, พฤติกรรมเดิมทุกอย่าง
+### นอกขอบเขต
+- ไม่มีการเปลี่ยน schema ฐานข้อมูล (กฎบังคับเป็น client-side; ของเดิม server ก็รับ media array อยู่แล้ว)
+- ไม่แตะ admin panel/sidebar
