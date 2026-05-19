@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getAdminToken, clearAdminSession } from "@/lib/admin-session";
 import {
   adminUpsertCategory,
   adminDeleteCategory,
@@ -20,6 +19,7 @@ import {
   adminUpsertQcEmployee,
   adminDeleteQcEmployee,
 } from "@/lib/admin.functions";
+import { adminUpload, requireToken, showError } from "@/lib/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,26 +54,6 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/i18n";
 import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
-
-function requireToken(): string {
-  const t = getAdminToken();
-  if (!t) {
-    clearAdminSession();
-    if (typeof window !== "undefined") window.location.href = "/admin";
-    throw new Error("Unauthorized");
-  }
-  return t;
-}
-
-function showError(err: unknown) {
-  const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
-  if (msg === "Unauthorized") {
-    clearAdminSession();
-    if (typeof window !== "undefined") window.location.href = "/admin";
-    return;
-  }
-  toast.error(msg);
-}
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
