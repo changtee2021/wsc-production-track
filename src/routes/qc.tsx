@@ -65,6 +65,16 @@ export const Route = createFileRoute("/qc")({
         content:
           "หน้าตรวจสอบคุณภาพงาน (QC) แบบ checklist พร้อมแนบรูปและวิดีโอเป็นหลักฐาน",
       },
+      { property: "og:title", content: "QC — WSC ProductionTrack" },
+      {
+        property: "og:description",
+        content:
+          "ตรวจสอบคุณภาพงานแบบ checklist พร้อมแนบรูป/วิดีโอเป็นหลักฐาน บันทึกผลผ่าน–ไม่ผ่านแบบเรียลไทม์",
+      },
+      { property: "og:url", content: "https://wsc-production-track.lovable.app/qc" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://wsc-production-track.lovable.app/qc" },
     ],
   }),
   component: QcPage,
@@ -558,11 +568,19 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                 }}
                 variant="outline"
                 className="h-11 gap-1"
+                aria-label="ล้างหมายเลขงาน"
+                title="ล้างหมายเลขงาน"
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={applyManualJob} variant="outline" className="h-11 gap-1">
+              <Button
+                onClick={applyManualJob}
+                variant="outline"
+                className="h-11 gap-1"
+                aria-label="ยืนยันหมายเลขงาน"
+                title="ยืนยันหมายเลขงาน"
+              >
                 <Check className="h-4 w-4" />
               </Button>
             )}
@@ -778,6 +796,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                     <button
                       type="button"
                       onClick={() => setMedia((prev) => prev.filter((_, j) => j !== i))}
+                      aria-label="ลบไฟล์หลักฐาน"
                       className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -938,6 +957,7 @@ function ChecklistRow({
                   <button
                     type="button"
                     onClick={() => onRemoveMedia(i)}
+                    aria-label="ลบไฟล์หลักฐานของรายการนี้"
                     className="absolute top-0.5 right-0.5 rounded-full bg-background/90 p-0.5 shadow"
                   >
                     <X className="h-3 w-3" />

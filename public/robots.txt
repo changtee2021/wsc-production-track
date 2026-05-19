@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /logs
+Disallow: /manage
+Disallow: /qc-reports
+Disallow: /storage
+
+Sitemap: https://wsc-production-track.lovable.app/sitemap.xml

@@ -73,6 +73,16 @@ export const Route = createFileRoute("/scan")({
         content:
           "สแกน QR code เพื่อบันทึกเวลาเริ่มและเสร็จงานในสายการผลิต ใช้งานง่ายบนมือถือ",
       },
+      { property: "og:title", content: "สแกนงาน — WSC ProductionTrack" },
+      {
+        property: "og:description",
+        content:
+          "สแกน QR code เพื่อบันทึกเวลาเริ่ม–เสร็จงานในสายการผลิตอย่างรวดเร็ว",
+      },
+      { property: "og:url", content: "https://wsc-production-track.lovable.app/scan" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://wsc-production-track.lovable.app/scan" },
     ],
   }),
   component: ScanPage,
@@ -321,6 +331,7 @@ function ScanPage() {
                 }}
                 variant="outline"
                 className="h-11 gap-1"
+                aria-label={t("job.resetTitle")}
                 title={t("job.resetTitle")}
               >
                 <RotateCcw className="h-4 w-4" />
@@ -330,6 +341,7 @@ function ScanPage() {
                 onClick={applyManualJob}
                 variant="outline"
                 className="h-11 gap-1"
+                aria-label={t("job.confirmTitle")}
                 title={t("job.confirmTitle")}
               >
                 <Check className="h-4 w-4" />
@@ -539,6 +551,7 @@ function ScanPage() {
                     <button
                       type="button"
                       onClick={() => setNoteImageUrl(null)}
+                      aria-label="ลบรูปหมายเหตุ"
                       className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"
                     >
                       <X className="h-4 w-4" />
