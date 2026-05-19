@@ -179,6 +179,107 @@ function LogsPage() {
         </label>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3 shadow-sm">
+        <span className="text-sm font-medium text-muted-foreground">ช่วงวันที่:</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("gap-2", !dateFrom && "text-muted-foreground")}
+            >
+              <CalendarIcon className="h-4 w-4" />
+              {dateFrom ? format(dateFrom, "dd MMM yyyy") : "ตั้งแต่"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateFrom}
+              onSelect={setDateFrom}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+        <span className="text-muted-foreground">—</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("gap-2", !dateTo && "text-muted-foreground")}
+            >
+              <CalendarIcon className="h-4 w-4" />
+              {dateTo ? format(dateTo, "dd MMM yyyy") : "ถึง"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateTo}
+              onSelect={setDateTo}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+
+        <div className="ml-auto flex flex-wrap items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const t = new Date();
+              setDateFrom(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
+              setDateTo(new Date());
+            }}
+          >
+            วันนี้
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const t = new Date();
+              const f = new Date();
+              f.setDate(t.getDate() - 6);
+              setDateFrom(f);
+              setDateTo(t);
+            }}
+          >
+            7 วัน
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const t = new Date();
+              const f = new Date();
+              f.setDate(t.getDate() - 29);
+              setDateFrom(f);
+              setDateTo(t);
+            }}
+          >
+            30 วัน
+          </Button>
+          {(dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-destructive hover:text-destructive"
+              onClick={() => {
+                setDateFrom(undefined);
+                setDateTo(undefined);
+              }}
+            >
+              <X className="h-3.5 w-3.5" /> ล้าง
+            </Button>
+          )}
+        </div>
+      </div>
+
+
       <div className="rounded-2xl border border-border bg-card shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-muted-foreground">กำลังโหลด…</p>
