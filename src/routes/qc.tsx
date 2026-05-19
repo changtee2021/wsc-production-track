@@ -358,8 +358,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       const items: MediaItem[] = [];
       for (const f of Array.from(files)) {
         const map = kind === "image" ? IMAGE_EXT_BY_MIME : VIDEO_EXT_BY_MIME;
-        const ext = map[f.type];
-        if (!ext) {
+        if (!map[f.type]) {
           toast.error(
             kind === "image"
               ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF"
@@ -372,19 +371,27 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           toast.error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
           continue;
         }
-        const signed = await createUpload({
-          data: { token, ext: ext as any, kind },
-        });
-        const { error } = await supabase.storage
-          .from("qc-media")
-          .uploadToSignedUrl(signed.path, signed.token, f, {
-            contentType: f.type,
+        // Convert to base64 and upload via server (magic-byte validated).
+        const buf = await f.arrayBuffer();
+        let binary = "";
+        const u8 = new Uint8Array(buf);
+        const CHUNK = 0x8000;
+        for (let i = 0; i < u8.length; i += CHUNK) {
+          binary += String.fromCharCode.apply(
+            null,
+            Array.from(u8.subarray(i, i + CHUNK)),
+          );
+        }
+        const dataBase64 = btoa(binary);
+        try {
+          const res = await uploadMedia({
+            data: { token, kind, dataBase64 },
           });
-        if (error) {
-          toast.error(error.message);
+          items.push({ url: res.publicUrl, type: kind });
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
           continue;
         }
-        items.push({ url: signed.publicUrl, type: kind });
       }
       if (items.length) {
         if (target === "overall") {
