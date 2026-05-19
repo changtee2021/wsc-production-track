@@ -970,10 +970,11 @@ function ChecklistRow({
               {state.media.map((m, i) => (
                 <div key={i} className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
                   {m.type === "image" ? (
-                    <img src={m.url} alt="" className="h-full w-full object-cover" />
+                    <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <video src={m.url} className="h-full w-full object-cover" muted />
+                    <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" muted />
                   )}
+
                   <button
                     type="button"
                     onClick={() => onRemoveMedia(i)}
