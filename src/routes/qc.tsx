@@ -391,7 +391,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           const res = await uploadMedia({
             data: { token, kind, dataBase64 },
           });
-          items.push({ url: res.publicUrl, type: kind });
+          items.push({ url: res.path, previewUrl: res.previewUrl, type: kind });
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
           continue;
