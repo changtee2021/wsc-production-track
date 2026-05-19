@@ -362,6 +362,89 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
     rafRef.current = requestAnimationFrame(tick);
   };
 
+  // ---- Path A2: pre-acquired stream + html5-qrcode scanFile loop ---------
+  // Used on iOS / any browser without BarcodeDetector when the caller
+  // pre-acquired the stream. We attach the stream to our own <video> element
+  // (with `playsinline` set BEFORE `srcObject`, which iOS requires) and
+  // decode by snapshotting frames to canvas → Blob → Html5Qrcode.scanFile.
+  const startWithExistingStream = async (stream: MediaStream): Promise<void> => {
+    const region = document.getElementById(REGION_ID);
+    if (!region) throw new Error("ไม่พบพื้นที่แสดงผลกล้อง");
+
+    // Remove any leftover video so we own the element and its attributes.
+    region.querySelectorAll("video").forEach((v) => v.remove());
+
+    const video = document.createElement("video");
+    video.setAttribute("playsinline", "true");
+    video.setAttribute("webkit-playsinline", "true");
+    video.setAttribute("muted", "true");
+    video.setAttribute("autoplay", "true");
+    video.muted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.className = "h-full w-full object-cover";
+    region.appendChild(video);
+    video.srcObject = stream;
+    videoRef.current = video;
+    streamRef.current = stream;
+    pendingStreamRef.current = null;
+
+    try {
+      await video.play();
+    } catch {
+      // iOS may need a beat after srcObject; retry once.
+      await new Promise((r) => setTimeout(r, 50));
+      try {
+        await video.play();
+      } catch {}
+    }
+
+    // scanFile decoder — reuses REGION_ID but with showImage=false it does
+    // not add or render anything in there.
+    const decoder = new Html5Qrcode(REGION_ID, {
+      verbose: false,
+      formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+    });
+    html5Ref.current = decoder;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) throw new Error("ไม่สามารถสร้าง canvas");
+
+    let lastScan = 0;
+    let scanning = false;
+    const tick = async (ts: number) => {
+      if (cancelledRef.current) return;
+      const ready = !scanning && ts - lastScan >= 350 && video.readyState >= 2 && video.videoWidth > 0;
+      if (ready) {
+        lastScan = ts;
+        scanning = true;
+        try {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0);
+          const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.7));
+          if (blob) {
+            const file = new File([blob], "frame.jpg", { type: "image/jpeg" });
+            try {
+              const text = await decoder.scanFile(file, false);
+              scanning = false;
+              finishWith(text);
+              return;
+            } catch {
+              // QR not present in this frame — keep scanning.
+            }
+          }
+        } catch {
+          // drawImage / toBlob can transiently fail while video is warming up.
+        }
+        scanning = false;
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
   // ---- Path B: html5-qrcode fallback with legacy-friendly settings -------
   const startHtml5 = async (mode: FacingMode): Promise<void> => {
     const region = document.getElementById(REGION_ID);
@@ -476,14 +559,22 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
         }
       }
 
-      // html5-qrcode insists on managing its own stream — release any
-      // pre-acquired one so it can reacquire (permission is already cached
-      // for this origin, so no user-gesture is required).
-      if (pendingStreamRef.current) {
-        pendingStreamRef.current.getTracks().forEach((t) => t.stop());
-        pendingStreamRef.current = null;
+      // iOS / no-BarcodeDetector path: if the caller pre-acquired a stream
+      // during the user gesture, use it directly. This avoids handing the
+      // camera to html5-qrcode (which re-runs getUserMedia and whose
+      // <video> element doesn't reliably honor `playsinline` on iOS — the
+      // root cause of the "permission granted but no video feed" bug).
+      const pending = pendingStreamRef.current;
+      if (pending && pending.active && pending.getVideoTracks().length > 0) {
+        await startWithExistingStream(pending);
+        setUsingNative(false);
+        setFacing(mode);
+        return;
       }
 
+      // No pre-acquired stream available — let html5-qrcode try on its own.
+      // (Permission is cached for this origin if it was granted earlier, so
+      // no user-gesture is required for the internal getUserMedia.)
       await startHtml5(mode);
       setUsingNative(false);
       setFacing(mode);
