@@ -48,7 +48,7 @@ export const Route = createFileRoute("/api/public/hooks/line-daily-send")({
           if (upErr) throw new Error(upErr.message);
 
           const result = await sendDailySummary();
-          return Response.json({ ok: true, sent: true, ...result });
+          return Response.json({ sent: true, ...result });
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           return Response.json({ ok: false, error: msg }, { status: 500 });
