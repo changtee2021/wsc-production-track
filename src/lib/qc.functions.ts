@@ -251,8 +251,11 @@ export const qcUploadMedia = createServerFn({ method: "POST" })
       .from("qc-media")
       .upload(path, bytes, { contentType: detected.mime, upsert: false });
     if (error) throw new Error(error.message);
-    const { data: pub } = supabaseAdmin.storage
+    // Bucket is private — return the path (persisted) and a signed URL for
+    // immediate preview in the QC UI.
+    const { data: signed } = await supabaseAdmin.storage
       .from("qc-media")
-      .getPublicUrl(path);
-    return { publicUrl: pub.publicUrl, type: data.kind };
+      .createSignedUrl(path, 60 * 60);
+    return { path, previewUrl: signed?.signedUrl ?? "", type: data.kind };
   });
+
