@@ -19,7 +19,6 @@ import {
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
-  ShieldCheck,
   ScanLine,
   QrCode,
   ArrowLeft,
@@ -35,10 +34,13 @@ import {
   Layers,
   ListChecks,
   LogOut,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import {
   verifyQcPassword,
   qcFetchJobLogs,
+  qcFetchChecklist,
   qcSubmitReport,
   qcCreateUploadUrl,
 } from "@/lib/qc.functions";
@@ -61,7 +63,7 @@ export const Route = createFileRoute("/qc")({
       {
         name: "description",
         content:
-          "หน้าตรวจสอบคุณภาพงาน (QC) แนบรูปและวิดีโอข้อผิดพลาดส่งให้แอดมิน",
+          "หน้าตรวจสอบคุณภาพงาน (QC) แบบ checklist พร้อมแนบรูปและวิดีโอเป็นหลักฐาน",
       },
     ],
   }),
@@ -161,10 +163,27 @@ interface JobLog {
   categories: { name: string } | null;
 }
 
+interface ChecklistItem {
+  id: string;
+  item_text: string;
+  item_order: number;
+}
+
 interface MediaItem {
   url: string;
   type: "image" | "video";
 }
+
+interface CategoryRow {
+  id: string;
+  name: string;
+}
+
+type ItemState = {
+  is_passed: boolean | null;
+  remark: string;
+  media: MediaItem[];
+};
 
 const IMAGE_EXT_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -190,14 +209,16 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const [qcEmployees, setQcEmployees] = useState<QcEmployee[]>([]);
   const [qcEmployeeId, setQcEmployeeId] = useState("");
 
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [categoryAutoSet, setCategoryAutoSet] = useState(false);
+
   const [logs, setLogs] = useState<JobLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
-  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
-  const selectedLog = useMemo(
-    () => logs.find((l) => l.id === selectedLogId) ?? null,
-    [logs, selectedLogId],
-  );
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [loadingChecklist, setLoadingChecklist] = useState(false);
+  const [itemStates, setItemStates] = useState<Record<string, ItemState>>({});
 
   const [note, setNote] = useState("");
   const [media, setMedia] = useState<MediaItem[]>([]);
@@ -208,24 +229,35 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const vidInput = useRef<HTMLInputElement>(null);
 
   const fetchLogs = useServerFn(qcFetchJobLogs);
+  const fetchChecklist = useServerFn(qcFetchChecklist);
   const createUpload = useServerFn(qcCreateUploadUrl);
   const submitReport = useServerFn(qcSubmitReport);
 
+  // Load QC employees and categories
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("qc_employees")
-        .select("id, name, emp_code")
-        .eq("active", true)
-        .order("name");
-      if (data) setQcEmployees(data);
+      const [emp, cat] = await Promise.all([
+        supabase
+          .from("qc_employees")
+          .select("id, name, emp_code")
+          .eq("active", true)
+          .order("name"),
+        supabase
+          .from("categories")
+          .select("id, name")
+          .eq("active", true)
+          .order("name"),
+      ]);
+      if (emp.data) setQcEmployees(emp.data);
+      if (cat.data) setCategories(cat.data);
     })();
   }, []);
 
+  // Load job logs when job_id changes
   useEffect(() => {
     if (!job_id) {
       setLogs([]);
-      setSelectedLogId(null);
+      setCategoryAutoSet(false);
       return;
     }
     const token = getQcToken();
@@ -233,12 +265,47 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     setLoadingLogs(true);
     fetchLogs({ data: { token, job_id } })
       .then((res) => {
-        setLogs((res.rows ?? []) as unknown as JobLog[]);
-        setSelectedLogId(null);
+        const rows = (res.rows ?? []) as unknown as JobLog[];
+        setLogs(rows);
+        // Auto-pick category from latest log that has one
+        const withCat = [...rows].reverse().find((l) => l.category_id);
+        if (withCat?.category_id) {
+          setCategoryId(withCat.category_id);
+          setCategoryAutoSet(true);
+        } else {
+          setCategoryAutoSet(false);
+        }
       })
       .catch((err) => toast.error(err instanceof Error ? err.message : "โหลดข้อมูลไม่สำเร็จ"))
       .finally(() => setLoadingLogs(false));
   }, [job_id, fetchLogs]);
+
+  // Load checklist when category changes
+  useEffect(() => {
+    if (!categoryId) {
+      setChecklist([]);
+      setItemStates({});
+      return;
+    }
+    const token = getQcToken();
+    if (!token) return;
+    setLoadingChecklist(true);
+    fetchChecklist({ data: { token, category_id: categoryId } })
+      .then((res) => {
+        const rows = (res.rows ?? []) as ChecklistItem[];
+        setChecklist(rows);
+        // Initialize empty states; preserve any existing entries
+        setItemStates((prev) => {
+          const next: Record<string, ItemState> = {};
+          for (const r of rows) {
+            next[r.id] = prev[r.id] ?? { is_passed: null, remark: "", media: [] };
+          }
+          return next;
+        });
+      })
+      .catch((err) => toast.error(err instanceof Error ? err.message : "โหลด checklist ไม่สำเร็จ"))
+      .finally(() => setLoadingChecklist(false));
+  }, [categoryId, fetchChecklist]);
 
   const applyManualJob = () => {
     const t = manualJob.trim();
@@ -258,7 +325,12 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     toast.success("สแกนแล้ว: " + v);
   };
 
-  const uploadFiles = async (files: FileList, kind: "image" | "video") => {
+  // Generic media uploader. target = "overall" or checklist item id
+  const uploadFiles = async (
+    files: FileList,
+    kind: "image" | "video",
+    target: "overall" | string,
+  ) => {
     const token = getQcToken();
     if (!token) {
       onLogout();
@@ -297,7 +369,19 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         }
         items.push({ url: signed.publicUrl, type: kind });
       }
-      if (items.length) setMedia((prev) => [...prev, ...items]);
+      if (items.length) {
+        if (target === "overall") {
+          setMedia((prev) => [...prev, ...items]);
+        } else {
+          setItemStates((prev) => ({
+            ...prev,
+            [target]: {
+              ...(prev[target] ?? { is_passed: null, remark: "", media: [] }),
+              media: [...(prev[target]?.media ?? []), ...items],
+            },
+          }));
+        }
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
     } finally {
@@ -307,14 +391,60 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     }
   };
 
+  const setItemPass = (id: string, pass: boolean) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? { is_passed: null, remark: "", media: [] }), is_passed: pass },
+    }));
+  };
+
+  const setItemRemark = (id: string, remark: string) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? { is_passed: null, remark: "", media: [] }), remark },
+    }));
+  };
+
+  const removeItemMedia = (id: string, index: number) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] ?? { is_passed: null, remark: "", media: [] }),
+        media: (prev[id]?.media ?? []).filter((_, i) => i !== index),
+      },
+    }));
+  };
+
+  const { passCount, failCount, answeredCount, total } = useMemo(() => {
+    let p = 0, f = 0, a = 0;
+    for (const it of checklist) {
+      const s = itemStates[it.id];
+      if (s?.is_passed === true) { p++; a++; }
+      else if (s?.is_passed === false) { f++; a++; }
+    }
+    return { passCount: p, failCount: f, answeredCount: a, total: checklist.length };
+  }, [checklist, itemStates]);
+
   const submit = async () => {
     if (!job_id) return toast.error("ยังไม่ได้กรอก Job");
     if (!qcEmployeeId) return toast.error("กรุณาเลือกพนักงาน QC");
-    if (!selectedLog) return toast.error("กรุณาเลือกขั้นตอนที่ต้องการรายงาน");
-    if (!note.trim() && media.length === 0)
-      return toast.error("กรุณากรอกข้อความหรือแนบไฟล์อย่างน้อย 1 รายการ");
+    if (checklist.length === 0)
+      return toast.error("ไม่มีรายการ checklist สำหรับหมวดนี้ — แจ้งแอดมินเพิ่ม");
+    if (answeredCount < total)
+      return toast.error(`ยังตรวจไม่ครบ (${answeredCount}/${total})`);
+    // Every failed item must have a remark
+    for (const it of checklist) {
+      const s = itemStates[it.id];
+      if (s?.is_passed === false && !s.remark.trim())
+        return toast.error(`กรุณากรอกเหตุผลข้อ "${it.item_text.slice(0, 40)}"`);
+    }
     const token = getQcToken();
     if (!token) return onLogout();
+
+    const overallResult: "pass" | "fail" = failCount > 0 ? "fail" : "pass";
+    // Pick a representative log for back-compat columns (latest with matching category)
+    const repLog = [...logs].reverse().find((l) => l.category_id === categoryId) ?? logs[logs.length - 1];
+
     setSubmitting(true);
     try {
       await submitReport({
@@ -322,18 +452,37 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           token,
           job_id,
           qc_employee_id: qcEmployeeId,
-          production_log_id: selectedLog.id,
-          step_id: selectedLog.step_id,
-          category_id: selectedLog.category_id,
-          employee_id: selectedLog.employee_id,
+          production_log_id: repLog?.id ?? null,
+          step_id: repLog?.step_id ?? null,
+          category_id: categoryId || null,
+          employee_id: repLog?.employee_id ?? null,
           note: note.trim() || null,
           media,
+          overall_result: overallResult,
+          items: checklist.map((it) => {
+            const s = itemStates[it.id];
+            return {
+              checklist_id: it.id,
+              item_text_snapshot: it.item_text,
+              item_order: it.item_order,
+              is_passed: s?.is_passed === true,
+              remark: s?.remark?.trim() || null,
+              media: s?.media ?? [],
+            };
+          }),
         },
       });
-      toast.success("ส่งรายงานสำเร็จ");
+      toast.success(
+        overallResult === "pass"
+          ? `ส่งรายงานสำเร็จ — ผ่าน ${passCount}/${total}`
+          : `ส่งรายงานสำเร็จ — ไม่ผ่าน ${failCount} ข้อ`,
+      );
+      // Reset
       setNote("");
       setMedia([]);
-      setSelectedLogId(null);
+      setItemStates({});
+      setManualJob("");
+      navigate({ search: { job_id: "" } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "ส่งรายงานไม่สำเร็จ");
     } finally {
@@ -341,6 +490,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     }
   };
 
+  // Stable refs for per-item file inputs would explode; use overall refs + per-item handlers via inline inputs
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/40">
       <Toaster richColors position="top-center" />
@@ -369,7 +519,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         <h1 className="sr-only">QC — ตรวจสอบงาน</h1>
 
         {/* Job */}
-        <div className="rounded-3xl border border-border/60 bg-card p-5 shadow-[var(--shadow-card)] bg-gradient-to-br from-card to-secondary/5">
+        <section className="rounded-3xl border border-border/60 bg-card p-5 shadow-[var(--shadow-card)] bg-gradient-to-br from-card to-secondary/5">
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <QrCode className="h-4 w-4" /> Job ID
           </div>
@@ -412,7 +562,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               </Button>
             )}
           </div>
-        </div>
+        </section>
 
         {/* QC employee */}
         <section className="mt-5">
@@ -443,13 +593,13 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           </Select>
         </section>
 
-        {/* Job log list */}
+        {/* Job history pass-through */}
         {job_id && (
           <section className="mt-5">
             <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-              <ListChecks className="h-4 w-4 text-secondary" /> ขั้นตอนที่ทำในงานนี้
+              <ListChecks className="h-4 w-4 text-secondary" /> ประวัติงานนี้
             </h2>
-            <div className="rounded-2xl border border-border bg-card p-2 space-y-1.5 max-h-[360px] overflow-y-auto">
+            <div className="rounded-2xl border border-border bg-card p-2 space-y-1.5 max-h-[260px] overflow-y-auto">
               {loadingLogs && (
                 <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> กำลังโหลด...
@@ -460,50 +610,108 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                   ไม่พบบันทึกการทำงานของ Job นี้
                 </div>
               )}
-              {logs.map((l) => {
-                const active = l.id === selectedLogId;
+              {logs.map((l) => (
+                <div key={l.id} className="rounded-xl border border-border bg-background p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Layers className="h-3.5 w-3.5" />
+                    <span>{l.categories?.name ?? "—"}</span>
+                    <span>•</span>
+                    <span>{new Date(l.created_at).toLocaleString("th-TH")}</span>
+                  </div>
+                  <div className="mt-1 text-base font-semibold leading-tight">
+                    {l.steps?.step_name ?? "ขั้นตอนไม่ระบุ"}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <User className="h-3.5 w-3.5" />
+                    <span>{l.employees?.name ?? "—"}</span>
+                    {l.employees?.emp_code && (
+                      <span className="font-mono text-xs">({l.employees.emp_code})</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Category selector */}
+        {job_id && (
+          <section className="mt-5">
+            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Layers className="h-4 w-4 text-secondary" /> หมวดสินค้า
+              {categoryAutoSet && (
+                <span className="ml-1 rounded-full bg-secondary/15 px-2 py-0.5 text-[10px] font-medium text-secondary">
+                  อัตโนมัติจากประวัติงาน
+                </span>
+              )}
+            </h2>
+            <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setCategoryAutoSet(false); }}>
+              <SelectTrigger className="h-12 w-full rounded-2xl text-base">
+                <SelectValue placeholder="เลือกหมวดสินค้า" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </section>
+        )}
+
+        {/* Checklist */}
+        {job_id && categoryId && (
+          <section className="mt-5">
+            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <ListChecks className="h-4 w-4 text-secondary" /> รายการตรวจสอบ
+              {total > 0 && (
+                <span className="ml-auto text-xs text-muted-foreground">
+                  ตรวจแล้ว {answeredCount}/{total}
+                </span>
+              )}
+            </h2>
+
+            {loadingChecklist && (
+              <div className="flex items-center gap-2 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> กำลังโหลด checklist...
+              </div>
+            )}
+
+            {!loadingChecklist && checklist.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+                ไม่มีรายการตรวจสอบสำหรับหมวดนี้ — แจ้งแอดมินเพิ่มใน "จัดการ → Checklist QC"
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {checklist.map((it, idx) => {
+                const s = itemStates[it.id] ?? { is_passed: null, remark: "", media: [] };
                 return (
-                  <button
-                    key={l.id}
-                    onClick={() => setSelectedLogId(l.id)}
-                    className={`w-full text-left rounded-xl border p-3 transition-colors ${
-                      active
-                        ? "border-secondary bg-secondary/10"
-                        : "border-border bg-background hover:bg-muted/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Layers className="h-3.5 w-3.5" />
-                      <span>{l.categories?.name ?? "—"}</span>
-                      <span>•</span>
-                      <span>{new Date(l.created_at).toLocaleString("th-TH")}</span>
-                    </div>
-                    <div className="mt-1 text-base font-semibold leading-tight">
-                      {l.steps?.step_name ?? "ขั้นตอนไม่ระบุ"}
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <User className="h-3.5 w-3.5" />
-                      <span>{l.employees?.name ?? "—"}</span>
-                      {l.employees?.emp_code && (
-                        <span className="font-mono text-xs">({l.employees.emp_code})</span>
-                      )}
-                    </div>
-                  </button>
+                  <ChecklistRow
+                    key={it.id}
+                    index={idx + 1}
+                    item={it}
+                    state={s}
+                    uploading={uploading}
+                    onPass={(v) => setItemPass(it.id, v)}
+                    onRemark={(v) => setItemRemark(it.id, v)}
+                    onUpload={(files, kind) => uploadFiles(files, kind, it.id)}
+                    onRemoveMedia={(i) => removeItemMedia(it.id, i)}
+                  />
                 );
               })}
             </div>
           </section>
         )}
 
-        {/* Report form */}
-        {selectedLog && (
+        {/* Overall evidence */}
+        {job_id && categoryId && checklist.length > 0 && (
           <section className="mt-5 rounded-2xl border border-border bg-card p-4 space-y-3">
-            <h2 className="text-sm font-semibold">รายงานข้อผิดพลาด</h2>
+            <h2 className="text-sm font-semibold">หมายเหตุภาพรวม / หลักฐานรวม</h2>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="อธิบายปัญหาที่พบ..."
-              rows={4}
+              placeholder="หมายเหตุภาพรวม (ถ้ามี)..."
+              rows={3}
               maxLength={2000}
               className="w-full rounded-lg border border-border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
             />
@@ -515,7 +723,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               multiple
               capture="environment"
               className="hidden"
-              onChange={(e) => e.target.files && uploadFiles(e.target.files, "image")}
+              onChange={(e) => e.target.files && uploadFiles(e.target.files, "image", "overall")}
             />
             <input
               ref={vidInput}
@@ -523,7 +731,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               accept="video/*"
               capture="environment"
               className="hidden"
-              onChange={(e) => e.target.files && uploadFiles(e.target.files, "video")}
+              onChange={(e) => e.target.files && uploadFiles(e.target.files, "video", "overall")}
             />
 
             <div className="grid grid-cols-2 gap-2">
@@ -573,20 +781,164 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                 ))}
               </div>
             )}
+          </section>
+        )}
 
+        {/* Submit */}
+        {job_id && categoryId && checklist.length > 0 && (
+          <section className="mt-5">
+            <div className="mb-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">
+              <span className="font-semibold">สรุป:</span>{" "}
+              <span className="text-success">ผ่าน {passCount}</span> /{" "}
+              <span className="text-destructive">ไม่ผ่าน {failCount}</span> /{" "}
+              <span className="text-muted-foreground">ทั้งหมด {total}</span>
+            </div>
             <Button
               onClick={submit}
-              disabled={submitting || uploading}
-              className="h-12 w-full gap-2 text-base font-semibold"
+              disabled={submitting || uploading || answeredCount < total}
+              className="h-14 w-full gap-2 text-base font-semibold"
             >
               {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-              ส่งรายงานไปแอดมิน
+              ส่งรายงาน QC
             </Button>
           </section>
         )}
       </main>
 
       <QrScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onScanned={handleScanned} />
+    </div>
+  );
+}
+
+function ChecklistRow({
+  index,
+  item,
+  state,
+  uploading,
+  onPass,
+  onRemark,
+  onUpload,
+  onRemoveMedia,
+}: {
+  index: number;
+  item: ChecklistItem;
+  state: ItemState;
+  uploading: boolean;
+  onPass: (v: boolean) => void;
+  onRemark: (v: string) => void;
+  onUpload: (files: FileList, kind: "image" | "video") => void;
+  onRemoveMedia: (i: number) => void;
+}) {
+  const imgRef = useRef<HTMLInputElement>(null);
+  const vidRef = useRef<HTMLInputElement>(null);
+
+  const failed = state.is_passed === false;
+  const passed = state.is_passed === true;
+
+  return (
+    <div className={`rounded-2xl border-2 bg-card p-3 transition-colors ${
+      passed ? "border-success/40 bg-success/5"
+      : failed ? "border-destructive/40 bg-destructive/5"
+      : "border-border"
+    }`}>
+      <div className="flex items-start gap-2">
+        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground">
+          {index}
+        </span>
+        <p className="flex-1 text-sm font-medium leading-snug">{item.item_text}</p>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Button
+          type="button"
+          onClick={() => onPass(true)}
+          className={`h-11 gap-1 font-semibold ${
+            passed
+              ? "bg-success text-success-foreground hover:bg-success/90"
+              : "bg-success/15 text-success hover:bg-success/25"
+          }`}
+        >
+          <CheckCircle2 className="h-4 w-4" /> ผ่าน
+        </Button>
+        <Button
+          type="button"
+          onClick={() => onPass(false)}
+          className={`h-11 gap-1 font-semibold ${
+            failed
+              ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              : "bg-destructive/15 text-destructive hover:bg-destructive/25"
+          }`}
+        >
+          <XCircle className="h-4 w-4" /> ไม่ผ่าน
+        </Button>
+      </div>
+
+      {failed && (
+        <div className="mt-3 space-y-2">
+          <textarea
+            value={state.remark}
+            onChange={(e) => onRemark(e.target.value)}
+            placeholder="หมายเหตุ: ไม่ผ่านเพราะ... (จำเป็น)"
+            rows={2}
+            maxLength={2000}
+            className="w-full rounded-lg border border-destructive/40 bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-destructive"
+          />
+
+          <input
+            ref={imgRef}
+            type="file"
+            accept="image/*"
+            multiple
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) onUpload(e.target.files, "image");
+              if (imgRef.current) imgRef.current.value = "";
+            }}
+          />
+          <input
+            ref={vidRef}
+            type="file"
+            accept="video/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) onUpload(e.target.files, "video");
+              if (vidRef.current) vidRef.current.value = "";
+            }}
+          />
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" size="sm" variant="outline" className="gap-1" disabled={uploading} onClick={() => imgRef.current?.click()}>
+              <Camera className="h-4 w-4" /> รูป
+            </Button>
+            <Button type="button" size="sm" variant="outline" className="gap-1" disabled={uploading} onClick={() => vidRef.current?.click()}>
+              <VideoIcon className="h-4 w-4" /> วิดีโอ
+            </Button>
+          </div>
+
+          {state.media.length > 0 && (
+            <div className="grid grid-cols-4 gap-1.5">
+              {state.media.map((m, i) => (
+                <div key={i} className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
+                  {m.type === "image" ? (
+                    <img src={m.url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <video src={m.url} className="h-full w-full object-cover" muted />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onRemoveMedia(i)}
+                    className="absolute top-0.5 right-0.5 rounded-full bg-background/90 p-0.5 shadow"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
