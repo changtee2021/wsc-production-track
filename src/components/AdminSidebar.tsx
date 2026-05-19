@@ -1,4 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState, useCallback } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard,
   FileText,
@@ -6,6 +8,7 @@ import {
   Users,
   HardDrive,
   Factory,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -18,6 +21,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { adminGetLatestSystemLog } from "@/lib/system-logs.functions";
+import { getAdminToken } from "@/lib/admin-session";
+import { hasUnseen } from "@/lib/log-seen";
 
 const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -25,10 +31,36 @@ const NAV_ITEMS = [
   { title: "รายงาน QC", url: "/qc-reports", icon: ClipboardCheck },
   { title: "จัดการข้อมูล", url: "/manage", icon: Users },
   { title: "พื้นที่จัดเก็บ", url: "/storage", icon: HardDrive },
+  { title: "LogUpdate", url: "/logs-update", icon: Sparkles },
 ] as const;
 
 export function AdminSidebar() {
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
+  const getLatest = useServerFn(adminGetLatestSystemLog);
+  const [hasNew, setHasNew] = useState(false);
+
+  const check = useCallback(async () => {
+    const token = getAdminToken();
+    if (!token) return;
+    try {
+      const res = await getLatest({ data: { token } });
+      setHasNew(hasUnseen(res.latest?.created_at));
+    } catch {
+      // silent
+    }
+  }, [getLatest]);
+
+  useEffect(() => {
+    check();
+    const onSeen = () => setHasNew(false);
+    window.addEventListener("wsc:logs-seen", onSeen);
+    // Re-check every 60s in case new logs arrive while admin is logged in
+    const t = setInterval(check, 60_000);
+    return () => {
+      window.removeEventListener("wsc:logs-seen", onSeen);
+      clearInterval(t);
+    };
+  }, [check]);
 
   return (
     <Sidebar collapsible="icon">
@@ -53,12 +85,21 @@ export function AdminSidebar() {
             <SidebarMenu>
               {NAV_ITEMS.map((item) => {
                 const active = currentPath === item.url;
+                const showBadge = item.url === "/logs-update" && hasNew;
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
                       <Link to={item.url} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span className="flex-1">{item.title}</span>
+                        {showBadge && (
+                          <span className="ml-auto inline-flex items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white group-data-[collapsible=icon]:hidden">
+                            NEW
+                          </span>
+                        )}
+                        {showBadge && (
+                          <span className="ml-auto hidden h-2 w-2 rounded-full bg-rose-500 group-data-[collapsible=icon]:inline-block" />
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

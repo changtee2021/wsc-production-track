@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
+import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 
@@ -65,6 +66,11 @@ const ProtectedManageRoute = ProtectedManageRouteImport.update({
   path: '/manage',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedLogsUpdateRoute = ProtectedLogsUpdateRouteImport.update({
+  id: '/logs-update',
+  path: '/logs-update',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedLogsRoute = ProtectedLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/logs': typeof ProtectedLogsRoute
+  '/logs-update': typeof ProtectedLogsUpdateRoute
   '/manage': typeof ProtectedManageRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/storage': typeof ProtectedStorageRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/logs': typeof ProtectedLogsRoute
+  '/logs-update': typeof ProtectedLogsUpdateRoute
   '/manage': typeof ProtectedManageRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/storage': typeof ProtectedStorageRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
   '/_protected/logs': typeof ProtectedLogsRoute
+  '/_protected/logs-update': typeof ProtectedLogsUpdateRoute
   '/_protected/manage': typeof ProtectedManageRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/storage': typeof ProtectedStorageRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/dashboard'
     | '/logs'
+    | '/logs-update'
     | '/manage'
     | '/qc-reports'
     | '/storage'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/dashboard'
     | '/logs'
+    | '/logs-update'
     | '/manage'
     | '/qc-reports'
     | '/storage'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/_protected/dashboard'
     | '/_protected/logs'
+    | '/_protected/logs-update'
     | '/_protected/manage'
     | '/_protected/qc-reports'
     | '/_protected/storage'
@@ -228,6 +240,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedManageRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/logs-update': {
+      id: '/_protected/logs-update'
+      path: '/logs-update'
+      fullPath: '/logs-update'
+      preLoaderRoute: typeof ProtectedLogsUpdateRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/logs': {
       id: '/_protected/logs'
       path: '/logs'
@@ -248,6 +267,7 @@ declare module '@tanstack/react-router' {
 interface ProtectedRouteChildren {
   ProtectedDashboardRoute: typeof ProtectedDashboardRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
+  ProtectedLogsUpdateRoute: typeof ProtectedLogsUpdateRoute
   ProtectedManageRoute: typeof ProtectedManageRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
@@ -256,6 +276,7 @@ interface ProtectedRouteChildren {
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedDashboardRoute: ProtectedDashboardRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,
+  ProtectedLogsUpdateRoute: ProtectedLogsUpdateRoute,
   ProtectedManageRoute: ProtectedManageRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,
@@ -276,12 +297,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
