@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { adminFetchLogs } from "@/lib/admin.functions";
-import { adminSendLineTest } from "@/lib/line.functions";
+
 import { getAdminToken } from "@/lib/admin-session";
 import { requireToken, showError } from "@/lib/admin-helpers";
 import { AdminAiAssistant } from "@/components/AdminAiAssistant";
@@ -58,8 +58,6 @@ import {
   ArrowDown,
   Minus,
   ChevronDown,
-  Send,
-  Loader2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -212,20 +210,6 @@ function Dashboard() {
   const [stepFilter, setStepFilter] = useState<string>("all");
 
   const fetchLogs = useServerFn(adminFetchLogs);
-  const sendLineTest = useServerFn(adminSendLineTest);
-  const [lineSending, setLineSending] = useState(false);
-
-  const handleSendLineTest = async () => {
-    setLineSending(true);
-    try {
-      await sendLineTest({ data: { token: requireToken() } });
-      toast.success("ส่งข้อความทดสอบ LINE สำเร็จ ✅");
-    } catch (e) {
-      showError(e, "ส่งข้อความทดสอบ LINE ไม่สำเร็จ");
-    } finally {
-      setLineSending(false);
-    }
-  };
 
   useEffect(() => {
     (async () => {
@@ -1329,31 +1313,6 @@ function Dashboard() {
         />
       </div>
 
-      <div className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4">
-
-        <div className="min-w-0">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Send className="h-4 w-4 text-primary" />
-            ทดสอบการแจ้งเตือน LINE
-          </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            กดปุ่มเพื่อส่งข้อความทดสอบไปยังปลายทาง LINE ที่ตั้งค่าไว้
-          </p>
-        </div>
-        <Button
-          onClick={handleSendLineTest}
-          disabled={lineSending}
-          size="sm"
-          className="mt-3 gap-2 sm:mt-0"
-        >
-          {lineSending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-          {lineSending ? "กำลังส่ง..." : "ส่งข้อความทดสอบ"}
-        </Button>
-      </div>
 
       <div className="mt-6 space-y-6">
         {/* Scope picker (day/month) — applies to ranking, employee × step, over-standard */}

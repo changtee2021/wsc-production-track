@@ -6,6 +6,7 @@ import {
   adminInsertSystemLog,
   adminDeleteSystemLog,
 } from "@/lib/system-logs.functions";
+import { adminSendLineTest } from "@/lib/line.functions";
 import { requireToken, showError } from "@/lib/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { Plus, Trash2, Search, Clock, FileCode } from "lucide-react";
+import { Plus, Trash2, Search, Clock, FileCode, Send, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { markLogsSeen } from "@/lib/log-seen";
@@ -62,6 +63,20 @@ function LogsUpdatePage() {
   const fetchLogs = useServerFn(adminFetchSystemLogs);
   const insertLog = useServerFn(adminInsertSystemLog);
   const deleteLog = useServerFn(adminDeleteSystemLog);
+  const sendLineTest = useServerFn(adminSendLineTest);
+  const [lineSending, setLineSending] = useState(false);
+
+  const handleSendLineTest = async () => {
+    setLineSending(true);
+    try {
+      await sendLineTest({ data: { token: requireToken() } });
+      toast.success("ส่งข้อความทดสอบ LINE สำเร็จ ✅");
+    } catch (e) {
+      showError(e, "ส่งข้อความทดสอบ LINE ไม่สำเร็จ");
+    } finally {
+      setLineSending(false);
+    }
+  };
 
   const [rows, setRows] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -259,6 +274,32 @@ function LogsUpdatePage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Send className="h-4 w-4 text-primary" />
+            ทดสอบการแจ้งเตือน LINE
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            กดปุ่มเพื่อส่งสรุปภาพรวมประจำวันไปยังกลุ่ม LINE ที่ตั้งค่าไว้
+          </p>
+        </div>
+        <Button
+          onClick={handleSendLineTest}
+          disabled={lineSending}
+          size="sm"
+          className="mt-3 gap-2 sm:mt-0"
+        >
+          {lineSending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+          {lineSending ? "กำลังส่ง..." : "ส่งข้อความทดสอบ"}
+        </Button>
+      </div>
+
 
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
