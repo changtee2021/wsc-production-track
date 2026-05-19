@@ -364,10 +364,10 @@ function QcReportsPage() {
                                     className="group relative block aspect-square overflow-hidden rounded-md border border-border bg-muted"
                                   >
                                     {m.type === "image" ? (
-                                      <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                                      <img src={signedSrc(m.url)} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                                     ) : (
                                       <>
-                                        <video src={m.url} muted className="h-full w-full object-cover" />
+                                        <video src={signedSrc(m.url)} muted className="h-full w-full object-cover" />
                                         <span className="absolute inset-0 flex items-center justify-center bg-black/30">
                                           <VideoIcon className="h-6 w-6 text-white" />
                                         </span>
@@ -410,10 +410,10 @@ function QcReportsPage() {
                         className="relative block aspect-square overflow-hidden rounded-lg border border-border bg-muted"
                       >
                         {m.type === "image" ? (
-                          <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                          <img src={signedSrc(m.url)} alt="" loading="lazy" className="h-full w-full object-cover" />
                         ) : (
                           <>
-                            <video src={m.url} muted className="h-full w-full object-cover" />
+                            <video src={signedSrc(m.url)} muted className="h-full w-full object-cover" />
                             <span className="absolute inset-0 flex items-center justify-center bg-black/30">
                               <VideoIcon className="h-6 w-6 text-white" />
                             </span>
@@ -448,9 +448,9 @@ function QcReportsPage() {
         <DialogContent className="max-w-4xl border-0 bg-black/95 p-2 sm:p-4">
           {lightbox && (
             lightbox.type === "image" ? (
-              <img src={lightbox.url} alt="" className="mx-auto max-h-[85vh] w-auto object-contain" />
+              <img src={signedSrc(lightbox.url)} alt="" className="mx-auto max-h-[85vh] w-auto object-contain" />
             ) : (
-              <video src={lightbox.url} controls autoPlay className="mx-auto max-h-[85vh] w-auto" />
+              <video src={signedSrc(lightbox.url)} controls autoPlay className="mx-auto max-h-[85vh] w-auto" />
             )
           )}
         </DialogContent>
