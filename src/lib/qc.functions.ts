@@ -153,37 +153,106 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
   });
 
 
-// Signed upload URL for qc-media bucket (images + videos).
-const ALLOWED_EXT = [
-  "jpg",
-  "jpeg",
-  "png",
-  "webp",
-  "gif",
-  "mp4",
-  "webm",
-  "mov",
-  "m4v",
-  "quicktime",
-] as const;
+// List active QC employees (token-gated; qc_employees table is no longer
+// publicly readable).
+export const qcListEmployees = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertQc(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("qc_employees")
+      .select("id, name, emp_code")
+      .eq("active", true)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
 
-export const qcCreateUploadUrl = createServerFn({ method: "POST" })
+// Server-side validated media upload for qc-media bucket. The client sends
+// base64 bytes; we verify magic bytes for the declared kind before uploading
+// with the admin client (the bucket has no public INSERT policy).
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50 MB
+
+type Detected = { mime: string; ext: string };
+
+function detectImage(b: Uint8Array): Detected | null {
+  if (b.length < 12) return null;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff)
+    return { mime: "image/jpeg", ext: "jpg" };
+  if (
+    b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 &&
+    b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a
+  )
+    return { mime: "image/png", ext: "png" };
+  if (
+    b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 &&
+    (b[4] === 0x37 || b[4] === 0x39) && b[5] === 0x61
+  )
+    return { mime: "image/gif", ext: "gif" };
+  if (
+    b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+    b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
+  )
+    return { mime: "image/webp", ext: "webp" };
+  return null;
+}
+
+function detectVideo(b: Uint8Array): Detected | null {
+  if (b.length < 12) return null;
+  // WEBM/Matroska EBML: 1A 45 DF A3
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3)
+    return { mime: "video/webm", ext: "webm" };
+  // ISO base media (MP4/MOV/M4V): bytes 4-7 == "ftyp"
+  if (
+    b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70
+  ) {
+    const brand = String.fromCharCode(b[8], b[9], b[10], b[11]);
+    if (brand === "qt  ") return { mime: "video/quicktime", ext: "mov" };
+    if (brand.startsWith("M4V")) return { mime: "video/x-m4v", ext: "m4v" };
+    // mp4 family: isom, iso2, mp41, mp42, avc1, dash, etc.
+    return { mime: "video/mp4", ext: "mp4" };
+  }
+  return null;
+}
+
+export const qcUploadMedia = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
         token: tokenStr,
-        ext: z.enum(ALLOWED_EXT),
         kind: z.enum(["image", "video"]),
+        dataBase64: z
+          .string()
+          .min(1)
+          .max(Math.ceil((MAX_VIDEO_BYTES * 4) / 3) + 16),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     assertQc(data.token);
-    const path = `${data.kind}/${crypto.randomUUID()}.${data.ext.toLowerCase()}`;
-    const { data: signed, error } = await supabaseAdmin.storage
+    const bytes = Uint8Array.from(Buffer.from(data.dataBase64, "base64"));
+    if (bytes.length === 0) throw new Error("ไฟล์ว่างเปล่า");
+    const max = data.kind === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
+    if (bytes.length > max)
+      throw new Error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
+
+    const detected =
+      data.kind === "image" ? detectImage(bytes) : detectVideo(bytes);
+    if (!detected)
+      throw new Error(
+        data.kind === "image"
+          ? "รองรับเฉพาะรูปภาพ JPG, PNG, WEBP, GIF"
+          : "รองรับเฉพาะวิดีโอ MP4, WEBM, MOV, M4V",
+      );
+
+    const path = `${data.kind}/${crypto.randomUUID()}.${detected.ext}`;
+    const { error } = await supabaseAdmin.storage
       .from("qc-media")
-      .createSignedUploadUrl(path);
-    if (error || !signed) throw new Error(error?.message || "ขออัปโหลดไม่สำเร็จ");
-    const { data: pub } = supabaseAdmin.storage.from("qc-media").getPublicUrl(path);
-    return { path, token: signed.token, publicUrl: pub.publicUrl };
+      .upload(path, bytes, { contentType: detected.mime, upsert: false });
+    if (error) throw new Error(error.message);
+    const { data: pub } = supabaseAdmin.storage
+      .from("qc-media")
+      .getPublicUrl(path);
+    return { publicUrl: pub.publicUrl, type: data.kind };
   });
