@@ -1,63 +1,37 @@
-# LogUpdate — บันทึกการเปลี่ยนแปลงแอป
+# LINE Notification Test (Admin)
 
 ## เป้าหมาย
-หน้าใหม่ใน Admin แสดงรายการการอัปเดต/แก้ไข/เพิ่มฟีเจอร์ของแอปแบบ timeline และตั้งกฎให้ Lovable insert log อัตโนมัติทุกครั้งที่แก้โค้ด
+ปุ่มทดสอบส่งข้อความเข้า LINE จากหน้า Admin Dashboard เพื่อยืนยันว่า LINE Messaging API เชื่อมต่อสำเร็จ
 
-## 1. Database (migration)
+## 1. Secrets (ต้องใส่ก่อนใช้งาน)
+ขอเพิ่ม 2 ค่าใน Lovable Cloud secrets:
+- `LINE_CHANNEL_ACCESS_TOKEN` — Channel access token (long-lived) จาก LINE Developers Console
+- `LINE_TARGET_USER_ID` — userId / groupId ปลายทาง (ขึ้นต้นด้วย `U...` หรือ `C...`)
 
-ตาราง `system_logs`:
-- `id` uuid PK
-- `title` text — หัวข้อสั้น (เช่น "เพิ่มหน้า LogUpdate")
-- `summary` text — สรุปสิ่งที่เปลี่ยน (อ่านง่าย ภาษาไทย)
-- `category` text — `feature` | `bugfix` | `security` | `ui` | `refactor`
-- `version` text nullable — เช่น `v1.2.3`
-- `paths` text[] — ไฟล์/โมดูลที่แตะ
-- `created_at` timestamptz default now()
+จะเรียก `secrets--add_secret` ก่อนเขียนโค้ดที่ใช้ค่าเหล่านี้
 
-RLS: เปิด, block anon ทั้งหมด (admin อ่านผ่าน service-role server function เหมือนตารางอื่น)
+## 2. Server function — `src/lib/line.functions.ts`
+สร้าง `adminSendLineTest({ token })`:
+- ใช้ `assertAdmin(token)` (pattern เดียวกับ admin functions อื่น)
+- อ่าน env ภายใน `.handler()` — ถ้าไม่มีโยน error ภาษาไทยที่อ่านง่าย
+- `fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: \`Bearer ${LINE_CHANNEL_ACCESS_TOKEN}\` }, body: JSON.stringify({ to: LINE_TARGET_USER_ID, messages: [{ type: 'text', text: '🎯 Test Notification from WSC Production Track App! Your LINE integration is working 100% perfectly.' }] }) })`
+- ถ้า `!res.ok` → อ่าน body แล้ว throw `LINE API ${status}: ${message}`
+- คืน `{ ok: true, sentAt: new Date().toISOString() }`
 
-Index: `created_at desc`
+## 3. UI — เพิ่มการ์ดในหน้า Dashboard
+แก้ `src/routes/_protected.dashboard.tsx` เพิ่ม section "ทดสอบการแจ้งเตือน LINE":
+- ปุ่ม "ส่งข้อความทดสอบ" (`Button` + icon `Send` จาก lucide)
+- ระหว่างกดแสดง `Loader2` หมุน + disabled
+- สำเร็จ → `toast.success("ส่งข้อความทดสอบสำเร็จ ✅")`
+- ล้มเหลว → `toast.error(msg)` (ใช้ `showError` จาก `admin-helpers.ts`)
 
-## 2. Server functions (`src/lib/system-logs.functions.ts`)
-- `adminFetchSystemLogs({ token, limit?, category? })` — list
-- `adminInsertSystemLog({ token, title, summary, category, version?, paths? })` — manual add (optional admin UI)
-- `adminDeleteSystemLog({ token, id })`
-- `adminGetLatestLogTimestamp()` — สำหรับคำนวน badge NEW
-ทุกตัวใช้ `assertAdmin` + `supabaseAdmin` (pattern เดียวกับ `admin.functions.ts`)
-
-## 3. หน้า Admin
-
-### `src/routes/_protected.logs-update.tsx`
-- Timeline เรียงใหม่→เก่า, group ตามวัน
-- Filter: category, search
-- แต่ละการ์ดแสดง: badge category สี, title, summary, paths chips, created_at (Asia/Bangkok), version pill ถ้ามี
-- ปุ่ม "เพิ่ม log" (dialog) สำหรับ admin เพิ่มเอง + ปุ่มลบ
-
-### Sidebar (`AdminSidebar.tsx`)
-- เพิ่มเมนู "อัปเดตล่าสุด" / "LogUpdate"
-- Badge "NEW" สีแดง เมื่อ `latest_log.created_at > localStorage.lastSeenLogAt`
-- เข้าหน้านี้แล้ว set `lastSeenLogAt = now()` → badge หาย
-
-### Auto-open dialog
-- เมื่อ admin เข้าหน้า `/admin` (หลัง login) ครั้งแรกหลังมี log ใหม่ → เปิด Dialog สรุป log ล่าสุด N รายการที่ยังไม่เห็น
-- กด "รับทราบ" → set `lastSeenLogAt`, dialog ปิด
-- เก็บ state ใน `localStorage` key: `wsc.admin.lastSeenLogAt`
-
-## 4. กฎ auto-log สำหรับ Lovable (ตัวผม)
-
-บันทึกเป็น **project memory** (`mem://index.md` core rule + `mem://features/system-logs`):
-
-> **Core rule:** ทุก turn ที่แก้โค้ด/เพิ่มฟีเจอร์/แก้บั๊ก ต้องสร้าง migration เพิ่มแถวใน `system_logs` ด้วย (title, summary ภาษาไทย, category, paths[]) ใน migration เดียวกับการเปลี่ยนแปลง หรือ migration แยกถ้าไม่มี schema change
-
-ทุกครั้งจะใช้ `INSERT INTO public.system_logs (...) VALUES (...)` แนบท้าย migration ที่จะรัน ผ่าน `supabase--insert` หรือใน migration เดียวกัน
-
-## 5. Detail technical
-- ใช้ pattern `requireToken()` + `showError()` จาก `admin-helpers.ts`
-- เพิ่ม route เข้า `src/routeTree.gen.ts` อัตโนมัติโดย vite plugin (ไม่แตะมือ)
-- รูปแบบเวลาแสดงผล: `dd MMM yyyy HH:mm` (th locale) + relative ("2 ชั่วโมงที่แล้ว")
-- Category color mapping ใน styles.css tokens
+## 4. Auto system_logs (กฎโปรเจกต์)
+แนบ INSERT log เข้า `system_logs` ผ่าน `supabase--insert`:
+- title: "เพิ่มฟีเจอร์ทดสอบส่ง LINE Notification"
+- category: `feature`
+- paths: `["src/lib/line.functions.ts","src/routes/_protected.dashboard.tsx"]`
 
 ## ขอบเขตที่ไม่ทำ
-- ไม่ดึง git history มาแสดง (เป็น manual/AI insert เท่านั้น)
-- ไม่ทำ public changelog (เฉพาะ admin)
-- ไม่ทำ markdown rendering ใน summary (plain text + paths array)
+- ไม่ทำหน้าตั้งค่า token ผ่าน UI (ใช้ secret อย่างเดียว)
+- ไม่ทำ webhook รับข้อความขาเข้า
+- ไม่รองรับ multicast/broadcast — push เดี่ยวเท่านั้น
