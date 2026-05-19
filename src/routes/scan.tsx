@@ -542,16 +542,17 @@ function ScanPage() {
                     if (f) uploadNoteImage(f);
                   }}
                 />
-                {noteImageUrl ? (
+                {noteImage ? (
                   <div className="relative">
                     <img
-                      src={noteImageUrl}
+                      src={noteImage.previewUrl}
                       alt="note"
                       className="h-40 w-full rounded-lg object-cover border border-border"
                     />
                     <button
                       type="button"
-                      onClick={() => setNoteImageUrl(null)}
+                      onClick={() => setNoteImage(null)}
+
                       aria-label="ลบรูปหมายเหตุ"
                       className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"
                     >
