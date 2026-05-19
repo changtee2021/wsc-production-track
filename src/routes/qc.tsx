@@ -558,11 +558,19 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                 }}
                 variant="outline"
                 className="h-11 gap-1"
+                aria-label="ล้างหมายเลขงาน"
+                title="ล้างหมายเลขงาน"
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={applyManualJob} variant="outline" className="h-11 gap-1">
+              <Button
+                onClick={applyManualJob}
+                variant="outline"
+                className="h-11 gap-1"
+                aria-label="ยืนยันหมายเลขงาน"
+                title="ยืนยันหมายเลขงาน"
+              >
                 <Check className="h-4 w-4" />
               </Button>
             )}
