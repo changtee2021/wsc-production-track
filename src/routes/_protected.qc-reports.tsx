@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   adminFetchQcReports,
@@ -7,6 +7,7 @@ import {
   adminDeleteQcReport,
 } from "@/lib/admin.functions";
 import { requireToken, showError } from "@/lib/admin-helpers";
+import { downloadQcReportsCsv } from "@/lib/qc-export";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -26,6 +34,9 @@ import {
   Check,
   Undo2,
   ClipboardCheck,
+  Download,
+  Image as ImageIcon,
+  Video as VideoIcon,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_protected/qc-reports")({
@@ -33,13 +44,18 @@ export const Route = createFileRoute("/_protected/qc-reports")({
   component: QcReportsPage,
 });
 
+interface MediaItem {
+  url: string;
+  type: "image" | "video";
+}
+
 interface QcReportItem {
   id: string;
   item_text_snapshot: string;
   item_order: number;
   is_passed: boolean;
   remark: string | null;
-  media: Array<{ url: string; type: "image" | "video" }>;
+  media: MediaItem[];
 }
 
 interface QcReportRow {
@@ -51,7 +67,7 @@ interface QcReportRow {
   category_id: string | null;
   employee_id: string | null;
   note: string | null;
-  media: Array<{ url: string; type: "image" | "video" }>;
+  media: MediaItem[];
   status: "open" | "resolved";
   overall_result: "pass" | "fail" | null;
   summary: string | null;
@@ -74,6 +90,7 @@ function QcReportsPage() {
   const [to, setTo] = useState("");
   const [jobId, setJobId] = useState("");
   const [status, setStatus] = useState<"open" | "resolved" | "all">("all");
+  const [lightbox, setLightbox] = useState<MediaItem | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -124,14 +141,36 @@ function QcReportsPage() {
     }
   };
 
+  const handleExport = () => {
+    if (rows.length === 0) {
+      toast.error("ไม่มีข้อมูลให้ส่งออก");
+      return;
+    }
+    downloadQcReportsCsv(rows);
+    toast.success(`ส่งออก ${rows.length} รายงานแล้ว`);
+  };
+
+  const totalRows = useMemo(() => rows.length, [rows]);
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
       <Toaster richColors position="top-center" />
-      <div className="flex items-center gap-3 mb-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
-          <ClipboardCheck className="h-5 w-5" />
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+            <ClipboardCheck className="h-5 w-5" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">รายงาน QC</h1>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">รายงาน QC</h1>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={handleExport}
+          disabled={loading || totalRows === 0}
+        >
+          <Download className="h-4 w-4" />
+          ส่งออก CSV ({totalRows})
+        </Button>
       </div>
       <p className="mb-6 text-sm text-muted-foreground">
         รายงานข้อผิดพลาดจากพนักงาน QC พร้อมรูปและวิดีโอประกอบ
@@ -177,147 +216,218 @@ function QcReportsPage() {
             ไม่มีรายงาน QC
           </div>
         )}
-        {rows.map((r) => (
-          <article key={r.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-mono">{new Date(r.created_at).toLocaleString("th-TH")}</span>
-                  <span>•</span>
-                  <span>Job <span className="font-mono font-semibold text-foreground">{r.job_id}</span></span>
-                  {r.categories?.name && (<><span>•</span><span>{r.categories.name}</span></>)}
-                </div>
-                <h3 className="mt-1 text-lg font-bold leading-tight">
-                  {r.steps?.step_name ?? "ขั้นตอนไม่ระบุ"}
-                </h3>
-                <div className="mt-1 text-sm">
-                  <span className="text-muted-foreground">พนักงานที่ทำ: </span>
-                  <span className="font-medium">{r.employees?.name ?? "—"}</span>
-                  {r.employees?.emp_code && (
-                    <span className="ml-1 font-mono text-xs text-muted-foreground">({r.employees.emp_code})</span>
-                  )}
-                </div>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">ผู้ตรวจ QC: </span>
-                  <span className="font-medium">{r.qc_employees?.name ?? "—"}</span>
-                  {r.qc_employees?.emp_code && (
-                    <span className="ml-1 font-mono text-xs text-muted-foreground">({r.qc_employees.emp_code})</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {r.overall_result && (
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      r.overall_result === "pass"
-                        ? "bg-success/15 text-success"
-                        : "bg-destructive/15 text-destructive"
-                    }`}
-                  >
-                    {r.overall_result === "pass" ? "✓ ผ่าน" : "✗ ไม่ผ่าน"}
-                  </span>
-                )}
-                {r.summary && (
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
-                    {r.summary}
-                  </span>
-                )}
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    r.status === "resolved"
-                      ? "bg-success/15 text-success"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {r.status === "resolved" ? "แก้ไขแล้ว" : "ยังไม่แก้"}
-                </span>
-              </div>
-            </div>
+        {rows.map((r) => {
+          const items = [...(r.qc_report_items ?? [])].sort((a, b) => a.item_order - b.item_order);
+          // Auto-expand failed items
+          const defaultOpen = items.filter((it) => !it.is_passed).map((it) => it.id);
+          const passCount = items.filter((it) => it.is_passed).length;
+          const failCount = items.length - passCount;
 
-            {r.qc_report_items && r.qc_report_items.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {[...r.qc_report_items]
-                  .sort((a, b) => a.item_order - b.item_order)
-                  .map((it) => (
-                    <div
-                      key={it.id}
-                      className={`rounded-lg border p-2.5 ${
-                        it.is_passed
-                          ? "border-success/30 bg-success/5"
-                          : "border-destructive/40 bg-destructive/5"
+          return (
+            <article key={r.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-mono">{new Date(r.created_at).toLocaleString("th-TH")}</span>
+                    <span>•</span>
+                    <span>Job <span className="font-mono font-semibold text-foreground">{r.job_id}</span></span>
+                    {r.categories?.name && (<><span>•</span><span>{r.categories.name}</span></>)}
+                  </div>
+                  <h3 className="mt-1 text-lg font-bold leading-tight">
+                    {r.steps?.step_name ?? "ขั้นตอนไม่ระบุ"}
+                  </h3>
+                  <div className="mt-1 text-sm">
+                    <span className="text-muted-foreground">พนักงานที่ทำ: </span>
+                    <span className="font-medium">{r.employees?.name ?? "—"}</span>
+                    {r.employees?.emp_code && (
+                      <span className="ml-1 font-mono text-xs text-muted-foreground">({r.employees.emp_code})</span>
+                    )}
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">ผู้ตรวจ QC: </span>
+                    <span className="font-medium">{r.qc_employees?.name ?? "—"}</span>
+                    {r.qc_employees?.emp_code && (
+                      <span className="ml-1 font-mono text-xs text-muted-foreground">({r.qc_employees.emp_code})</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {r.overall_result && (
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        r.overall_result === "pass"
+                          ? "bg-success/15 text-success"
+                          : "bg-destructive/15 text-destructive"
                       }`}
                     >
-                      <div className="flex items-start gap-2">
-                        <span className={`mt-0.5 text-xs font-bold ${it.is_passed ? "text-success" : "text-destructive"}`}>
-                          {it.is_passed ? "✓" : "✗"}
-                        </span>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium leading-snug">{it.item_text_snapshot}</p>
-                          {it.remark && (
-                            <p className="mt-1 text-xs text-destructive whitespace-pre-wrap">
-                              หมายเหตุ: {it.remark}
-                            </p>
-                          )}
-                          {it.media && it.media.length > 0 && (
-                            <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-                              {it.media.map((m, i) =>
-                                m.type === "image" ? (
-                                  <a key={i} href={m.url} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded border border-border bg-muted">
-                                    <img src={m.url} alt="" className="h-full w-full object-cover" />
-                                  </a>
-                                ) : (
-                                  <video key={i} src={m.url} controls className="aspect-square w-full rounded border border-border bg-black object-contain" />
-                                ),
+                      {r.overall_result === "pass" ? "✓ ผ่าน" : "✗ ไม่ผ่าน"}
+                    </span>
+                  )}
+                  {items.length > 0 && (
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                      ผ่าน {passCount}/{items.length}
+                    </span>
+                  )}
+                  {r.summary && (
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+                      {r.summary}
+                    </span>
+                  )}
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      r.status === "resolved"
+                        ? "bg-success/15 text-success"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {r.status === "resolved" ? "แก้ไขแล้ว" : "ยังไม่แก้"}
+                  </span>
+                </div>
+              </div>
+
+              {items.length > 0 && (
+                <div className="mt-3">
+                  <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
+                    {items.map((it) => {
+                      const mediaCount = it.media?.length ?? 0;
+                      return (
+                        <AccordionItem
+                          key={it.id}
+                          value={it.id}
+                          className={`rounded-lg border px-3 ${
+                            it.is_passed
+                              ? "border-success/30 bg-success/5"
+                              : "border-destructive/40 bg-destructive/5"
+                          }`}
+                        >
+                          <AccordionTrigger className="py-2 hover:no-underline">
+                            <div className="flex w-full items-center gap-2 pr-2 text-left">
+                              <span
+                                className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                  it.is_passed
+                                    ? "bg-success/20 text-success"
+                                    : "bg-destructive/20 text-destructive"
+                                }`}
+                              >
+                                {it.is_passed ? "✓" : "✗"}
+                              </span>
+                              <span className="flex-1 truncate text-sm font-medium">
+                                {it.item_order}. {it.item_text_snapshot}
+                              </span>
+                              {mediaCount > 0 && (
+                                <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                  {mediaCount} สื่อ
+                                </span>
                               )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
-
-            {r.note && (
-              <div className="mt-3">
-                <div className="text-xs font-semibold text-muted-foreground mb-1">หมายเหตุภาพรวม</div>
-                <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm">
-                  {r.note}
-                </p>
-              </div>
-            )}
-
-            {r.media && r.media.length > 0 && (
-              <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {r.media.map((m, i) =>
-                  m.type === "image" ? (
-                    <a key={i} href={m.url} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-lg border border-border bg-muted">
-                      <img src={m.url} alt="" className="h-full w-full object-cover" />
-                    </a>
-                  ) : (
-                    <video key={i} src={m.url} controls className="aspect-square w-full rounded-lg border border-border bg-black object-contain" />
-                  ),
-                )}
-              </div>
-            )}
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              {r.status === "open" ? (
-                <Button size="sm" variant="outline" className="gap-1" onClick={() => setRowStatus(r.id, "resolved")}>
-                  <Check className="h-4 w-4" /> ทำเครื่องหมายว่าแก้แล้ว
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" className="gap-1" onClick={() => setRowStatus(r.id, "open")}>
-                  <Undo2 className="h-4 w-4" /> กลับเป็นยังไม่แก้
-                </Button>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-3 pt-1">
+                            {it.remark && (
+                              <p className="mb-2 whitespace-pre-wrap rounded-md bg-background/60 p-2 text-xs text-destructive">
+                                <span className="font-semibold">หมายเหตุ: </span>{it.remark}
+                              </p>
+                            )}
+                            {mediaCount > 0 ? (
+                              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                                {it.media.map((m, i) => (
+                                  <button
+                                    type="button"
+                                    key={i}
+                                    onClick={() => setLightbox(m)}
+                                    className="group relative block aspect-square overflow-hidden rounded-md border border-border bg-muted"
+                                  >
+                                    {m.type === "image" ? (
+                                      <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                                    ) : (
+                                      <>
+                                        <video src={m.url} muted className="h-full w-full object-cover" />
+                                        <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                          <VideoIcon className="h-6 w-6 text-white" />
+                                        </span>
+                                      </>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs italic text-muted-foreground">ไม่มีสื่อหลักฐาน</p>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </div>
               )}
-              <Button size="sm" variant="ghost" className="gap-1 text-destructive hover:text-destructive" onClick={() => removeRow(r.id)}>
-                <Trash2 className="h-4 w-4" /> ลบ
-              </Button>
-            </div>
-          </article>
-        ))}
+
+              {r.note && (
+                <div className="mt-3">
+                  <div className="text-xs font-semibold text-muted-foreground mb-1">หมายเหตุภาพรวม</div>
+                  <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm">
+                    {r.note}
+                  </p>
+                </div>
+              )}
+
+              {r.media && r.media.length > 0 && (
+                <div className="mt-3">
+                  <div className="mb-1 flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                    <ImageIcon className="h-3.5 w-3.5" /> สื่อภาพรวม
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                    {r.media.map((m, i) => (
+                      <button
+                        type="button"
+                        key={i}
+                        onClick={() => setLightbox(m)}
+                        className="relative block aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+                      >
+                        {m.type === "image" ? (
+                          <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                        ) : (
+                          <>
+                            <video src={m.url} muted className="h-full w-full object-cover" />
+                            <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <VideoIcon className="h-6 w-6 text-white" />
+                            </span>
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {r.status === "open" ? (
+                  <Button size="sm" variant="outline" className="gap-1" onClick={() => setRowStatus(r.id, "resolved")}>
+                    <Check className="h-4 w-4" /> ทำเครื่องหมายว่าแก้แล้ว
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" className="gap-1" onClick={() => setRowStatus(r.id, "open")}>
+                    <Undo2 className="h-4 w-4" /> กลับเป็นยังไม่แก้
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" className="gap-1 text-destructive hover:text-destructive" onClick={() => removeRow(r.id)}>
+                  <Trash2 className="h-4 w-4" /> ลบ
+                </Button>
+              </div>
+            </article>
+          );
+        })}
       </section>
+
+      <Dialog open={!!lightbox} onOpenChange={(o) => !o && setLightbox(null)}>
+        <DialogContent className="max-w-4xl border-0 bg-black/95 p-2 sm:p-4">
+          {lightbox && (
+            lightbox.type === "image" ? (
+              <img src={lightbox.url} alt="" className="mx-auto max-h-[85vh] w-auto object-contain" />
+            ) : (
+              <video src={lightbox.url} controls autoPlay className="mx-auto max-h-[85vh] w-auto" />
+            )
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
