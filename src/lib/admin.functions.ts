@@ -408,6 +408,18 @@ export const adminUpsertQcEmployee = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminListQcEmployees = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("qc_employees")
+      .select("id, name, emp_code, avatar_url, active")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
 export const adminDeleteQcEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),

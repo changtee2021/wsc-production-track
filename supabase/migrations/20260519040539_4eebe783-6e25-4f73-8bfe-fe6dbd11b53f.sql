@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Anyone can read qc_employees" ON public.qc_employees;
