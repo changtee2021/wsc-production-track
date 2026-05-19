@@ -65,6 +65,16 @@ export const Route = createFileRoute("/qc")({
         content:
           "หน้าตรวจสอบคุณภาพงาน (QC) แบบ checklist พร้อมแนบรูปและวิดีโอเป็นหลักฐาน",
       },
+      { property: "og:title", content: "QC — WSC ProductionTrack" },
+      {
+        property: "og:description",
+        content:
+          "ตรวจสอบคุณภาพงานแบบ checklist พร้อมแนบรูป/วิดีโอเป็นหลักฐาน บันทึกผลผ่าน–ไม่ผ่านแบบเรียลไทม์",
+      },
+      { property: "og:url", content: "https://wsc-production-track.lovable.app/qc" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://wsc-production-track.lovable.app/qc" },
     ],
   }),
   component: QcPage,
