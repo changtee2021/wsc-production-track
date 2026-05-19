@@ -9,6 +9,14 @@ interface QrScannerDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onScanned: (text: string) => void;
+  /**
+   * Camera stream pre-acquired from a user-gesture context (e.g. a button
+   * onClick). Required on iOS Safari / WKWebView, which lose transient
+   * activation by the time this dialog's effect fires and would otherwise
+   * silently reject `getUserMedia`. Use {@link acquireCameraStream} in the
+   * click handler and pass the result here.
+   */
+  initialStream?: MediaStream | null;
 }
 
 const REGION_ID = "qr-scan-region";
@@ -59,13 +67,13 @@ function patchVideoElement(container: HTMLElement) {
   return () => obs.disconnect();
 }
 
-interface CameraErrorInfo {
+export interface CameraErrorInfo {
   message: string;
   hint?: string;
   showRetry: boolean;
 }
 
-function formatCameraError(err: unknown): CameraErrorInfo {
+export function formatCameraError(err: unknown): CameraErrorInfo {
   const e = err as { name?: string; message?: string } | undefined;
   const name = e?.name || "";
 
@@ -129,6 +137,45 @@ function formatCameraError(err: unknown): CameraErrorInfo {
 
 type FacingMode = "environment" | "user";
 
+/**
+ * Open the camera from a synchronous user-gesture context (e.g. a button
+ * onClick) so iOS Safari / WKWebView honor the request. The function must
+ * not `await` anything before calling `getUserMedia`, otherwise the
+ * transient activation is lost.
+ *
+ * On success the caller is responsible for the returned stream — pass it
+ * straight into <QrScannerDialog initialStream={stream}/>; the dialog
+ * takes ownership and stops the tracks when it closes.
+ */
+export async function acquireCameraStream(
+  facing: FacingMode = "environment",
+): Promise<{ stream: MediaStream } | { errorInfo: CameraErrorInfo }> {
+  try {
+    if (!isSecureCtx()) {
+      throw Object.assign(new Error("Insecure context"), {
+        name: "SecurityError",
+      });
+    }
+    if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw Object.assign(new Error("ไม่รองรับกล้องบนเบราว์เซอร์นี้"), {
+        name: "NotFoundError",
+      });
+    }
+    if (isInAppBrowser()) {
+      throw Object.assign(new Error("In-app browser"), {
+        name: "NotAllowedError",
+      });
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: facing } },
+    });
+    return { stream };
+  } catch (err) {
+    return { errorInfo: formatCameraError(err) };
+  }
+}
+
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
 };
@@ -172,7 +219,7 @@ function buildConstraintLadder(mode: FacingMode): MediaStreamConstraints[] {
   ];
 }
 
-export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDialogProps) {
+export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream = null }: QrScannerDialogProps) {
   const html5Ref = useRef<Html5Qrcode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -181,6 +228,10 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
   const observerCleanupRef = useRef<(() => void) | null>(null);
   const cancelledRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Stream pre-acquired by the caller during the user gesture. Consumed on
+  // first use; camera switches / retries fall back to getUserMedia (which
+  // works without a gesture because permission is now cached).
+  const pendingStreamRef = useRef<MediaStream | null>(null);
 
   const [facing, setFacing] = useState<FacingMode>("environment");
   const [starting, setStarting] = useState(false);
@@ -196,6 +247,10 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
     if (observerCleanupRef.current) {
       observerCleanupRef.current();
       observerCleanupRef.current = null;
+    }
+    if (pendingStreamRef.current) {
+      pendingStreamRef.current.getTracks().forEach((t) => t.stop());
+      pendingStreamRef.current = null;
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
@@ -232,30 +287,40 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
     const region = document.getElementById(REGION_ID);
     if (!region) throw new Error("ไม่พบพื้นที่แสดงผลกล้อง");
 
-    const ladder = buildConstraintLadder(mode);
     let stream: MediaStream | null = null;
-    let lastErr: unknown = null;
-    for (let i = 0; i < ladder.length; i++) {
-      if (cancelledRef.current) return;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(ladder[i]);
-        if (i > 0) setLegacyMode(true);
-        break;
-      } catch (e) {
-        lastErr = e;
-        const name = (e as { name?: string })?.name;
-        // Permission/secure errors → don't retry the ladder
-        if (
-          name === "NotAllowedError" ||
-          name === "PermissionDeniedError" ||
-          name === "SecurityError" ||
-          name === "NotFoundError"
-        ) {
-          throw e;
+
+    // Prefer the stream the caller acquired during the user gesture. Only
+    // a fresh request can hit the user-activation requirement on iOS, so
+    // we never want to re-acquire if we already have one.
+    const pending = pendingStreamRef.current;
+    if (pending && pending.active && pending.getVideoTracks().length > 0) {
+      stream = pending;
+      pendingStreamRef.current = null;
+    } else {
+      const ladder = buildConstraintLadder(mode);
+      let lastErr: unknown = null;
+      for (let i = 0; i < ladder.length; i++) {
+        if (cancelledRef.current) return;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(ladder[i]);
+          if (i > 0) setLegacyMode(true);
+          break;
+        } catch (e) {
+          lastErr = e;
+          const name = (e as { name?: string })?.name;
+          // Permission/secure errors → don't retry the ladder
+          if (
+            name === "NotAllowedError" ||
+            name === "PermissionDeniedError" ||
+            name === "SecurityError" ||
+            name === "NotFoundError"
+          ) {
+            throw e;
+          }
         }
       }
+      if (!stream) throw lastErr ?? new Error("ไม่สามารถเปิดกล้องได้");
     }
-    if (!stream) throw lastErr ?? new Error("ไม่สามารถเปิดกล้องได้");
 
     if (cancelledRef.current) {
       stream.getTracks().forEach((t) => t.stop());
@@ -327,7 +392,6 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
             const size = Math.floor(Math.min(vw, vh) * (useLegacy ? 0.7 : 0.85));
             return { width: size, height: size };
           },
-          aspectRatio: 1.0,
           disableFlip: false,
         },
       },
@@ -395,10 +459,6 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
         });
       }
 
-      // Give the dialog time to lay out (iOS dislikes getUserMedia before container is sized)
-      //await new Promise((r) => setTimeout(r, 300));
-      if (cancelledRef.current) return;
-
       if (detectorRef.current) {
         try {
           await startNative(mode);
@@ -414,6 +474,14 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
           await stopAll();
           if (cancelledRef.current) return;
         }
+      }
+
+      // html5-qrcode insists on managing its own stream — release any
+      // pre-acquired one so it can reacquire (permission is already cached
+      // for this origin, so no user-gesture is required).
+      if (pendingStreamRef.current) {
+        pendingStreamRef.current.getTracks().forEach((t) => t.stop());
+        pendingStreamRef.current = null;
       }
 
       await startHtml5(mode);
@@ -432,6 +500,7 @@ export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDial
     cancelledRef.current = false;
     setErrorInfo(null);
     setLegacyMode(false);
+    pendingStreamRef.current = initialStream ?? null;
 
     (async () => {
       if (await hasNativeQrDetector()) {
