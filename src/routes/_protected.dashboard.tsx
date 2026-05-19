@@ -301,7 +301,7 @@ function Dashboard() {
           out.push({
             job_id: l.job_id,
             employee_id: l.employee_id,
-            employee_name: l.employees?.name ?? "—",
+            employee_name: l.employees?.name ?? "(ลบแล้ว)",
             step_id: l.step_id,
             step_name: l.steps?.step_name ?? "—",
             std: l.steps?.std_duration_minutes ?? null,
@@ -385,7 +385,7 @@ function Dashboard() {
       if (seen.has(key)) continue;
       seen.add(key);
       const cur = map.get(l.employee_id) ?? {
-        name: l.employees?.name ?? "—",
+        name: l.employees?.name ?? "(ลบแล้ว)",
         jobs: 0,
       };
       cur.jobs += 1;
@@ -411,7 +411,7 @@ function Dashboard() {
         if (d < from) continue;
         if (to && d >= to) continue;
         const cur = jobsByEmp.get(l.employee_id) ?? {
-          name: l.employees?.name ?? "—",
+          name: l.employees?.name ?? "(ลบแล้ว)",
           jobs: new Set<string>(),
           durations: [],
         };
@@ -492,7 +492,7 @@ function Dashboard() {
     for (const l of filtered) {
       if (l.action !== "finish") continue;
       const empId = l.employee_id;
-      const empName = l.employees?.name ?? "—";
+      const empName = l.employees?.name ?? "(ลบแล้ว)";
       const stepId = l.step_id;
       const stepName = l.steps?.step_name ?? "—";
       stepOrder.set(stepId, stepName);
@@ -630,7 +630,7 @@ function Dashboard() {
     for (const l of filtered) {
       if (l.action !== "finish") continue;
       const empId = l.employee_id;
-      const empName = l.employees?.name ?? "—";
+      const empName = l.employees?.name ?? "(ลบแล้ว)";
       const cat = l.categories?.name ?? "(ไม่ระบุหมวด)";
       const step = l.steps?.step_name ?? "—";
       const key = `${cat} — ${step}`;
@@ -714,7 +714,7 @@ function Dashboard() {
       if (!e) {
         e = {
           empId: l.employee_id,
-          name: l.employees?.name ?? "—",
+          name: l.employees?.name ?? "(ลบแล้ว)",
           jobs: new Set(),
           durations: [],
         };
@@ -793,7 +793,7 @@ function Dashboard() {
       if (!e) {
         e = {
           empId: l.employee_id,
-          name: l.employees?.name ?? "—",
+          name: l.employees?.name ?? "(ลบแล้ว)",
           jobs: new Set(),
           durations: [],
         };
@@ -935,7 +935,7 @@ function Dashboard() {
           allSessions.push({
             job_id: l.job_id,
             employee_id: l.employee_id,
-            employee_name: l.employees?.name ?? "—",
+            employee_name: l.employees?.name ?? "(ลบแล้ว)",
             step_id: l.step_id,
             step_name: l.steps?.step_name ?? "—",
             std: l.steps?.std_duration_minutes ?? null,
@@ -1016,7 +1016,7 @@ function Dashboard() {
           const d = new Date(l.created_at);
           if (d < from || d >= to) continue;
           const cur = m.get(l.employee_id) ?? {
-            name: l.employees?.name ?? "—",
+            name: l.employees?.name ?? "(ลบแล้ว)",
             jobs: new Set<string>(),
             durations: [],
           };
