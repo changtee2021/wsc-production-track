@@ -23,6 +23,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/qc-reports": "รายงาน QC",
   "/manage": "จัดการข้อมูล",
   "/storage": "พื้นที่จัดเก็บ",
+  "/logs-update": "LogUpdate",
 };
 
 function AdminLayout() {
