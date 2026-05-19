@@ -9,7 +9,7 @@ import {
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { SwitchCamera, Loader2, ImagePlus } from "lucide-react";
+import { SwitchCamera, Loader2, ImagePlus, Camera, AlertCircle } from "lucide-react";
 
 interface QrScannerDialogProps {
   open: boolean;
@@ -19,20 +19,34 @@ interface QrScannerDialogProps {
 
 const REGION_ID = "qr-scan-region";
 
-// Detect iOS / Safari for tailored behavior (e.g. playsInline patching)
+// ---- Environment detection ------------------------------------------------
 const isIOS = (): boolean => {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   return (
     /iPad|iPhone|iPod/.test(ua) ||
-    // iPadOS 13+ reports as MacIntel with touch
     (ua.includes("Mac") && "ontouchend" in document)
   );
 };
 
-// Force inline playback on the <video> element rendered by html5-qrcode.
-// Without these attributes iOS Safari refuses to render the preview
-// (or kicks it into fullscreen) so the scanner looks broken.
+const getIOSVersion = (): number | null => {
+  if (typeof navigator === "undefined") return null;
+  const m = navigator.userAgent.match(/OS (\d+)_/);
+  return m ? parseInt(m[1], 10) : null;
+};
+
+const isInAppBrowser = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /Line|FBAN|FBAV|Instagram|MicroMessenger|TikTok/i.test(ua);
+};
+
+const isSecureCtx = (): boolean => {
+  if (typeof window === "undefined") return true;
+  return window.isSecureContext === true || location.hostname === "localhost";
+};
+
+// Apply iOS-friendly attributes to the <video> element rendered by html5-qrcode
 function patchVideoElement(container: HTMLElement) {
   const apply = (v: HTMLVideoElement) => {
     v.setAttribute("playsinline", "true");
@@ -42,10 +56,7 @@ function patchVideoElement(container: HTMLElement) {
     v.muted = true;
     v.autoplay = true;
     v.playsInline = true;
-    // Best-effort kickstart (some iOS versions need an explicit play())
-    v.play().catch(() => {
-      /* ignore — user gesture already happened on dialog open */
-    });
+    v.play().catch(() => {});
   };
   const existing = container.querySelector("video");
   if (existing) apply(existing as HTMLVideoElement);
@@ -57,39 +68,80 @@ function patchVideoElement(container: HTMLElement) {
   return () => obs.disconnect();
 }
 
-// Human-friendly error message for the most common getUserMedia failures.
-function formatCameraError(err: unknown): string {
+interface CameraErrorInfo {
+  message: string;
+  hint?: string;
+  showRetry: boolean;
+}
+
+function formatCameraError(err: unknown): CameraErrorInfo {
   const e = err as { name?: string; message?: string } | undefined;
   const name = e?.name || "";
+
+  if (!isSecureCtx()) {
+    return {
+      message: "ต้องเปิดผ่าน HTTPS เพื่อใช้กล้อง",
+      hint: "เปิดเว็บไซต์ผ่าน https:// แล้วลองใหม่",
+      showRetry: false,
+    };
+  }
+  if (isInAppBrowser()) {
+    return {
+      message: "เบราว์เซอร์ในแอปไม่รองรับกล้องอย่างเต็มที่",
+      hint: "กดเมนู (•••) มุมขวาบน แล้วเลือก ‘เปิดใน Safari/Chrome’",
+      showRetry: true,
+    };
+  }
   if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-    return "ไม่ได้รับอนุญาตให้ใช้กล้อง — เปิดสิทธิ์กล้องในตั้งค่า Safari/เบราว์เซอร์แล้วลองใหม่";
+    if (isIOS()) {
+      return {
+        message: "ไม่ได้รับอนุญาตให้ใช้กล้อง",
+        hint: "iOS: ไปที่ ตั้งค่า > Safari > กล้อง > อนุญาต  หรือแตะ ‘อา’ ในแถบที่อยู่ > Website Settings > Camera > Allow แล้วโหลดหน้าใหม่",
+        showRetry: true,
+      };
+    }
+    return {
+      message: "ไม่ได้รับอนุญาตให้ใช้กล้อง",
+      hint: "เปิดสิทธิ์กล้องในตั้งค่าเบราว์เซอร์ แล้วลองใหม่",
+      showRetry: true,
+    };
   }
   if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-    return "ไม่พบกล้องบนอุปกรณ์นี้";
+    return { message: "ไม่พบกล้องบนอุปกรณ์นี้", showRetry: false };
   }
   if (name === "NotReadableError" || name === "TrackStartError") {
-    return "กล้องกำลังถูกใช้งานโดยแอปอื่น — ปิดแอปกล้องอื่นแล้วลองใหม่";
+    return {
+      message: "กล้องถูกใช้งานโดยแอปอื่น",
+      hint: "ปิดแอปกล้อง/วิดีโอคอลที่ใช้กล้องอยู่ แล้วกดลองใหม่",
+      showRetry: true,
+    };
   }
   if (name === "OverconstrainedError") {
-    return "อุปกรณ์ไม่รองรับการเปิดกล้องตามที่ขอ";
+    return {
+      message: "อุปกรณ์ไม่รองรับการตั้งค่ากล้องนี้",
+      hint: "กด ‘ลองใหม่’ ระบบจะลองโหมดเข้ากันได้",
+      showRetry: true,
+    };
   }
   if (name === "SecurityError") {
-    return "ต้องเปิดผ่าน HTTPS เพื่อใช้กล้อง";
+    return {
+      message: "ต้องเปิดผ่าน HTTPS เพื่อใช้กล้อง",
+      showRetry: false,
+    };
   }
-  return e?.message || "ไม่สามารถเข้าถึงกล้องได้";
+  return {
+    message: e?.message || "ไม่สามารถเข้าถึงกล้องได้",
+    hint: "กด ‘ลองใหม่’ หรือใช้ ‘ถ่ายภาพ QR แทน’",
+    showRetry: true,
+  };
 }
 
 type FacingMode = "environment" | "user";
 
-// Minimal BarcodeDetector type (the lib.dom typings don't ship it yet)
 type BarcodeDetectorLike = {
-  detect: (
-    source: CanvasImageSource,
-  ) => Promise<Array<{ rawValue: string }>>;
+  detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
 };
-type BarcodeDetectorCtor = new (opts?: {
-  formats?: string[];
-}) => BarcodeDetectorLike;
+type BarcodeDetectorCtor = new (opts?: { formats?: string[] }) => BarcodeDetectorLike;
 
 async function hasNativeQrDetector(): Promise<boolean> {
   const w = window as unknown as {
@@ -104,6 +156,29 @@ async function hasNativeQrDetector(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// Build a ladder of constraints from strictest -> loosest.
+function buildConstraintLadder(mode: FacingMode): MediaStreamConstraints[] {
+  return [
+    {
+      audio: false,
+      video: {
+        facingMode: { ideal: mode },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    },
+    {
+      audio: false,
+      video: { facingMode: { ideal: mode } },
+    },
+    {
+      audio: false,
+      video: { facingMode: mode },
+    },
+    { audio: false, video: true },
+  ];
 }
 
 export function QrScannerDialog({
@@ -123,9 +198,9 @@ export function QrScannerDialog({
   const [facing, setFacing] = useState<FacingMode>("environment");
   const [starting, setStarting] = useState(false);
   const [usingNative, setUsingNative] = useState(false);
-  const [canSwitch, setCanSwitch] = useState(true);
+  const [legacyMode, setLegacyMode] = useState(false);
+  const [errorInfo, setErrorInfo] = useState<CameraErrorInfo | null>(null);
 
-  // Tear everything down (both code paths).
   const stopAll = async () => {
     if (rafRef.current != null) {
       cancelAnimationFrame(rafRef.current);
@@ -142,9 +217,7 @@ export function QrScannerDialog({
     if (videoRef.current) {
       try {
         videoRef.current.pause();
-      } catch {
-        /* noop */
-      }
+      } catch {}
       videoRef.current.srcObject = null;
     }
     const s = html5Ref.current;
@@ -153,9 +226,7 @@ export function QrScannerDialog({
       try {
         if (s.isScanning) await s.stop();
         s.clear();
-      } catch {
-        /* noop */
-      }
+      } catch {}
     }
   };
 
@@ -169,19 +240,36 @@ export function QrScannerDialog({
     });
   };
 
-  // ---- Path A: native BarcodeDetector (iOS 17+, Chrome) ------------------
-  const startNative = async (mode: FacingMode) => {
+  // ---- Path A: native BarcodeDetector with constraint ladder -------------
+  const startNative = async (mode: FacingMode): Promise<void> => {
     const region = document.getElementById(REGION_ID);
     if (!region) throw new Error("ไม่พบพื้นที่แสดงผลกล้อง");
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: { ideal: mode },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
-    });
+    const ladder = buildConstraintLadder(mode);
+    let stream: MediaStream | null = null;
+    let lastErr: unknown = null;
+    for (let i = 0; i < ladder.length; i++) {
+      if (cancelledRef.current) return;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(ladder[i]);
+        if (i > 0) setLegacyMode(true);
+        break;
+      } catch (e) {
+        lastErr = e;
+        const name = (e as { name?: string })?.name;
+        // Permission/secure errors → don't retry the ladder
+        if (
+          name === "NotAllowedError" ||
+          name === "PermissionDeniedError" ||
+          name === "SecurityError" ||
+          name === "NotFoundError"
+        ) {
+          throw e;
+        }
+      }
+    }
+    if (!stream) throw lastErr ?? new Error("ไม่สามารถเปิดกล้องได้");
+
     if (cancelledRef.current) {
       stream.getTracks().forEach((t) => t.stop());
       return;
@@ -201,16 +289,13 @@ export function QrScannerDialog({
     video.playsInline = true;
     video.srcObject = stream;
     videoRef.current = video;
-    await video.play().catch(() => {
-      /* iOS may resolve later — keep going */
-    });
+    await video.play().catch(() => {});
 
     const detector = detectorRef.current!;
     let lastTick = 0;
     const tick = async (ts: number) => {
       if (cancelledRef.current) return;
-      // Throttle detect() to ~5 fps — plenty for QR, easy on battery
-      if (ts - lastTick >= 180 && video!.readyState >= 2) {
+      if (ts - lastTick >= 200 && video!.readyState >= 2) {
         lastTick = ts;
         try {
           const results = await detector.detect(video!);
@@ -218,54 +303,117 @@ export function QrScannerDialog({
             finishWith(results[0].rawValue);
             return;
           }
-        } catch {
-          /* ignore single-frame errors */
-        }
+        } catch {}
       }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
   };
 
-  // ---- Path B: html5-qrcode fallback (older iOS, in-app browsers) --------
-  const startHtml5 = async (mode: FacingMode) => {
+  // ---- Path B: html5-qrcode fallback with legacy-friendly settings -------
+  const startHtml5 = async (mode: FacingMode): Promise<void> => {
     const region = document.getElementById(REGION_ID);
     if (!region) throw new Error("ไม่พบพื้นที่แสดงผลกล้อง");
 
-    // Patch <video> as soon as html5-qrcode injects it
     observerCleanupRef.current = patchVideoElement(region);
+
+    const iosVer = getIOSVersion();
+    const useLegacy = legacyMode || (isIOS() && (iosVer ?? 99) < 15);
+    const fps = useLegacy ? 5 : 10;
 
     const scanner = new Html5Qrcode(REGION_ID, {
       verbose: false,
       formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
     });
     html5Ref.current = scanner;
-    await scanner.start(
-      { facingMode: { ideal: mode } },
+
+    // Try several configurations from strictest to loosest
+    const configs: Array<{
+      camera: MediaTrackConstraints | { facingMode: string };
+      config: Parameters<Html5Qrcode["start"]>[1];
+    }> = [
       {
-        fps: 10,
-        qrbox: (vw, vh) => {
-          const size = Math.floor(Math.min(vw, vh) * 0.85);
-          return { width: size, height: size };
+        camera: { facingMode: { ideal: mode } } as MediaTrackConstraints,
+        config: {
+          fps,
+          qrbox: (vw, vh) => {
+            const size = Math.floor(Math.min(vw, vh) * (useLegacy ? 0.7 : 0.85));
+            return { width: size, height: size };
+          },
+          aspectRatio: 1.0,
+          disableFlip: false,
         },
-        aspectRatio: 1.0,
-        disableFlip: false,
       },
-      (decodedText) => finishWith(decodedText),
-      () => {
-        /* per-frame errors are normal; ignore */
+      {
+        camera: { facingMode: mode },
+        config: {
+          fps,
+          qrbox: (vw, vh) => {
+            const size = Math.floor(Math.min(vw, vh) * 0.7);
+            return { width: size, height: size };
+          },
+          disableFlip: false,
+        },
       },
-    );
+      {
+        camera: { facingMode: "environment" },
+        config: { fps: 5, disableFlip: false },
+      },
+    ];
+
+    let lastErr: unknown = null;
+    for (let i = 0; i < configs.length; i++) {
+      if (cancelledRef.current) return;
+      try {
+        await scanner.start(
+          configs[i].camera as never,
+          configs[i].config,
+          (decodedText) => finishWith(decodedText),
+          () => {},
+        );
+        if (i > 0) setLegacyMode(true);
+        return;
+      } catch (e) {
+        lastErr = e;
+        const name = (e as { name?: string })?.name;
+        if (
+          name === "NotAllowedError" ||
+          name === "PermissionDeniedError" ||
+          name === "SecurityError" ||
+          name === "NotFoundError"
+        ) {
+          throw e;
+        }
+      }
+    }
+    throw lastErr ?? new Error("ไม่สามารถเปิดกล้องได้");
   };
 
   const startWith = async (mode: FacingMode) => {
     await stopAll();
     if (cancelledRef.current) return;
     setStarting(true);
+    setErrorInfo(null);
+
     try {
-      // Wait one frame so the dialog is laid out (iOS dislikes getUserMedia
-      // before the container has real dimensions)
-      await new Promise((r) => setTimeout(r, 250));
+      // Preflight checks
+      if (!isSecureCtx()) {
+        throw Object.assign(new Error("Insecure context"), {
+          name: "SecurityError",
+        });
+      }
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+      ) {
+        throw Object.assign(new Error("ไม่รองรับกล้องบนเบราว์เซอร์นี้"), {
+          name: "NotFoundError",
+        });
+      }
+
+      // Give the dialog time to lay out (iOS dislikes getUserMedia before container is sized)
+      await new Promise((r) => setTimeout(r, 300));
       if (cancelledRef.current) return;
 
       if (detectorRef.current) {
@@ -275,7 +423,14 @@ export function QrScannerDialog({
           setFacing(mode);
           return;
         } catch (err) {
-          // Native path failed — try html5-qrcode (covers some iOS quirks)
+          const name = (err as { name?: string })?.name;
+          if (
+            name === "NotAllowedError" ||
+            name === "PermissionDeniedError" ||
+            name === "SecurityError"
+          ) {
+            throw err;
+          }
           console.warn("Native BarcodeDetector failed, falling back", err);
           await stopAll();
           if (cancelledRef.current) return;
@@ -286,31 +441,27 @@ export function QrScannerDialog({
       setUsingNative(false);
       setFacing(mode);
     } catch (err) {
-      toast.error(formatCameraError(err));
-      // Don't auto-close — the file fallback should remain accessible
+      const info = formatCameraError(err);
+      setErrorInfo(info);
     } finally {
       setStarting(false);
     }
   };
 
-  // Init on open
   useEffect(() => {
     if (!open) return;
     cancelledRef.current = false;
+    setErrorInfo(null);
+    setLegacyMode(false);
 
     (async () => {
-      // Detect native QR support once per open
       if (await hasNativeQrDetector()) {
-        const Ctor = (
-          window as unknown as { BarcodeDetector: BarcodeDetectorCtor }
-        ).BarcodeDetector;
+        const Ctor = (window as unknown as { BarcodeDetector: BarcodeDetectorCtor })
+          .BarcodeDetector;
         detectorRef.current = new Ctor({ formats: ["qr_code"] });
       } else {
         detectorRef.current = null;
       }
-      // Most phones have both — keep button visible; on iOS Safari we'll
-      // discover the second cam only if facingMode switch actually succeeds.
-      setCanSwitch(true);
       await startWith("environment");
     })();
 
@@ -326,13 +477,16 @@ export function QrScannerDialog({
     await startWith(next);
   };
 
-  // ---- File fallback: decode a photo taken with the native Camera app ----
+  const retryCamera = async () => {
+    setLegacyMode(false);
+    await startWith(facing);
+  };
+
   const onFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
     try {
-      // Try native detector first
       if (detectorRef.current && "createImageBitmap" in window) {
         const bitmap = await createImageBitmap(file);
         const results = await detectorRef.current.detect(bitmap);
@@ -341,7 +495,6 @@ export function QrScannerDialog({
           return;
         }
       }
-      // Fallback: html5-qrcode file scan (uses its own decoder)
       await stopAll();
       const tmp = new Html5Qrcode(REGION_ID, {
         verbose: false,
@@ -350,15 +503,12 @@ export function QrScannerDialog({
       try {
         const text = await tmp.scanFile(file, false);
         finishWith(text);
+        return;
       } finally {
         try {
           tmp.clear();
-        } catch {
-          /* noop */
-        }
+        } catch {}
       }
-      // Re-open camera if we're still on screen
-      if (!cancelledRef.current) await startWith(facing);
     } catch (err) {
       toast.error(
         err instanceof Error
@@ -376,13 +526,26 @@ export function QrScannerDialog({
           <DialogTitle>สแกน QR Code</DialogTitle>
           <DialogDescription>
             จัดให้ QR อยู่กลางกรอบ ระบบจะอ่านให้อัตโนมัติ
-            {isIOS() && !usingNative && !starting && (
+            {isIOS() && !usingNative && !starting && !errorInfo && (
               <span className="ml-1 text-xs text-muted-foreground">
-                (โหมดเข้ากันได้)
+                {legacyMode ? "(โหมดเข้ากันได้ iOS เก่า)" : "(โหมดเข้ากันได้)"}
               </span>
             )}
           </DialogDescription>
         </DialogHeader>
+
+        {errorInfo && (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <div className="flex-1 space-y-1">
+              <p className="font-medium text-destructive">{errorInfo.message}</p>
+              {errorInfo.hint && (
+                <p className="text-xs text-muted-foreground">{errorInfo.hint}</p>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="relative w-full flex-1 overflow-hidden rounded-xl bg-black sm:aspect-square sm:flex-none">
           <div
             id={REGION_ID}
@@ -393,24 +556,40 @@ export function QrScannerDialog({
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           )}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {canSwitch && (
-            <Button
-              variant="outline"
-              onClick={switchCamera}
-              disabled={starting}
-              className="h-11 gap-2"
-            >
-              <SwitchCamera className="h-4 w-4" />
-              สลับกล้อง
-            </Button>
+          {errorInfo && !starting && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 p-4 text-center text-white">
+              <Camera className="h-10 w-10 opacity-80" />
+              <p className="text-sm">กล้องยังไม่พร้อมใช้งาน</p>
+            </div>
           )}
+        </div>
+
+        {errorInfo?.showRetry && (
+          <Button
+            onClick={retryCamera}
+            disabled={starting}
+            className="h-11 gap-2"
+          >
+            <Camera className="h-4 w-4" />
+            อนุญาตและเปิดกล้องอีกครั้ง
+          </Button>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            onClick={switchCamera}
+            disabled={starting}
+            className="h-11 gap-2"
+          >
+            <SwitchCamera className="h-4 w-4" />
+            สลับกล้อง
+          </Button>
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             disabled={starting}
-            className={`h-11 gap-2 ${canSwitch ? "" : "col-span-2"}`}
+            className="h-11 gap-2"
           >
             <ImagePlus className="h-4 w-4" />
             ถ่ายภาพ QR แทน
