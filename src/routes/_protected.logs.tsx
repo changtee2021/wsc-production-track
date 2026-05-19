@@ -378,7 +378,7 @@ function LogsPage() {
                   label="เวลา"
                   value={new Date(selected.created_at).toLocaleString("th-TH")}
                 />
-                <Info label="พนักงาน" value={selected.employees?.name ?? "—"} />
+                <Info label="พนักงาน" value={selected.employees?.name ?? "พนักงานถูกลบ"} />
                 <Info label="ขั้นตอน" value={selected.steps?.step_name ?? "—"} />
                 <Info label="หมวดหมู่" value={selected.categories?.name ?? "—"} />
                 <Info
