@@ -922,7 +922,11 @@ function ChecklistRow({
             </Button>
           </div>
 
-          {state.media.length > 0 && (
+          {state.media.length === 0 ? (
+            <p className="text-xs font-medium text-destructive">
+              * ต้องแนบรูปหรือวิดีโอหลักฐานอย่างน้อย 1 รายการ
+            </p>
+          ) : (
             <div className="grid grid-cols-4 gap-1.5">
               {state.media.map((m, i) => (
                 <div key={i} className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
