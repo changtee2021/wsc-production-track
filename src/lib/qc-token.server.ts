@@ -3,15 +3,20 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
 const TTL_MS = 1000 * 60 * 60 * 12; // 12h
-const DEFAULT_QC_PASSWORD = "wscqc123";
 
 function qcPassword(): string {
-  return process.env.QC_PASSWORD || DEFAULT_QC_PASSWORD;
+  const pw = process.env.QC_PASSWORD;
+  if (!pw || pw.length < 6)
+    throw new Error("QC_PASSWORD is not configured on the server");
+  return pw;
 }
 
 function secret(): string {
   // Use admin password as HMAC secret if available; fall back to QC password
-  return process.env.ADMIN_PASSWORD || qcPassword();
+  const s = process.env.ADMIN_PASSWORD || process.env.QC_PASSWORD;
+  if (!s || s.length < 6)
+    throw new Error("QC signing secret is not configured on the server");
+  return s;
 }
 
 function sign(payload: string): string {
