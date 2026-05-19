@@ -321,7 +321,14 @@ function LogsPage() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-2">{l.employees?.name ?? "—"}</td>
+                      <td className="px-4 py-2">
+                        {l.employees?.name ?? (
+                          <span className="text-xs italic text-muted-foreground">
+                            พนักงานถูกลบ
+                          </span>
+                        )}
+                      </td>
+
                       <td className="px-4 py-2">{l.steps?.step_name ?? "—"}</td>
                       <td className="px-4 py-2">
                         <span
