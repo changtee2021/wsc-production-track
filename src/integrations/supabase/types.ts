@@ -400,6 +400,36 @@ export type Database = {
         }
         Relationships: []
       }
+      system_logs: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          paths: string[]
+          summary: string
+          title: string
+          version: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          paths?: string[]
+          summary: string
+          title: string
+          version?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          paths?: string[]
+          summary?: string
+          title?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

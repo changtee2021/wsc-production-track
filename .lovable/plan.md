@@ -1,42 +1,63 @@
-## แผนแก้ iOS QR Scanner Compatibility
+# LogUpdate — บันทึกการเปลี่ยนแปลงแอป
 
-### ข้อจำกัดสำคัญของ iOS
-- เว็บไซต์/เว็บแอป **ไม่สามารถกดอนุญาตกล้องแทนผู้ใช้ หรือเปิดกล้องอัตโนมัติโดยไม่ผ่าน permission prompt ได้** เพราะเป็นข้อจำกัดความปลอดภัยของ iOS/Safari
-- เว็บไซต์ **ไม่สามารถพาผู้ใช้ไปเปิดสิทธิ์กล้องใน Settings อัตโนมัติได้** แบบ native app; ทำได้เพียงแสดงคำแนะนำที่ชัดเจนและให้ผู้ใช้กดอนุญาตเอง
-- สิ่งที่แก้ได้คือทำให้การขอสิทธิ์เกิดจาก user gesture ชัดเจนขึ้น, ลด constraint ที่ iOS เก่าไม่รองรับ, และมีโหมด fallback ที่เปิดกล้องติดง่ายกว่า
+## เป้าหมาย
+หน้าใหม่ใน Admin แสดงรายการการอัปเดต/แก้ไข/เพิ่มฟีเจอร์ของแอปแบบ timeline และตั้งกฎให้ Lovable insert log อัตโนมัติทุกครั้งที่แก้โค้ด
 
-### สิ่งที่จะปรับใน `src/components/QrScannerDialog.tsx`
-1. **เพิ่ม iOS legacy compatibility mode**
-   - ตรวจ iOS/Safari และถ้า live camera เปิดไม่สำเร็จ จะ retry แบบขั้นบันไดโดยลดความยากของ camera constraints
-   - ลำดับ retry เช่น:
-     1. `facingMode: { ideal: "environment" }` + 1280x720
-     2. `facingMode: "environment"` แบบไม่กำหนด resolution
-     3. `video: true` ให้ iOS เลือกกล้องเอง
-     4. fallback ไป html5-qrcode แบบ fps ต่ำ/qrbox เล็กลง
+## 1. Database (migration)
 
-2. **ปรับ fps / qrbox สำหรับ iOS เก่า**
-   - ลด fps เหลือประมาณ 5–7 fps บน legacy mode เพื่อลด CPU และเพิ่มเสถียรภาพ
-   - ปรับ `qrbox` ให้ไม่ใหญ่เกินไปบนหน้าจอ iPhone และคำนวณจากขนาด container จริง
-   - ลด/ถอด `aspectRatio` ใน fallback บางเคส เพราะ iOS เก่าบางตัว reject constraint ได้ง่าย
+ตาราง `system_logs`:
+- `id` uuid PK
+- `title` text — หัวข้อสั้น (เช่น "เพิ่มหน้า LogUpdate")
+- `summary` text — สรุปสิ่งที่เปลี่ยน (อ่านง่าย ภาษาไทย)
+- `category` text — `feature` | `bugfix` | `security` | `ui` | `refactor`
+- `version` text nullable — เช่น `v1.2.3`
+- `paths` text[] — ไฟล์/โมดูลที่แตะ
+- `created_at` timestamptz default now()
 
-3. **เปลี่ยน flow การเปิดกล้องให้ผูกกับการกดปุ่มชัดเจนขึ้น**
-   - ถ้าเปิดทันทีตอน dialog แสดงแล้ว iOS ปฏิเสธ จะขึ้นปุ่ม **“เปิดกล้องอีกครั้ง”** เพื่อให้การเรียก `getUserMedia()` เกิดจากการกดของผู้ใช้โดยตรง
-   - ยังคงพยายาม auto-start เมื่อ dialog เปิด แต่ถ้าล้มเหลวจะไม่ปล่อยหน้าจอดำเฉย ๆ
+RLS: เปิด, block anon ทั้งหมด (admin อ่านผ่าน service-role server function เหมือนตารางอื่น)
 
-4. **เพิ่ม permission preflight และข้อความแนะนำเฉพาะ iOS**
-   - ตรวจ `navigator.mediaDevices` / secure context / permission state เท่าที่ browser รองรับ
-   - แยกข้อความสำหรับ:
-     - ยังไม่ได้อนุญาตกล้อง
-     - ผู้ใช้กด Block
-     - เปิดจาก in-app browser เช่น LINE/Facebook ที่มักจำกัดกล้อง
-     - ไม่มี `navigator.mediaDevices` หรือไม่ได้เปิดผ่าน HTTPS
-   - เพิ่มข้อความแนะนำสั้น ๆ เช่น “แตะ AA/เมนูเบราว์เซอร์ > Website Settings > Camera > Allow” หรือ “เปิดใน Safari” เมื่อจำเป็น
+Index: `created_at desc`
 
-5. **ปรับ fallback ถ่ายภาพ QR ให้เด่นและใช้งานต่อได้**
-   - เมื่อ live camera เปิดไม่ติด จะแสดง fallback “ถ่ายภาพ QR แทน” เป็นทางเลือกหลัก
-   - หลังเลือกไฟล์แล้ว decode ไม่ได้ จะคืนสถานะให้กดเปิดกล้องใหม่ได้ ไม่ค้างจอดำ
+## 2. Server functions (`src/lib/system-logs.functions.ts`)
+- `adminFetchSystemLogs({ token, limit?, category? })` — list
+- `adminInsertSystemLog({ token, title, summary, category, version?, paths? })` — manual add (optional admin UI)
+- `adminDeleteSystemLog({ token, id })`
+- `adminGetLatestLogTimestamp()` — สำหรับคำนวน badge NEW
+ทุกตัวใช้ `assertAdmin` + `supabaseAdmin` (pattern เดียวกับ `admin.functions.ts`)
 
-### ผลลัพธ์ที่คาดหวัง
-- iOS รุ่นเก่า/เบราว์เซอร์ในแอปมีโอกาสเปิดกล้องติดมากขึ้นจาก retry แบบขั้นบันได
-- ถ้าระบบ iOS บล็อก permission จริง ผู้ใช้จะเห็นสาเหตุและทางแก้ทันทีแทนจอดำ
-- ยังไม่สามารถ bypass permission ของ iOS ได้ แต่จะลดโอกาส “กดแล้วไม่เกิดอะไรขึ้น” ให้มากที่สุด
+## 3. หน้า Admin
+
+### `src/routes/_protected.logs-update.tsx`
+- Timeline เรียงใหม่→เก่า, group ตามวัน
+- Filter: category, search
+- แต่ละการ์ดแสดง: badge category สี, title, summary, paths chips, created_at (Asia/Bangkok), version pill ถ้ามี
+- ปุ่ม "เพิ่ม log" (dialog) สำหรับ admin เพิ่มเอง + ปุ่มลบ
+
+### Sidebar (`AdminSidebar.tsx`)
+- เพิ่มเมนู "อัปเดตล่าสุด" / "LogUpdate"
+- Badge "NEW" สีแดง เมื่อ `latest_log.created_at > localStorage.lastSeenLogAt`
+- เข้าหน้านี้แล้ว set `lastSeenLogAt = now()` → badge หาย
+
+### Auto-open dialog
+- เมื่อ admin เข้าหน้า `/admin` (หลัง login) ครั้งแรกหลังมี log ใหม่ → เปิด Dialog สรุป log ล่าสุด N รายการที่ยังไม่เห็น
+- กด "รับทราบ" → set `lastSeenLogAt`, dialog ปิด
+- เก็บ state ใน `localStorage` key: `wsc.admin.lastSeenLogAt`
+
+## 4. กฎ auto-log สำหรับ Lovable (ตัวผม)
+
+บันทึกเป็น **project memory** (`mem://index.md` core rule + `mem://features/system-logs`):
+
+> **Core rule:** ทุก turn ที่แก้โค้ด/เพิ่มฟีเจอร์/แก้บั๊ก ต้องสร้าง migration เพิ่มแถวใน `system_logs` ด้วย (title, summary ภาษาไทย, category, paths[]) ใน migration เดียวกับการเปลี่ยนแปลง หรือ migration แยกถ้าไม่มี schema change
+
+ทุกครั้งจะใช้ `INSERT INTO public.system_logs (...) VALUES (...)` แนบท้าย migration ที่จะรัน ผ่าน `supabase--insert` หรือใน migration เดียวกัน
+
+## 5. Detail technical
+- ใช้ pattern `requireToken()` + `showError()` จาก `admin-helpers.ts`
+- เพิ่ม route เข้า `src/routeTree.gen.ts` อัตโนมัติโดย vite plugin (ไม่แตะมือ)
+- รูปแบบเวลาแสดงผล: `dd MMM yyyy HH:mm` (th locale) + relative ("2 ชั่วโมงที่แล้ว")
+- Category color mapping ใน styles.css tokens
+
+## ขอบเขตที่ไม่ทำ
+- ไม่ดึง git history มาแสดง (เป็น manual/AI insert เท่านั้น)
+- ไม่ทำ public changelog (เฉพาะ admin)
+- ไม่ทำ markdown rendering ใน summary (plain text + paths array)
