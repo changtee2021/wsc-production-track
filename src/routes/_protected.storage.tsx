@@ -76,6 +76,32 @@ function StoragePage() {
       </div>
 
       {/* Summary */}
+      {/* Usage vs Free Tier limits */}
+      <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <header className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">ภาพรวมเทียบเพดาน (Free Tier)</h2>
+        </header>
+        <div className="space-y-5">
+          <UsageBar
+            icon={<Database className="h-4 w-4" />}
+            label="Database"
+            usedMB={dbUsedMB}
+            limitMB={DB_LIMIT_MB}
+            pct={dbPct}
+            loading={loading && !data}
+          />
+          <UsageBar
+            icon={<HardDrive className="h-4 w-4" />}
+            label="Storage"
+            usedMB={stUsedMB}
+            limitMB={STORAGE_LIMIT_MB}
+            pct={stPct}
+            loading={loading && !data}
+          />
+        </div>
+      </section>
+
+      {/* Summary */}
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <SummaryCard
           icon={<Database className="h-5 w-5 text-secondary" />}
