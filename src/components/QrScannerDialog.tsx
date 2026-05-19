@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -23,10 +17,7 @@ const REGION_ID = "qr-scan-region";
 const isIOS = (): boolean => {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
-  return (
-    /iPad|iPhone|iPod/.test(ua) ||
-    (ua.includes("Mac") && "ontouchend" in document)
-  );
+  return /iPad|iPhone|iPod/.test(ua) || (ua.includes("Mac") && "ontouchend" in document);
 };
 
 const getIOSVersion = (): number | null => {
@@ -181,11 +172,7 @@ function buildConstraintLadder(mode: FacingMode): MediaStreamConstraints[] {
   ];
 }
 
-export function QrScannerDialog({
-  open,
-  onOpenChange,
-  onScanned,
-}: QrScannerDialogProps) {
+export function QrScannerDialog({ open, onOpenChange, onScanned }: QrScannerDialogProps) {
   const html5Ref = useRef<Html5Qrcode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -402,18 +389,14 @@ export function QrScannerDialog({
           name: "SecurityError",
         });
       }
-      if (
-        typeof navigator === "undefined" ||
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia
-      ) {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw Object.assign(new Error("ไม่รองรับกล้องบนเบราว์เซอร์นี้"), {
           name: "NotFoundError",
         });
       }
 
       // Give the dialog time to lay out (iOS dislikes getUserMedia before container is sized)
-      await new Promise((r) => setTimeout(r, 300));
+      //await new Promise((r) => setTimeout(r, 300));
       if (cancelledRef.current) return;
 
       if (detectorRef.current) {
@@ -424,11 +407,7 @@ export function QrScannerDialog({
           return;
         } catch (err) {
           const name = (err as { name?: string })?.name;
-          if (
-            name === "NotAllowedError" ||
-            name === "PermissionDeniedError" ||
-            name === "SecurityError"
-          ) {
+          if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
             throw err;
           }
           console.warn("Native BarcodeDetector failed, falling back", err);
@@ -456,8 +435,7 @@ export function QrScannerDialog({
 
     (async () => {
       if (await hasNativeQrDetector()) {
-        const Ctor = (window as unknown as { BarcodeDetector: BarcodeDetectorCtor })
-          .BarcodeDetector;
+        const Ctor = (window as unknown as { BarcodeDetector: BarcodeDetectorCtor }).BarcodeDetector;
         detectorRef.current = new Ctor({ formats: ["qr_code"] });
       } else {
         detectorRef.current = null;
@@ -510,11 +488,7 @@ export function QrScannerDialog({
         } catch {}
       }
     } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? `อ่าน QR จากรูปไม่สำเร็จ: ${err.message}`
-          : "อ่าน QR จากรูปไม่สำเร็จ",
-      );
+      toast.error(err instanceof Error ? `อ่าน QR จากรูปไม่สำเร็จ: ${err.message}` : "อ่าน QR จากรูปไม่สำเร็จ");
       if (!cancelledRef.current) await startWith(facing);
     }
   };
@@ -539,18 +513,13 @@ export function QrScannerDialog({
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
             <div className="flex-1 space-y-1">
               <p className="font-medium text-destructive">{errorInfo.message}</p>
-              {errorInfo.hint && (
-                <p className="text-xs text-muted-foreground">{errorInfo.hint}</p>
-              )}
+              {errorInfo.hint && <p className="text-xs text-muted-foreground">{errorInfo.hint}</p>}
             </div>
           </div>
         )}
 
         <div className="relative w-full flex-1 overflow-hidden rounded-xl bg-black sm:aspect-square sm:flex-none">
-          <div
-            id={REGION_ID}
-            className="h-full w-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover"
-          />
+          <div id={REGION_ID} className="h-full w-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover" />
           {starting && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -565,23 +534,14 @@ export function QrScannerDialog({
         </div>
 
         {errorInfo?.showRetry && (
-          <Button
-            onClick={retryCamera}
-            disabled={starting}
-            className="h-11 gap-2"
-          >
+          <Button onClick={retryCamera} disabled={starting} className="h-11 gap-2">
             <Camera className="h-4 w-4" />
             อนุญาตและเปิดกล้องอีกครั้ง
           </Button>
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            onClick={switchCamera}
-            disabled={starting}
-            className="h-11 gap-2"
-          >
+          <Button variant="outline" onClick={switchCamera} disabled={starting} className="h-11 gap-2">
             <SwitchCamera className="h-4 w-4" />
             สลับกล้อง
           </Button>
