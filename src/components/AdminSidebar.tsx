@@ -9,6 +9,7 @@ import {
   HardDrive,
   Factory,
   Sparkles,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
