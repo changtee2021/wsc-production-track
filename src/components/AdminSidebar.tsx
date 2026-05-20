@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "ประวัติงาน", url: "/logs", icon: FileText },
   { title: "รายงาน QC", url: "/qc-reports", icon: ClipboardCheck },
+  { title: "สรุป QC", url: "/qc-summary", icon: BarChart3 },
   { title: "จัดการข้อมูล", url: "/manage", icon: Users },
   { title: "พื้นที่จัดเก็บ", url: "/storage", icon: HardDrive },
   { title: "LogUpdate", url: "/logs-update", icon: Sparkles },
