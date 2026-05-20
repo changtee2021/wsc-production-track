@@ -644,3 +644,60 @@ export const adminReorderChecklist = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+// QC summary aggregations grouped by day or month.
+export const adminFetchQcSummary = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        from: z.string().optional(),
+        to: z.string().optional(),
+        granularity: z.enum(["day", "month"]).default("day"),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    let q = supabaseAdmin
+      .from("qc_reports")
+      .select("id, created_at, overall_result, category_id, categories(name)")
+      .order("created_at", { ascending: true })
+      .limit(10000);
+    if (data.from) q = q.gte("created_at", data.from);
+    if (data.to) q = q.lte("created_at", data.to);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+
+    type Bucket = { key: string; total: number; pass: number; fail: number; unknown: number };
+    const bucketMap = new Map<string, Bucket>();
+    const catMap = new Map<string, Bucket>();
+    const totals = { total: 0, pass: 0, fail: 0, unknown: 0 };
+
+    for (const r of rows ?? []) {
+      const dt = new Date(r.created_at);
+      const yyyy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, "0");
+      const dd = String(dt.getDate()).padStart(2, "0");
+      const key = data.granularity === "month" ? `${yyyy}-${mm}` : `${yyyy}-${mm}-${dd}`;
+      const b = bucketMap.get(key) ?? { key, total: 0, pass: 0, fail: 0, unknown: 0 };
+      b.total++;
+      const catName = (r as { categories: { name: string } | null }).categories?.name ?? "ไม่ระบุหมวด";
+      const cb = catMap.get(catName) ?? { key: catName, total: 0, pass: 0, fail: 0, unknown: 0 };
+      cb.total++;
+      totals.total++;
+      if (r.overall_result === "pass") {
+        b.pass++; cb.pass++; totals.pass++;
+      } else if (r.overall_result === "fail") {
+        b.fail++; cb.fail++; totals.fail++;
+      } else {
+        b.unknown++; cb.unknown++; totals.unknown++;
+      }
+      bucketMap.set(key, b);
+      catMap.set(catName, cb);
+    }
+
+    const buckets = Array.from(bucketMap.values()).sort((a, b) => a.key.localeCompare(b.key));
+    const byCategory = Array.from(catMap.values()).sort((a, b) => b.total - a.total);
+    return { buckets, byCategory, totals };
+  });
