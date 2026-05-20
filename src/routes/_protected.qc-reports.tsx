@@ -97,6 +97,31 @@ function QcReportsPage() {
   const [status, setStatus] = useState<"open" | "resolved" | "all">("all");
   const [lightbox, setLightbox] = useState<MediaItem | null>(null);
   const [signedMap, setSignedMap] = useState<Record<string, string>>({});
+  type JobWorkerRow = {
+    id: string;
+    action: string;
+    created_at: string;
+    note: string | null;
+    employees: { name: string; emp_code: string | null } | null;
+    steps: { step_name: string } | null;
+    categories: { name: string } | null;
+  };
+  const [jobWorkersMap, setJobWorkersMap] = useState<Record<string, JobWorkerRow[]>>({});
+  const [jobWorkersLoading, setJobWorkersLoading] = useState<Record<string, boolean>>({});
+
+  const loadJobWorkers = async (jobId: string) => {
+    if (jobWorkersMap[jobId] || jobWorkersLoading[jobId]) return;
+    setJobWorkersLoading((p) => ({ ...p, [jobId]: true }));
+    try {
+      const token = requireToken();
+      const res = await fetchJobWorkers({ data: { token, job_id: jobId } });
+      setJobWorkersMap((p) => ({ ...p, [jobId]: (res.rows ?? []) as unknown as JobWorkerRow[] }));
+    } catch (err) {
+      showError(err, "โหลดรายชื่อพนักงานไม่สำเร็จ");
+    } finally {
+      setJobWorkersLoading((p) => ({ ...p, [jobId]: false }));
+    }
+  };
 
   const load = async () => {
     setLoading(true);
