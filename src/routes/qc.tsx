@@ -185,11 +185,15 @@ interface CategoryRow {
   name: string;
 }
 
+type ItemTag = "motor" | null;
 type ItemState = {
   is_passed: boolean | null;
+  tag: ItemTag;
   remark: string;
   media: MediaItem[];
 };
+
+const EMPTY_ITEM_STATE: ItemState = { is_passed: null, tag: null, remark: "", media: [] };
 
 const IMAGE_EXT_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
