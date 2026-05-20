@@ -268,6 +268,7 @@ export type Database = {
           media: Json
           qc_report_id: string
           remark: string | null
+          result_tag: string | null
         }
         Insert: {
           checklist_id?: string | null
@@ -279,6 +280,7 @@ export type Database = {
           media?: Json
           qc_report_id: string
           remark?: string | null
+          result_tag?: string | null
         }
         Update: {
           checklist_id?: string | null
@@ -290,6 +292,7 @@ export type Database = {
           media?: Json
           qc_report_id?: string
           remark?: string | null
+          result_tag?: string | null
         }
         Relationships: [
           {
