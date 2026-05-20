@@ -341,30 +341,40 @@ function QcReportsPage() {
                   <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
                     {items.map((it) => {
                       const mediaCount = it.media?.length ?? 0;
+                      const isMotor = it.is_passed && it.result_tag === "motor";
                       return (
                         <AccordionItem
                           key={it.id}
                           value={it.id}
                           className={`rounded-lg border px-3 ${
-                            it.is_passed
-                              ? "border-success/30 bg-success/5"
-                              : "border-destructive/40 bg-destructive/5"
+                            isMotor
+                              ? "border-amber-400/50 bg-amber-50/60 dark:bg-amber-950/20"
+                              : it.is_passed
+                                ? "border-success/30 bg-success/5"
+                                : "border-destructive/40 bg-destructive/5"
                           }`}
                         >
                           <AccordionTrigger className="py-2 hover:no-underline">
                             <div className="flex w-full items-center gap-2 pr-2 text-left">
                               <span
                                 className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                                  it.is_passed
-                                    ? "bg-success/20 text-success"
-                                    : "bg-destructive/20 text-destructive"
+                                  isMotor
+                                    ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                                    : it.is_passed
+                                      ? "bg-success/20 text-success"
+                                      : "bg-destructive/20 text-destructive"
                                 }`}
                               >
-                                {it.is_passed ? "✓" : "✗"}
+                                {isMotor ? "M" : it.is_passed ? "✓" : "✗"}
                               </span>
                               <span className="flex-1 truncate text-sm font-medium">
                                 {it.item_order}. {it.item_text_snapshot}
                               </span>
+                              {isMotor && (
+                                <span className="shrink-0 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                                  มอเตอร์
+                                </span>
+                              )}
                               {mediaCount > 0 && (
                                 <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                                   {mediaCount} สื่อ
@@ -372,6 +382,7 @@ function QcReportsPage() {
                               )}
                             </div>
                           </AccordionTrigger>
+
                           <AccordionContent className="pb-3 pt-1">
                             {it.remark && (
                               <p className="mb-2 whitespace-pre-wrap rounded-md bg-background/60 p-2 text-xs text-destructive">
