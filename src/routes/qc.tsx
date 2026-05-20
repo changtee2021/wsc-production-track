@@ -494,6 +494,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               item_text_snapshot: it.item_text,
               item_order: it.item_order,
               is_passed: s?.is_passed === true,
+              tag: s?.tag ?? null,
               remark: s?.remark?.trim() || null,
               media: (s?.media ?? []).map((m) => ({ url: m.url, type: m.type })),
             };
