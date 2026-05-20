@@ -885,6 +885,7 @@ function ChecklistRow({
   state,
   uploading,
   onPass,
+  onMotor,
   onRemark,
   onUpload,
   onRemoveMedia,
@@ -894,6 +895,7 @@ function ChecklistRow({
   state: ItemState;
   uploading: boolean;
   onPass: (v: boolean) => void;
+  onMotor: () => void;
   onRemark: (v: string) => void;
   onUpload: (files: FileList, kind: "image" | "video") => void;
   onRemoveMedia: (i: number) => void;
@@ -902,12 +904,19 @@ function ChecklistRow({
   const vidRef = useRef<HTMLInputElement>(null);
 
   const failed = state.is_passed === false;
-  const passed = state.is_passed === true;
+  const isMotor = state.is_passed === true && state.tag === "motor";
+  const passed = state.is_passed === true && !isMotor;
 
   return (
     <div
       className={`rounded-2xl border-2 bg-card p-3 transition-colors ${
-        passed ? "border-success/40 bg-success/5" : failed ? "border-destructive/40 bg-destructive/5" : "border-border"
+        passed
+          ? "border-success/40 bg-success/5"
+          : isMotor
+            ? "border-amber-400/50 bg-amber-50/60 dark:bg-amber-950/20"
+            : failed
+              ? "border-destructive/40 bg-destructive/5"
+              : "border-border"
       }`}
     >
       <div className="flex items-start gap-2">
@@ -915,13 +924,18 @@ function ChecklistRow({
           {index}
         </span>
         <p className="flex-1 text-sm font-medium leading-snug">{item.item_text}</p>
+        {isMotor && (
+          <span className="shrink-0 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+            มอเตอร์
+          </span>
+        )}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2">
         <Button
           type="button"
           onClick={() => onPass(true)}
-          className={`h-11 gap-1 font-semibold ${
+          className={`h-11 gap-1 px-2 text-sm font-semibold ${
             passed
               ? "bg-success text-success-foreground hover:bg-success/90"
               : "bg-success/15 text-success hover:bg-success/25"
@@ -932,7 +946,7 @@ function ChecklistRow({
         <Button
           type="button"
           onClick={() => onPass(false)}
-          className={`h-11 gap-1 font-semibold ${
+          className={`h-11 gap-1 px-2 text-sm font-semibold ${
             failed
               ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
               : "bg-destructive/15 text-destructive hover:bg-destructive/25"
@@ -940,7 +954,19 @@ function ChecklistRow({
         >
           <XCircle className="h-4 w-4" /> ไม่ผ่าน
         </Button>
+        <Button
+          type="button"
+          onClick={() => onMotor()}
+          className={`h-11 gap-1 px-2 text-sm font-semibold ${
+            isMotor
+              ? "bg-amber-500 text-white hover:bg-amber-500/90"
+              : "bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 dark:text-amber-300"
+          }`}
+        >
+          <Wrench className="h-4 w-4" /> มอเตอร์
+        </Button>
       </div>
+
 
       {failed && (
         <div className="mt-3 space-y-2">
