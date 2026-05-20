@@ -29,7 +29,8 @@ import { hasUnseen } from "@/lib/log-seen";
 
 const NAV_ITEMS = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "ประวัติงาน", url: "/logs", icon: FileText },
+  { title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search },
+  { title: "ประวัติงานผลิต", url: "/logs", icon: FileText },
   { title: "รายงาน QC", url: "/qc-reports", icon: ClipboardCheck },
   { title: "สรุป QC", url: "/qc-summary", icon: BarChart3 },
   { title: "จัดการข้อมูล", url: "/manage", icon: Users },
