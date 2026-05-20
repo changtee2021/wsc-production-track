@@ -849,7 +849,8 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         {job_id && categoryId && checklist.length > 0 && (
           <section className="mt-5">
             <div className="mb-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">
-              <span className="font-semibold">สรุป:</span> <span className="text-success">ผ่าน {passCount}</span> /{" "}
+              <span className="font-semibold">สรุป:</span> <span className="text-success">ผ่าน {passCount}</span>
+              {motorCount > 0 && <span className="text-amber-600"> (มอเตอร์ {motorCount})</span>} /{" "}
               <span className="text-destructive">ไม่ผ่าน {failCount}</span> /{" "}
               <span className="text-muted-foreground">ทั้งหมด {total}</span>
             </div>
