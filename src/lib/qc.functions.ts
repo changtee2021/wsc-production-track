@@ -74,6 +74,7 @@ const reportItemInput = z.object({
   item_text_snapshot: z.string().trim().min(1).max(500),
   item_order: z.number().int().min(0).max(10000),
   is_passed: z.boolean(),
+  tag: z.enum(["motor"]).nullable().optional(),
   remark: z.string().trim().max(2000).nullable().optional(),
   media: z.array(mediaItem).max(20).default([]),
 });
