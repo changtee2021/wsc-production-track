@@ -527,6 +527,9 @@ function QcReportsPage() {
                   <Trash2 className="h-4 w-4" /> ลบ
                 </Button>
               </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </article>
           );
         })}
