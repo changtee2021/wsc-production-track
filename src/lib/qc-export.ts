@@ -80,7 +80,7 @@ export function buildQcReportsCsv(reports: QcReportRow[]): string {
           ...base,
           it.item_order,
           it.item_text_snapshot,
-          it.is_passed ? "ผ่าน" : "ไม่ผ่าน",
+          it.result_tag === "motor" ? "ผ่าน (มอเตอร์)" : it.is_passed ? "ผ่าน" : "ไม่ผ่าน",
           it.remark ?? "",
           it.media?.length ?? 0,
           (it.media ?? []).map((m) => m.url).join(";"),
