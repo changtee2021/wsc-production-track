@@ -129,6 +129,7 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
         item_text_snapshot: it.item_text_snapshot,
         item_order: it.item_order,
         is_passed: it.is_passed,
+        result_tag: it.tag ?? null,
         remark: it.remark ?? null,
         media: it.media,
       }));
