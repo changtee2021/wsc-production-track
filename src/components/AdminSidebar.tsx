@@ -10,6 +10,7 @@ import {
   Factory,
   Sparkles,
   BarChart3,
+  Search,
 } from "lucide-react";
 import {
   Sidebar,
