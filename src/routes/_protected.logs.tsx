@@ -64,6 +64,8 @@ function LogsPage() {
   const [onlyNotes, setOnlyNotes] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [appliedFrom, setAppliedFrom] = useState<Date | undefined>(undefined);
+  const [appliedTo, setAppliedTo] = useState<Date | undefined>(undefined);
   const [selected, setSelected] = useState<LogRow | null>(null);
   const [signedMap, setSignedMap] = useState<Record<string, string>>({});
 

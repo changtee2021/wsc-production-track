@@ -1,60 +1,41 @@
-## เป้าหมาย
-เพิ่มหน้าใหม่ `สรุป QC` ที่แสดงสถิติงาน QC แบบ **รายวัน** และ **รายเดือน** พร้อมกราฟ — ผ่าน/ไม่ผ่าน, จำนวนรวม, แยกตามหมวด
+## 1) หน้า "รายละเอียดบันทึกการผลิต" (`/logs`)
 
-## หน้าใหม่: `/qc-summary`
+**ปัญหาที่พบ**
+- ใน `src/routes/_protected.logs.tsx` (บรรทัด 122-123) ใช้ `dateFrom.setHours(0,0,0,0)` และ `dateTo.setHours(23,59,59,999)` ซึ่ง **mutate ตัว Date ที่เก็บใน state ตรง ๆ** → ทำให้ Calendar เลือกผิดวัน / กรองได้ผลแปลก ๆ บางครั้งกรองจน "ไม่มีข้อมูล" แม้เลือกช่วงถูกต้อง
+- ตอนนี้กรองแบบ live ทุกครั้งที่เลือกวัน → ระหว่างเลือก from ก่อน to เสร็จก็เกิดเงื่อนไข from > to ชั่วคราว, ทำให้รู้สึกว่า "เลือกช่วงแล้วไม่ขึ้นข้อมูล"
 
-### ส่วนหัว / ตัวกรอง
-- เลือกโหมด: **รายวัน** (default, ช่วง 30 วันล่าสุด) / **รายเดือน** (12 เดือนล่าสุด)
-- เลือกช่วงวันที่เอง (from / to)
-- ปุ่ม Refresh
+**สิ่งที่จะทำ**
+- เปลี่ยนการ normalize เวลาเป็นแบบ immutable: สร้าง `new Date(dateFrom)` ใหม่ก่อน `setHours` (ไม่แก้ตัวใน state)
+- เพิ่ม state คู่ "applied" `appliedFrom` / `appliedTo` แยกจากที่ผู้ใช้กำลังเลือก
+- เพิ่มปุ่ม **"ค้นหา"** (icon Search) ในแถวช่วงวันที่ — กดแล้วถึงจะ apply ค่า from/to เข้ากับ filter
+- ปุ่ม **"ล้าง"** เคลียร์ทั้งค่าเลือกและค่า applied
+- ปุ่มลัด (วันนี้ / 7 วัน / 30 วัน) ให้ apply ทันที (set ทั้ง pending และ applied พร้อมกัน เพื่อพฤติกรรมเดิม)
+- ใช้ `appliedFrom` / `appliedTo` ใน `useMemo filtered`
 
-### การ์ดสรุป (KPI) 4 ใบ
-- งาน QC ทั้งหมด
-- ✅ ผ่าน (จำนวน + %)
-- ❌ ไม่ผ่าน (จำนวน + %)
-- ⏳ ยังไม่ระบุผล (overall_result เป็น null)
+ไฟล์ที่แก้: `src/routes/_protected.logs.tsx`
 
-### กราฟ
-1. **Bar chart (stacked)** — แกน X เป็นวัน/เดือน, แท่งสีเขียว=ผ่าน / สีแดง=ไม่ผ่าน / สีเทา=ไม่ระบุ
-2. **Pie chart** — สัดส่วน ผ่าน/ไม่ผ่าน/ไม่ระบุ รวมทั้งช่วง
-3. **Bar chart แนวนอน** — แยกตามหมวด (มู่ลี่ไม้/อลู/ม่านม้วน/ม่านปรับแสง) แสดงผ่าน vs ไม่ผ่าน
+---
 
-### ตารางสรุป
-- คอลัมน์: วัน/เดือน • รวม • ผ่าน • ไม่ผ่าน • ไม่ระบุ • อัตราผ่าน(%)
+## 2) หน้า "รายงาน QC" (`/qc-reports`) — ทำการ์ดให้หุบ/กางได้
 
-## เทคนิค
+**สิ่งที่จะทำ**
+- ครอบทั้ง `<article>` ของแต่ละรายงานด้วย `Accordion` (`type="single"` + `collapsible`, **default หุบ**)
+- ส่วน **AccordionTrigger** (โหมดหุบ) แสดงเฉพาะ:
+  - วันเวลา (`created_at`)
+  - `Job <job_id>` (ตัวหนา)
+  - ชื่อผู้ตรวจ QC (`qc_employees.name` + `emp_code`)
+  - Badge สถานะ "✓ ผ่าน" / "✗ ไม่ผ่าน" (จาก `overall_result`)
+- ส่วน **AccordionContent** เก็บเนื้อหาเดิมทั้งหมด: checklist items (pass/fail พร้อมสื่อ), accordion "พนักงานที่ทำใน Job นี้", หมายเหตุภาพรวม, สื่อภาพรวม, ปุ่มแก้ไข/ลบ
+- คงพฤติกรรม auto-open ของ failed item ไว้ (อยู่ในเนื้อหาด้านในอยู่แล้ว — เมื่อกางการ์ดถึงจะมีผล)
 
-### 1. Server function ใหม่ใน `src/lib/admin.functions.ts`
-`adminFetchQcSummary({ token, from, to, granularity: 'day' | 'month' })`
-- Query `qc_reports`: `id, created_at, overall_result, category_id, categories(name)`
-- Filter ตาม `from`/`to`
-- Group ฝั่ง JS ตาม `granularity` (วัน=`YYYY-MM-DD`, เดือน=`YYYY-MM`) เป็น buckets
-- คืน:
-  ```ts
-  {
-    buckets: [{ key, total, pass, fail, unknown }],
-    byCategory: [{ category, total, pass, fail, unknown }],
-    totals: { total, pass, fail, unknown },
-  }
-  ```
+ไฟล์ที่แก้: `src/routes/_protected.qc-reports.tsx` (ช่วงบรรทัด 280-525)
 
-### 2. หน้า `src/routes/_protected.qc-summary.tsx`
-- ใช้ `recharts` (มีอยู่แล้วในโปรเจค dashboard)
-- โหลดผ่าน `useServerFn` + state filters
-- token ผ่าน `requireToken()` (รูปแบบเดียวกับ qc-reports)
-- ธีมสีใช้ semantic tokens จาก `styles.css`
+---
 
-### 3. เพิ่มเมนู sidebar
-ใน `src/components/AdminSidebar.tsx` เพิ่มรายการใหม่หลัง "รายงาน QC":
-```
-{ title: "สรุป QC", url: "/qc-summary", icon: BarChart3 }
-```
-
-### 4. system_logs INSERT
-บันทึก: "เพิ่มหน้าสรุป QC รายวัน/รายเดือน พร้อมกราฟ" — category: feature
+## 3) บันทึก `system_logs`
+INSERT 1 แถว — `category: bugfix`, สรุป "แก้บั๊กกรองช่วงวันที่ในประวัติงาน + เพิ่มปุ่มค้นหา และทำการ์ดรายงาน QC ให้หุบได้"
 
 ## ไฟล์ที่เปลี่ยน
-- `src/lib/admin.functions.ts` (เพิ่ม `adminFetchQcSummary`)
-- `src/routes/_protected.qc-summary.tsx` (ใหม่)
-- `src/components/AdminSidebar.tsx` (เพิ่มเมนู)
+- `src/routes/_protected.logs.tsx`
+- `src/routes/_protected.qc-reports.tsx`
 - `system_logs` INSERT
