@@ -16,6 +16,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
+import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
 import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
@@ -55,6 +56,11 @@ const IndexRoute = IndexRouteImport.update({
 const ProtectedStorageRoute = ProtectedStorageRouteImport.update({
   id: '/storage',
   path: '/storage',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedQcSummaryRoute = ProtectedQcSummaryRouteImport.update({
+  id: '/qc-summary',
+  path: '/qc-summary',
   getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedQcReportsRoute = ProtectedQcReportsRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/logs-update': typeof ProtectedLogsUpdateRoute
   '/manage': typeof ProtectedManageRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
+  '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/logs-update': typeof ProtectedLogsUpdateRoute
   '/manage': typeof ProtectedManageRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
+  '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/_protected/logs-update': typeof ProtectedLogsUpdateRoute
   '/_protected/manage': typeof ProtectedManageRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
+  '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
   '/_protected/storage': typeof ProtectedStorageRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/logs-update'
     | '/manage'
     | '/qc-reports'
+    | '/qc-summary'
     | '/storage'
     | '/api/public/hooks/line-daily-send'
   fileRoutesByTo: FileRoutesByTo
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/logs-update'
     | '/manage'
     | '/qc-reports'
+    | '/qc-summary'
     | '/storage'
     | '/api/public/hooks/line-daily-send'
   id:
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/_protected/logs-update'
     | '/_protected/manage'
     | '/_protected/qc-reports'
+    | '/_protected/qc-summary'
     | '/_protected/storage'
     | '/api/public/hooks/line-daily-send'
   fileRoutesById: FileRoutesById
@@ -240,6 +252,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedStorageRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/qc-summary': {
+      id: '/_protected/qc-summary'
+      path: '/qc-summary'
+      fullPath: '/qc-summary'
+      preLoaderRoute: typeof ProtectedQcSummaryRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/qc-reports': {
       id: '/_protected/qc-reports'
       path: '/qc-reports'
@@ -291,6 +310,7 @@ interface ProtectedRouteChildren {
   ProtectedLogsUpdateRoute: typeof ProtectedLogsUpdateRoute
   ProtectedManageRoute: typeof ProtectedManageRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
+  ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
 }
 
@@ -300,6 +320,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedLogsUpdateRoute: ProtectedLogsUpdateRoute,
   ProtectedManageRoute: ProtectedManageRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
+  ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,
 }
 
