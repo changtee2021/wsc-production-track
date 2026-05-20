@@ -749,6 +749,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                     state={s}
                     uploading={uploading}
                     onPass={(v) => setItemPass(it.id, v)}
+                    onMotor={() => setItemMotor(it.id)}
                     onRemark={(v) => setItemRemark(it.id, v)}
                     onUpload={(files, kind) => uploadFiles(files, kind, it.id)}
                     onRemoveMedia={(i) => removeItemMedia(it.id, i)}
