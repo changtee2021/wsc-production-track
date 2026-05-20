@@ -278,57 +278,62 @@ function QcReportsPage() {
           const failCount = items.length - passCount;
 
           return (
-            <article key={r.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span className="font-mono">{new Date(r.created_at).toLocaleString("th-TH")}</span>
-                    {r.categories?.name && (<><span>•</span><span>{r.categories.name}</span></>)}
-                  </div>
-                  <h3 className="mt-1 text-xl font-bold leading-tight">
-                    Job <span className="font-mono">{r.job_id}</span>
-                  </h3>
-                  <div className="mt-1 text-base font-bold">
-                    <span className="text-muted-foreground font-normal text-sm">ผู้ตรวจ QC: </span>
-                    <span>{r.qc_employees?.name ?? "—"}</span>
-                    {r.qc_employees?.emp_code && (
-                      <span className="ml-1 font-mono text-xs text-muted-foreground font-normal">({r.qc_employees.emp_code})</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {r.overall_result && (
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        r.overall_result === "pass"
-                          ? "bg-success/15 text-success"
-                          : "bg-destructive/15 text-destructive"
-                      }`}
-                    >
-                      {r.overall_result === "pass" ? "✓ ผ่าน" : "✗ ไม่ผ่าน"}
-                    </span>
-                  )}
-                  {items.length > 0 && (
-                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                      ผ่าน {passCount}/{items.length}
-                    </span>
-                  )}
-                  {r.summary && (
-                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
-                      {r.summary}
-                    </span>
-                  )}
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      r.status === "resolved"
-                        ? "bg-success/15 text-success"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {r.status === "resolved" ? "แก้ไขแล้ว" : "ยังไม่แก้"}
-                  </span>
-                </div>
-              </div>
+            <article key={r.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <Accordion type="single" collapsible>
+                <AccordionItem value="card" className="border-0">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 pr-2 text-left">
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {new Date(r.created_at).toLocaleString("th-TH")}
+                      </span>
+                      <span className="text-base font-bold">
+                        Job <span className="font-mono">{r.job_id}</span>
+                      </span>
+                      <span className="text-sm">
+                        <span className="text-muted-foreground">QC: </span>
+                        <span className="font-semibold">{r.qc_employees?.name ?? "—"}</span>
+                        {r.qc_employees?.emp_code && (
+                          <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                            ({r.qc_employees.emp_code})
+                          </span>
+                        )}
+                      </span>
+                      {r.overall_result && (
+                        <span
+                          className={`ml-auto rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            r.overall_result === "pass"
+                              ? "bg-success/15 text-success"
+                              : "bg-destructive/15 text-destructive"
+                          }`}
+                        >
+                          {r.overall_result === "pass" ? "✓ ผ่าน" : "✗ ไม่ผ่าน"}
+                        </span>
+                      )}
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          r.status === "resolved"
+                            ? "bg-success/15 text-success"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {r.status === "resolved" ? "แก้ไขแล้ว" : "ยังไม่แก้"}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4 pt-0">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {r.categories?.name && <span>หมวด: {r.categories.name}</span>}
+                      {items.length > 0 && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
+                          ผ่าน {passCount}/{items.length}
+                        </span>
+                      )}
+                      {r.summary && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
+                          {r.summary}
+                        </span>
+                      )}
+                    </div>
 
               {items.length > 0 && (
                 <div className="mt-3">
@@ -522,6 +527,9 @@ function QcReportsPage() {
                   <Trash2 className="h-4 w-4" /> ลบ
                 </Button>
               </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </article>
           );
         })}
