@@ -311,7 +311,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         setItemStates((prev) => {
           const next: Record<string, ItemState> = {};
           for (const r of rows) {
-            next[r.id] = prev[r.id] ?? { is_passed: null, remark: "", media: [] };
+            next[r.id] = prev[r.id] ?? EMPTY_ITEM_STATE;
           }
           return next;
         });
@@ -385,7 +385,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           setItemStates((prev) => ({
             ...prev,
             [target]: {
-              ...(prev[target] ?? { is_passed: null, remark: "", media: [] }),
+              ...(prev[target] ?? EMPTY_ITEM_STATE),
               media: [...(prev[target]?.media ?? []), ...items],
             },
           }));
@@ -403,14 +403,14 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const setItemPass = (id: string, pass: boolean) => {
     setItemStates((prev) => ({
       ...prev,
-      [id]: { ...(prev[id] ?? { is_passed: null, remark: "", media: [] }), is_passed: pass },
+      [id]: { ...(prev[id] ?? EMPTY_ITEM_STATE), is_passed: pass },
     }));
   };
 
   const setItemRemark = (id: string, remark: string) => {
     setItemStates((prev) => ({
       ...prev,
-      [id]: { ...(prev[id] ?? { is_passed: null, remark: "", media: [] }), remark },
+      [id]: { ...(prev[id] ?? EMPTY_ITEM_STATE), remark },
     }));
   };
 
@@ -418,7 +418,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     setItemStates((prev) => ({
       ...prev,
       [id]: {
-        ...(prev[id] ?? { is_passed: null, remark: "", media: [] }),
+        ...(prev[id] ?? EMPTY_ITEM_STATE),
         media: (prev[id]?.media ?? []).filter((_, i) => i !== index),
       },
     }));
@@ -729,7 +729,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
 
             <div className="space-y-3">
               {checklist.map((it, idx) => {
-                const s = itemStates[it.id] ?? { is_passed: null, remark: "", media: [] };
+                const s = itemStates[it.id] ?? EMPTY_ITEM_STATE;
                 return (
                   <ChecklistRow
                     key={it.id}
