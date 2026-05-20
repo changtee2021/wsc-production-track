@@ -121,8 +121,12 @@ function LogsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const fromTs = dateFrom ? new Date(dateFrom.setHours(0, 0, 0, 0)).getTime() : null;
-    const toTs = dateTo ? new Date(dateTo.setHours(23, 59, 59, 999)).getTime() : null;
+    const fromTs = appliedFrom
+      ? new Date(appliedFrom).setHours(0, 0, 0, 0)
+      : null;
+    const toTs = appliedTo
+      ? new Date(appliedTo).setHours(23, 59, 59, 999)
+      : null;
     return logs.filter((l) => {
       if (categoryFilter !== "all" && l.category_id !== categoryFilter) return false;
       if (actionFilter !== "all" && l.action !== actionFilter) return false;
@@ -138,7 +142,7 @@ function LogsPage() {
       }
       return true;
     });
-  }, [logs, search, categoryFilter, actionFilter, onlyNotes, dateFrom, dateTo]);
+  }, [logs, search, categoryFilter, actionFilter, onlyNotes, appliedFrom, appliedTo]);
 
 
   const notesCount = useMemo(
