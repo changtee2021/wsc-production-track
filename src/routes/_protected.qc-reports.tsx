@@ -86,6 +86,7 @@ function QcReportsPage() {
   const fetchReports = useServerFn(adminFetchQcReports);
   const updateStatus = useServerFn(adminUpdateQcReportStatus);
   const del = useServerFn(adminDeleteQcReport);
+  const fetchJobWorkers = useServerFn(adminFetchJobWorkers);
   const signUrls = useServerFn(adminSignMediaUrls);
 
   const [rows, setRows] = useState<QcReportRow[]>([]);
