@@ -403,7 +403,14 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const setItemPass = (id: string, pass: boolean) => {
     setItemStates((prev) => ({
       ...prev,
-      [id]: { ...(prev[id] ?? EMPTY_ITEM_STATE), is_passed: pass },
+      [id]: { ...(prev[id] ?? EMPTY_ITEM_STATE), is_passed: pass, tag: null },
+    }));
+  };
+
+  const setItemMotor = (id: string) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? EMPTY_ITEM_STATE), is_passed: true, tag: "motor", remark: "", media: [] },
     }));
   };
 
@@ -424,22 +431,25 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     }));
   };
 
-  const { passCount, failCount, answeredCount, total } = useMemo(() => {
+  const { passCount, failCount, motorCount, answeredCount, total } = useMemo(() => {
     let p = 0,
       f = 0,
+      m = 0,
       a = 0;
     for (const it of checklist) {
       const s = itemStates[it.id];
       if (s?.is_passed === true) {
         p++;
         a++;
+        if (s.tag === "motor") m++;
       } else if (s?.is_passed === false) {
         f++;
         a++;
       }
     }
-    return { passCount: p, failCount: f, answeredCount: a, total: checklist.length };
+    return { passCount: p, failCount: f, motorCount: m, answeredCount: a, total: checklist.length };
   }, [checklist, itemStates]);
+
 
   const submit = async () => {
     if (!job_id) return toast.error("ยังไม่ได้กรอก Job");
