@@ -454,7 +454,7 @@ export const adminFetchQcReports = createServerFn({ method: "POST" })
     let q = supabaseAdmin
       .from("qc_reports")
       .select(
-        "id, job_id, qc_employee_id, production_log_id, step_id, category_id, employee_id, note, media, status, overall_result, summary, created_at, qc_employees(name, emp_code), employees(name, emp_code), steps(step_name), categories(name), qc_report_items(id, item_text_snapshot, item_order, is_passed, remark, media)",
+        "id, job_id, qc_employee_id, production_log_id, step_id, category_id, employee_id, note, media, status, overall_result, summary, created_at, qc_employees(name, emp_code), employees(name, emp_code), steps(step_name), categories(name), qc_report_items(id, item_text_snapshot, item_order, is_passed, result_tag, remark, media)",
       )
       .order("created_at", { ascending: false })
       .limit(1000);
@@ -722,7 +722,7 @@ export const adminFetchJobDetail = createServerFn({ method: "POST" })
       supabaseAdmin
         .from("qc_reports")
         .select(
-          "id, job_id, qc_employee_id, step_id, category_id, employee_id, note, media, status, overall_result, summary, created_at, qc_employees(name, emp_code, avatar_url), employees(name, emp_code), steps(step_name), categories(name), qc_report_items(id, item_text_snapshot, item_order, is_passed, remark, media)",
+          "id, job_id, qc_employee_id, step_id, category_id, employee_id, note, media, status, overall_result, summary, created_at, qc_employees(name, emp_code, avatar_url), employees(name, emp_code), steps(step_name), categories(name), qc_report_items(id, item_text_snapshot, item_order, is_passed, result_tag, remark, media)",
         )
         .eq("job_id", jobId)
         .order("created_at", { ascending: false }),

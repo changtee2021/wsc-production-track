@@ -1,0 +1,1 @@
+ALTER TABLE public.qc_report_items ADD COLUMN IF NOT EXISTS result_tag text NULL;

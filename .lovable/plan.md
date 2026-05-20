@@ -1,53 +1,64 @@
-## 1) เปลี่ยนชื่อเมนู "ประวัติงาน" → "ประวัติงานผลิต"
-
-**ไฟล์:** `src/components/AdminSidebar.tsx`
-- แก้รายการ `{ title: "ประวัติงาน", url: "/logs" }` เป็น `{ title: "ประวัติงานผลิต", url: "/logs" }`
-- (ไม่เปลี่ยน path/route — แค่ label ในเมนู)
-
----
-
-## 2) ฟีเจอร์ใหม่ "ค้นหา Job ด่วน" (Quick Look)
-
-วางใต้ Dashboard ในเมนูแอดมิน — ใส่เลข `job_id` หรือสแกน QR แล้วโชว์ข้อมูลทุกอย่างของ job นั้นในหน้าเดียว
-
-### 2.1 Server function — `src/lib/admin.functions.ts`
-เพิ่ม `adminFetchJobDetail({ token, job_id })` คืนข้อมูลรวมของ job:
-- **production_logs** ทุก action (start/finish/etc.) ของ job_id นี้ พร้อม join `employees(name, emp_code, avatar_url)`, `steps(step_name, icon)`, `categories(name)`
-- **qc_reports** ทุกใบของ job_id นี้ พร้อม join `qc_employees(name, emp_code)`, `categories(name)`, `employees(name)` และ `qc_report_items` (checklist ผ่าน/ไม่ผ่าน + remark + media) ของแต่ละใบ
-- **summary**: นับจำนวน workers (distinct employee), จำนวน steps ที่ทำเสร็จ, ผลรวม QC (pass/fail/unknown), เวลา start แรกสุด & finish ล่าสุด, category หลัก
-- ใช้ `assertAdmin(token)` + `supabaseAdmin` (RLS bypass บนเซิร์ฟเวอร์อย่างปลอดภัย)
-- คืน DTO แบน ๆ (ตามกฎ serialization-safe)
-- ถ้าไม่พบ job เลย คืน `{ found: false }` แทน throw
-
-### 2.2 หน้าใหม่ — `src/routes/_protected.job-lookup.tsx`
-- Header: "ค้นหา Job ด่วน" + คำอธิบายสั้น
-- แถวค้นหา:
-  - `Input` ใส่เลข job id + ปุ่ม **"ค้นหา"** (icon Search)
-  - ปุ่ม **"สแกน QR"** เปิด `QrScannerDialog` (มีอยู่แล้ว) → เติมค่าลง input แล้ว auto-search
-  - กด Enter ก็ค้นหา
-- ผลลัพธ์ (เมื่อพบ):
-  1. **การ์ดสรุป** — Job ID ตัวใหญ่, หมวด, ช่วงเวลา (เริ่ม-เสร็จล่าสุด), จำนวนพนักงานที่ทำ, จำนวนขั้นตอน, สรุป QC (ผ่าน/ไม่ผ่าน badge)
-  2. **Timeline ขั้นตอนการผลิต** — list `production_logs` เรียงตามเวลา แสดง: avatar + ชื่อพนักงาน + emp_code, ชื่อ step, action (start/finish), เวลา, หมวด, note (+ note_image ถ้ามี)
-  3. **รายงาน QC ทั้งหมดของ Job** — Accordion แต่ละใบเหมือนหน้า `/qc-reports` (หุบ default): หัวการ์ดโชว์ เวลา + ผู้ตรวจ + ✓/✗; กางแล้วโชว์ checklist items, สื่อ, หมายเหตุ
-- ถ้าไม่พบ: state ว่าง "ไม่พบข้อมูลของ Job นี้"
-- Loading state ระหว่างยิง server fn
-
-### 2.3 Sidebar — `src/components/AdminSidebar.tsx`
-แทรกใต้ Dashboard:
-```
-{ title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search }
-```
-(import `Search` จาก lucide-react)
+## เป้าหมาย
+เพิ่มปุ่มที่ 3 "มอเตอร์" ถัดจากปุ่ม "ไม่ผ่าน" ในแต่ละข้อของเช็คลิสต์ QC
+- กดแล้วถือว่า **ผ่าน** (is_passed = true) → นับรวมกับยอด "ผ่าน" ปกติ
+- แต่จะมีป้ายกำกับ **"มอเตอร์"** แสดงในรายงาน/CSV เพื่อแยกประเภท
+- ปุ่ม "ผ่าน" และ "ไม่ผ่าน" ทำงานเหมือนเดิมทุกอย่าง
 
 ---
 
-## 3) บันทึก `system_logs`
-INSERT 1 แถว — `category: feature`, สรุป "เพิ่มหน้าค้นหา Job ด่วน (Quick Look) สำหรับแอดมิน + เปลี่ยนชื่อเมนูประวัติงานเป็นประวัติงานผลิต"
+## 1) เพิ่มคอลัมน์ใน `qc_report_items` (migration)
+เพิ่มคอลัมน์ `result_tag text` (nullable) — เก็บค่า `'motor'` เมื่อกดปุ่มมอเตอร์, null สำหรับผ่าน/ไม่ผ่านปกติ
+ออกแบบให้ขยายในอนาคตได้ (เช่นเพิ่ม tag อื่นๆ ภายหลัง)
+
+## 2) หน้า QC — `src/routes/qc.tsx`
+- ขยาย type `ItemState`: เพิ่ม `tag: "motor" | null`
+- เพิ่ม handler `setItemTag(id, "motor")` — ตั้ง `is_passed = true` + `tag = "motor"` พร้อมกัน (และเคลียร์ remark ถ้าจำเป็น)
+- ในส่วน checklist UI (รอบ ๆ บรรทัด 912–923):
+  - เพิ่มปุ่มที่ 3 หลังปุ่ม "ไม่ผ่าน" — สีเหลือง/ส้ม (variant แยก) ไอคอน `Wrench` หรือ `Cog` พร้อมข้อความ **"มอเตอร์"**
+  - เมื่อ active: แสดง state ปุ่มถูกเลือกเหมือนปุ่มอื่น และโชว์ badge เล็ก "มอเตอร์" ใต้ข้อ
+  - กดปุ่ม "ผ่าน" หรือ "ไม่ผ่าน" → เคลียร์ tag กลับเป็น null
+- ปรับ counter "ตรวจแล้ว x/y" + สรุปด้านล่าง: ยอด **ผ่าน** = ผ่านปกติ + มอเตอร์ (โชว์เพิ่ม "(มอเตอร์ N)" ในวงเล็บ)
+- ปรับ payload ส่ง `qcSubmitReport`: ใส่ `tag` ของแต่ละ item
+- ไม่ต้องบังคับ remark สำหรับมอเตอร์ (เพราะถือว่าผ่าน)
+
+## 3) Server function — `src/lib/qc.functions.ts`
+- เพิ่ม `tag: z.enum(["motor"]).nullable().optional()` ใน `reportItemInput` (zod)
+- ใน insert mapping → ใส่ `result_tag: it.tag ?? null`
+
+## 4) หน้ารายงาน — `src/routes/_protected.qc-reports.tsx`
+- เพิ่ม `result_tag` ใน select query และ type `QcReportItem`
+- ใน UI checklist (~บรรทัด 348–365):
+  - ถ้า `result_tag === 'motor'` → แสดงป้าย/สีพิเศษ (เช่น badge สีส้ม "มอเตอร์") แทนเครื่องหมาย ✓ ปกติ
+  - ยังคง `is_passed === true` (นับเป็นผ่านในสถิติ)
+
+## 5) Quick Look — `src/routes/_protected.job-lookup.tsx` + `src/lib/admin.functions.ts`
+- เพิ่ม `result_tag` ใน query ของ `adminFetchJobDetail` (qc_report_items)
+- โชว์ป้าย "มอเตอร์" ในส่วนรายงาน QC เช่นเดียวกัน
+
+## 6) CSV Export — `src/lib/qc-export.ts`
+- เพิ่ม field `result_tag` ใน type + HEADERS
+- คอลัมน์ใหม่ `item_tag` → เขียนค่า "มอเตอร์" หรือว่าง
+- หรือเปลี่ยน `item_result` ให้แสดง "ผ่าน (มอเตอร์)" เมื่อเป็น motor
+
+## 7) สรุป QC — `src/routes/_protected.qc-summary.tsx` (ถ้ามีกราฟ)
+- ไม่แก้ logic ผ่าน/ไม่ผ่าน (มอเตอร์ยังนับเป็นผ่าน) แต่อาจเพิ่ม metric "มอเตอร์" แยกถ้ามีพื้นที่ — รอ confirm
+
+## 8) บันทึก `system_logs`
+INSERT 1 แถว: category `feature` — "เพิ่มปุ่มมอเตอร์ในเช็คลิสต์ QC (นับเป็นผ่าน + ติดป้ายมอเตอร์)"
 
 ---
 
 ## ไฟล์ที่จะเปลี่ยน
-- `src/components/AdminSidebar.tsx` (rename + เพิ่มเมนู)
-- `src/lib/admin.functions.ts` (เพิ่ม `adminFetchJobDetail`)
-- `src/routes/_protected.job-lookup.tsx` (สร้างใหม่)
+- Migration: `qc_report_items.result_tag`
+- `src/routes/qc.tsx` (UI ปุ่ม + state + payload)
+- `src/lib/qc.functions.ts` (zod + insert)
+- `src/routes/_protected.qc-reports.tsx` (แสดงป้าย)
+- `src/routes/_protected.job-lookup.tsx` + `src/lib/admin.functions.ts` (query + แสดงป้าย)
+- `src/lib/qc-export.ts` (CSV column)
 - `system_logs` INSERT
+
+---
+
+## คำถามก่อนเริ่ม
+1. ป้าย "มอเตอร์" ให้ใช้สีอะไร? (แนะนำสีส้ม/เหลืองอำพันเพื่อแยกจาก เขียว=ผ่าน, แดง=ไม่ผ่าน)
+2. ในสถิติสรุป (passCount) → นับมอเตอร์รวมในผ่านเลย แล้วโชว์ "(มอเตอร์ N)" ในวงเล็บ ใช่ไหม?

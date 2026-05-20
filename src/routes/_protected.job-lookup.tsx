@@ -36,6 +36,7 @@ import {
   ClipboardCheck,
   PlayCircle,
   StopCircle,
+  Wrench,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_protected/job-lookup")({
@@ -63,6 +64,7 @@ interface QcItem {
   item_text_snapshot: string;
   item_order: number;
   is_passed: boolean;
+  result_tag: string | null;
   remark: string | null;
   media: MediaItem[];
 }
@@ -389,14 +391,21 @@ function JobLookupPage() {
                                 {(r.qc_report_items ?? [])
                                   .slice()
                                   .sort((a, b) => a.item_order - b.item_order)
-                                  .map((it) => (
-                                    <li key={it.id} className={`rounded-md border p-2 ${it.is_passed ? "border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-rose-200 bg-rose-50/40 dark:bg-rose-950/20"}`}>
+                                  .map((it) => {
+                                    const isMotor = it.is_passed && it.result_tag === "motor";
+                                    return (
+                                    <li key={it.id} className={`rounded-md border p-2 ${isMotor ? "border-amber-300 bg-amber-50/60 dark:bg-amber-950/20" : it.is_passed ? "border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-rose-200 bg-rose-50/40 dark:bg-rose-950/20"}`}>
                                       <div className="flex items-start gap-2">
-                                        {it.is_passed
-                                          ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                                          : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />}
+                                        {isMotor
+                                          ? <Wrench className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                                          : it.is_passed
+                                            ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                                            : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />}
                                         <div className="flex-1">
-                                          <p className="text-sm font-medium">{it.item_text_snapshot}</p>
+                                          <p className="text-sm font-medium">
+                                            {it.item_text_snapshot}
+                                            {isMotor && <span className="ml-2 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">มอเตอร์</span>}
+                                          </p>
                                           {it.remark && <p className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap">{it.remark}</p>}
                                           {it.media && it.media.length > 0 && (
                                             <div className="mt-2 flex flex-wrap gap-2">
@@ -406,7 +415,8 @@ function JobLookupPage() {
                                         </div>
                                       </div>
                                     </li>
-                                  ))}
+                                    );
+                                  })}
                               </ul>
                             )}
                             {r.summary && (

@@ -74,6 +74,7 @@ const reportItemInput = z.object({
   item_text_snapshot: z.string().trim().min(1).max(500),
   item_order: z.number().int().min(0).max(10000),
   is_passed: z.boolean(),
+  tag: z.enum(["motor"]).nullable().optional(),
   remark: z.string().trim().max(2000).nullable().optional(),
   media: z.array(mediaItem).max(20).default([]),
 });
@@ -128,6 +129,7 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
         item_text_snapshot: it.item_text_snapshot,
         item_order: it.item_order,
         is_passed: it.is_passed,
+        result_tag: it.tag ?? null,
         remark: it.remark ?? null,
         media: it.media,
       }));

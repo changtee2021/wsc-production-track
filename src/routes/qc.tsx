@@ -30,6 +30,7 @@ import {
   LogOut,
   CheckCircle2,
   XCircle,
+  Wrench,
 } from "lucide-react";
 import {
   verifyQcPassword,
@@ -184,11 +185,15 @@ interface CategoryRow {
   name: string;
 }
 
+type ItemTag = "motor" | null;
 type ItemState = {
   is_passed: boolean | null;
+  tag: ItemTag;
   remark: string;
   media: MediaItem[];
 };
+
+const EMPTY_ITEM_STATE: ItemState = { is_passed: null, tag: null, remark: "", media: [] };
 
 const IMAGE_EXT_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -306,7 +311,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         setItemStates((prev) => {
           const next: Record<string, ItemState> = {};
           for (const r of rows) {
-            next[r.id] = prev[r.id] ?? { is_passed: null, remark: "", media: [] };
+            next[r.id] = prev[r.id] ?? EMPTY_ITEM_STATE;
           }
           return next;
         });
@@ -380,7 +385,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           setItemStates((prev) => ({
             ...prev,
             [target]: {
-              ...(prev[target] ?? { is_passed: null, remark: "", media: [] }),
+              ...(prev[target] ?? EMPTY_ITEM_STATE),
               media: [...(prev[target]?.media ?? []), ...items],
             },
           }));
@@ -398,14 +403,21 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const setItemPass = (id: string, pass: boolean) => {
     setItemStates((prev) => ({
       ...prev,
-      [id]: { ...(prev[id] ?? { is_passed: null, remark: "", media: [] }), is_passed: pass },
+      [id]: { ...(prev[id] ?? EMPTY_ITEM_STATE), is_passed: pass, tag: null },
+    }));
+  };
+
+  const setItemMotor = (id: string) => {
+    setItemStates((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? EMPTY_ITEM_STATE), is_passed: true, tag: "motor", remark: "", media: [] },
     }));
   };
 
   const setItemRemark = (id: string, remark: string) => {
     setItemStates((prev) => ({
       ...prev,
-      [id]: { ...(prev[id] ?? { is_passed: null, remark: "", media: [] }), remark },
+      [id]: { ...(prev[id] ?? EMPTY_ITEM_STATE), remark },
     }));
   };
 
@@ -413,28 +425,31 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     setItemStates((prev) => ({
       ...prev,
       [id]: {
-        ...(prev[id] ?? { is_passed: null, remark: "", media: [] }),
+        ...(prev[id] ?? EMPTY_ITEM_STATE),
         media: (prev[id]?.media ?? []).filter((_, i) => i !== index),
       },
     }));
   };
 
-  const { passCount, failCount, answeredCount, total } = useMemo(() => {
+  const { passCount, failCount, motorCount, answeredCount, total } = useMemo(() => {
     let p = 0,
       f = 0,
+      m = 0,
       a = 0;
     for (const it of checklist) {
       const s = itemStates[it.id];
       if (s?.is_passed === true) {
         p++;
         a++;
+        if (s.tag === "motor") m++;
       } else if (s?.is_passed === false) {
         f++;
         a++;
       }
     }
-    return { passCount: p, failCount: f, answeredCount: a, total: checklist.length };
+    return { passCount: p, failCount: f, motorCount: m, answeredCount: a, total: checklist.length };
   }, [checklist, itemStates]);
+
 
   const submit = async () => {
     if (!job_id) return toast.error("ยังไม่ได้กรอก Job");
@@ -479,6 +494,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               item_text_snapshot: it.item_text,
               item_order: it.item_order,
               is_passed: s?.is_passed === true,
+              tag: s?.tag ?? null,
               remark: s?.remark?.trim() || null,
               media: (s?.media ?? []).map((m) => ({ url: m.url, type: m.type })),
             };
@@ -724,7 +740,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
 
             <div className="space-y-3">
               {checklist.map((it, idx) => {
-                const s = itemStates[it.id] ?? { is_passed: null, remark: "", media: [] };
+                const s = itemStates[it.id] ?? EMPTY_ITEM_STATE;
                 return (
                   <ChecklistRow
                     key={it.id}
@@ -733,6 +749,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                     state={s}
                     uploading={uploading}
                     onPass={(v) => setItemPass(it.id, v)}
+                    onMotor={() => setItemMotor(it.id)}
                     onRemark={(v) => setItemRemark(it.id, v)}
                     onUpload={(files, kind) => uploadFiles(files, kind, it.id)}
                     onRemoveMedia={(i) => removeItemMedia(it.id, i)}
@@ -833,7 +850,8 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         {job_id && categoryId && checklist.length > 0 && (
           <section className="mt-5">
             <div className="mb-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">
-              <span className="font-semibold">สรุป:</span> <span className="text-success">ผ่าน {passCount}</span> /{" "}
+              <span className="font-semibold">สรุป:</span> <span className="text-success">ผ่าน {passCount}</span>
+              {motorCount > 0 && <span className="text-amber-600"> (มอเตอร์ {motorCount})</span>} /{" "}
               <span className="text-destructive">ไม่ผ่าน {failCount}</span> /{" "}
               <span className="text-muted-foreground">ทั้งหมด {total}</span>
             </div>
@@ -867,6 +885,7 @@ function ChecklistRow({
   state,
   uploading,
   onPass,
+  onMotor,
   onRemark,
   onUpload,
   onRemoveMedia,
@@ -876,6 +895,7 @@ function ChecklistRow({
   state: ItemState;
   uploading: boolean;
   onPass: (v: boolean) => void;
+  onMotor: () => void;
   onRemark: (v: string) => void;
   onUpload: (files: FileList, kind: "image" | "video") => void;
   onRemoveMedia: (i: number) => void;
@@ -884,12 +904,19 @@ function ChecklistRow({
   const vidRef = useRef<HTMLInputElement>(null);
 
   const failed = state.is_passed === false;
-  const passed = state.is_passed === true;
+  const isMotor = state.is_passed === true && state.tag === "motor";
+  const passed = state.is_passed === true && !isMotor;
 
   return (
     <div
       className={`rounded-2xl border-2 bg-card p-3 transition-colors ${
-        passed ? "border-success/40 bg-success/5" : failed ? "border-destructive/40 bg-destructive/5" : "border-border"
+        passed
+          ? "border-success/40 bg-success/5"
+          : isMotor
+            ? "border-amber-400/50 bg-amber-50/60 dark:bg-amber-950/20"
+            : failed
+              ? "border-destructive/40 bg-destructive/5"
+              : "border-border"
       }`}
     >
       <div className="flex items-start gap-2">
@@ -897,13 +924,18 @@ function ChecklistRow({
           {index}
         </span>
         <p className="flex-1 text-sm font-medium leading-snug">{item.item_text}</p>
+        {isMotor && (
+          <span className="shrink-0 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+            มอเตอร์
+          </span>
+        )}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2">
         <Button
           type="button"
           onClick={() => onPass(true)}
-          className={`h-11 gap-1 font-semibold ${
+          className={`h-11 gap-1 px-2 text-sm font-semibold ${
             passed
               ? "bg-success text-success-foreground hover:bg-success/90"
               : "bg-success/15 text-success hover:bg-success/25"
@@ -914,7 +946,7 @@ function ChecklistRow({
         <Button
           type="button"
           onClick={() => onPass(false)}
-          className={`h-11 gap-1 font-semibold ${
+          className={`h-11 gap-1 px-2 text-sm font-semibold ${
             failed
               ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
               : "bg-destructive/15 text-destructive hover:bg-destructive/25"
@@ -922,7 +954,19 @@ function ChecklistRow({
         >
           <XCircle className="h-4 w-4" /> ไม่ผ่าน
         </Button>
+        <Button
+          type="button"
+          onClick={() => onMotor()}
+          className={`h-11 gap-1 px-2 text-sm font-semibold ${
+            isMotor
+              ? "bg-amber-500 text-white hover:bg-amber-500/90"
+              : "bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 dark:text-amber-300"
+          }`}
+        >
+          <Wrench className="h-4 w-4" /> มอเตอร์
+        </Button>
       </div>
+
 
       {failed && (
         <div className="mt-3 space-y-2">
