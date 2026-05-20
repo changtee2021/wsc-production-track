@@ -9,6 +9,7 @@ interface QcReportItem {
   item_order: number;
   item_text_snapshot: string;
   is_passed: boolean;
+  result_tag: string | null;
   remark: string | null;
   media: MediaItem[];
 }
