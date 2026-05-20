@@ -19,8 +19,10 @@ export const Route = createFileRoute("/_protected")({
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
-  "/logs": "ประวัติงาน",
+  "/job-lookup": "ค้นหา Job ด่วน",
+  "/logs": "ประวัติงานผลิต",
   "/qc-reports": "รายงาน QC",
+  "/qc-summary": "สรุป QC",
   "/manage": "จัดการข้อมูล",
   "/storage": "พื้นที่จัดเก็บ",
   "/logs-update": "LogUpdate",
