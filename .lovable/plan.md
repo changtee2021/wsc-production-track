@@ -1,41 +1,53 @@
-## 1) หน้า "รายละเอียดบันทึกการผลิต" (`/logs`)
+## 1) เปลี่ยนชื่อเมนู "ประวัติงาน" → "ประวัติงานผลิต"
 
-**ปัญหาที่พบ**
-- ใน `src/routes/_protected.logs.tsx` (บรรทัด 122-123) ใช้ `dateFrom.setHours(0,0,0,0)` และ `dateTo.setHours(23,59,59,999)` ซึ่ง **mutate ตัว Date ที่เก็บใน state ตรง ๆ** → ทำให้ Calendar เลือกผิดวัน / กรองได้ผลแปลก ๆ บางครั้งกรองจน "ไม่มีข้อมูล" แม้เลือกช่วงถูกต้อง
-- ตอนนี้กรองแบบ live ทุกครั้งที่เลือกวัน → ระหว่างเลือก from ก่อน to เสร็จก็เกิดเงื่อนไข from > to ชั่วคราว, ทำให้รู้สึกว่า "เลือกช่วงแล้วไม่ขึ้นข้อมูล"
-
-**สิ่งที่จะทำ**
-- เปลี่ยนการ normalize เวลาเป็นแบบ immutable: สร้าง `new Date(dateFrom)` ใหม่ก่อน `setHours` (ไม่แก้ตัวใน state)
-- เพิ่ม state คู่ "applied" `appliedFrom` / `appliedTo` แยกจากที่ผู้ใช้กำลังเลือก
-- เพิ่มปุ่ม **"ค้นหา"** (icon Search) ในแถวช่วงวันที่ — กดแล้วถึงจะ apply ค่า from/to เข้ากับ filter
-- ปุ่ม **"ล้าง"** เคลียร์ทั้งค่าเลือกและค่า applied
-- ปุ่มลัด (วันนี้ / 7 วัน / 30 วัน) ให้ apply ทันที (set ทั้ง pending และ applied พร้อมกัน เพื่อพฤติกรรมเดิม)
-- ใช้ `appliedFrom` / `appliedTo` ใน `useMemo filtered`
-
-ไฟล์ที่แก้: `src/routes/_protected.logs.tsx`
+**ไฟล์:** `src/components/AdminSidebar.tsx`
+- แก้รายการ `{ title: "ประวัติงาน", url: "/logs" }` เป็น `{ title: "ประวัติงานผลิต", url: "/logs" }`
+- (ไม่เปลี่ยน path/route — แค่ label ในเมนู)
 
 ---
 
-## 2) หน้า "รายงาน QC" (`/qc-reports`) — ทำการ์ดให้หุบ/กางได้
+## 2) ฟีเจอร์ใหม่ "ค้นหา Job ด่วน" (Quick Look)
 
-**สิ่งที่จะทำ**
-- ครอบทั้ง `<article>` ของแต่ละรายงานด้วย `Accordion` (`type="single"` + `collapsible`, **default หุบ**)
-- ส่วน **AccordionTrigger** (โหมดหุบ) แสดงเฉพาะ:
-  - วันเวลา (`created_at`)
-  - `Job <job_id>` (ตัวหนา)
-  - ชื่อผู้ตรวจ QC (`qc_employees.name` + `emp_code`)
-  - Badge สถานะ "✓ ผ่าน" / "✗ ไม่ผ่าน" (จาก `overall_result`)
-- ส่วน **AccordionContent** เก็บเนื้อหาเดิมทั้งหมด: checklist items (pass/fail พร้อมสื่อ), accordion "พนักงานที่ทำใน Job นี้", หมายเหตุภาพรวม, สื่อภาพรวม, ปุ่มแก้ไข/ลบ
-- คงพฤติกรรม auto-open ของ failed item ไว้ (อยู่ในเนื้อหาด้านในอยู่แล้ว — เมื่อกางการ์ดถึงจะมีผล)
+วางใต้ Dashboard ในเมนูแอดมิน — ใส่เลข `job_id` หรือสแกน QR แล้วโชว์ข้อมูลทุกอย่างของ job นั้นในหน้าเดียว
 
-ไฟล์ที่แก้: `src/routes/_protected.qc-reports.tsx` (ช่วงบรรทัด 280-525)
+### 2.1 Server function — `src/lib/admin.functions.ts`
+เพิ่ม `adminFetchJobDetail({ token, job_id })` คืนข้อมูลรวมของ job:
+- **production_logs** ทุก action (start/finish/etc.) ของ job_id นี้ พร้อม join `employees(name, emp_code, avatar_url)`, `steps(step_name, icon)`, `categories(name)`
+- **qc_reports** ทุกใบของ job_id นี้ พร้อม join `qc_employees(name, emp_code)`, `categories(name)`, `employees(name)` และ `qc_report_items` (checklist ผ่าน/ไม่ผ่าน + remark + media) ของแต่ละใบ
+- **summary**: นับจำนวน workers (distinct employee), จำนวน steps ที่ทำเสร็จ, ผลรวม QC (pass/fail/unknown), เวลา start แรกสุด & finish ล่าสุด, category หลัก
+- ใช้ `assertAdmin(token)` + `supabaseAdmin` (RLS bypass บนเซิร์ฟเวอร์อย่างปลอดภัย)
+- คืน DTO แบน ๆ (ตามกฎ serialization-safe)
+- ถ้าไม่พบ job เลย คืน `{ found: false }` แทน throw
+
+### 2.2 หน้าใหม่ — `src/routes/_protected.job-lookup.tsx`
+- Header: "ค้นหา Job ด่วน" + คำอธิบายสั้น
+- แถวค้นหา:
+  - `Input` ใส่เลข job id + ปุ่ม **"ค้นหา"** (icon Search)
+  - ปุ่ม **"สแกน QR"** เปิด `QrScannerDialog` (มีอยู่แล้ว) → เติมค่าลง input แล้ว auto-search
+  - กด Enter ก็ค้นหา
+- ผลลัพธ์ (เมื่อพบ):
+  1. **การ์ดสรุป** — Job ID ตัวใหญ่, หมวด, ช่วงเวลา (เริ่ม-เสร็จล่าสุด), จำนวนพนักงานที่ทำ, จำนวนขั้นตอน, สรุป QC (ผ่าน/ไม่ผ่าน badge)
+  2. **Timeline ขั้นตอนการผลิต** — list `production_logs` เรียงตามเวลา แสดง: avatar + ชื่อพนักงาน + emp_code, ชื่อ step, action (start/finish), เวลา, หมวด, note (+ note_image ถ้ามี)
+  3. **รายงาน QC ทั้งหมดของ Job** — Accordion แต่ละใบเหมือนหน้า `/qc-reports` (หุบ default): หัวการ์ดโชว์ เวลา + ผู้ตรวจ + ✓/✗; กางแล้วโชว์ checklist items, สื่อ, หมายเหตุ
+- ถ้าไม่พบ: state ว่าง "ไม่พบข้อมูลของ Job นี้"
+- Loading state ระหว่างยิง server fn
+
+### 2.3 Sidebar — `src/components/AdminSidebar.tsx`
+แทรกใต้ Dashboard:
+```
+{ title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search }
+```
+(import `Search` จาก lucide-react)
 
 ---
 
 ## 3) บันทึก `system_logs`
-INSERT 1 แถว — `category: bugfix`, สรุป "แก้บั๊กกรองช่วงวันที่ในประวัติงาน + เพิ่มปุ่มค้นหา และทำการ์ดรายงาน QC ให้หุบได้"
+INSERT 1 แถว — `category: feature`, สรุป "เพิ่มหน้าค้นหา Job ด่วน (Quick Look) สำหรับแอดมิน + เปลี่ยนชื่อเมนูประวัติงานเป็นประวัติงานผลิต"
 
-## ไฟล์ที่เปลี่ยน
-- `src/routes/_protected.logs.tsx`
-- `src/routes/_protected.qc-reports.tsx`
+---
+
+## ไฟล์ที่จะเปลี่ยน
+- `src/components/AdminSidebar.tsx` (rename + เพิ่มเมนู)
+- `src/lib/admin.functions.ts` (เพิ่ม `adminFetchJobDetail`)
+- `src/routes/_protected.job-lookup.tsx` (สร้างใหม่)
 - `system_logs` INSERT

@@ -701,3 +701,89 @@ export const adminFetchQcSummary = createServerFn({ method: "POST" })
     const byCategory = Array.from(catMap.values()).sort((a, b) => b.total - a.total);
     return { buckets, byCategory, totals };
   });
+
+// ---- Quick Look: full job detail -----------------------------------------
+export const adminFetchJobDetail = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, job_id: z.string().trim().min(1).max(200) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const jobId = data.job_id.trim();
+
+    const [logsRes, reportsRes] = await Promise.all([
+      supabaseAdmin
+        .from("production_logs")
+        .select(
+          "id, job_id, action, created_at, note, note_image_url, employees(id, name, emp_code, avatar_url, nationality), steps(id, step_name, icon), categories(id, name)",
+        )
+        .eq("job_id", jobId)
+        .order("created_at", { ascending: true }),
+      supabaseAdmin
+        .from("qc_reports")
+        .select(
+          "id, job_id, qc_employee_id, step_id, category_id, employee_id, note, media, status, overall_result, summary, created_at, qc_employees(name, emp_code, avatar_url), employees(name, emp_code), steps(step_name), categories(name), qc_report_items(id, item_text_snapshot, item_order, is_passed, remark, media)",
+        )
+        .eq("job_id", jobId)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (logsRes.error) throw new Error(logsRes.error.message);
+    if (reportsRes.error) throw new Error(reportsRes.error.message);
+
+    const logs = (logsRes.data ?? []) as unknown as Array<Record<string, any>>;
+    const reports = (reportsRes.data ?? []) as unknown as Array<Record<string, any>>;
+
+    if (logs.length === 0 && reports.length === 0) {
+      return { found: false as const };
+    }
+
+    // Summary stats
+    const employeeIds = new Set<string>();
+    const stepIds = new Set<string>();
+    const categoryCount = new Map<string, number>();
+    let firstStart: string | null = null;
+    let lastFinish: string | null = null;
+    let finishCount = 0;
+
+    for (const l of logs) {
+      const eid = l.employees?.id ?? null;
+      if (eid) employeeIds.add(eid);
+      const sid = l.steps?.id ?? null;
+      if (sid) stepIds.add(sid);
+      const cname = l.categories?.name ?? null;
+      if (cname) categoryCount.set(cname, (categoryCount.get(cname) ?? 0) + 1);
+      if (l.action === "start") {
+        if (!firstStart || l.created_at < firstStart) firstStart = l.created_at;
+      } else if (l.action === "finish") {
+        finishCount++;
+        if (!lastFinish || l.created_at > lastFinish) lastFinish = l.created_at;
+      }
+    }
+
+    const qcTotals = { total: reports.length, pass: 0, fail: 0, unknown: 0 };
+    for (const r of reports) {
+      if (r.overall_result === "pass") qcTotals.pass++;
+      else if (r.overall_result === "fail") qcTotals.fail++;
+      else qcTotals.unknown++;
+    }
+
+    const topCategory =
+      Array.from(categoryCount.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+    return {
+      found: true as const,
+      job_id: jobId,
+      summary: {
+        workers: employeeIds.size,
+        steps_done: finishCount,
+        unique_steps: stepIds.size,
+        first_start: firstStart,
+        last_finish: lastFinish,
+        top_category: topCategory,
+        qc: qcTotals,
+      },
+      logs,
+      reports,
+    };
+  });

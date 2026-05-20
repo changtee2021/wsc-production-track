@@ -21,6 +21,7 @@ import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-r
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
 import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
+import { Route as ProtectedJobLookupRouteImport } from './routes/_protected.job-lookup'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 
@@ -83,6 +84,11 @@ const ProtectedLogsRoute = ProtectedLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedJobLookupRoute = ProtectedJobLookupRouteImport.update({
+  id: '/job-lookup',
+  path: '/job-lookup',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof ProtectedDashboardRoute
+  '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
   '/manage': typeof ProtectedManageRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard': typeof ProtectedDashboardRoute
+  '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
   '/manage': typeof ProtectedManageRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
+  '/_protected/job-lookup': typeof ProtectedJobLookupRoute
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/logs-update': typeof ProtectedLogsUpdateRoute
   '/_protected/manage': typeof ProtectedManageRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/sitemap.xml'
     | '/dashboard'
+    | '/job-lookup'
     | '/logs'
     | '/logs-update'
     | '/manage'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/sitemap.xml'
     | '/dashboard'
+    | '/job-lookup'
     | '/logs'
     | '/logs-update'
     | '/manage'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/sitemap.xml'
     | '/_protected/dashboard'
+    | '/_protected/job-lookup'
     | '/_protected/logs'
     | '/_protected/logs-update'
     | '/_protected/manage'
@@ -287,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedLogsRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/job-lookup': {
+      id: '/_protected/job-lookup'
+      path: '/job-lookup'
+      fullPath: '/job-lookup'
+      preLoaderRoute: typeof ProtectedJobLookupRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/dashboard': {
       id: '/_protected/dashboard'
       path: '/dashboard'
@@ -306,6 +325,7 @@ declare module '@tanstack/react-router' {
 
 interface ProtectedRouteChildren {
   ProtectedDashboardRoute: typeof ProtectedDashboardRoute
+  ProtectedJobLookupRoute: typeof ProtectedJobLookupRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedLogsUpdateRoute: typeof ProtectedLogsUpdateRoute
   ProtectedManageRoute: typeof ProtectedManageRoute
@@ -316,6 +336,7 @@ interface ProtectedRouteChildren {
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedDashboardRoute: ProtectedDashboardRoute,
+  ProtectedJobLookupRoute: ProtectedJobLookupRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedLogsUpdateRoute: ProtectedLogsUpdateRoute,
   ProtectedManageRoute: ProtectedManageRoute,
