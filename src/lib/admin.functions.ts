@@ -503,6 +503,25 @@ export const adminDeleteQcReport = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Fetch all production_logs for a job (action='finish'), with employee/step/category names.
+export const adminFetchJobWorkers = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, job_id: z.string().trim().min(1).max(200) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("production_logs")
+      .select(
+        "id, action, created_at, note, employees(name, emp_code), steps(step_name), categories(name)",
+      )
+      .eq("job_id", data.job_id)
+      .eq("action", "finish")
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
 // ---- QC Checklists -------------------------------------------------------
 
 export const adminFetchChecklists = createServerFn({ method: "POST" })

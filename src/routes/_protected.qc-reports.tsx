@@ -5,6 +5,7 @@ import {
   adminFetchQcReports,
   adminUpdateQcReportStatus,
   adminDeleteQcReport,
+  adminFetchJobWorkers,
 } from "@/lib/admin.functions";
 import { adminSignMediaUrls } from "@/lib/media.functions";
 import { requireToken, showError } from "@/lib/admin-helpers";
@@ -85,6 +86,7 @@ function QcReportsPage() {
   const fetchReports = useServerFn(adminFetchQcReports);
   const updateStatus = useServerFn(adminUpdateQcReportStatus);
   const del = useServerFn(adminDeleteQcReport);
+  const fetchJobWorkers = useServerFn(adminFetchJobWorkers);
   const signUrls = useServerFn(adminSignMediaUrls);
 
   const [rows, setRows] = useState<QcReportRow[]>([]);
@@ -95,6 +97,31 @@ function QcReportsPage() {
   const [status, setStatus] = useState<"open" | "resolved" | "all">("all");
   const [lightbox, setLightbox] = useState<MediaItem | null>(null);
   const [signedMap, setSignedMap] = useState<Record<string, string>>({});
+  type JobWorkerRow = {
+    id: string;
+    action: string;
+    created_at: string;
+    note: string | null;
+    employees: { name: string; emp_code: string | null } | null;
+    steps: { step_name: string } | null;
+    categories: { name: string } | null;
+  };
+  const [jobWorkersMap, setJobWorkersMap] = useState<Record<string, JobWorkerRow[]>>({});
+  const [jobWorkersLoading, setJobWorkersLoading] = useState<Record<string, boolean>>({});
+
+  const loadJobWorkers = async (jobId: string) => {
+    if (jobWorkersMap[jobId] || jobWorkersLoading[jobId]) return;
+    setJobWorkersLoading((p) => ({ ...p, [jobId]: true }));
+    try {
+      const token = requireToken();
+      const res = await fetchJobWorkers({ data: { token, job_id: jobId } });
+      setJobWorkersMap((p) => ({ ...p, [jobId]: (res.rows ?? []) as unknown as JobWorkerRow[] }));
+    } catch (err) {
+      showError(err, "โหลดรายชื่อพนักงานไม่สำเร็จ");
+    } finally {
+      setJobWorkersLoading((p) => ({ ...p, [jobId]: false }));
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -386,6 +413,71 @@ function QcReportsPage() {
                   </Accordion>
                 </div>
               )}
+
+              <div className="mt-3">
+                <Accordion
+                  type="single"
+                  collapsible
+                  onValueChange={(v) => {
+                    if (v) loadJobWorkers(r.job_id);
+                  }}
+                >
+                  <AccordionItem value="workers" className="rounded-lg border border-border bg-muted/30 px-3">
+                    <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                      พนักงานที่ทำใน Job นี้ทั้งหมด (กดเพื่อดู)
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-3 pt-1">
+                      {jobWorkersLoading[r.job_id] ? (
+                        <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> กำลังโหลด...
+                        </div>
+                      ) : !jobWorkersMap[r.job_id] ? (
+                        <p className="py-2 text-xs italic text-muted-foreground">กดเพื่อโหลดข้อมูล</p>
+                      ) : jobWorkersMap[r.job_id].length === 0 ? (
+                        <p className="py-2 text-xs italic text-muted-foreground">ไม่มีบันทึกการผลิตสำหรับ Job นี้</p>
+                      ) : (
+                        <ol className="space-y-1.5 text-xs">
+                          {jobWorkersMap[r.job_id].map((w, idx) => (
+                            <li
+                              key={w.id}
+                              className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-md bg-background/60 px-2 py-1.5"
+                            >
+                              <span className="font-mono text-[10px] text-muted-foreground">
+                                {idx + 1}.
+                              </span>
+                              <span className="font-mono text-[10px] text-muted-foreground">
+                                {new Date(w.created_at).toLocaleString("th-TH")}
+                              </span>
+                              <span className="font-semibold">
+                                {w.steps?.step_name ?? "—"}
+                              </span>
+                              <span className="text-muted-foreground">โดย</span>
+                              <span className="font-medium">{w.employees?.name ?? "—"}</span>
+                              {w.employees?.emp_code && (
+                                <span className="font-mono text-[10px] text-muted-foreground">
+                                  ({w.employees.emp_code})
+                                </span>
+                              )}
+                              {w.categories?.name && (
+                                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                                  {w.categories.name}
+                                </span>
+                              )}
+                              {w.note && (
+                                <span className="basis-full whitespace-pre-wrap pl-4 text-muted-foreground">
+                                  หมายเหตุ: {w.note}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
+
+
 
               {r.note && (
                 <div className="mt-3">
