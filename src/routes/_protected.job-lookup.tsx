@@ -36,6 +36,7 @@ import {
   ClipboardCheck,
   PlayCircle,
   StopCircle,
+  Wrench,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_protected/job-lookup")({
