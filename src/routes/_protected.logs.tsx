@@ -255,12 +255,25 @@ function LogsPage() {
 
         <div className="ml-auto flex flex-wrap items-center gap-1">
           <Button
+            size="sm"
+            className="gap-1"
+            onClick={() => {
+              setAppliedFrom(dateFrom);
+              setAppliedTo(dateTo);
+            }}
+          >
+            <Search className="h-3.5 w-3.5" /> ค้นหา
+          </Button>
+          <Button
             variant="ghost"
             size="sm"
             onClick={() => {
               const t = new Date();
-              setDateFrom(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
-              setDateTo(new Date());
+              const f = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+              setDateFrom(f);
+              setDateTo(t);
+              setAppliedFrom(f);
+              setAppliedTo(t);
             }}
           >
             วันนี้
@@ -274,6 +287,8 @@ function LogsPage() {
               f.setDate(t.getDate() - 6);
               setDateFrom(f);
               setDateTo(t);
+              setAppliedFrom(f);
+              setAppliedTo(t);
             }}
           >
             7 วัน
@@ -287,11 +302,13 @@ function LogsPage() {
               f.setDate(t.getDate() - 29);
               setDateFrom(f);
               setDateTo(t);
+              setAppliedFrom(f);
+              setAppliedTo(t);
             }}
           >
             30 วัน
           </Button>
-          {(dateFrom || dateTo) && (
+          {(dateFrom || dateTo || appliedFrom || appliedTo) && (
             <Button
               variant="ghost"
               size="sm"
@@ -299,6 +316,8 @@ function LogsPage() {
               onClick={() => {
                 setDateFrom(undefined);
                 setDateTo(undefined);
+                setAppliedFrom(undefined);
+                setAppliedTo(undefined);
               }}
             >
               <X className="h-3.5 w-3.5" /> ล้าง
