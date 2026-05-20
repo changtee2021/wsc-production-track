@@ -10,7 +10,6 @@ import {
 import { adminSignMediaUrls } from "@/lib/media.functions";
 import { requireToken, showError } from "@/lib/admin-helpers";
 import { downloadQcReportsCsv } from "@/lib/qc-export";
-import { downloadQcReportsCsv } from "@/lib/qc-export";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
