@@ -283,25 +283,16 @@ function QcReportsPage() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <span className="font-mono">{new Date(r.created_at).toLocaleString("th-TH")}</span>
-                    <span>•</span>
-                    <span>Job <span className="font-mono font-semibold text-foreground">{r.job_id}</span></span>
                     {r.categories?.name && (<><span>•</span><span>{r.categories.name}</span></>)}
                   </div>
-                  <h3 className="mt-1 text-lg font-bold leading-tight">
-                    {r.steps?.step_name ?? "ขั้นตอนไม่ระบุ"}
+                  <h3 className="mt-1 text-xl font-bold leading-tight">
+                    Job <span className="font-mono">{r.job_id}</span>
                   </h3>
-                  <div className="mt-1 text-sm">
-                    <span className="text-muted-foreground">พนักงานที่ทำ: </span>
-                    <span className="font-medium">{r.employees?.name ?? "—"}</span>
-                    {r.employees?.emp_code && (
-                      <span className="ml-1 font-mono text-xs text-muted-foreground">({r.employees.emp_code})</span>
-                    )}
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">ผู้ตรวจ QC: </span>
-                    <span className="font-medium">{r.qc_employees?.name ?? "—"}</span>
+                  <div className="mt-1 text-base font-bold">
+                    <span className="text-muted-foreground font-normal text-sm">ผู้ตรวจ QC: </span>
+                    <span>{r.qc_employees?.name ?? "—"}</span>
                     {r.qc_employees?.emp_code && (
-                      <span className="ml-1 font-mono text-xs text-muted-foreground">({r.qc_employees.emp_code})</span>
+                      <span className="ml-1 font-mono text-xs text-muted-foreground font-normal">({r.qc_employees.emp_code})</span>
                     )}
                   </div>
                 </div>
