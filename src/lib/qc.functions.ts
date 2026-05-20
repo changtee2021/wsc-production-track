@@ -2,11 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  issueQcToken,
-  verifyQcToken,
-  checkQcPassword,
-} from "./qc-token.server";
+import { issueQcToken, verifyQcToken, checkQcPassword } from "./qc-token.server";
 
 function assertQc(token: string | undefined) {
   if (!verifyQcToken(token)) throw new Error("Unauthorized");
@@ -15,9 +11,7 @@ function assertQc(token: string | undefined) {
 const tokenStr = z.string().min(1);
 
 export const verifyQcPassword = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ password: z.string().min(1).max(200) }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ password: z.string().min(1).max(200) }).parse(d))
   .handler(async ({ data }) => {
     if (!checkQcPassword(data.password)) {
       return { ok: false as const, error: "รหัสผ่านไม่ถูกต้อง" };
@@ -54,15 +48,14 @@ export const qcFetchJobLogs = createServerFn({ method: "POST" })
   });
 
 const mediaItem = z.object({
-  url: z.string().url().max(2000),
+  // Storage path inside the private qc-media bucket, not a URL.
+  url: z.string().min(1).max(2000),
   type: z.enum(["image", "video"]),
 });
 
 // Checklist for a category (active items, ordered).
 export const qcFetchChecklist = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, category_id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, category_id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertQc(data.token);
     const { data: rows, error } = await supabaseAdmin
@@ -107,9 +100,7 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
     assertQc(data.token);
     const passCount = data.items.filter((i) => i.is_passed).length;
     const total = data.items.length;
-    const computedOverall =
-      data.overall_result ??
-      (total > 0 ? (passCount === total ? "pass" : "fail") : null);
+    const computedOverall = data.overall_result ?? (total > 0 ? (passCount === total ? "pass" : "fail") : null);
     const summary = total > 0 ? `ผ่าน ${passCount}/${total} ข้อ` : null;
 
     const { data: inserted, error } = await supabaseAdmin
@@ -140,9 +131,7 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
         remark: it.remark ?? null,
         media: it.media,
       }));
-      const { error: itemErr } = await supabaseAdmin
-        .from("qc_report_items")
-        .insert(itemsRows);
+      const { error: itemErr } = await supabaseAdmin.from("qc_report_items").insert(itemsRows);
       if (itemErr) {
         // Rollback: best-effort delete of the parent report so we don't leave an orphan.
         await supabaseAdmin.from("qc_reports").delete().eq("id", inserted.id);
@@ -151,7 +140,6 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
     }
     return { ok: true, id: inserted.id };
   });
-
 
 // List active QC employees (token-gated; qc_employees table is no longer
 // publicly readable).
@@ -178,21 +166,36 @@ type Detected = { mime: string; ext: string };
 
 function detectImage(b: Uint8Array): Detected | null {
   if (b.length < 12) return null;
-  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff)
-    return { mime: "image/jpeg", ext: "jpg" };
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { mime: "image/jpeg", ext: "jpg" };
   if (
-    b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 &&
-    b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a
+    b[0] === 0x89 &&
+    b[1] === 0x50 &&
+    b[2] === 0x4e &&
+    b[3] === 0x47 &&
+    b[4] === 0x0d &&
+    b[5] === 0x0a &&
+    b[6] === 0x1a &&
+    b[7] === 0x0a
   )
     return { mime: "image/png", ext: "png" };
   if (
-    b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 &&
-    (b[4] === 0x37 || b[4] === 0x39) && b[5] === 0x61
+    b[0] === 0x47 &&
+    b[1] === 0x49 &&
+    b[2] === 0x46 &&
+    b[3] === 0x38 &&
+    (b[4] === 0x37 || b[4] === 0x39) &&
+    b[5] === 0x61
   )
     return { mime: "image/gif", ext: "gif" };
   if (
-    b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
-    b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
+    b[0] === 0x52 &&
+    b[1] === 0x49 &&
+    b[2] === 0x46 &&
+    b[3] === 0x46 &&
+    b[8] === 0x57 &&
+    b[9] === 0x45 &&
+    b[10] === 0x42 &&
+    b[11] === 0x50
   )
     return { mime: "image/webp", ext: "webp" };
   return null;
@@ -201,12 +204,9 @@ function detectImage(b: Uint8Array): Detected | null {
 function detectVideo(b: Uint8Array): Detected | null {
   if (b.length < 12) return null;
   // WEBM/Matroska EBML: 1A 45 DF A3
-  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3)
-    return { mime: "video/webm", ext: "webm" };
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return { mime: "video/webm", ext: "webm" };
   // ISO base media (MP4/MOV/M4V): bytes 4-7 == "ftyp"
-  if (
-    b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70
-  ) {
+  if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
     const brand = String.fromCharCode(b[8], b[9], b[10], b[11]);
     if (brand === "qt  ") return { mime: "video/quicktime", ext: "mov" };
     if (brand.startsWith("M4V")) return { mime: "video/x-m4v", ext: "m4v" };
@@ -234,16 +234,12 @@ export const qcUploadMedia = createServerFn({ method: "POST" })
     const bytes = Uint8Array.from(Buffer.from(data.dataBase64, "base64"));
     if (bytes.length === 0) throw new Error("ไฟล์ว่างเปล่า");
     const max = data.kind === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
-    if (bytes.length > max)
-      throw new Error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
+    if (bytes.length > max) throw new Error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
 
-    const detected =
-      data.kind === "image" ? detectImage(bytes) : detectVideo(bytes);
+    const detected = data.kind === "image" ? detectImage(bytes) : detectVideo(bytes);
     if (!detected)
       throw new Error(
-        data.kind === "image"
-          ? "รองรับเฉพาะรูปภาพ JPG, PNG, WEBP, GIF"
-          : "รองรับเฉพาะวิดีโอ MP4, WEBM, MOV, M4V",
+        data.kind === "image" ? "รองรับเฉพาะรูปภาพ JPG, PNG, WEBP, GIF" : "รองรับเฉพาะวิดีโอ MP4, WEBM, MOV, M4V",
       );
 
     const path = `${data.kind}/${crypto.randomUUID()}.${detected.ext}`;
@@ -253,9 +249,6 @@ export const qcUploadMedia = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     // Bucket is private — return the path (persisted) and a signed URL for
     // immediate preview in the QC UI.
-    const { data: signed } = await supabaseAdmin.storage
-      .from("qc-media")
-      .createSignedUrl(path, 60 * 60);
+    const { data: signed } = await supabaseAdmin.storage.from("qc-media").createSignedUrl(path, 60 * 60);
     return { path, previewUrl: signed?.signedUrl ?? "", type: data.kind };
   });
-
