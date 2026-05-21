@@ -1,64 +1,54 @@
-## เป้าหมาย
-เพิ่มปุ่มที่ 3 "มอเตอร์" ถัดจากปุ่ม "ไม่ผ่าน" ในแต่ละข้อของเช็คลิสต์ QC
-- กดแล้วถือว่า **ผ่าน** (is_passed = true) → นับรวมกับยอด "ผ่าน" ปกติ
-- แต่จะมีป้ายกำกับ **"มอเตอร์"** แสดงในรายงาน/CSV เพื่อแยกประเภท
-- ปุ่ม "ผ่าน" และ "ไม่ผ่าน" ทำงานเหมือนเดิมทุกอย่าง
+# แผน: เพิ่มแผนก "แพ็คของ" (Packing) — ฟีเจอร์ชุดเดียวกับ QC
 
----
+จะคัดลอกโครงสร้างของ QC ทั้งหมดมาเป็นแผนก "แพ็คของ" แบบขนานกัน (ไม่กระทบของเดิม)
 
-## 1) เพิ่มคอลัมน์ใน `qc_report_items` (migration)
-เพิ่มคอลัมน์ `result_tag text` (nullable) — เก็บค่า `'motor'` เมื่อกดปุ่มมอเตอร์, null สำหรับผ่าน/ไม่ผ่านปกติ
-ออกแบบให้ขยายในอนาคตได้ (เช่นเพิ่ม tag อื่นๆ ภายหลัง)
+## 1) Database (migration)
+สร้างตารางและบัคเก็ตใหม่ขนานกับ QC:
+- `packing_employees` — พนักงานแพ็ค (id, name, emp_code, avatar_url, active)
+- `packing_checklists` — รายการเช็คลิสต์ตาม category (id, category_id, item_text, item_order, is_active)
+- `packing_reports` — รายงานการแพ็ค (job_id, packing_employee_id, production_log_id, step_id, category_id, employee_id, note, media jsonb, overall_result, summary, status)
+- `packing_report_items` — ข้อย่อยในรายงาน (qc_report_id เทียบเป็น packing_report_id, checklist_id, item_text_snapshot, item_order, is_passed, result_tag, remark, media)
+- Storage bucket ใหม่ `packing-media` (private) — โครงสร้าง policy เหมือน `qc-media`
+- RLS: บล็อก anon/auth ทั้งหมด เข้าผ่าน server function ด้วย admin client เท่านั้น (เหมือน QC)
+- Secret ใหม่: `PACKING_PASSWORD` (จะขอจากผู้ใช้ก่อนเริ่มทำ migration)
 
-## 2) หน้า QC — `src/routes/qc.tsx`
-- ขยาย type `ItemState`: เพิ่ม `tag: "motor" | null`
-- เพิ่ม handler `setItemTag(id, "motor")` — ตั้ง `is_passed = true` + `tag = "motor"` พร้อมกัน (และเคลียร์ remark ถ้าจำเป็น)
-- ในส่วน checklist UI (รอบ ๆ บรรทัด 912–923):
-  - เพิ่มปุ่มที่ 3 หลังปุ่ม "ไม่ผ่าน" — สีเหลือง/ส้ม (variant แยก) ไอคอน `Wrench` หรือ `Cog` พร้อมข้อความ **"มอเตอร์"**
-  - เมื่อ active: แสดง state ปุ่มถูกเลือกเหมือนปุ่มอื่น และโชว์ badge เล็ก "มอเตอร์" ใต้ข้อ
-  - กดปุ่ม "ผ่าน" หรือ "ไม่ผ่าน" → เคลียร์ tag กลับเป็น null
-- ปรับ counter "ตรวจแล้ว x/y" + สรุปด้านล่าง: ยอด **ผ่าน** = ผ่านปกติ + มอเตอร์ (โชว์เพิ่ม "(มอเตอร์ N)" ในวงเล็บ)
-- ปรับ payload ส่ง `qcSubmitReport`: ใส่ `tag` ของแต่ละ item
-- ไม่ต้องบังคับ remark สำหรับมอเตอร์ (เพราะถือว่าผ่าน)
+## 2) Server functions และ helpers
+- `src/lib/packing-token.server.ts` — issue/verify token + check password (clone จาก qc-token.server.ts)
+- `src/lib/packing.functions.ts` — clone จาก `qc.functions.ts` ทุก endpoint:
+  - `verifyPackingPassword`, `checkPackingToken`
+  - `packingFetchJobLogs`, `packingFetchChecklist`
+  - `packingSubmitReport`, `packingListEmployees`
+  - `packingUploadMedia` (ใช้ bucket `packing-media`)
+- `src/lib/packing-session.ts` — เก็บ token ฝั่ง client (clone qc-session.ts)
+- `src/lib/packing-export.ts` — CSV export (clone qc-export.ts)
+- ขยาย `src/lib/admin.functions.ts`:
+  - `adminFetchPackingReports`, `adminFetchPackingSummary`
+  - CRUD: `adminListPackingEmployees/Upsert/Delete`, `adminListPackingChecklists/Upsert/Delete`
+  - เพิ่มข้อมูล packing เข้า `adminFetchJobDetail` ของ Job Lookup ด้วย
 
-## 3) Server function — `src/lib/qc.functions.ts`
-- เพิ่ม `tag: z.enum(["motor"]).nullable().optional()` ใน `reportItemInput` (zod)
-- ใน insert mapping → ใส่ `result_tag: it.tag ?? null`
+## 3) หน้าใหม่ (routes)
+- `src/routes/packing.tsx` — หน้าทำงานของพนักงานแพ็ค: ล็อกอินรหัสผ่าน → เลือกตัวเอง → สแกน/กรอก Job ID → ดู logs → เลือก step/category → ทำ checklist (ผ่าน / ไม่ผ่าน / มอเตอร์) → แนบรูป/วิดีโอ → บันทึก  
+  (clone โครงจาก `src/routes/qc.tsx` ทั้งหน้า)
+- `src/routes/_protected.packing-reports.tsx` — รายงานแพ็คของ (clone `_protected.qc-reports.tsx` รวมการ์ดหุบ/กางและ filter ช่วงวันที่)
+- `src/routes/_protected.packing-summary.tsx` — สรุปแพ็คของ (clone `_protected.qc-summary.tsx`)
 
-## 4) หน้ารายงาน — `src/routes/_protected.qc-reports.tsx`
-- เพิ่ม `result_tag` ใน select query และ type `QcReportItem`
-- ใน UI checklist (~บรรทัด 348–365):
-  - ถ้า `result_tag === 'motor'` → แสดงป้าย/สีพิเศษ (เช่น badge สีส้ม "มอเตอร์") แทนเครื่องหมาย ✓ ปกติ
-  - ยังคง `is_passed === true` (นับเป็นผ่านในสถิติ)
+## 4) หน้า "จัดการข้อมูล" (`_protected.manage.tsx`)
+เพิ่ม 2 แท็บใหม่ใต้แท็บของ QC:
+- **พนักงานแพ็คของ** — CRUD `packing_employees` (เหมือนแท็บพนักงาน QC)
+- **Checklist แพ็คของ** — CRUD `packing_checklists` ต่อหมวด (ใช้ `QcChecklistsPanel` เป็นแม่แบบ → สร้าง `PackingChecklistsPanel.tsx`)
 
-## 5) Quick Look — `src/routes/_protected.job-lookup.tsx` + `src/lib/admin.functions.ts`
-- เพิ่ม `result_tag` ใน query ของ `adminFetchJobDetail` (qc_report_items)
-- โชว์ป้าย "มอเตอร์" ในส่วนรายงาน QC เช่นเดียวกัน
+## 5) Navigation & Job Lookup
+- `AdminSidebar.tsx`: เพิ่มเมนู "รายงานแพ็คของ" และ "สรุปแพ็คของ" ใต้กลุ่ม QC (หรือกลุ่มใหม่ "แพ็คของ")
+- `src/routes/index.tsx` / หน้า scan: เพิ่มทางเข้าหน้า `/packing` ข้างปุ่ม QC
+- `_protected.job-lookup.tsx`: แสดงรายงานแพ็คของของ job นั้นเพิ่มเติม (timeline + การ์ดหุบ/กาง รูปแบบเดียวกับ QC)
 
-## 6) CSV Export — `src/lib/qc-export.ts`
-- เพิ่ม field `result_tag` ใน type + HEADERS
-- คอลัมน์ใหม่ `item_tag` → เขียนค่า "มอเตอร์" หรือว่าง
-- หรือเปลี่ยน `item_result` ให้แสดง "ผ่าน (มอเตอร์)" เมื่อเป็น motor
-
-## 7) สรุป QC — `src/routes/_protected.qc-summary.tsx` (ถ้ามีกราฟ)
-- ไม่แก้ logic ผ่าน/ไม่ผ่าน (มอเตอร์ยังนับเป็นผ่าน) แต่อาจเพิ่ม metric "มอเตอร์" แยกถ้ามีพื้นที่ — รอ confirm
-
-## 8) บันทึก `system_logs`
-INSERT 1 แถว: category `feature` — "เพิ่มปุ่มมอเตอร์ในเช็คลิสต์ QC (นับเป็นผ่าน + ติดป้ายมอเตอร์)"
-
----
-
-## ไฟล์ที่จะเปลี่ยน
-- Migration: `qc_report_items.result_tag`
-- `src/routes/qc.tsx` (UI ปุ่ม + state + payload)
-- `src/lib/qc.functions.ts` (zod + insert)
-- `src/routes/_protected.qc-reports.tsx` (แสดงป้าย)
-- `src/routes/_protected.job-lookup.tsx` + `src/lib/admin.functions.ts` (query + แสดงป้าย)
-- `src/lib/qc-export.ts` (CSV column)
-- `system_logs` INSERT
+## 6) System logs
+INSERT แถวลง `public.system_logs` สรุปการเพิ่มแผนก "แพ็คของ" พร้อม paths ที่แก้/สร้าง
 
 ---
 
 ## คำถามก่อนเริ่ม
-1. ป้าย "มอเตอร์" ให้ใช้สีอะไร? (แนะนำสีส้ม/เหลืองอำพันเพื่อแยกจาก เขียว=ผ่าน, แดง=ไม่ผ่าน)
-2. ในสถิติสรุป (passCount) → นับมอเตอร์รวมในผ่านเลย แล้วโชว์ "(มอเตอร์ N)" ในวงเล็บ ใช่ไหม?
+1. **รหัสผ่านเข้าหน้าแพ็คของ** — ใช้รหัสเดียวกับ QC, ใช้รหัสเดียวกับ Admin, หรือสร้าง secret ใหม่ `PACKING_PASSWORD`?
+2. **ปุ่มในเช็คลิสต์** — ใช้ ผ่าน/ไม่ผ่าน/มอเตอร์ เหมือน QC ทุกอย่าง หรือสำหรับแพ็คของให้เป็น ผ่าน/ไม่ผ่าน เฉยๆ (ไม่มีมอเตอร์)?
+3. **เมนูใน Sidebar** — รวมไว้ใต้กลุ่ม QC, หรือสร้างกลุ่มใหม่ "แพ็คของ" แยกจาก QC?
+4. **แชร์ checklist กับ QC ไหม** — แยกตารางคนละชุด (แผนแนะนำ) หรือใช้ตาราง `qc_checklists` ร่วมกันโดยเพิ่ม column `dept`?
