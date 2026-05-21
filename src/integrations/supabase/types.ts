@@ -134,6 +134,150 @@ export type Database = {
         }
         Relationships: []
       }
+      packing_checklists: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          item_order: number
+          item_text: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_order?: number
+          item_text: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_order?: number
+          item_text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      packing_employees: {
+        Row: {
+          active: boolean
+          avatar_url: string | null
+          created_at: string
+          emp_code: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          emp_code?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          emp_code?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      packing_report_items: {
+        Row: {
+          checklist_id: string | null
+          created_at: string
+          id: string
+          is_passed: boolean
+          item_order: number
+          item_text_snapshot: string
+          media: Json
+          packing_report_id: string
+          remark: string | null
+          result_tag: string | null
+        }
+        Insert: {
+          checklist_id?: string | null
+          created_at?: string
+          id?: string
+          is_passed: boolean
+          item_order?: number
+          item_text_snapshot: string
+          media?: Json
+          packing_report_id: string
+          remark?: string | null
+          result_tag?: string | null
+        }
+        Update: {
+          checklist_id?: string | null
+          created_at?: string
+          id?: string
+          is_passed?: boolean
+          item_order?: number
+          item_text_snapshot?: string
+          media?: Json
+          packing_report_id?: string
+          remark?: string | null
+          result_tag?: string | null
+        }
+        Relationships: []
+      }
+      packing_reports: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          employee_id: string | null
+          id: string
+          job_id: string
+          media: Json
+          note: string | null
+          overall_result: string | null
+          packing_employee_id: string | null
+          production_log_id: string | null
+          status: string
+          step_id: string | null
+          summary: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          job_id: string
+          media?: Json
+          note?: string | null
+          overall_result?: string | null
+          packing_employee_id?: string | null
+          production_log_id?: string | null
+          status?: string
+          step_id?: string | null
+          summary?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          employee_id?: string | null
+          id?: string
+          job_id?: string
+          media?: Json
+          note?: string | null
+          overall_result?: string | null
+          packing_employee_id?: string | null
+          production_log_id?: string | null
+          status?: string
+          step_id?: string | null
+          summary?: string | null
+        }
+        Relationships: []
+      }
       production_logs: {
         Row: {
           action: string
