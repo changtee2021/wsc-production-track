@@ -53,11 +53,13 @@ import {
   EyeOff,
   Megaphone,
   ClipboardCheck,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/i18n";
 import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
+import { PackingChecklistsPanel } from "@/components/PackingChecklistsPanel";
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
