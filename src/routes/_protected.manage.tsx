@@ -101,6 +101,8 @@ function Manage() {
         <StepsPanel />
         <QcEmployeesPanel />
         <QcChecklistsPanel />
+        <PackingEmployeesPanel />
+        <PackingChecklistsPanel />
       </div>
     </main>
   );
