@@ -7,12 +7,13 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "./admin-token.server";
 import { verifyQcToken } from "./qc-token.server";
+import { verifyPackingToken } from "./packing-token.server";
 import {
   parseStorageRef,
   parseStorageRefWithDefault,
 } from "./storage-refs.server";
 
-const ALLOWED = ["qc-media", "log-notes"] as const;
+const ALLOWED = ["qc-media", "log-notes", "packing-media"] as const;
 const SIGN_TTL = 60 * 60; // 1 hour
 
 async function signRefs(
