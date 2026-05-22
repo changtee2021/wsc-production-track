@@ -19,6 +19,9 @@ import {
   adminUpsertQcEmployee,
   adminDeleteQcEmployee,
   adminListQcEmployees,
+  adminUpsertPackingEmployee,
+  adminDeletePackingEmployee,
+  adminListPackingEmployees,
 } from "@/lib/admin.functions";
 import { adminUpload, requireToken, showError } from "@/lib/admin-helpers";
 import { Button } from "@/components/ui/button";
