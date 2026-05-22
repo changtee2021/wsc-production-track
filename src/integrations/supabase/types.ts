@@ -162,7 +162,15 @@ export type Database = {
           item_text?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "packing_checklists_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       packing_employees: {
         Row: {
@@ -228,7 +236,22 @@ export type Database = {
           remark?: string | null
           result_tag?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "packing_report_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "packing_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packing_report_items_packing_report_id_fkey"
+            columns: ["packing_report_id"]
+            isOneToOne: false
+            referencedRelation: "packing_reports"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       packing_reports: {
         Row: {
@@ -276,7 +299,43 @@ export type Database = {
           step_id?: string | null
           summary?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "packing_reports_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packing_reports_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packing_reports_packing_employee_id_fkey"
+            columns: ["packing_employee_id"]
+            isOneToOne: false
+            referencedRelation: "packing_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packing_reports_production_log_id_fkey"
+            columns: ["production_log_id"]
+            isOneToOne: false
+            referencedRelation: "production_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packing_reports_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "steps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       production_logs: {
         Row: {

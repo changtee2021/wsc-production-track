@@ -19,6 +19,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
+import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
+import { Route as ProtectedPackingReportsRouteImport } from './routes/_protected.packing-reports'
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
 import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
@@ -75,6 +77,16 @@ const ProtectedQcReportsRoute = ProtectedQcReportsRouteImport.update({
   path: '/qc-reports',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedPackingSummaryRoute = ProtectedPackingSummaryRouteImport.update({
+  id: '/packing-summary',
+  path: '/packing-summary',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedPackingReportsRoute = ProtectedPackingReportsRouteImport.update({
+  id: '/packing-reports',
+  path: '/packing-reports',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedManageRoute = ProtectedManageRouteImport.update({
   id: '/manage',
   path: '/manage',
@@ -119,6 +131,8 @@ export interface FileRoutesByFullPath {
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
   '/manage': typeof ProtectedManageRoute
+  '/packing-reports': typeof ProtectedPackingReportsRoute
+  '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
@@ -136,6 +150,8 @@ export interface FileRoutesByTo {
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
   '/manage': typeof ProtectedManageRoute
+  '/packing-reports': typeof ProtectedPackingReportsRoute
+  '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
@@ -155,6 +171,8 @@ export interface FileRoutesById {
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/logs-update': typeof ProtectedLogsUpdateRoute
   '/_protected/manage': typeof ProtectedManageRoute
+  '/_protected/packing-reports': typeof ProtectedPackingReportsRoute
+  '/_protected/packing-summary': typeof ProtectedPackingSummaryRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
   '/_protected/storage': typeof ProtectedStorageRoute
@@ -174,6 +192,8 @@ export interface FileRouteTypes {
     | '/logs'
     | '/logs-update'
     | '/manage'
+    | '/packing-reports'
+    | '/packing-summary'
     | '/qc-reports'
     | '/qc-summary'
     | '/storage'
@@ -191,6 +211,8 @@ export interface FileRouteTypes {
     | '/logs'
     | '/logs-update'
     | '/manage'
+    | '/packing-reports'
+    | '/packing-summary'
     | '/qc-reports'
     | '/qc-summary'
     | '/storage'
@@ -209,6 +231,8 @@ export interface FileRouteTypes {
     | '/_protected/logs'
     | '/_protected/logs-update'
     | '/_protected/manage'
+    | '/_protected/packing-reports'
+    | '/_protected/packing-summary'
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
     | '/_protected/storage'
@@ -298,6 +322,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedQcReportsRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/packing-summary': {
+      id: '/_protected/packing-summary'
+      path: '/packing-summary'
+      fullPath: '/packing-summary'
+      preLoaderRoute: typeof ProtectedPackingSummaryRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/packing-reports': {
+      id: '/_protected/packing-reports'
+      path: '/packing-reports'
+      fullPath: '/packing-reports'
+      preLoaderRoute: typeof ProtectedPackingReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/manage': {
       id: '/_protected/manage'
       path: '/manage'
@@ -349,6 +387,8 @@ interface ProtectedRouteChildren {
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedLogsUpdateRoute: typeof ProtectedLogsUpdateRoute
   ProtectedManageRoute: typeof ProtectedManageRoute
+  ProtectedPackingReportsRoute: typeof ProtectedPackingReportsRoute
+  ProtectedPackingSummaryRoute: typeof ProtectedPackingSummaryRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
@@ -360,6 +400,8 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedLogsUpdateRoute: ProtectedLogsUpdateRoute,
   ProtectedManageRoute: ProtectedManageRoute,
+  ProtectedPackingReportsRoute: ProtectedPackingReportsRoute,
+  ProtectedPackingSummaryRoute: ProtectedPackingSummaryRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,

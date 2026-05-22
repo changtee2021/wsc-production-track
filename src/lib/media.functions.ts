@@ -7,17 +7,20 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "./admin-token.server";
 import { verifyQcToken } from "./qc-token.server";
+import { verifyPackingToken } from "./packing-token.server";
 import {
   parseStorageRef,
   parseStorageRefWithDefault,
 } from "./storage-refs.server";
 
-const ALLOWED = ["qc-media", "log-notes"] as const;
+const ALLOWED = ["qc-media", "log-notes", "packing-media"] as const;
 const SIGN_TTL = 60 * 60; // 1 hour
+
+type AllowedBucket = (typeof ALLOWED)[number];
 
 async function signRefs(
   refs: string[],
-  defaultBucket: "qc-media" | "log-notes" | null,
+  defaultBucket: AllowedBucket | null,
 ): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   // Dedupe
@@ -78,5 +81,20 @@ export const qcSignMediaUrls = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!verifyQcToken(data.token)) throw new Error("Unauthorized");
     const urlMap = await signRefs(data.refs, "qc-media");
+    return { urlMap };
+  });
+
+export const packingSignMediaUrls = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: z.string().min(1),
+        refs: refsSchema,
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    if (!verifyPackingToken(data.token)) throw new Error("Unauthorized");
+    const urlMap = await signRefs(data.refs, "packing-media");
     return { urlMap };
   });
