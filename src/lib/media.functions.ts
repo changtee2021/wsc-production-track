@@ -16,9 +16,11 @@ import {
 const ALLOWED = ["qc-media", "log-notes", "packing-media"] as const;
 const SIGN_TTL = 60 * 60; // 1 hour
 
+type AllowedBucket = (typeof ALLOWED)[number];
+
 async function signRefs(
   refs: string[],
-  defaultBucket: "qc-media" | "log-notes" | null,
+  defaultBucket: AllowedBucket | null,
 ): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   // Dedupe
