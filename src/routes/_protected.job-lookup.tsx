@@ -521,6 +521,93 @@ function JobLookupPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Packing reports */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Package className="h-4 w-4" /> รายงานแพ็คของ ({detail.packing_reports.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {detail.packing_reports.length === 0 ? (
+                <p className="text-sm text-muted-foreground">ยังไม่มีรายงานแพ็คของ Job นี้</p>
+              ) : (
+                <Accordion type="multiple" className="space-y-2">
+                  {detail.packing_reports.map((r) => {
+                    const pass = r.overall_result === "pass";
+                    const fail = r.overall_result === "fail";
+                    const items = r.packing_report_items ?? [];
+                    return (
+                      <AccordionItem key={r.id} value={r.id} className="rounded-lg border bg-card">
+                        <AccordionTrigger className="px-3 py-3 hover:no-underline">
+                          <div className="flex flex-1 flex-wrap items-center gap-2 pr-2">
+                            <span className="text-xs text-muted-foreground">{fmtDateTime(r.created_at)}</span>
+                            <span className="text-sm font-semibold">ผู้แพ็ค: {r.packing_employees?.name ?? "-"}</span>
+                            {r.packing_employees?.emp_code && (
+                              <span className="text-xs text-muted-foreground">#{r.packing_employees.emp_code}</span>
+                            )}
+                            {r.steps?.step_name && <Badge variant="outline" className="text-[10px]">{r.steps.step_name}</Badge>}
+                            <span className="ml-auto flex items-center gap-1.5">
+                              {pass && <Badge className="gap-1 bg-emerald-600 hover:bg-emerald-600"><CheckCircle2 className="h-3 w-3" />ผ่าน</Badge>}
+                              {fail && <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />ไม่ผ่าน</Badge>}
+                              {!pass && !fail && <Badge variant="secondary">ไม่ระบุ</Badge>}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-3">
+                          <div className="space-y-3">
+                            {items.length > 0 && (
+                              <ul className="space-y-2">
+                                {items.slice().sort((a, b) => a.item_order - b.item_order).map((it) => (
+                                  <li key={it.id} className={`rounded-md border p-2 ${it.is_passed ? "border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-rose-200 bg-rose-50/40 dark:bg-rose-950/20"}`}>
+                                    <div className="flex items-start gap-2">
+                                      {it.is_passed
+                                        ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                                        : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />}
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium">{it.item_text_snapshot}</p>
+                                        {it.remark && <p className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap">{it.remark}</p>}
+                                        {it.media && it.media.length > 0 && (
+                                          <div className="mt-2 flex flex-wrap gap-2">
+                                            {it.media.map((m, i) => <MediaThumb key={i} m={m} signedSrc={signedSrc} onOpen={setLightbox} />)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            {r.summary && (
+                              <div>
+                                <div className="text-xs font-semibold text-muted-foreground">สรุปภาพรวม</div>
+                                <p className="text-sm whitespace-pre-wrap">{r.summary}</p>
+                              </div>
+                            )}
+                            {r.note && (
+                              <div>
+                                <div className="text-xs font-semibold text-muted-foreground">หมายเหตุ</div>
+                                <p className="text-sm whitespace-pre-wrap">{r.note}</p>
+                              </div>
+                            )}
+                            {r.media && r.media.length > 0 && (
+                              <div>
+                                <div className="text-xs font-semibold text-muted-foreground">สื่อภาพรวม</div>
+                                <div className="mt-1 flex flex-wrap gap-2">
+                                  {r.media.map((m, i) => <MediaThumb key={i} m={m} signedSrc={signedSrc} onOpen={setLightbox} />)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 
