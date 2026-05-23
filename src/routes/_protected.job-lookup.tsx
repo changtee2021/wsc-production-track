@@ -191,6 +191,51 @@ function JobLookupPage() {
     }
   }, [fetchDetail, signUrls]);
 
+  const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({ done: 0, total: 0 });
+  const downloadAllMedia = useCallback(async () => {
+    if (!data || !data.found) return;
+    // รวบรวมไฟล์สื่อทั้งหมด (note image + QC + แพ็คของ)
+    const items: { ref: string; ext: string; folder: string }[] = [];
+    const seen = new Set<string>();
+    const push = (ref: string | null | undefined, folder: string, type?: string) => {
+      if (!ref || seen.has(ref)) return;
+      seen.add(ref);
+      const m = ref.match(/\.([a-z0-9]{2,5})(?:\?|$)/i);
+      const ext = m ? m[1].toLowerCase() : (type === "video" ? "mp4" : "jpg");
+      items.push({ ref, ext, folder });
+    };
+    for (const l of data.logs) {
+      if (l.note_image_url) push(l.note_image_url, "production-notes");
+    }
+    for (const r of data.reports) {
+      for (const m of r.media ?? []) push(m.url, "qc", m.type);
+      for (const it of r.qc_report_items ?? []) for (const m of it.media ?? []) push(m.url, "qc", m.type);
+    }
+    for (const r of data.packing_reports) {
+      for (const m of r.media ?? []) push(m.url, "packing", m.type);
+      for (const it of r.packing_report_items ?? []) for (const m of it.media ?? []) push(m.url, "packing", m.type);
+    }
+    if (items.length === 0) {
+      toast.info("ไม่มีไฟล์สื่อสำหรับ Job นี้");
+      return;
+    }
+    setDownloading(true);
+    setDownloadProgress({ done: 0, total: items.length });
+    try {
+      const downloadable = items.map((it, i) => ({
+        url: signedMap[it.ref] ?? it.ref,
+        filename: `${it.folder}/${String(i + 1).padStart(3, "0")}.${it.ext}`,
+      }));
+      await downloadMediaAsZip(data.job_id, downloadable, (d, t) => setDownloadProgress({ done: d, total: t }));
+      toast.success(`ดาวน์โหลดสำเร็จ ${items.length} ไฟล์`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "ดาวน์โหลดไม่สำเร็จ");
+    } finally {
+      setDownloading(false);
+    }
+  }, [data, signedMap]);
+
   const handleScanned = useCallback((text: string) => {
     const v = text.trim();
     setInput(v);
