@@ -103,8 +103,9 @@ function StoragePage() {
     load();
   }, [load]);
 
-  const DB_LIMIT_MB = 500;
-  const STORAGE_LIMIT_MB = 1024;
+  // แผน Supabase Pro: 8 GB database, 100 GB file storage
+  const DB_LIMIT_MB = 8 * 1024;        // 8 GB
+  const STORAGE_LIMIT_MB = 100 * 1024; // 100 GB
   const BYTES_PER_MB = 1_048_576;
   const dbUsedMB = (data?.database.total_bytes ?? 0) / BYTES_PER_MB;
   const stUsedMB = (data?.storage.total_bytes ?? 0) / BYTES_PER_MB;
