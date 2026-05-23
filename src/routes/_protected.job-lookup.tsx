@@ -151,22 +151,37 @@ function JobLookupPage() {
       const res = (await fetchDetail({ data: { token, job_id: id } })) as JobDetail;
       setData(res);
       if (res.found) {
-        // Sign QC media refs
-        const refs = new Set<string>();
+        // เซ็น URL ของสื่อจาก QC (bucket qc-media) และแพ็คของ (packing-media)
+        const qcRefs = new Set<string>();
         for (const r of res.reports) {
-          for (const m of r.media ?? []) if (m.url) refs.add(m.url);
+          for (const m of r.media ?? []) if (m.url) qcRefs.add(m.url);
           for (const it of r.qc_report_items ?? []) {
-            for (const m of it.media ?? []) if (m.url) refs.add(m.url);
+            for (const m of it.media ?? []) if (m.url) qcRefs.add(m.url);
           }
         }
-        if (refs.size > 0) {
-          try {
+        const packingRefs = new Set<string>();
+        for (const r of res.packing_reports) {
+          for (const m of r.media ?? []) if (m.url) packingRefs.add(m.url);
+          for (const it of r.packing_report_items ?? []) {
+            for (const m of it.media ?? []) if (m.url) packingRefs.add(m.url);
+          }
+        }
+        try {
+          const merged: Record<string, string> = {};
+          if (qcRefs.size > 0) {
             const { urlMap } = await signUrls({
-              data: { token, refs: Array.from(refs), defaultBucket: "qc-media" },
+              data: { token, refs: Array.from(qcRefs), defaultBucket: "qc-media" },
             });
-            setSignedMap(urlMap);
-          } catch { setSignedMap({}); }
-        } else { setSignedMap({}); }
+            Object.assign(merged, urlMap);
+          }
+          if (packingRefs.size > 0) {
+            const { urlMap } = await signUrls({
+              data: { token, refs: Array.from(packingRefs), defaultBucket: "packing-media" },
+            });
+            Object.assign(merged, urlMap);
+          }
+          setSignedMap(merged);
+        } catch { setSignedMap({}); }
       }
     } catch (err) {
       showError(err, "ค้นหาไม่สำเร็จ");
