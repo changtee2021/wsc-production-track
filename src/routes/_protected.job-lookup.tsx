@@ -97,9 +97,11 @@ interface JobDetailFound {
     last_finish: string | null;
     top_category: string | null;
     qc: { total: number; pass: number; fail: number; unknown: number };
+    packing: { total: number; pass: number; fail: number; unknown: number };
   };
   logs: LogRow[];
   reports: ReportRow[];
+  packing_reports: ReportRow[];
 }
 type JobDetail = JobDetailFound | { found: false };
 
