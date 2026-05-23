@@ -348,12 +348,14 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     setUploading(true);
     try {
       const items: MediaItem[] = [];
-      for (const f of Array.from(files)) {
+      for (const original of Array.from(files)) {
         const map = kind === "image" ? IMAGE_EXT_BY_MIME : VIDEO_EXT_BY_MIME;
-        if (!map[f.type]) {
+        if (!map[original.type]) {
           toast.error(kind === "image" ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF" : "รองรับเฉพาะ MP4, WEBM, MOV, M4V");
           continue;
         }
+        // บีบอัดรูป (วิดีโอผ่านตามเดิม)
+        const f = await compressMedia(original, kind);
         const max = kind === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
         if (f.size > max) {
           toast.error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
