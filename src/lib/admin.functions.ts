@@ -711,7 +711,7 @@ export const adminFetchJobDetail = createServerFn({ method: "POST" })
     assertAdmin(data.token);
     const jobId = data.job_id.trim();
 
-    const [logsRes, reportsRes] = await Promise.all([
+    const [logsRes, reportsRes, packingRes] = await Promise.all([
       supabaseAdmin
         .from("production_logs")
         .select(
@@ -726,15 +726,24 @@ export const adminFetchJobDetail = createServerFn({ method: "POST" })
         )
         .eq("job_id", jobId)
         .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("packing_reports")
+        .select(
+          "id, job_id, packing_employee_id, step_id, category_id, employee_id, note, media, status, overall_result, summary, created_at, packing_employees(name, emp_code, avatar_url), employees(name, emp_code), steps(step_name), categories(name), packing_report_items(id, item_text_snapshot, item_order, is_passed, result_tag, remark, media)",
+        )
+        .eq("job_id", jobId)
+        .order("created_at", { ascending: false }),
     ]);
 
     if (logsRes.error) throw new Error(logsRes.error.message);
     if (reportsRes.error) throw new Error(reportsRes.error.message);
+    if (packingRes.error) throw new Error(packingRes.error.message);
 
     const logs = (logsRes.data ?? []) as unknown as Array<Record<string, any>>;
     const reports = (reportsRes.data ?? []) as unknown as Array<Record<string, any>>;
+    const packingReports = (packingRes.data ?? []) as unknown as Array<Record<string, any>>;
 
-    if (logs.length === 0 && reports.length === 0) {
+    if (logs.length === 0 && reports.length === 0 && packingReports.length === 0) {
       return { found: false as const };
     }
 
@@ -768,6 +777,13 @@ export const adminFetchJobDetail = createServerFn({ method: "POST" })
       else qcTotals.unknown++;
     }
 
+    const packingTotals = { total: packingReports.length, pass: 0, fail: 0, unknown: 0 };
+    for (const r of packingReports) {
+      if (r.overall_result === "pass") packingTotals.pass++;
+      else if (r.overall_result === "fail") packingTotals.fail++;
+      else packingTotals.unknown++;
+    }
+
     const topCategory =
       Array.from(categoryCount.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
@@ -782,9 +798,11 @@ export const adminFetchJobDetail = createServerFn({ method: "POST" })
         last_finish: lastFinish,
         top_category: topCategory,
         qc: qcTotals,
+        packing: packingTotals,
       },
       logs,
       reports,
+      packing_reports: packingReports,
     };
   });
 

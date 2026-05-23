@@ -54,6 +54,11 @@ function UsageBar({
         ? { text: "ใกล้เต็ม", cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" }
         : { text: "ปกติ", cls: "bg-primary/10 text-primary" };
 
+  // แสดงเป็น GB ถ้าเพดาน ≥ 1024 MB
+  const useGB = limitMB >= 1024;
+  const fmt = (mb: number) => useGB ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(1)} MB`;
+  const limitLabel = useGB ? `${(limitMB / 1024).toFixed(0)} GB` : `${limitMB} MB`;
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-2 text-sm">
@@ -66,7 +71,7 @@ function UsageBar({
             {badge.text}
           </span>
           <span className="tabular-nums text-muted-foreground">
-            {loading ? "—" : `${usedMB.toFixed(1)} / ${limitMB} MB`}
+            {loading ? "—" : `${fmt(usedMB)} / ${limitLabel}`}
             <span className="ml-1 font-semibold text-foreground">({pct.toFixed(1)}%)</span>
           </span>
         </div>
@@ -103,8 +108,9 @@ function StoragePage() {
     load();
   }, [load]);
 
-  const DB_LIMIT_MB = 500;
-  const STORAGE_LIMIT_MB = 1024;
+  // แผน Supabase Pro: 8 GB database, 100 GB file storage
+  const DB_LIMIT_MB = 8 * 1024;        // 8 GB
+  const STORAGE_LIMIT_MB = 100 * 1024; // 100 GB
   const BYTES_PER_MB = 1_048_576;
   const dbUsedMB = (data?.database.total_bytes ?? 0) / BYTES_PER_MB;
   const stUsedMB = (data?.storage.total_bytes ?? 0) / BYTES_PER_MB;
@@ -135,7 +141,7 @@ function StoragePage() {
       {/* Usage vs Free Tier limits */}
       <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
         <header className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">ภาพรวมเทียบเพดาน (Free Tier)</h2>
+          <h2 className="text-lg font-semibold">ภาพรวมเทียบเพดาน (Supabase Pro)</h2>
         </header>
         <div className="space-y-5">
           <UsageBar

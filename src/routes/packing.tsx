@@ -27,6 +27,7 @@ import {
 import {
   isPackingSession, setPackingToken, getPackingToken, clearPackingSession,
 } from "@/lib/packing-session";
+import { compressMedia } from "@/lib/media-compress";
 
 const packingSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -224,9 +225,10 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
     setUploading(true);
     try {
       const items: MediaItem[] = [];
-      for (const f of Array.from(files)) {
+      for (const original of Array.from(files)) {
         const map = kind === "image" ? IMG_EXT : VID_EXT;
-        if (!map[f.type]) { toast.error(kind === "image" ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF" : "รองรับเฉพาะ MP4, WEBM, MOV, M4V"); continue; }
+        if (!map[original.type]) { toast.error(kind === "image" ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF" : "รองรับเฉพาะ MP4, WEBM, MOV, M4V"); continue; }
+        const f = await compressMedia(original, kind);
         const max = kind === "image" ? MAX_IMG : MAX_VID;
         if (f.size > max) { toast.error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`); continue; }
         const buf = await f.arrayBuffer();

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
-import { Factory, ShieldCheck, ScanLine, ClipboardCheck } from "lucide-react";
+import { Factory, ShieldCheck, ScanLine, ClipboardCheck, Package, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -129,6 +129,31 @@ function WelcomePage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <a
+              href="https://lin.ee/P94KTyM"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="เพิ่มเพื่อนทาง LINE — ดูยอดการผลิต/ประชาสัมพันธ์ภายใน"
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 rounded-full bg-[#06C755] text-white ring-1 ring-white/30 hover:bg-[#05b34c] hover:text-white"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">LINE WSC</span>
+              </Button>
+            </a>
+            <Link to="/packing" search={{ job_id: "" }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 rounded-full bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
+              >
+                <Package className="h-4 w-4" />
+                <span className="hidden sm:inline">แพ็คของ</span>
+              </Button>
+            </Link>
             <Link to="/qc" search={{ job_id: "" }}>
               <Button
                 variant="ghost"
