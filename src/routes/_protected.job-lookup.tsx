@@ -325,19 +325,25 @@ function JobLookupPage() {
                   </div>
                   <CardTitle className="text-3xl font-bold text-primary sm:text-4xl">{detail.job_id}</CardTitle>
                 </div>
-                {qcBadge && qcBadge.total > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {qcBadge.pass > 0 && (
-                      <Badge className="gap-1 bg-emerald-600 hover:bg-emerald-600"><CheckCircle2 className="h-3 w-3" /> ผ่าน {qcBadge.pass}</Badge>
-                    )}
-                    {qcBadge.fail > 0 && (
-                      <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> ไม่ผ่าน {qcBadge.fail}</Badge>
-                    )}
-                    {qcBadge.unknown > 0 && (
-                      <Badge variant="secondary" className="gap-1"><HelpCircle className="h-3 w-3" /> ไม่ระบุ {qcBadge.unknown}</Badge>
-                    )}
-                  </div>
-                )}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {qcBadge && qcBadge.total > 0 && (
+                    <>
+                      {qcBadge.pass > 0 && (
+                        <Badge className="gap-1 bg-emerald-600 hover:bg-emerald-600"><CheckCircle2 className="h-3 w-3" /> ผ่าน {qcBadge.pass}</Badge>
+                      )}
+                      {qcBadge.fail > 0 && (
+                        <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> ไม่ผ่าน {qcBadge.fail}</Badge>
+                      )}
+                      {qcBadge.unknown > 0 && (
+                        <Badge variant="secondary" className="gap-1"><HelpCircle className="h-3 w-3" /> ไม่ระบุ {qcBadge.unknown}</Badge>
+                      )}
+                    </>
+                  )}
+                  <Button size="sm" variant="outline" className="gap-1" disabled={downloading} onClick={downloadAllMedia}>
+                    {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                    {downloading ? `${downloadProgress.done}/${downloadProgress.total}` : "ดาวน์โหลดสื่อทั้งหมด (ZIP)"}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
