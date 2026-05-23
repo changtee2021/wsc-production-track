@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
-import { Factory, ShieldCheck, ScanLine, ClipboardCheck } from "lucide-react";
+import { Factory, ShieldCheck, ScanLine, ClipboardCheck, Package, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
