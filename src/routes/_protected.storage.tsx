@@ -54,6 +54,11 @@ function UsageBar({
         ? { text: "ใกล้เต็ม", cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" }
         : { text: "ปกติ", cls: "bg-primary/10 text-primary" };
 
+  // แสดงเป็น GB ถ้าเพดาน ≥ 1024 MB
+  const useGB = limitMB >= 1024;
+  const fmt = (mb: number) => useGB ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(1)} MB`;
+  const limitLabel = useGB ? `${(limitMB / 1024).toFixed(0)} GB` : `${limitMB} MB`;
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-2 text-sm">
@@ -66,7 +71,7 @@ function UsageBar({
             {badge.text}
           </span>
           <span className="tabular-nums text-muted-foreground">
-            {loading ? "—" : `${usedMB.toFixed(1)} / ${limitMB} MB`}
+            {loading ? "—" : `${fmt(usedMB)} / ${limitLabel}`}
             <span className="ml-1 font-semibold text-foreground">({pct.toFixed(1)}%)</span>
           </span>
         </div>
