@@ -38,6 +38,8 @@ import {
   PlayCircle,
   StopCircle,
   Wrench,
+  Download,
+  Package,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_protected/job-lookup")({
