@@ -80,11 +80,13 @@ interface ReportRow {
   note: string | null;
   summary: string | null;
   media: MediaItem[];
-  qc_employees: { name: string; emp_code: string | null; avatar_url: string | null } | null;
+  qc_employees?: { name: string; emp_code: string | null; avatar_url: string | null } | null;
+  packing_employees?: { name: string; emp_code: string | null; avatar_url: string | null } | null;
   employees: { name: string; emp_code: string | null } | null;
   steps: { step_name: string } | null;
   categories: { name: string } | null;
-  qc_report_items: QcItem[] | null;
+  qc_report_items?: QcItem[] | null;
+  packing_report_items?: QcItem[] | null;
 }
 interface JobDetailFound {
   found: true;
