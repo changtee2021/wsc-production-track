@@ -136,7 +136,7 @@ function StoragePage() {
       {/* Usage vs Free Tier limits */}
       <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
         <header className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">ภาพรวมเทียบเพดาน (Free Tier)</h2>
+          <h2 className="text-lg font-semibold">ภาพรวมเทียบเพดาน (Supabase Pro)</h2>
         </header>
         <div className="space-y-5">
           <UsageBar
