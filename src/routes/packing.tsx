@@ -27,6 +27,7 @@ import {
 import {
   isPackingSession, setPackingToken, getPackingToken, clearPackingSession,
 } from "@/lib/packing-session";
+import { compressMedia } from "@/lib/media-compress";
 
 const packingSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
