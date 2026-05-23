@@ -5,6 +5,7 @@ import { adminFetchJobDetail } from "@/lib/admin.functions";
 import { adminSignMediaUrls } from "@/lib/media.functions";
 import { requireToken, showError } from "@/lib/admin-helpers";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
+import { downloadMediaAsZip } from "@/lib/media-zip";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
