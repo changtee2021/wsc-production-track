@@ -28,18 +28,46 @@ import { adminGetLatestSystemLog } from "@/lib/system-logs.functions";
 import { getAdminToken } from "@/lib/admin-session";
 import { hasUnseen } from "@/lib/log-seen";
 
-const NAV_ITEMS = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search },
-  { title: "ประวัติงานผลิต", url: "/logs", icon: FileText },
-  { title: "รายงาน QC", url: "/qc-reports", icon: ClipboardCheck },
-  { title: "สรุป QC", url: "/qc-summary", icon: BarChart3 },
-  { title: "รายงานแพ็คของ", url: "/packing-reports", icon: Package },
-  { title: "สรุปแพ็คของ", url: "/packing-summary", icon: BarChart3 },
-  { title: "จัดการข้อมูล", url: "/manage", icon: Users },
-  { title: "พื้นที่จัดเก็บ", url: "/storage", icon: HardDrive },
-  { title: "LogUpdate", url: "/logs-update", icon: Sparkles },
-] as const;
+const NAV_GROUPS: Array<{
+  label: string;
+  items: Array<{ title: string; url: string; icon: typeof LayoutDashboard }>;
+}> = [
+  {
+    label: "ภาพรวม",
+    items: [
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+      { title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search },
+      { title: "ประวัติงานผลิต", url: "/logs", icon: FileText },
+    ],
+  },
+  {
+    label: "QC",
+    items: [
+      { title: "รายงาน QC", url: "/qc-reports", icon: ClipboardCheck },
+      { title: "สรุป QC", url: "/qc-summary", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "แพ็คของ",
+    items: [
+      { title: "รายงานแพ็คของ", url: "/packing-reports", icon: Package },
+      { title: "สรุปแพ็คของ", url: "/packing-summary", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "ระบบ",
+    items: [
+      { title: "จัดการข้อมูล", url: "/manage", icon: Users },
+      { title: "พื้นที่จัดเก็บ", url: "/storage", icon: HardDrive },
+    ],
+  },
+  {
+    label: "อัพเดต",
+    items: [
+      { title: "LogUpdate", url: "/logs-update", icon: Sparkles },
+    ],
+  },
+];
 
 export function AdminSidebar() {
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
