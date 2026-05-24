@@ -31,6 +31,7 @@ import {
   RotateCcw,
   Check,
   Timer,
+  Package,
 } from "lucide-react";
 import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 
@@ -302,11 +303,17 @@ function ScanPage() {
                 }
                 setScannerStream(result.stream);
               }}
-              className="h-11 flex-1 gap-1 bg-secondary hover:bg-secondary/90 shadow-md shadow-secondary/30"
+              className="h-11 flex-[2] gap-1 bg-secondary hover:bg-secondary/90 shadow-md shadow-secondary/30"
             >
               <ScanLine className="h-4 w-4" />
               {t("job.scan")}
             </Button>
+            <Link to="/packing" search={{ job_id: "" }}>
+              <Button className="h-11 flex-1 gap-1 bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/30">
+                <Package className="h-4 w-4" />
+                <span className="hidden sm:inline">แพ็คของ</span>
+              </Button>
+            </Link>
           </div>
 
           <div className="mt-2 flex gap-2">
