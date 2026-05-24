@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
-import { Factory, ShieldCheck, ScanLine, ClipboardCheck, MessageCircle } from "lucide-react";
+import { Factory, ShieldCheck, ScanLine, ClipboardCheck, MessageCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -144,6 +144,17 @@ function WelcomePage() {
                 <span className="hidden sm:inline">LINE WSC</span>
               </Button>
             </a>
+            <Link to="/packing" search={{ job_id: "" }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="แพ็คของ"
+                className="gap-1 rounded-full bg-blue-600 text-white ring-1 ring-white/30 hover:bg-blue-700 hover:text-white"
+              >
+                <Package className="h-4 w-4" />
+                <span className="hidden sm:inline">แพ็คของ</span>
+              </Button>
+            </Link>
             <Link to="/qc" search={{ job_id: "" }}>
               <Button
                 variant="ghost"
