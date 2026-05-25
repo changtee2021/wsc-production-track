@@ -14,16 +14,18 @@ function assertPacking(token: string | undefined) {
 
 const tokenStr = z.string().min(1);
 
+// ยกเลิกรหัสผ่านแพ็คของ — ออก token ให้ทันทีโดยไม่ตรวจรหัสผ่าน
 export const verifyPackingPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ password: z.string().min(1).max(200) }).parse(d),
+    z.object({ password: z.string().max(200).optional() }).parse(d ?? {}),
   )
-  .handler(async ({ data }) => {
-    if (!checkPackingPassword(data.password)) {
-      return { ok: false as const, error: "รหัสผ่านไม่ถูกต้อง" };
-    }
+  .handler(async () => {
     return { ok: true as const, token: issuePackingToken() };
   });
+
+export const issuePackingSession = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({}).parse(d ?? {}))
+  .handler(async () => ({ token: issuePackingToken() }));
 
 export const checkPackingToken = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: z.string() }).parse(d))
