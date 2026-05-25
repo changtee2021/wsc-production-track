@@ -45,63 +45,29 @@ export const Route = createFileRoute("/packing")({
 });
 
 function PackingPage() {
+  const verify = useServerFn(verifyPackingPassword);
   const [authed, setAuthed] = useState(false);
-  useEffect(() => { setAuthed(isPackingSession()); }, []);
-  if (!authed) return <PackingLogin onSuccess={() => setAuthed(true)} />;
+  useEffect(() => {
+    if (isPackingSession()) { setAuthed(true); return; }
+    // ไม่ต้องใส่รหัส — ออก token ให้อัตโนมัติ
+    verify({ data: { password: "" } })
+      .then((res) => {
+        if (res.ok) { setPackingToken(res.token); setAuthed(true); }
+        else toast.error("เข้าสู่ระบบแพ็คของไม่สำเร็จ");
+      })
+      .catch((err) => toast.error(err instanceof Error ? err.message : "เข้าสู่ระบบแพ็คของไม่สำเร็จ"));
+  }, [verify]);
+  if (!authed) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Toaster richColors position="top-center" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
   return <PackingWorkbench onLogout={() => setAuthed(false)} />;
 }
 
-function PackingLogin({ onSuccess }: { onSuccess: () => void }) {
-  const verify = useServerFn(verifyPackingPassword);
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await verify({ data: { password } });
-      if (res.ok) {
-        setPackingToken(res.token);
-        toast.success("เข้าสู่ระบบแพ็คของสำเร็จ");
-        onSuccess();
-      } else {
-        toast.error(res.error || "เข้าสู่ระบบไม่สำเร็จ");
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Toaster richColors position="top-center" />
-      <AppHeader>
-        <Link to="/">
-          <Button variant="ghost" size="sm" className="gap-1 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground">
-            <ArrowLeft className="h-4 w-4" /><span className="hidden sm:inline">หน้าแรก</span>
-          </Button>
-        </Link>
-      </AppHeader>
-      <main className="mx-auto flex max-w-md flex-col items-center px-4 py-12">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
-          <Package className="h-7 w-7" />
-        </div>
-        <h1 className="mt-4 text-2xl font-bold text-foreground">เข้าสู่ระบบแพ็คของ</h1>
-        <p className="mt-1 text-sm text-muted-foreground">กรอกรหัสผ่านสำหรับพนักงานแพ็คของ</p>
-        <form onSubmit={onSubmit} className="mt-6 w-full rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)]">
-          <Label htmlFor="ppw" className="text-sm font-medium">รหัสผ่านแพ็คของ</Label>
-          <Input id="ppw" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-2 h-12 text-base" autoFocus required />
-          <Button type="submit" disabled={loading} className="mt-4 h-12 w-full text-base font-semibold">
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "เข้าสู่ระบบ"}
-          </Button>
-        </form>
-      </main>
-    </div>
-  );
-}
 
 interface PackingEmployee { id: string; name: string; emp_code: string | null }
 interface JobLog {
