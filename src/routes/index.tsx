@@ -144,27 +144,6 @@ function WelcomePage() {
                 <span className="hidden sm:inline">LINE WSC</span>
               </Button>
             </a>
-            <Link to="/packing" search={{ job_id: "" }}>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="แพ็คของ"
-                className="gap-1 rounded-full bg-blue-600 text-white ring-1 ring-white/30 hover:bg-blue-700 hover:text-white"
-              >
-                <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">แพ็คของ</span>
-              </Button>
-            </Link>
-            <Link to="/qc" search={{ job_id: "" }}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 rounded-full bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
-              >
-                <ClipboardCheck className="h-4 w-4" />
-                <span className="hidden sm:inline">QC</span>
-              </Button>
-            </Link>
             <Link to="/admin">
               <Button
                 variant="ghost"
@@ -196,7 +175,7 @@ function WelcomePage() {
               ))}
             </div>
           )}
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-md space-y-2">
             <Button
               onClick={goToScan}
               className="h-16 w-full rounded-2xl bg-white text-lg font-bold text-primary shadow-lg hover:bg-white/90"
@@ -204,6 +183,27 @@ function WelcomePage() {
               <ScanLine className="mr-2 h-5 w-5" />
               สแกน
             </Button>
+            <div className="flex gap-2">
+              <Link to="/qc" search={{ job_id: "" }} className="flex-1">
+                <Button
+                  variant="ghost"
+                  className="h-12 w-full rounded-2xl bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
+                >
+                  <ClipboardCheck className="h-4 w-4 mr-1" />
+                  QC
+                </Button>
+              </Link>
+              <Link to="/packing" search={{ job_id: "" }} className="flex-[2]">
+                <Button
+                  variant="ghost"
+                  aria-label="แพ็คของ"
+                  className="h-12 w-full rounded-2xl bg-blue-600 text-white ring-1 ring-white/30 hover:bg-blue-700 hover:text-white"
+                >
+                  <Package className="h-4 w-4 mr-1" />
+                  แพ็คของ
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
