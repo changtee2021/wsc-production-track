@@ -144,27 +144,6 @@ function WelcomePage() {
                 <span className="hidden sm:inline">LINE WSC</span>
               </Button>
             </a>
-            <Link to="/packing" search={{ job_id: "" }}>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="แพ็คของ"
-                className="gap-1 rounded-full bg-blue-600 text-white ring-1 ring-white/30 hover:bg-blue-700 hover:text-white"
-              >
-                <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">แพ็คของ</span>
-              </Button>
-            </Link>
-            <Link to="/qc" search={{ job_id: "" }}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 rounded-full bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
-              >
-                <ClipboardCheck className="h-4 w-4" />
-                <span className="hidden sm:inline">QC</span>
-              </Button>
-            </Link>
             <Link to="/admin">
               <Button
                 variant="ghost"
