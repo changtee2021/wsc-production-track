@@ -8,12 +8,13 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "./admin-token.server";
 import { verifyQcToken } from "./qc-token.server";
 import { verifyPackingToken } from "./packing-token.server";
+import { verifyMaintenanceToken } from "./maintenance-token.server";
 import {
   parseStorageRef,
   parseStorageRefWithDefault,
 } from "./storage-refs.server";
 
-const ALLOWED = ["qc-media", "log-notes", "packing-media"] as const;
+const ALLOWED = ["qc-media", "log-notes", "packing-media", "maintenance-media"] as const;
 const SIGN_TTL = 60 * 60; // 1 hour
 
 type AllowedBucket = (typeof ALLOWED)[number];
@@ -96,5 +97,15 @@ export const packingSignMediaUrls = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!verifyPackingToken(data.token)) throw new Error("Unauthorized");
     const urlMap = await signRefs(data.refs, "packing-media");
+    return { urlMap };
+  });
+
+export const maintenanceSignMediaUrls = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: z.string().min(1), refs: refsSchema }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    if (!verifyMaintenanceToken(data.token)) throw new Error("Unauthorized");
+    const urlMap = await signRefs(data.refs, "maintenance-media");
     return { urlMap };
   });

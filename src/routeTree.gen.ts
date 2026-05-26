@@ -13,6 +13,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QcRouteImport } from './routes/qc'
 import { Route as PackingRouteImport } from './routes/packing'
+import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
@@ -46,6 +47,11 @@ const QcRoute = QcRouteImport.update({
 const PackingRoute = PackingRouteImport.update({
   id: '/packing',
   path: '/packing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MaintenanceRoute = MaintenanceRouteImport.update({
+  id: '/maintenance',
+  path: '/maintenance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -122,6 +128,7 @@ const ApiPublicHooksLineDailySendRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_protected': typeof ProtectedRouteWithChildren
   '/admin': typeof AdminRoute
+  '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/maintenance'
     | '/packing'
     | '/qc'
     | '/scan'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/maintenance'
     | '/packing'
     | '/qc'
     | '/scan'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_protected'
     | '/admin'
+    | '/maintenance'
     | '/packing'
     | '/qc'
     | '/scan'
@@ -243,6 +255,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProtectedRoute: typeof ProtectedRouteWithChildren
   AdminRoute: typeof AdminRoute
+  MaintenanceRoute: typeof MaintenanceRoute
   PackingRoute: typeof PackingRoute
   QcRoute: typeof QcRoute
   ScanRoute: typeof ScanRoute
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       path: '/packing'
       fullPath: '/packing'
       preLoaderRoute: typeof PackingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maintenance': {
+      id: '/maintenance'
+      path: '/maintenance'
+      fullPath: '/maintenance'
+      preLoaderRoute: typeof MaintenanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -415,6 +435,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProtectedRoute: ProtectedRouteWithChildren,
   AdminRoute: AdminRoute,
+  MaintenanceRoute: MaintenanceRoute,
   PackingRoute: PackingRoute,
   QcRoute: QcRoute,
   ScanRoute: ScanRoute,
@@ -424,12 +445,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
