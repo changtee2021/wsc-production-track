@@ -59,6 +59,66 @@ export type Database = {
         }
         Relationships: []
       }
+      assets: {
+        Row: {
+          active: boolean
+          brand: string | null
+          category: string
+          code: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          location: string | null
+          model: string | null
+          name: string
+          note: string | null
+          purchase_date: string | null
+          purchase_price: number | null
+          serial_no: string | null
+          updated_at: string
+          vendor: string | null
+          warranty_until: string | null
+        }
+        Insert: {
+          active?: boolean
+          brand?: string | null
+          category?: string
+          code?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          model?: string | null
+          name: string
+          note?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          serial_no?: string | null
+          updated_at?: string
+          vendor?: string | null
+          warranty_until?: string | null
+        }
+        Update: {
+          active?: boolean
+          brand?: string | null
+          category?: string
+          code?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          model?: string | null
+          name?: string
+          note?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          serial_no?: string | null
+          updated_at?: string
+          vendor?: string | null
+          warranty_until?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           active: boolean
@@ -133,6 +193,116 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      maintenance_parts_used: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          qty: number
+          spare_part_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          qty: number
+          spare_part_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          qty?: number
+          spare_part_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_parts_used_spare_part_id_fkey"
+            columns: ["spare_part_id"]
+            isOneToOne: false
+            referencedRelation: "spare_parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_parts_used_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_tickets: {
+        Row: {
+          asset_id: string | null
+          assignee_name: string | null
+          created_at: string
+          done_at: string | null
+          fix_media: Json
+          fix_method: string | null
+          id: string
+          priority: string
+          problem_media: Json
+          problem_text: string
+          reported_at: string
+          reporter_name: string
+          started_at: string | null
+          status: string
+          summary: string | null
+          ticket_no: string
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string | null
+          assignee_name?: string | null
+          created_at?: string
+          done_at?: string | null
+          fix_media?: Json
+          fix_method?: string | null
+          id?: string
+          priority?: string
+          problem_media?: Json
+          problem_text: string
+          reported_at?: string
+          reporter_name: string
+          started_at?: string | null
+          status?: string
+          summary?: string | null
+          ticket_no?: string
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string | null
+          assignee_name?: string | null
+          created_at?: string
+          done_at?: string | null
+          fix_media?: Json
+          fix_method?: string | null
+          id?: string
+          priority?: string
+          problem_media?: Json
+          problem_text?: string
+          reported_at?: string
+          reporter_name?: string
+          started_at?: string | null
+          status?: string
+          summary?: string | null
+          ticket_no?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_tickets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       packing_checklists: {
         Row: {
@@ -590,6 +760,99 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      spare_part_movements: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          note: string | null
+          reason: string
+          spare_part_id: string
+          ticket_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          note?: string | null
+          reason: string
+          spare_part_id: string
+          ticket_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          note?: string | null
+          reason?: string
+          spare_part_id?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spare_part_movements_spare_part_id_fkey"
+            columns: ["spare_part_id"]
+            isOneToOne: false
+            referencedRelation: "spare_parts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spare_part_movements_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spare_parts: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          location_bin: string | null
+          min_qty: number
+          name: string
+          note: string | null
+          stock_qty: number
+          unit: string
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          location_bin?: string | null
+          min_qty?: number
+          name: string
+          note?: string | null
+          stock_qty?: number
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          location_bin?: string | null
+          min_qty?: number
+          name?: string
+          note?: string | null
+          stock_qty?: number
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       steps: {
         Row: {
