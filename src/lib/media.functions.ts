@@ -99,3 +99,13 @@ export const packingSignMediaUrls = createServerFn({ method: "POST" })
     const urlMap = await signRefs(data.refs, "packing-media");
     return { urlMap };
   });
+
+export const maintenanceSignMediaUrls = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: z.string().min(1), refs: refsSchema }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    if (!verifyMaintenanceToken(data.token)) throw new Error("Unauthorized");
+    const urlMap = await signRefs(data.refs, "maintenance-media");
+    return { urlMap };
+  });
