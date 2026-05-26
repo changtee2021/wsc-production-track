@@ -14,7 +14,7 @@ import {
   parseStorageRefWithDefault,
 } from "./storage-refs.server";
 
-const ALLOWED = ["qc-media", "log-notes", "packing-media"] as const;
+const ALLOWED = ["qc-media", "log-notes", "packing-media", "maintenance-media"] as const;
 const SIGN_TTL = 60 * 60; // 1 hour
 
 type AllowedBucket = (typeof ALLOWED)[number];
