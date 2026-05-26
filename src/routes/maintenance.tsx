@@ -142,7 +142,7 @@ function TicketsPanel({ token }: { token: string }) {
     setLoading(true);
     try {
       const r = await list({ data: { token, status, limit: 200 } });
-      setRows(r.rows as Ticket[]);
+      setRows(r.rows as unknown as Ticket[]);
     } finally { setLoading(false); }
   };
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [status]);
