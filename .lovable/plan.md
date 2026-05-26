@@ -1,54 +1,106 @@
-# แผน: เพิ่มแผนก "แพ็คของ" (Packing) — ฟีเจอร์ชุดเดียวกับ QC
 
-จะคัดลอกโครงสร้างของ QC ทั้งหมดมาเป็นแผนก "แพ็คของ" แบบขนานกัน (ไม่กระทบของเดิม)
+# แผน: เจ้าหนูแจ้งซ่อม (Maintenance Module)
 
-## 1) Database (migration)
-สร้างตารางและบัคเก็ตใหม่ขนานกับ QC:
-- `packing_employees` — พนักงานแพ็ค (id, name, emp_code, avatar_url, active)
-- `packing_checklists` — รายการเช็คลิสต์ตาม category (id, category_id, item_text, item_order, is_active)
-- `packing_reports` — รายงานการแพ็ค (job_id, packing_employee_id, production_log_id, step_id, category_id, employee_id, note, media jsonb, overall_result, summary, status)
-- `packing_report_items` — ข้อย่อยในรายงาน (qc_report_id เทียบเป็น packing_report_id, checklist_id, item_text_snapshot, item_order, is_passed, result_tag, remark, media)
-- Storage bucket ใหม่ `packing-media` (private) — โครงสร้าง policy เหมือน `qc-media`
-- RLS: บล็อก anon/auth ทั้งหมด เข้าผ่าน server function ด้วย admin client เท่านั้น (เหมือน QC)
-- Secret ใหม่: `PACKING_PASSWORD` (จะขอจากผู้ใช้ก่อนเริ่มทำ migration)
+ทำเฉพาะส่วน A ทั้งหมดในรอบนี้ ส่วน B (สต๊อกออฟฟิศ/พนักงาน) จะทำเป็น Phase ถัดไป
 
-## 2) Server functions และ helpers
-- `src/lib/packing-token.server.ts` — issue/verify token + check password (clone จาก qc-token.server.ts)
-- `src/lib/packing.functions.ts` — clone จาก `qc.functions.ts` ทุก endpoint:
-  - `verifyPackingPassword`, `checkPackingToken`
-  - `packingFetchJobLogs`, `packingFetchChecklist`
-  - `packingSubmitReport`, `packingListEmployees`
-  - `packingUploadMedia` (ใช้ bucket `packing-media`)
-- `src/lib/packing-session.ts` — เก็บ token ฝั่ง client (clone qc-session.ts)
-- `src/lib/packing-export.ts` — CSV export (clone qc-export.ts)
-- ขยาย `src/lib/admin.functions.ts`:
-  - `adminFetchPackingReports`, `adminFetchPackingSummary`
-  - CRUD: `adminListPackingEmployees/Upsert/Delete`, `adminListPackingChecklists/Upsert/Delete`
-  - เพิ่มข้อมูล packing เข้า `adminFetchJobDetail` ของ Job Lookup ด้วย
+## ภาพรวมการใช้งาน
 
-## 3) หน้าใหม่ (routes)
-- `src/routes/packing.tsx` — หน้าทำงานของพนักงานแพ็ค: ล็อกอินรหัสผ่าน → เลือกตัวเอง → สแกน/กรอก Job ID → ดู logs → เลือก step/category → ทำ checklist (ผ่าน / ไม่ผ่าน / มอเตอร์) → แนบรูป/วิดีโอ → บันทึก  
-  (clone โครงจาก `src/routes/qc.tsx` ทั้งหน้า)
-- `src/routes/_protected.packing-reports.tsx` — รายงานแพ็คของ (clone `_protected.qc-reports.tsx` รวมการ์ดหุบ/กางและ filter ช่วงวันที่)
-- `src/routes/_protected.packing-summary.tsx` — สรุปแพ็คของ (clone `_protected.qc-summary.tsx`)
+```text
+หน้าแรก → ปุ่ม "เจ้าหนูแจ้งซ่อม" (ใส่รหัส wscmaintenance123 ครั้งเดียว)
+  ├─ แดชบอร์ดงานแจ้งซ่อม (open / in_progress / done)
+  ├─ ทรัพย์สิน (เครื่องจักร/อุปกรณ์)
+  ├─ แจ้งซ่อมใหม่
+  └─ สต๊อกอะไหล่
+```
 
-## 4) หน้า "จัดการข้อมูล" (`_protected.manage.tsx`)
-เพิ่ม 2 แท็บใหม่ใต้แท็บของ QC:
-- **พนักงานแพ็คของ** — CRUD `packing_employees` (เหมือนแท็บพนักงาน QC)
-- **Checklist แพ็คของ** — CRUD `packing_checklists` ต่อหมวด (ใช้ `QcChecklistsPanel` เป็นแม่แบบ → สร้าง `PackingChecklistsPanel.tsx`)
+flow งานซ่อม 1 ใบ:
+```text
+แจ้งซ่อม (รูป+เหตุผล+เลือกเครื่อง)
+   ↓
+เช็กอะไหล่ที่ต้องใช้ → เบิก (ตัดสต๊อก auto)
+   ↓
+ดำเนินการซ่อม (ถ่ายภาพส่งงาน + บันทึกวิธีซ่อม)
+   ↓
+ปิดงาน → เก็บเป็น log ค้นหาได้
+```
 
-## 5) Navigation & Job Lookup
-- `AdminSidebar.tsx`: เพิ่มเมนู "รายงานแพ็คของ" และ "สรุปแพ็คของ" ใต้กลุ่ม QC (หรือกลุ่มใหม่ "แพ็คของ")
-- `src/routes/index.tsx` / หน้า scan: เพิ่มทางเข้าหน้า `/packing` ข้างปุ่ม QC
-- `_protected.job-lookup.tsx`: แสดงรายงานแพ็คของของ job นั้นเพิ่มเติม (timeline + การ์ดหุบ/กาง รูปแบบเดียวกับ QC)
+## 1. Database (migration)
 
-## 6) System logs
-INSERT แถวลง `public.system_logs` สรุปการเพิ่มแผนก "แพ็คของ" พร้อม paths ที่แก้/สร้าง
+ตารางใหม่ทั้งหมดอยู่ใน schema `public`, RLS แบบเดียวกับ QC/Packing (block anon/auth — เข้าผ่าน server fn + admin client เท่านั้น):
 
----
+- **`assets`** — ทรัพย์สิน/เครื่องจักร
+  - `code` (รหัสทรัพย์สิน, unique), `name`, `category` (machine/equipment/tool), `location`, `serial_no`, `brand`, `model`, `purchase_date`, `purchase_price`, `vendor`, `warranty_until`, `note`, `image_url`, `active`
+- **`spare_parts`** — อะไหล่
+  - `code` (unique), `name`, `unit`, `stock_qty` (int), `min_qty`, `location_bin`, `unit_cost`, `image_url`, `active`
+- **`maintenance_tickets`** — ใบแจ้งซ่อม
+  - `ticket_no` (auto), `asset_id`, `reporter_name`, `reported_at`, `problem_text`, `problem_media` jsonb, `priority` (low/normal/high), `status` (open/in_progress/done/cancelled), `assignee_name`, `started_at`, `done_at`, `fix_method`, `fix_media` jsonb, `summary`
+- **`maintenance_parts_used`** — อะไหล่ที่เบิกในใบงานนี้
+  - `ticket_id`, `spare_part_id`, `qty`, `note`, `created_at`
+- **`spare_part_movements`** — log การเคลื่อนไหวสต๊อก (issue/restock/adjust)
+  - `spare_part_id`, `delta` (+/-), `reason`, `ticket_id` (nullable), `created_at`
+- Trigger: เมื่อ insert `maintenance_parts_used` → ตัด `spare_parts.stock_qty` และเขียน `spare_part_movements` อัตโนมัติ
+- **Storage bucket ใหม่** `maintenance-media` (private) — เก็บรูป/วิดีโอแจ้งซ่อม + รูปส่งงาน (signed URLs ผ่าน `media.functions.ts`)
+- **Secret ใหม่** `MAINTENANCE_PASSWORD = wscmaintenance123` — เพิ่มผ่าน `add_secret`
 
-## คำถามก่อนเริ่ม
-1. **รหัสผ่านเข้าหน้าแพ็คของ** — ใช้รหัสเดียวกับ QC, ใช้รหัสเดียวกับ Admin, หรือสร้าง secret ใหม่ `PACKING_PASSWORD`?
-2. **ปุ่มในเช็คลิสต์** — ใช้ ผ่าน/ไม่ผ่าน/มอเตอร์ เหมือน QC ทุกอย่าง หรือสำหรับแพ็คของให้เป็น ผ่าน/ไม่ผ่าน เฉยๆ (ไม่มีมอเตอร์)?
-3. **เมนูใน Sidebar** — รวมไว้ใต้กลุ่ม QC, หรือสร้างกลุ่มใหม่ "แพ็คของ" แยกจาก QC?
-4. **แชร์ checklist กับ QC ไหม** — แยกตารางคนละชุด (แผนแนะนำ) หรือใช้ตาราง `qc_checklists` ร่วมกันโดยเพิ่ม column `dept`?
+## 2. Server functions / helpers
+
+- `src/lib/maintenance-token.server.ts` — issue/verify token + ตรวจรหัสผ่าน (clone จาก qc-token)
+- `src/lib/maintenance-session.ts` — client token store
+- `src/lib/maintenance.functions.ts` — endpoints หลัก:
+  - auth: `verifyMaintenancePassword`, `checkMaintenanceToken`
+  - assets: `listAssets`, `upsertAsset`, `deleteAsset`, `getAsset`
+  - spare parts: `listSpareParts`, `upsertSparePart`, `deleteSparePart`, `restockPart`
+  - tickets: `listTickets` (filter status/asset/วันที่), `createTicket`, `getTicket`, `updateTicketStatus`, `addPartsUsed`, `closeTicket` (กรอก fix_method + แนบรูปงาน), `cancelTicket`
+  - media: `maintenanceUploadMedia` (bucket `maintenance-media`)
+- ขยาย `src/lib/media.functions.ts` เพิ่ม `maintenanceSignMediaUrls` + เพิ่ม `maintenance-media` ใน `ALLOWED`
+- ขยาย `src/lib/admin.functions.ts`: เพิ่ม view รวมในหน้าแอดมิน (รายการ ticket + สถิติ)
+
+## 3. หน้าใหม่ (routes)
+
+- `src/routes/maintenance.tsx` — เกตรหัสผ่าน + แดชบอร์ดงานซ่อม (tab: Open / In progress / Done) + ปุ่มแจ้งซ่อม + ทางเข้าทรัพย์สิน/อะไหล่
+  - subview ทำในไฟล์เดียว: `TicketListPanel`, `NewTicketForm`, `TicketDetail` (เช็ก/เบิกอะไหล่ + ปิดงาน), `AssetsPanel`, `SparePartsPanel`
+- `src/routes/_protected.maintenance-admin.tsx` — มุมมองแอดมิน: รายงานสรุป, รายการ ticket ทั้งหมด, อะไหล่ใกล้หมด (stock_qty ≤ min_qty), export CSV
+
+## 4. Navigation
+
+- `src/routes/index.tsx`: เพิ่มปุ่ม "เจ้าหนูแจ้งซ่อม" ใต้ปุ่ม QC/แพ็คของ (สีส้ม/เขียวเข้ม เพื่อแยกหมวด — ใช้ semantic token)
+- `src/components/AdminSidebar.tsx`: เพิ่มกลุ่มใหม่ "ซ่อมบำรุง" → "รายงานซ่อมบำรุง" (link ไป `/maintenance-admin`) วางก่อนกลุ่ม "ระบบ"
+- `_protected.tsx`: เพิ่ม PAGE_TITLES สำหรับ `/maintenance-admin`
+
+## 5. รายละเอียดที่สำคัญ
+
+- รูป/วิดีโอแนบ: ใช้ `compressMedia` (มีอยู่แล้วใน `src/lib/media-compress.ts`) ก่อนอัปโหลด
+- สต๊อกตัดเมื่อ "เบิก" เท่านั้น (insert `maintenance_parts_used`) — มีปุ่มคืน/ยกเลิกแถวที่จะเขียน movement กลับ
+- ticket_no สร้างจาก sequence: `MT-YYMM-####`
+- "log การซ่อม" = list ticket ที่ `status=done` พร้อม fix_method + รูป — พนักงานเปิดดูซ่อมแบบเก่าได้
+- หน้า assets/spare parts แก้ไขได้จากหน้า `/maintenance` เลย (ไม่ต้องเป็นแอดมิน) ตามที่ผู้ใช้ระบุว่า "พนักงานทุกคน ไม่ต้องใส่รหัส" ถ้าผ่านเกตรหัส maintenance แล้ว
+- ทุกการ insert/update ลง `public.system_logs` ตาม core rule
+
+## 6. ไฟล์ที่จะสร้าง / แก้
+
+สร้าง:
+- `supabase/migrations/<ts>_maintenance.sql`
+- `src/lib/maintenance-token.server.ts`
+- `src/lib/maintenance-session.ts`
+- `src/lib/maintenance.functions.ts`
+- `src/routes/maintenance.tsx`
+- `src/routes/_protected.maintenance-admin.tsx`
+
+แก้:
+- `src/lib/media.functions.ts` (เพิ่ม maintenance bucket + sign fn)
+- `src/routes/index.tsx` (เพิ่มปุ่มเข้าหน้าซ่อม)
+- `src/components/AdminSidebar.tsx` (เพิ่มกลุ่มซ่อมบำรุง)
+- `src/routes/_protected.tsx` (title)
+- `src/integrations/supabase/types.ts` (auto จาก migration)
+- `src/routeTree.gen.ts` (auto)
+
+## ลำดับการทำ
+
+1. ขอ secret `MAINTENANCE_PASSWORD` จากผู้ใช้
+2. รัน migration (ตาราง + bucket + RLS + trigger)
+3. เขียน server fn + token helpers
+4. เขียนหน้า `/maintenance` (gate + dashboard + ticket flow + assets + spare parts)
+5. เพิ่มหน้าแอดมิน + sidebar + ปุ่มหน้าแรก
+6. INSERT system_logs
+
+หลังจบ phase นี้ ค่อยทำส่วน B (สต๊อกอุปกรณ์ออฟฟิศ/พนักงาน) ในรอบถัดไป — โครงตารางจะคล้าย `spare_parts` มาก แต่แยก domain ให้ชัดเจน
