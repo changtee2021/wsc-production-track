@@ -1,0 +1,666 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Plus, Trash2, Upload, Wrench, Boxes, Package2, AlertTriangle, ImagePlus, Loader2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  verifyMaintenancePassword,
+  listTickets, createTicket, getTicket, updateTicketStatus, closeTicket,
+  addPartsUsed, removePartsUsed,
+  listAssets, upsertAsset, deleteAsset,
+  listSpareParts, upsertSparePart, deleteSparePart, restockPart,
+  maintenanceUploadMedia,
+} from "@/lib/maintenance.functions";
+import { setMaintenanceToken, getMaintenanceToken, clearMaintenanceSession } from "@/lib/maintenance-session";
+import { compressMedia } from "@/lib/media-compress";
+
+export const Route = createFileRoute("/maintenance")({
+  head: () => ({
+    meta: [
+      { title: "เจ้าหนูแจ้งซ่อม — WSC ProductionTrack" },
+      { name: "description", content: "ระบบแจ้งซ่อมเครื่องจักรและจัดการสต๊อกอะไหล่" },
+    ],
+  }),
+  component: MaintenancePage,
+});
+
+type MediaItem = { url: string; type: "image" | "video" };
+
+function MaintenancePage() {
+  const [token, setToken] = useState<string | null>(null);
+  useEffect(() => {
+    setToken(getMaintenanceToken());
+  }, []);
+  if (!token) return <LoginGate onAuth={(t) => { setMaintenanceToken(t); setToken(t); }} />;
+  return <Workbench token={token} onLogout={() => { clearMaintenanceSession(); setToken(null); }} />;
+}
+
+function LoginGate({ onAuth }: { onAuth: (token: string) => void }) {
+  const verify = useServerFn(verifyMaintenancePassword);
+  const [pw, setPw] = useState("");
+  const [loading, setLoading] = useState(false);
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Wrench className="h-5 w-5 text-amber-600" /> เจ้าหนูแจ้งซ่อม</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            try {
+              const r = await verify({ data: { password: pw } });
+              if (!r.ok || !("token" in r)) throw new Error("รหัสผ่านไม่ถูกต้อง");
+              onAuth(r.token!);
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "เข้าระบบไม่สำเร็จ");
+            } finally { setLoading(false); }
+          }} className="space-y-3">
+            <Label>รหัสผ่าน</Label>
+            <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus />
+            <div className="flex gap-2">
+              <Link to="/" className="flex-1"><Button type="button" variant="outline" className="w-full">ย้อนกลับ</Button></Link>
+              <Button type="submit" disabled={loading} className="flex-1 bg-amber-600 hover:bg-amber-700">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "เข้าใช้งาน"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Workbench({ token, onLogout }: { token: string; onLogout: () => void }) {
+  const [tab, setTab] = useState("tickets");
+  return (
+    <div className="min-h-[100dvh] bg-muted/30">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background px-3 py-2">
+        <div className="flex items-center gap-2">
+          <Link to="/"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
+          <Wrench className="h-5 w-5 text-amber-600" />
+          <h1 className="font-bold">เจ้าหนูแจ้งซ่อม</h1>
+        </div>
+        <Button variant="outline" size="sm" onClick={onLogout}>ออก</Button>
+      </header>
+      <main className="mx-auto max-w-3xl p-3">
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="tickets"><Wrench className="mr-1 h-4 w-4" />แจ้งซ่อม</TabsTrigger>
+            <TabsTrigger value="assets"><Boxes className="mr-1 h-4 w-4" />ทรัพย์สิน</TabsTrigger>
+            <TabsTrigger value="parts"><Package2 className="mr-1 h-4 w-4" />อะไหล่</TabsTrigger>
+          </TabsList>
+          <TabsContent value="tickets" className="mt-3"><TicketsPanel token={token} /></TabsContent>
+          <TabsContent value="assets" className="mt-3"><AssetsPanel token={token} /></TabsContent>
+          <TabsContent value="parts" className="mt-3"><PartsPanel token={token} /></TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
+
+// ============ TICKETS ============
+type Ticket = {
+  id: string; ticket_no: string; status: string; priority: string;
+  reporter_name: string; problem_text: string; reported_at: string;
+  asset_id: string | null; assignee_name: string | null;
+  fix_method: string | null;
+  assets?: { id: string; code: string | null; name: string; location: string | null } | null;
+  problem_media: MediaItem[]; fix_media: MediaItem[];
+};
+
+const statusBadge = (s: string) => {
+  const m: Record<string, string> = {
+    open: "bg-rose-100 text-rose-700",
+    in_progress: "bg-amber-100 text-amber-700",
+    done: "bg-emerald-100 text-emerald-700",
+    cancelled: "bg-gray-200 text-gray-600",
+  };
+  const lbl: Record<string, string> = { open: "รอซ่อม", in_progress: "กำลังซ่อม", done: "เสร็จ", cancelled: "ยกเลิก" };
+  return <Badge className={m[s] ?? ""}>{lbl[s] ?? s}</Badge>;
+};
+
+function TicketsPanel({ token }: { token: string }) {
+  const list = useServerFn(listTickets);
+  const [status, setStatus] = useState<"open" | "in_progress" | "done" | "all">("open");
+  const [rows, setRows] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const r = await list({ data: { token, status, limit: 200 } });
+      setRows(r.rows as Ticket[]);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [status]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">รอซ่อม</SelectItem>
+            <SelectItem value="in_progress">กำลังซ่อม</SelectItem>
+            <SelectItem value="done">เสร็จแล้ว</SelectItem>
+            <SelectItem value="all">ทั้งหมด</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="ml-auto" />
+        <Button onClick={() => setNewOpen(true)} className="bg-amber-600 hover:bg-amber-700"><Plus className="mr-1 h-4 w-4" />แจ้งซ่อม</Button>
+      </div>
+
+      {loading ? <p className="text-center text-sm text-muted-foreground">กำลังโหลด…</p> :
+       rows.length === 0 ? <p className="text-center text-sm text-muted-foreground">— ไม่มีรายการ —</p> :
+       <div className="space-y-2">
+         {rows.map((t) => (
+           <Card key={t.id} className="cursor-pointer hover:bg-accent/50" onClick={() => setDetailId(t.id)}>
+             <CardContent className="p-3">
+               <div className="flex items-start justify-between gap-2">
+                 <div className="min-w-0">
+                   <div className="flex items-center gap-2 text-sm">
+                     <span className="font-mono font-semibold">{t.ticket_no}</span>
+                     {statusBadge(t.status)}
+                     {t.priority === "high" && <Badge variant="destructive">ด่วน</Badge>}
+                   </div>
+                   <div className="mt-1 truncate font-medium">{t.assets?.name ?? "(ไม่ระบุเครื่อง)"}</div>
+                   <div className="line-clamp-2 text-sm text-muted-foreground">{t.problem_text}</div>
+                   <div className="mt-1 text-xs text-muted-foreground">
+                     โดย {t.reporter_name} · {new Date(t.reported_at).toLocaleString("th-TH")}
+                   </div>
+                 </div>
+               </div>
+             </CardContent>
+           </Card>
+         ))}
+       </div>}
+
+      {newOpen && <NewTicketDialog token={token} onClose={() => { setNewOpen(false); refresh(); }} />}
+      {detailId && <TicketDetailDialog token={token} id={detailId} onClose={() => { setDetailId(null); refresh(); }} />}
+    </div>
+  );
+}
+
+function NewTicketDialog({ token, onClose }: { token: string; onClose: () => void }) {
+  const create = useServerFn(createTicket);
+  const listA = useServerFn(listAssets);
+  const [assets, setAssets] = useState<Array<{ id: string; name: string; code: string | null }>>([]);
+  const [assetId, setAssetId] = useState<string>("");
+  const [reporter, setReporter] = useState("");
+  const [problem, setProblem] = useState("");
+  const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    listA({ data: { token } }).then((r) => setAssets(r.rows.filter((a) => a.active)));
+  }, [listA, token]);
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>แจ้งซ่อมใหม่</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>เครื่อง/อุปกรณ์</Label>
+            <Select value={assetId} onValueChange={setAssetId}>
+              <SelectTrigger><SelectValue placeholder="เลือกเครื่อง (ไม่บังคับ)" /></SelectTrigger>
+              <SelectContent>
+                {assets.map((a) => <SelectItem key={a.id} value={a.id}>{a.code ? `[${a.code}] ` : ""}{a.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label>ชื่อผู้แจ้ง</Label><Input value={reporter} onChange={(e) => setReporter(e.target.value)} /></div>
+          <div><Label>อาการ/ปัญหา</Label><Textarea value={problem} onChange={(e) => setProblem(e.target.value)} rows={3} /></div>
+          <div>
+            <Label>ความสำคัญ</Label>
+            <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">ต่ำ</SelectItem>
+                <SelectItem value="normal">ปกติ</SelectItem>
+                <SelectItem value="high">ด่วน</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <MediaUploader token={token} media={media} onChange={setMedia} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>ยกเลิก</Button>
+          <Button disabled={saving || !reporter || !problem} onClick={async () => {
+            setSaving(true);
+            try {
+              const r = await create({ data: {
+                token, asset_id: assetId || null,
+                reporter_name: reporter, problem_text: problem,
+                problem_media: media, priority,
+              }});
+              toast.success(`สร้างใบงาน ${r.ticket_no}`);
+              onClose();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+            } finally { setSaving(false); }
+          }}>บันทึก</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TicketDetailDialog({ token, id, onClose }: { token: string; id: string; onClose: () => void }) {
+  const get = useServerFn(getTicket);
+  const upd = useServerFn(updateTicketStatus);
+  const close = useServerFn(closeTicket);
+  const addP = useServerFn(addPartsUsed);
+  const rmP = useServerFn(removePartsUsed);
+  const listP = useServerFn(listSpareParts);
+  const [data, setData] = useState<{ ticket: Ticket; parts: Array<{ id: string; qty: number; spare_parts: { id: string; name: string; unit: string; code: string | null } | null }> } | null>(null);
+  const [parts, setParts] = useState<Array<{ id: string; name: string; code: string | null; unit: string; stock_qty: number }>>([]);
+  const [assignee, setAssignee] = useState("");
+  const [fixMethod, setFixMethod] = useState("");
+  const [fixMedia, setFixMedia] = useState<MediaItem[]>([]);
+  const [partId, setPartId] = useState("");
+  const [qty, setQty] = useState(1);
+
+  const refresh = async () => {
+    const r = await get({ data: { token, id } });
+    setData(r as typeof data);
+    setAssignee(r.ticket.assignee_name ?? "");
+    setFixMethod(r.ticket.fix_method ?? "");
+    setFixMedia((r.ticket.fix_media as MediaItem[]) ?? []);
+  };
+  useEffect(() => {
+    refresh();
+    listP({ data: { token } }).then((r) => setParts(r.rows.filter((p) => p.active && p.stock_qty > 0)));
+    // eslint-disable-next-line
+  }, [id]);
+
+  if (!data) return null;
+  const t = data.ticket;
+  const isDone = t.status === "done";
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span className="font-mono">{t.ticket_no}</span> {statusBadge(t.status)}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div><b>เครื่อง:</b> {t.assets?.name ?? "(ไม่ระบุ)"}{t.assets?.location ? ` · ${t.assets.location}` : ""}</div>
+          <div><b>ผู้แจ้ง:</b> {t.reporter_name} · {new Date(t.reported_at).toLocaleString("th-TH")}</div>
+          <div><b>ปัญหา:</b> {t.problem_text}</div>
+          <MediaGrid items={t.problem_media} />
+
+          {!isDone && (
+            <>
+              <div>
+                <Label>ผู้รับผิดชอบซ่อม</Label>
+                <Input value={assignee} onChange={(e) => setAssignee(e.target.value)} />
+              </div>
+              <div className="flex gap-2">
+                {t.status === "open" && (
+                  <Button size="sm" onClick={async () => {
+                    await upd({ data: { token, id, status: "in_progress", assignee_name: assignee || null }});
+                    toast.success("เริ่มซ่อมแล้ว");
+                    refresh();
+                  }}>เริ่มซ่อม</Button>
+                )}
+                <Button size="sm" variant="outline" onClick={async () => {
+                  if (!confirm("ยกเลิกใบงานนี้?")) return;
+                  await upd({ data: { token, id, status: "cancelled" }});
+                  toast.success("ยกเลิกแล้ว"); onClose();
+                }}>ยกเลิกใบงาน</Button>
+              </div>
+
+              <div className="rounded border p-2">
+                <div className="mb-2 font-semibold">เบิกอะไหล่</div>
+                <div className="flex gap-2">
+                  <Select value={partId} onValueChange={setPartId}>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="เลือกอะไหล่" /></SelectTrigger>
+                    <SelectContent>
+                      {parts.map((p) => <SelectItem key={p.id} value={p.id}>{p.code ? `[${p.code}] ` : ""}{p.name} (เหลือ {p.stock_qty} {p.unit})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input type="number" min={1} value={qty} onChange={(e) => setQty(Number(e.target.value))} className="w-20" />
+                  <Button size="sm" disabled={!partId || qty < 1} onClick={async () => {
+                    try {
+                      await addP({ data: { token, ticket_id: id, spare_part_id: partId, qty }});
+                      toast.success("เบิกแล้ว — ตัดสต๊อกอัตโนมัติ");
+                      setPartId(""); setQty(1);
+                      refresh();
+                      listP({ data: { token } }).then((r) => setParts(r.rows.filter((p) => p.active && p.stock_qty > 0)));
+                    } catch (e) { toast.error(e instanceof Error ? e.message : "ผิดพลาด"); }
+                  }}>เบิก</Button>
+                </div>
+                {data.parts.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {data.parts.map((p) => (
+                      <li key={p.id} className="flex items-center justify-between text-sm">
+                        <span>• {p.spare_parts?.name} × {p.qty} {p.spare_parts?.unit}</span>
+                        <Button size="icon" variant="ghost" onClick={async () => {
+                          await rmP({ data: { token, id: p.id }});
+                          toast.success("คืนสต๊อกแล้ว"); refresh();
+                        }}><X className="h-3 w-3" /></Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div>
+                <Label>วิธีซ่อม / สิ่งที่ทำ</Label>
+                <Textarea value={fixMethod} onChange={(e) => setFixMethod(e.target.value)} rows={3} />
+              </div>
+              <MediaUploader token={token} media={fixMedia} onChange={setFixMedia} label="รูป/วิดีโองานซ่อมที่ทำเสร็จ" />
+              <Button className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={!fixMethod} onClick={async () => {
+                await close({ data: { token, id, fix_method: fixMethod, fix_media: fixMedia, summary: null }});
+                toast.success("ปิดงานแล้ว"); onClose();
+              }}>ปิดงาน (เสร็จสิ้น)</Button>
+            </>
+          )}
+
+          {isDone && (
+            <div className="rounded border bg-emerald-50 p-2">
+              <div><b>วิธีซ่อม:</b> {t.fix_method}</div>
+              <MediaGrid items={t.fix_media} />
+              {data.parts.length > 0 && (
+                <div className="mt-2"><b>อะไหล่ที่ใช้:</b>
+                  <ul>{data.parts.map((p) => <li key={p.id}>• {p.spare_parts?.name} × {p.qty} {p.spare_parts?.unit}</li>)}</ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============ ASSETS ============
+type Asset = {
+  id: string; code: string | null; name: string; category: string; location: string | null;
+  brand: string | null; model: string | null; serial_no: string | null;
+  purchase_date: string | null; purchase_price: number | null;
+  vendor: string | null; warranty_until: string | null; note: string | null;
+  image_url: string | null; active: boolean;
+};
+
+function AssetsPanel({ token }: { token: string }) {
+  const list = useServerFn(listAssets);
+  const del = useServerFn(deleteAsset);
+  const [rows, setRows] = useState<Asset[]>([]);
+  const [editing, setEditing] = useState<Asset | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const refresh = async () => { const r = await list({ data: { token } }); setRows(r.rows as Asset[]); };
+  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, []);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex"><div className="ml-auto" /><Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-1 h-4 w-4" />เพิ่มทรัพย์สิน</Button></div>
+      {rows.length === 0 ? <p className="text-center text-sm text-muted-foreground">— ยังไม่มี —</p> :
+       <div className="space-y-2">
+         {rows.map((a) => (
+           <Card key={a.id}>
+             <CardContent className="p-3">
+               <div className="flex items-start justify-between gap-2">
+                 <div className="min-w-0 flex-1">
+                   <div className="font-semibold">{a.code && <span className="mr-1 font-mono text-xs text-muted-foreground">[{a.code}]</span>}{a.name}</div>
+                   <div className="text-xs text-muted-foreground">
+                     {a.category} {a.location && `· ${a.location}`} {a.brand && `· ${a.brand}`} {a.model && a.model}
+                   </div>
+                   {(a.purchase_date || a.warranty_until) && (
+                     <div className="text-xs text-muted-foreground">
+                       {a.purchase_date && `ซื้อ ${a.purchase_date}`} {a.warranty_until && `· ประกันถึง ${a.warranty_until}`}
+                     </div>
+                   )}
+                 </div>
+                 <div className="flex gap-1">
+                   <Button size="sm" variant="outline" onClick={() => { setEditing(a); setOpen(true); }}>แก้ไข</Button>
+                   <Button size="icon" variant="ghost" onClick={async () => {
+                     if (!confirm(`ลบ ${a.name}?`)) return;
+                     try { await del({ data: { token, id: a.id }}); toast.success("ลบแล้ว"); refresh(); }
+                     catch (e) { toast.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
+                   }}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
+                 </div>
+               </div>
+             </CardContent>
+           </Card>
+         ))}
+       </div>}
+      {open && <AssetDialog token={token} initial={editing} onClose={() => { setOpen(false); refresh(); }} />}
+    </div>
+  );
+}
+
+function AssetDialog({ token, initial, onClose }: { token: string; initial: Asset | null; onClose: () => void }) {
+  const save = useServerFn(upsertAsset);
+  const [f, setF] = useState<Asset>(() => initial ?? {
+    id: "", code: null, name: "", category: "machine", location: null,
+    brand: null, model: null, serial_no: null, purchase_date: null, purchase_price: null,
+    vendor: null, warranty_until: null, note: null, image_url: null, active: true,
+  } as Asset);
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-h-[90dvh] max-w-md overflow-y-auto">
+        <DialogHeader><DialogTitle>{initial ? "แก้ไขทรัพย์สิน" : "เพิ่มทรัพย์สิน"}</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>รหัส</Label><Input value={f.code ?? ""} onChange={(e) => setF({ ...f, code: e.target.value || null })} /></div>
+            <div>
+              <Label>หมวด</Label>
+              <Select value={f.category} onValueChange={(v) => setF({ ...f, category: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="machine">เครื่องจักร</SelectItem>
+                  <SelectItem value="equipment">อุปกรณ์</SelectItem>
+                  <SelectItem value="tool">เครื่องมือ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div><Label>ชื่อ *</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>ยี่ห้อ</Label><Input value={f.brand ?? ""} onChange={(e) => setF({ ...f, brand: e.target.value || null })} /></div>
+            <div><Label>รุ่น</Label><Input value={f.model ?? ""} onChange={(e) => setF({ ...f, model: e.target.value || null })} /></div>
+          </div>
+          <div><Label>Serial No.</Label><Input value={f.serial_no ?? ""} onChange={(e) => setF({ ...f, serial_no: e.target.value || null })} /></div>
+          <div><Label>สถานที่</Label><Input value={f.location ?? ""} onChange={(e) => setF({ ...f, location: e.target.value || null })} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>วันที่ซื้อ</Label><Input type="date" value={f.purchase_date ?? ""} onChange={(e) => setF({ ...f, purchase_date: e.target.value || null })} /></div>
+            <div><Label>ราคา</Label><Input type="number" value={f.purchase_price ?? ""} onChange={(e) => setF({ ...f, purchase_price: e.target.value ? Number(e.target.value) : null })} /></div>
+          </div>
+          <div><Label>ผู้ขาย/ที่ซื้อ</Label><Input value={f.vendor ?? ""} onChange={(e) => setF({ ...f, vendor: e.target.value || null })} /></div>
+          <div><Label>ประกันถึง</Label><Input type="date" value={f.warranty_until ?? ""} onChange={(e) => setF({ ...f, warranty_until: e.target.value || null })} /></div>
+          <div><Label>หมายเหตุ</Label><Textarea rows={2} value={f.note ?? ""} onChange={(e) => setF({ ...f, note: e.target.value || null })} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>ยกเลิก</Button>
+          <Button disabled={!f.name} onClick={async () => {
+            try {
+              await save({ data: { token, asset: { ...f, id: f.id || undefined } as Asset & { id?: string } }});
+              toast.success("บันทึกแล้ว"); onClose();
+            } catch (e) { toast.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ"); }
+          }}>บันทึก</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============ SPARE PARTS ============
+type Part = {
+  id: string; code: string | null; name: string; unit: string;
+  stock_qty: number; min_qty: number; location_bin: string | null;
+  unit_cost: number | null; image_url: string | null; note: string | null; active: boolean;
+};
+
+function PartsPanel({ token }: { token: string }) {
+  const list = useServerFn(listSpareParts);
+  const del = useServerFn(deleteSparePart);
+  const restock = useServerFn(restockPart);
+  const [rows, setRows] = useState<Part[]>([]);
+  const [editing, setEditing] = useState<Part | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const refresh = async () => { const r = await list({ data: { token } }); setRows(r.rows as Part[]); };
+  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, []);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex"><div className="ml-auto" /><Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-1 h-4 w-4" />เพิ่มอะไหล่</Button></div>
+      {rows.length === 0 ? <p className="text-center text-sm text-muted-foreground">— ยังไม่มี —</p> :
+       <div className="space-y-2">
+         {rows.map((p) => {
+           const low = p.stock_qty <= p.min_qty;
+           return (
+             <Card key={p.id}>
+               <CardContent className="p-3">
+                 <div className="flex items-start justify-between gap-2">
+                   <div className="min-w-0 flex-1">
+                     <div className="flex items-center gap-2 font-semibold">
+                       {p.code && <span className="font-mono text-xs text-muted-foreground">[{p.code}]</span>}
+                       {p.name}
+                       {low && <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />ใกล้หมด</Badge>}
+                     </div>
+                     <div className="text-sm">คงเหลือ <b>{p.stock_qty}</b> {p.unit} (ขั้นต่ำ {p.min_qty}) {p.location_bin && `· ${p.location_bin}`}</div>
+                   </div>
+                   <div className="flex gap-1">
+                     <Button size="sm" variant="outline" onClick={async () => {
+                       const v = prompt(`เติมสต๊อก ${p.name} (จำนวน)`, "1");
+                       if (!v) return;
+                       const n = Number(v);
+                       if (!Number.isFinite(n) || n <= 0) return;
+                       try { await restock({ data: { token, spare_part_id: p.id, delta: n, reason: "restock" }}); toast.success("เติมแล้ว"); refresh(); }
+                       catch (e) { toast.error(e instanceof Error ? e.message : "ผิดพลาด"); }
+                     }}>+เติม</Button>
+                     <Button size="sm" variant="outline" onClick={() => { setEditing(p); setOpen(true); }}>แก้ไข</Button>
+                     <Button size="icon" variant="ghost" onClick={async () => {
+                       if (!confirm(`ลบ ${p.name}?`)) return;
+                       try { await del({ data: { token, id: p.id }}); toast.success("ลบแล้ว"); refresh(); }
+                       catch (e) { toast.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
+                     }}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
+                   </div>
+                 </div>
+               </CardContent>
+             </Card>
+           );
+         })}
+       </div>}
+      {open && <PartDialog token={token} initial={editing} onClose={() => { setOpen(false); refresh(); }} />}
+    </div>
+  );
+}
+
+function PartDialog({ token, initial, onClose }: { token: string; initial: Part | null; onClose: () => void }) {
+  const save = useServerFn(upsertSparePart);
+  const [f, setF] = useState<Part>(() => initial ?? {
+    id: "", code: null, name: "", unit: "ชิ้น", stock_qty: 0, min_qty: 0,
+    location_bin: null, unit_cost: null, image_url: null, note: null, active: true,
+  } as Part);
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>{initial ? "แก้ไขอะไหล่" : "เพิ่มอะไหล่"}</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>รหัส</Label><Input value={f.code ?? ""} onChange={(e) => setF({ ...f, code: e.target.value || null })} /></div>
+            <div><Label>หน่วย</Label><Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} /></div>
+          </div>
+          <div><Label>ชื่ออะไหล่ *</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>สต๊อก</Label><Input type="number" value={f.stock_qty} onChange={(e) => setF({ ...f, stock_qty: Number(e.target.value) })} /></div>
+            <div><Label>ขั้นต่ำ</Label><Input type="number" value={f.min_qty} onChange={(e) => setF({ ...f, min_qty: Number(e.target.value) })} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>ที่เก็บ</Label><Input value={f.location_bin ?? ""} onChange={(e) => setF({ ...f, location_bin: e.target.value || null })} /></div>
+            <div><Label>ราคา/หน่วย</Label><Input type="number" value={f.unit_cost ?? ""} onChange={(e) => setF({ ...f, unit_cost: e.target.value ? Number(e.target.value) : null })} /></div>
+          </div>
+          <div><Label>หมายเหตุ</Label><Textarea rows={2} value={f.note ?? ""} onChange={(e) => setF({ ...f, note: e.target.value || null })} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>ยกเลิก</Button>
+          <Button disabled={!f.name} onClick={async () => {
+            try {
+              await save({ data: { token, part: { ...f, id: f.id || undefined } as Part & { id?: string } }});
+              toast.success("บันทึกแล้ว"); onClose();
+            } catch (e) { toast.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ"); }
+          }}>บันทึก</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============ MEDIA HELPERS ============
+function MediaUploader({ token, media, onChange, label }: { token: string; media: MediaItem[]; onChange: (m: MediaItem[]) => void; label?: string }) {
+  const upload = useServerFn(maintenanceUploadMedia);
+  const [busy, setBusy] = useState(false);
+
+  const handleFile = async (file: File, kind: "image" | "video") => {
+    setBusy(true);
+    try {
+      const compressed = await compressMedia(file, kind);
+      const buf = await compressed.arrayBuffer();
+      // base64
+      let s = "";
+      const arr = new Uint8Array(buf);
+      const CHUNK = 0x8000;
+      for (let i = 0; i < arr.length; i += CHUNK) {
+        s += String.fromCharCode.apply(null, Array.from(arr.subarray(i, i + CHUNK)));
+      }
+      const dataBase64 = btoa(s);
+      const r = await upload({ data: { token, kind, dataBase64 } });
+      onChange([...media, { url: r.path, type: kind }]);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div>
+      <Label>{label ?? "รูป/วิดีโอแนบ"}</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        {media.map((m, i) => (
+          <div key={i} className="relative h-16 w-16 overflow-hidden rounded border">
+            <div className="flex h-full items-center justify-center bg-muted text-xs">{m.type === "video" ? "🎥" : "🖼"}</div>
+            <button onClick={() => onChange(media.filter((_, j) => j !== i))}
+              className="absolute -right-1 -top-1 rounded-full bg-rose-600 p-0.5 text-white"><X className="h-3 w-3" /></button>
+          </div>
+        ))}
+        <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded border border-dashed">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+          <input type="file" className="hidden" accept="image/*"
+            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0], "image")} />
+        </label>
+        <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded border border-dashed">
+          🎥
+          <input type="file" className="hidden" accept="video/*"
+            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0], "video")} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function MediaGrid({ items }: { items: MediaItem[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+      {items.map((m, i) => <span key={i} className="rounded bg-muted px-2 py-0.5">{m.type === "video" ? "🎥" : "🖼"} ไฟล์ {i + 1}</span>)}
+    </div>
+  );
+}
