@@ -300,7 +300,12 @@ export const updateTicketStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertMaint(data.token);
-    const patch: Record<string, unknown> = { status: data.status };
+    const patch: {
+      status: string;
+      assignee_name?: string | null;
+      started_at?: string;
+      done_at?: string;
+    } = { status: data.status };
     if (data.assignee_name !== undefined) patch.assignee_name = data.assignee_name;
     if (data.status === "in_progress") patch.started_at = new Date().toISOString();
     if (data.status === "done") patch.done_at = new Date().toISOString();
