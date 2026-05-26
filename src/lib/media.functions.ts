@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "./admin-token.server";
 import { verifyQcToken } from "./qc-token.server";
 import { verifyPackingToken } from "./packing-token.server";
+import { verifyMaintenanceToken } from "./maintenance-token.server";
 import {
   parseStorageRef,
   parseStorageRefWithDefault,
