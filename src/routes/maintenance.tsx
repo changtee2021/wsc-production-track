@@ -83,7 +83,6 @@ function LoginGate({ onAuth }: { onAuth: (token: string) => void }) {
 }
 
 function Workbench({ token, onLogout }: { token: string; onLogout: () => void }) {
-  const [tab, setTab] = useState("tickets");
   return (
     <div className="min-h-[100dvh] bg-muted/30">
       <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background px-3 py-2">
@@ -95,16 +94,7 @@ function Workbench({ token, onLogout }: { token: string; onLogout: () => void })
         <Button variant="outline" size="sm" onClick={onLogout}>ออก</Button>
       </header>
       <main className="mx-auto max-w-3xl p-3">
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="tickets"><Wrench className="mr-1 h-4 w-4" />แจ้งซ่อม</TabsTrigger>
-            <TabsTrigger value="assets"><Boxes className="mr-1 h-4 w-4" />ทรัพย์สิน</TabsTrigger>
-            <TabsTrigger value="parts"><Package2 className="mr-1 h-4 w-4" />อะไหล่</TabsTrigger>
-          </TabsList>
-          <TabsContent value="tickets" className="mt-3"><TicketsPanel token={token} /></TabsContent>
-          <TabsContent value="assets" className="mt-3"><AssetsPanel token={token} /></TabsContent>
-          <TabsContent value="parts" className="mt-3"><PartsPanel token={token} /></TabsContent>
-        </Tabs>
+        <TicketsPanel token={token} />
       </main>
     </div>
   );
