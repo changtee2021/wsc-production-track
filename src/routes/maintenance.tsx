@@ -1,13 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Trash2, Upload, Wrench, Boxes, Package2, AlertTriangle, ImagePlus, Loader2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Plus, Wrench, ImagePlus, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -16,9 +15,10 @@ import {
   verifyMaintenancePassword,
   listTickets, createTicket, getTicket, updateTicketStatus, closeTicket,
   addPartsUsed, removePartsUsed,
-  listAssets, upsertAsset, deleteAsset,
-  listSpareParts, upsertSparePart, deleteSparePart, restockPart,
+  listAssets,
+  listSpareParts,
   maintenanceUploadMedia,
+  listMaintenanceEmployees,
 } from "@/lib/maintenance.functions";
 import { setMaintenanceToken, getMaintenanceToken, clearMaintenanceSession } from "@/lib/maintenance-session";
 import { compressMedia } from "@/lib/media-compress";
@@ -83,7 +83,6 @@ function LoginGate({ onAuth }: { onAuth: (token: string) => void }) {
 }
 
 function Workbench({ token, onLogout }: { token: string; onLogout: () => void }) {
-  const [tab, setTab] = useState("tickets");
   return (
     <div className="min-h-[100dvh] bg-muted/30">
       <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background px-3 py-2">
@@ -95,16 +94,7 @@ function Workbench({ token, onLogout }: { token: string; onLogout: () => void })
         <Button variant="outline" size="sm" onClick={onLogout}>ออก</Button>
       </header>
       <main className="mx-auto max-w-3xl p-3">
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="tickets"><Wrench className="mr-1 h-4 w-4" />แจ้งซ่อม</TabsTrigger>
-            <TabsTrigger value="assets"><Boxes className="mr-1 h-4 w-4" />ทรัพย์สิน</TabsTrigger>
-            <TabsTrigger value="parts"><Package2 className="mr-1 h-4 w-4" />อะไหล่</TabsTrigger>
-          </TabsList>
-          <TabsContent value="tickets" className="mt-3"><TicketsPanel token={token} /></TabsContent>
-          <TabsContent value="assets" className="mt-3"><AssetsPanel token={token} /></TabsContent>
-          <TabsContent value="parts" className="mt-3"><PartsPanel token={token} /></TabsContent>
-        </Tabs>
+        <TicketsPanel token={token} />
       </main>
     </div>
   );
@@ -267,8 +257,10 @@ function TicketDetailDialog({ token, id, onClose }: { token: string; id: string;
   const addP = useServerFn(addPartsUsed);
   const rmP = useServerFn(removePartsUsed);
   const listP = useServerFn(listSpareParts);
+  const listEmp = useServerFn(listMaintenanceEmployees);
   const [data, setData] = useState<{ ticket: Ticket; parts: Array<{ id: string; qty: number; spare_parts: { id: string; name: string; unit: string; code: string | null } | null }> } | null>(null);
   const [parts, setParts] = useState<Array<{ id: string; name: string; code: string | null; unit: string; stock_qty: number }>>([]);
+  const [employees, setEmployees] = useState<Array<{ id: string; name: string; emp_code: string | null }>>([]);
   const [assignee, setAssignee] = useState("");
   const [fixMethod, setFixMethod] = useState("");
   const [fixMedia, setFixMedia] = useState<MediaItem[]>([]);
@@ -285,6 +277,7 @@ function TicketDetailDialog({ token, id, onClose }: { token: string; id: string;
   useEffect(() => {
     refresh();
     listP({ data: { token } }).then((r) => setParts(r.rows.filter((p) => p.active && p.stock_qty > 0)));
+    listEmp({ data: { token } }).then((r) => setEmployees(r.rows.map((e) => ({ id: e.id, name: e.name, emp_code: e.emp_code })))).catch(() => {});
     // eslint-disable-next-line
   }, [id]);
 
@@ -310,7 +303,15 @@ function TicketDetailDialog({ token, id, onClose }: { token: string; id: string;
             <>
               <div>
                 <Label>ผู้รับผิดชอบซ่อม</Label>
-                <Input value={assignee} onChange={(e) => setAssignee(e.target.value)} />
+                {employees.length > 0 ? (
+                  <Select value={employees.some((e) => e.name === assignee) ? assignee : ""} onValueChange={setAssignee}>
+                    <SelectTrigger><SelectValue placeholder="เลือกช่างซ่อม" /></SelectTrigger>
+                    <SelectContent>
+                      {employees.map((e) => <SelectItem key={e.id} value={e.name}>{e.emp_code ? `[${e.emp_code}] ` : ""}{e.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                <Input className="mt-1" placeholder="หรือพิมพ์ชื่อเอง" value={assignee} onChange={(e) => setAssignee(e.target.value)} />
               </div>
               <div className="flex gap-2">
                 {t.status === "open" && (
@@ -391,221 +392,8 @@ function TicketDetailDialog({ token, id, onClose }: { token: string; id: string;
   );
 }
 
-// ============ ASSETS ============
-type Asset = {
-  id: string; code: string | null; name: string; category: string; location: string | null;
-  brand: string | null; model: string | null; serial_no: string | null;
-  purchase_date: string | null; purchase_price: number | null;
-  vendor: string | null; warranty_until: string | null; note: string | null;
-  image_url: string | null; active: boolean;
-};
+// Asset/Spare-parts management moved to admin route /maintenance-master.
 
-function AssetsPanel({ token }: { token: string }) {
-  const list = useServerFn(listAssets);
-  const del = useServerFn(deleteAsset);
-  const [rows, setRows] = useState<Asset[]>([]);
-  const [editing, setEditing] = useState<Asset | null>(null);
-  const [open, setOpen] = useState(false);
-
-  const refresh = async () => { const r = await list({ data: { token } }); setRows(r.rows as Asset[]); };
-  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, []);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex"><div className="ml-auto" /><Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-1 h-4 w-4" />เพิ่มทรัพย์สิน</Button></div>
-      {rows.length === 0 ? <p className="text-center text-sm text-muted-foreground">— ยังไม่มี —</p> :
-       <div className="space-y-2">
-         {rows.map((a) => (
-           <Card key={a.id}>
-             <CardContent className="p-3">
-               <div className="flex items-start justify-between gap-2">
-                 <div className="min-w-0 flex-1">
-                   <div className="font-semibold">{a.code && <span className="mr-1 font-mono text-xs text-muted-foreground">[{a.code}]</span>}{a.name}</div>
-                   <div className="text-xs text-muted-foreground">
-                     {a.category} {a.location && `· ${a.location}`} {a.brand && `· ${a.brand}`} {a.model && a.model}
-                   </div>
-                   {(a.purchase_date || a.warranty_until) && (
-                     <div className="text-xs text-muted-foreground">
-                       {a.purchase_date && `ซื้อ ${a.purchase_date}`} {a.warranty_until && `· ประกันถึง ${a.warranty_until}`}
-                     </div>
-                   )}
-                 </div>
-                 <div className="flex gap-1">
-                   <Button size="sm" variant="outline" onClick={() => { setEditing(a); setOpen(true); }}>แก้ไข</Button>
-                   <Button size="icon" variant="ghost" onClick={async () => {
-                     if (!confirm(`ลบ ${a.name}?`)) return;
-                     try { await del({ data: { token, id: a.id }}); toast.success("ลบแล้ว"); refresh(); }
-                     catch (e) { toast.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
-                   }}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
-                 </div>
-               </div>
-             </CardContent>
-           </Card>
-         ))}
-       </div>}
-      {open && <AssetDialog token={token} initial={editing} onClose={() => { setOpen(false); refresh(); }} />}
-    </div>
-  );
-}
-
-function AssetDialog({ token, initial, onClose }: { token: string; initial: Asset | null; onClose: () => void }) {
-  const save = useServerFn(upsertAsset);
-  const [f, setF] = useState<Asset>(() => initial ?? {
-    id: "", code: null, name: "", category: "machine", location: null,
-    brand: null, model: null, serial_no: null, purchase_date: null, purchase_price: null,
-    vendor: null, warranty_until: null, note: null, image_url: null, active: true,
-  } as Asset);
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-h-[90dvh] max-w-md overflow-y-auto">
-        <DialogHeader><DialogTitle>{initial ? "แก้ไขทรัพย์สิน" : "เพิ่มทรัพย์สิน"}</DialogTitle></DialogHeader>
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>รหัส</Label><Input value={f.code ?? ""} onChange={(e) => setF({ ...f, code: e.target.value || null })} /></div>
-            <div>
-              <Label>หมวด</Label>
-              <Select value={f.category} onValueChange={(v) => setF({ ...f, category: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="machine">เครื่องจักร</SelectItem>
-                  <SelectItem value="equipment">อุปกรณ์</SelectItem>
-                  <SelectItem value="tool">เครื่องมือ</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div><Label>ชื่อ *</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>ยี่ห้อ</Label><Input value={f.brand ?? ""} onChange={(e) => setF({ ...f, brand: e.target.value || null })} /></div>
-            <div><Label>รุ่น</Label><Input value={f.model ?? ""} onChange={(e) => setF({ ...f, model: e.target.value || null })} /></div>
-          </div>
-          <div><Label>Serial No.</Label><Input value={f.serial_no ?? ""} onChange={(e) => setF({ ...f, serial_no: e.target.value || null })} /></div>
-          <div><Label>สถานที่</Label><Input value={f.location ?? ""} onChange={(e) => setF({ ...f, location: e.target.value || null })} /></div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>วันที่ซื้อ</Label><Input type="date" value={f.purchase_date ?? ""} onChange={(e) => setF({ ...f, purchase_date: e.target.value || null })} /></div>
-            <div><Label>ราคา</Label><Input type="number" value={f.purchase_price ?? ""} onChange={(e) => setF({ ...f, purchase_price: e.target.value ? Number(e.target.value) : null })} /></div>
-          </div>
-          <div><Label>ผู้ขาย/ที่ซื้อ</Label><Input value={f.vendor ?? ""} onChange={(e) => setF({ ...f, vendor: e.target.value || null })} /></div>
-          <div><Label>ประกันถึง</Label><Input type="date" value={f.warranty_until ?? ""} onChange={(e) => setF({ ...f, warranty_until: e.target.value || null })} /></div>
-          <div><Label>หมายเหตุ</Label><Textarea rows={2} value={f.note ?? ""} onChange={(e) => setF({ ...f, note: e.target.value || null })} /></div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>ยกเลิก</Button>
-          <Button disabled={!f.name} onClick={async () => {
-            try {
-              await save({ data: { token, asset: { ...f, id: f.id || undefined } as Asset & { id?: string } }});
-              toast.success("บันทึกแล้ว"); onClose();
-            } catch (e) { toast.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ"); }
-          }}>บันทึก</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ============ SPARE PARTS ============
-type Part = {
-  id: string; code: string | null; name: string; unit: string;
-  stock_qty: number; min_qty: number; location_bin: string | null;
-  unit_cost: number | null; image_url: string | null; note: string | null; active: boolean;
-};
-
-function PartsPanel({ token }: { token: string }) {
-  const list = useServerFn(listSpareParts);
-  const del = useServerFn(deleteSparePart);
-  const restock = useServerFn(restockPart);
-  const [rows, setRows] = useState<Part[]>([]);
-  const [editing, setEditing] = useState<Part | null>(null);
-  const [open, setOpen] = useState(false);
-
-  const refresh = async () => { const r = await list({ data: { token } }); setRows(r.rows as Part[]); };
-  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, []);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex"><div className="ml-auto" /><Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-1 h-4 w-4" />เพิ่มอะไหล่</Button></div>
-      {rows.length === 0 ? <p className="text-center text-sm text-muted-foreground">— ยังไม่มี —</p> :
-       <div className="space-y-2">
-         {rows.map((p) => {
-           const low = p.stock_qty <= p.min_qty;
-           return (
-             <Card key={p.id}>
-               <CardContent className="p-3">
-                 <div className="flex items-start justify-between gap-2">
-                   <div className="min-w-0 flex-1">
-                     <div className="flex items-center gap-2 font-semibold">
-                       {p.code && <span className="font-mono text-xs text-muted-foreground">[{p.code}]</span>}
-                       {p.name}
-                       {low && <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />ใกล้หมด</Badge>}
-                     </div>
-                     <div className="text-sm">คงเหลือ <b>{p.stock_qty}</b> {p.unit} (ขั้นต่ำ {p.min_qty}) {p.location_bin && `· ${p.location_bin}`}</div>
-                   </div>
-                   <div className="flex gap-1">
-                     <Button size="sm" variant="outline" onClick={async () => {
-                       const v = prompt(`เติมสต๊อก ${p.name} (จำนวน)`, "1");
-                       if (!v) return;
-                       const n = Number(v);
-                       if (!Number.isFinite(n) || n <= 0) return;
-                       try { await restock({ data: { token, spare_part_id: p.id, delta: n, reason: "restock" }}); toast.success("เติมแล้ว"); refresh(); }
-                       catch (e) { toast.error(e instanceof Error ? e.message : "ผิดพลาด"); }
-                     }}>+เติม</Button>
-                     <Button size="sm" variant="outline" onClick={() => { setEditing(p); setOpen(true); }}>แก้ไข</Button>
-                     <Button size="icon" variant="ghost" onClick={async () => {
-                       if (!confirm(`ลบ ${p.name}?`)) return;
-                       try { await del({ data: { token, id: p.id }}); toast.success("ลบแล้ว"); refresh(); }
-                       catch (e) { toast.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ"); }
-                     }}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
-                   </div>
-                 </div>
-               </CardContent>
-             </Card>
-           );
-         })}
-       </div>}
-      {open && <PartDialog token={token} initial={editing} onClose={() => { setOpen(false); refresh(); }} />}
-    </div>
-  );
-}
-
-function PartDialog({ token, initial, onClose }: { token: string; initial: Part | null; onClose: () => void }) {
-  const save = useServerFn(upsertSparePart);
-  const [f, setF] = useState<Part>(() => initial ?? {
-    id: "", code: null, name: "", unit: "ชิ้น", stock_qty: 0, min_qty: 0,
-    location_bin: null, unit_cost: null, image_url: null, note: null, active: true,
-  } as Part);
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{initial ? "แก้ไขอะไหล่" : "เพิ่มอะไหล่"}</DialogTitle></DialogHeader>
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>รหัส</Label><Input value={f.code ?? ""} onChange={(e) => setF({ ...f, code: e.target.value || null })} /></div>
-            <div><Label>หน่วย</Label><Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} /></div>
-          </div>
-          <div><Label>ชื่ออะไหล่ *</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>สต๊อก</Label><Input type="number" value={f.stock_qty} onChange={(e) => setF({ ...f, stock_qty: Number(e.target.value) })} /></div>
-            <div><Label>ขั้นต่ำ</Label><Input type="number" value={f.min_qty} onChange={(e) => setF({ ...f, min_qty: Number(e.target.value) })} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>ที่เก็บ</Label><Input value={f.location_bin ?? ""} onChange={(e) => setF({ ...f, location_bin: e.target.value || null })} /></div>
-            <div><Label>ราคา/หน่วย</Label><Input type="number" value={f.unit_cost ?? ""} onChange={(e) => setF({ ...f, unit_cost: e.target.value ? Number(e.target.value) : null })} /></div>
-          </div>
-          <div><Label>หมายเหตุ</Label><Textarea rows={2} value={f.note ?? ""} onChange={(e) => setF({ ...f, note: e.target.value || null })} /></div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>ยกเลิก</Button>
-          <Button disabled={!f.name} onClick={async () => {
-            try {
-              await save({ data: { token, part: { ...f, id: f.id || undefined } as Part & { id?: string } }});
-              toast.success("บันทึกแล้ว"); onClose();
-            } catch (e) { toast.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ"); }
-          }}>บันทึก</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // ============ MEDIA HELPERS ============
 function MediaUploader({ token, media, onChange, label }: { token: string; media: MediaItem[]; onChange: (m: MediaItem[]) => void; label?: string }) {
