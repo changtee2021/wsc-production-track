@@ -7,6 +7,7 @@ import {
   verifyMaintenanceToken,
   checkMaintenancePassword,
 } from "./maintenance-token.server";
+import { verifyAdminToken } from "./admin-token.server";
 
 function assertMaint(token: string | undefined) {
   if (!verifyMaintenanceToken(token)) throw new Error("Unauthorized");
