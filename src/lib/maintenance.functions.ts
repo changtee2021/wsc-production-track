@@ -491,8 +491,10 @@ export const listMaintenanceEmployees = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
   .handler(async ({ data }) => {
     assertMaintOrAdmin(data.token);
-    const { data: rows, error } = await supabaseAdmin
-      .from("maintenance_employees")
+    const { data: rows, error } = await (supabaseAdmin
+      .from("maintenance_employees" as never) as unknown as {
+        select: (s: string) => { eq: (a: string, b: boolean) => { order: (c: string) => Promise<{ data: Array<{ id: string; name: string; emp_code: string | null; avatar_url: string | null; active: boolean }> | null; error: { message: string } | null }> } };
+      })
       .select("id, name, emp_code, avatar_url, active")
       .eq("active", true)
       .order("name");
