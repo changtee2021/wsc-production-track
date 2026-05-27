@@ -611,15 +611,7 @@ function JobLookupPage() {
         </div>
       )}
 
-      <Dialog open={!!lightbox} onOpenChange={(v) => { if (!v) setLightbox(null); }}>
-        <DialogContent className="max-w-4xl p-2">
-          {lightbox?.type === "video" ? (
-            <video src={signedSrc(lightbox.url)} controls className="max-h-[80vh] w-full rounded" />
-          ) : lightbox ? (
-            <img src={signedSrc(lightbox.url)} alt="" className="max-h-[80vh] w-full rounded object-contain" />
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <MediaLightbox item={lightbox} signedSrc={signedSrc} onClose={() => setLightbox(null)} />
 
       <QrScannerDialog
         open={scannerOpen}
