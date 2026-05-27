@@ -303,7 +303,15 @@ function TicketDetailDialog({ token, id, onClose }: { token: string; id: string;
             <>
               <div>
                 <Label>ผู้รับผิดชอบซ่อม</Label>
-                <Input value={assignee} onChange={(e) => setAssignee(e.target.value)} />
+                {employees.length > 0 ? (
+                  <Select value={employees.some((e) => e.name === assignee) ? assignee : ""} onValueChange={setAssignee}>
+                    <SelectTrigger><SelectValue placeholder="เลือกช่างซ่อม" /></SelectTrigger>
+                    <SelectContent>
+                      {employees.map((e) => <SelectItem key={e.id} value={e.name}>{e.emp_code ? `[${e.emp_code}] ` : ""}{e.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                <Input className="mt-1" placeholder="หรือพิมพ์ชื่อเอง" value={assignee} onChange={(e) => setAssignee(e.target.value)} />
               </div>
               <div className="flex gap-2">
                 {t.status === "open" && (
