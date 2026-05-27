@@ -22,6 +22,7 @@ type AllowedBucket = (typeof ALLOWED)[number];
 async function signRefs(
   refs: string[],
   defaultBucket: AllowedBucket | null,
+  allowed: readonly AllowedBucket[] = ALLOWED,
 ): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   // Dedupe
@@ -31,8 +32,8 @@ async function signRefs(
   const byBucket = new Map<string, { ref: string; path: string }[]>();
   for (const ref of unique) {
     const parsed = defaultBucket
-      ? parseStorageRefWithDefault(ref, defaultBucket, ALLOWED)
-      : parseStorageRef(ref, ALLOWED);
+      ? parseStorageRefWithDefault(ref, defaultBucket, allowed)
+      : parseStorageRef(ref, allowed);
     if (!parsed) continue;
     const list = byBucket.get(parsed.bucket) ?? [];
     list.push({ ref, path: parsed.path });
@@ -51,6 +52,7 @@ async function signRefs(
   }
   return out;
 }
+
 
 const refsSchema = z.array(z.string().min(1).max(2000)).max(200);
 
@@ -81,7 +83,7 @@ export const qcSignMediaUrls = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!verifyQcToken(data.token)) throw new Error("Unauthorized");
-    const urlMap = await signRefs(data.refs, "qc-media");
+    const urlMap = await signRefs(data.refs, "qc-media", ["qc-media", "log-notes"]);
     return { urlMap };
   });
 
@@ -96,7 +98,7 @@ export const packingSignMediaUrls = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!verifyPackingToken(data.token)) throw new Error("Unauthorized");
-    const urlMap = await signRefs(data.refs, "packing-media");
+    const urlMap = await signRefs(data.refs, "packing-media", ["packing-media"]);
     return { urlMap };
   });
 
@@ -106,6 +108,6 @@ export const maintenanceSignMediaUrls = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!verifyMaintenanceToken(data.token)) throw new Error("Unauthorized");
-    const urlMap = await signRefs(data.refs, "maintenance-media");
+    const urlMap = await signRefs(data.refs, "maintenance-media", ["maintenance-media"]);
     return { urlMap };
   });
