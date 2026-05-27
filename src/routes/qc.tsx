@@ -791,7 +791,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               accept="video/*"
               capture="environment"
               className="hidden"
-              onChange={(e) => e.target.files && uploadFiles(e.target.files, "video", "overall")}
+              onChange={(e) => { if (e.target.files) { warnIfMovFiles(e.target.files); uploadFiles(e.target.files, "video", "overall"); } }}
             />
 
             <div className="grid grid-cols-2 gap-2">
