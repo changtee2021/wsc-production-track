@@ -485,3 +485,18 @@ export const adminMaintenanceSummary = createServerFn({ method: "POST" })
       counts,
     };
   });
+
+// ============ MAINTENANCE EMPLOYEES (dropdown) ============
+export const listMaintenanceEmployees = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertMaintOrAdmin(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("maintenance_employees")
+      .select("id, name, emp_code, avatar_url, active")
+      .eq("active", true)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
