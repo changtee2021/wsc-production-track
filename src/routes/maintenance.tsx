@@ -22,6 +22,7 @@ import {
 } from "@/lib/maintenance.functions";
 import { setMaintenanceToken, getMaintenanceToken, clearMaintenanceSession } from "@/lib/maintenance-session";
 import { compressMedia } from "@/lib/media-compress";
+import { warnIfMovFiles } from "@/components/MediaLightbox";
 
 export const Route = createFileRoute("/maintenance")({
   head: () => ({
@@ -649,7 +650,7 @@ function MediaUploader({ token, media, onChange, label }: { token: string; media
         <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded border border-dashed">
           🎥
           <input type="file" className="hidden" accept="video/*"
-            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0], "video")} />
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) { warnIfMovFiles([f]); handleFile(f, "video"); } }} />
         </label>
       </div>
     </div>
