@@ -59,6 +59,7 @@ const NAV_GROUPS: Array<{
     label: "ซ่อมบำรุง",
     items: [
       { title: "สรุปงานซ่อม", url: "/maintenance-admin", icon: Wrench },
+      { title: "ทรัพย์สิน & อะไหล่", url: "/maintenance-master", icon: Package },
     ],
   },
   {
