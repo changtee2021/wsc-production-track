@@ -64,6 +64,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/i18n";
 import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
 import { PackingChecklistsPanel } from "@/components/PackingChecklistsPanel";
+import { AllStaffPanel } from "@/components/AllStaffPanel";
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
