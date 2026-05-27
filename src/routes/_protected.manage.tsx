@@ -98,6 +98,9 @@ function Manage() {
       <p className="mb-6 text-sm text-muted-foreground">
         เพิ่ม แก้ไข ลบหมวดหมู่งานม่าน พนักงาน และขั้นตอนการผลิต พร้อมอัปโหลดรูปและตั้งเวลามาตรฐาน
       </p>
+      <div className="mb-6">
+        <AllStaffPanel />
+      </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <BannersPanel />
         <AnnouncementsPanel />
