@@ -257,8 +257,10 @@ function TicketDetailDialog({ token, id, onClose }: { token: string; id: string;
   const addP = useServerFn(addPartsUsed);
   const rmP = useServerFn(removePartsUsed);
   const listP = useServerFn(listSpareParts);
+  const listEmp = useServerFn(listMaintenanceEmployees);
   const [data, setData] = useState<{ ticket: Ticket; parts: Array<{ id: string; qty: number; spare_parts: { id: string; name: string; unit: string; code: string | null } | null }> } | null>(null);
   const [parts, setParts] = useState<Array<{ id: string; name: string; code: string | null; unit: string; stock_qty: number }>>([]);
+  const [employees, setEmployees] = useState<Array<{ id: string; name: string; emp_code: string | null }>>([]);
   const [assignee, setAssignee] = useState("");
   const [fixMethod, setFixMethod] = useState("");
   const [fixMedia, setFixMedia] = useState<MediaItem[]>([]);
@@ -275,6 +277,7 @@ function TicketDetailDialog({ token, id, onClose }: { token: string; id: string;
   useEffect(() => {
     refresh();
     listP({ data: { token } }).then((r) => setParts(r.rows.filter((p) => p.active && p.stock_qty > 0)));
+    listEmp({ data: { token } }).then((r) => setEmployees(r.rows.map((e) => ({ id: e.id, name: e.name, emp_code: e.emp_code })))).catch(() => {});
     // eslint-disable-next-line
   }, [id]);
 
