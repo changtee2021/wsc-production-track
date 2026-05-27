@@ -83,7 +83,7 @@ export const qcSignMediaUrls = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!verifyQcToken(data.token)) throw new Error("Unauthorized");
-    const urlMap = await signRefs(data.refs, "qc-media");
+    const urlMap = await signRefs(data.refs, "qc-media", ["qc-media", "log-notes"]);
     return { urlMap };
   });
 
@@ -98,7 +98,7 @@ export const packingSignMediaUrls = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!verifyPackingToken(data.token)) throw new Error("Unauthorized");
-    const urlMap = await signRefs(data.refs, "packing-media");
+    const urlMap = await signRefs(data.refs, "packing-media", ["packing-media"]);
     return { urlMap };
   });
 
@@ -108,6 +108,6 @@ export const maintenanceSignMediaUrls = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!verifyMaintenanceToken(data.token)) throw new Error("Unauthorized");
-    const urlMap = await signRefs(data.refs, "maintenance-media");
+    const urlMap = await signRefs(data.refs, "maintenance-media", ["maintenance-media"]);
     return { urlMap };
   });
