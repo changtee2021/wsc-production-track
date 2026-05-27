@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { warnIfMovFiles } from "@/components/MediaLightbox";
 import {
   ScanLine,
   QrCode,
@@ -1001,7 +1002,7 @@ function ChecklistRow({
             capture="environment"
             className="hidden"
             onChange={(e) => {
-              if (e.target.files) onUpload(e.target.files, "video");
+              if (e.target.files) { warnIfMovFiles(e.target.files); onUpload(e.target.files, "video"); }
               if (vidRef.current) vidRef.current.value = "";
             }}
           />
