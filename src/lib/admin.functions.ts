@@ -870,7 +870,80 @@ export const adminDeletePackingEmployee = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ---- Packing Checklists --------------------------------------------------
+// ---- Maintenance Employees -----------------------------------------------
+// `maintenance_employees` table was added after the generated Supabase types
+// snapshot; cast through `unknown` until types regenerate.
+
+const maintEmployeePayload = z.object({
+  token: tokenStr,
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(100),
+  emp_code: z.string().trim().max(50).nullable().optional(),
+  avatar_url: z.string().url().max(2000).nullable().optional(),
+  active: z.boolean().optional(),
+});
+
+type MaintEmpRow = {
+  id: string;
+  name: string;
+  emp_code: string | null;
+  avatar_url: string | null;
+  active: boolean;
+};
+
+type MaintEmpTable = {
+  select: (s: string) => { order: (c: string) => Promise<{ data: MaintEmpRow[] | null; error: { message: string } | null }> };
+  insert: (row: Partial<MaintEmpRow>) => Promise<{ error: { message: string } | null }>;
+  update: (row: Partial<MaintEmpRow>) => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
+  delete: () => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
+};
+
+function maintEmpTbl() {
+  return supabaseAdmin.from("maintenance_employees" as never) as unknown as MaintEmpTable;
+}
+
+export const adminListMaintenanceEmployees = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { data: rows, error } = await maintEmpTbl()
+      .select("id, name, emp_code, avatar_url, active")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+export const adminUpsertMaintenanceEmployee = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => maintEmployeePayload.parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const row: Partial<MaintEmpRow> = {
+      name: data.name,
+      emp_code: data.emp_code ?? null,
+      avatar_url: data.avatar_url ?? null,
+      ...(data.active !== undefined ? { active: data.active } : {}),
+    };
+    if (data.id) {
+      const { error } = await maintEmpTbl().update(row).eq("id", data.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await maintEmpTbl().insert(row);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const adminDeleteMaintenanceEmployee = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await maintEmpTbl().delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const adminFetchPackingChecklists = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
