@@ -26,6 +26,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/manage": "จัดการข้อมูล",
   "/storage": "พื้นที่จัดเก็บ",
   "/logs-update": "LogUpdate",
+  "/maintenance-admin": "สรุปงานซ่อมบำรุง",
 };
 
 function AdminLayout() {
