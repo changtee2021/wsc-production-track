@@ -13,6 +13,15 @@ function assertMaint(token: string | undefined) {
   if (!verifyMaintenanceToken(token)) throw new Error("Unauthorized");
 }
 
+// Allows both the maintenance worker token AND the admin token.
+// Used for asset/spare-parts/media endpoints that are also reachable from
+// the admin "ทรัพย์สิน & อะไหล่" page (_protected/maintenance-master).
+function assertMaintOrAdmin(token: string | undefined) {
+  if (verifyMaintenanceToken(token)) return;
+  if (verifyAdminToken(token)) return;
+  throw new Error("Unauthorized");
+}
+
 const tokenStr = z.string().min(1);
 
 // ============ AUTH ============
