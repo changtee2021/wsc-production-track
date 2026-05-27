@@ -56,6 +56,12 @@ const NAV_GROUPS: Array<{
     ],
   },
   {
+    label: "ซ่อมบำรุง",
+    items: [
+      { title: "สรุปงานซ่อม", url: "/maintenance-admin", icon: Wrench },
+    ],
+  },
+  {
     label: "ระบบ",
     items: [
       { title: "จัดการข้อมูล", url: "/manage", icon: Users },
