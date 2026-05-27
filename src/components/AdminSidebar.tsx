@@ -12,6 +12,7 @@ import {
   BarChart3,
   Search,
   Package,
+  Wrench,
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,6 +53,12 @@ const NAV_GROUPS: Array<{
     items: [
       { title: "รายงานแพ็คของ", url: "/packing-reports", icon: Package },
       { title: "สรุปแพ็คของ", url: "/packing-summary", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "ซ่อมบำรุง",
+    items: [
+      { title: "สรุปงานซ่อม", url: "/maintenance-admin", icon: Wrench },
     ],
   },
   {
