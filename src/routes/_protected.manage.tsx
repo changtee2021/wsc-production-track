@@ -64,6 +64,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/i18n";
 import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
 import { PackingChecklistsPanel } from "@/components/PackingChecklistsPanel";
+import { AllStaffPanel } from "@/components/AllStaffPanel";
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
@@ -97,6 +98,9 @@ function Manage() {
       <p className="mb-6 text-sm text-muted-foreground">
         เพิ่ม แก้ไข ลบหมวดหมู่งานม่าน พนักงาน และขั้นตอนการผลิต พร้อมอัปโหลดรูปและตั้งเวลามาตรฐาน
       </p>
+      <div className="mb-6">
+        <AllStaffPanel />
+      </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <BannersPanel />
         <AnnouncementsPanel />
