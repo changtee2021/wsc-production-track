@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
+import { warnIfMovFiles } from "@/components/MediaLightbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -417,7 +418,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
             <input ref={imgInput} type="file" accept="image/*" multiple capture="environment" className="hidden"
               onChange={(e) => e.target.files && uploadFiles(e.target.files, "image", "overall")} />
             <input ref={vidInput} type="file" accept="video/*" capture="environment" className="hidden"
-              onChange={(e) => e.target.files && uploadFiles(e.target.files, "video", "overall")} />
+              onChange={(e) => { if (e.target.files) { warnIfMovFiles(e.target.files); uploadFiles(e.target.files, "video", "overall"); } }} />
             <div className="grid grid-cols-2 gap-2">
               <Button type="button" variant="outline" className="gap-1" onClick={() => imgInput.current?.click()} disabled={uploading}><Camera className="h-4 w-4" /> เพิ่มรูป</Button>
               <Button type="button" variant="outline" className="gap-1" onClick={() => vidInput.current?.click()} disabled={uploading}><VideoIcon className="h-4 w-4" /> เพิ่มวิดีโอ</Button>
@@ -484,7 +485,7 @@ function PackingRow({ index, item, state, uploading, onPass, onRemark, onUpload,
           <input ref={imgRef} type="file" accept="image/*" multiple capture="environment" className="hidden"
             onChange={(e) => { if (e.target.files) onUpload(e.target.files, "image"); if (imgRef.current) imgRef.current.value = ""; }} />
           <input ref={vidRef} type="file" accept="video/*" capture="environment" className="hidden"
-            onChange={(e) => { if (e.target.files) onUpload(e.target.files, "video"); if (vidRef.current) vidRef.current.value = ""; }} />
+            onChange={(e) => { if (e.target.files) { warnIfMovFiles(e.target.files); onUpload(e.target.files, "video"); } if (vidRef.current) vidRef.current.value = ""; }} />
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" size="sm" variant="outline" className="gap-1" disabled={uploading} onClick={() => imgRef.current?.click()}><Camera className="h-4 w-4" /> รูป</Button>
             <Button type="button" size="sm" variant="outline" className="gap-1" disabled={uploading} onClick={() => vidRef.current?.click()}><VideoIcon className="h-4 w-4" /> วิดีโอ</Button>

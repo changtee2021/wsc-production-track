@@ -28,6 +28,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { MediaLightbox } from "@/components/MediaLightbox";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -547,17 +548,7 @@ function QcReportsPage() {
         })}
       </section>
 
-      <Dialog open={!!lightbox} onOpenChange={(o) => !o && setLightbox(null)}>
-        <DialogContent className="max-w-4xl border-0 bg-black/95 p-2 sm:p-4">
-          {lightbox && (
-            lightbox.type === "image" ? (
-              <img src={signedSrc(lightbox.url)} alt="" className="mx-auto max-h-[85vh] w-auto object-contain" />
-            ) : (
-              <video src={signedSrc(lightbox.url)} controls autoPlay className="mx-auto max-h-[85vh] w-auto" />
-            )
-          )}
-        </DialogContent>
-      </Dialog>
+      <MediaLightbox item={lightbox} signedSrc={signedSrc} onClose={() => setLightbox(null)} />
     </main>
   );
 }
