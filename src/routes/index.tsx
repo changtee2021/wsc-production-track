@@ -129,6 +129,16 @@ function WelcomePage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/maintenance" aria-label="เจ้าหนูแจ้งซ่อม">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 rounded-full bg-orange-600 text-white ring-1 ring-white/30 hover:bg-orange-700 hover:text-white"
+              >
+                <Wrench className="h-4 w-4" />
+                <span className="hidden sm:inline">แจ้งซ่อม</span>
+              </Button>
+            </Link>
             <a
               href="https://lin.ee/P94KTyM"
               target="_blank"
@@ -204,16 +214,6 @@ function WelcomePage() {
                 </Button>
               </Link>
             </div>
-            <Link to="/maintenance">
-              <Button
-                variant="ghost"
-                aria-label="เจ้าหนูแจ้งซ่อม"
-                className="h-12 w-full rounded-2xl bg-orange-600 text-white ring-1 ring-white/30 hover:bg-orange-700 hover:text-white"
-              >
-                <Wrench className="h-4 w-4 mr-1" />
-                เจ้าหนูแจ้งซ่อม
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
