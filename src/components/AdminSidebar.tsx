@@ -12,6 +12,7 @@ import {
   BarChart3,
   Search,
   Package,
+  Wrench,
 } from "lucide-react";
 import {
   Sidebar,
