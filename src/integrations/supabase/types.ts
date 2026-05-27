@@ -194,6 +194,33 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_employees: {
+        Row: {
+          active: boolean
+          avatar_url: string | null
+          created_at: string
+          emp_code: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          emp_code?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          emp_code?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       maintenance_parts_used: {
         Row: {
           created_at: string
