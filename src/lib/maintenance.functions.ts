@@ -62,7 +62,7 @@ const assetInput = z.object({
 export const listAssets = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
   .handler(async ({ data }) => {
-    assertMaint(data.token);
+    assertMaintOrAdmin(data.token);
     const { data: rows, error } = await supabaseAdmin
       .from("assets")
       .select("*")
@@ -77,7 +77,7 @@ export const upsertAsset = createServerFn({ method: "POST" })
     z.object({ token: tokenStr, asset: assetInput }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertMaint(data.token);
+    assertMaintOrAdmin(data.token);
     const a = data.asset;
     const payload = {
       code: a.code ?? null,
@@ -112,7 +112,7 @@ export const deleteAsset = createServerFn({ method: "POST" })
     z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertMaint(data.token);
+    assertMaintOrAdmin(data.token);
     const { error } = await supabaseAdmin.from("assets").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -136,7 +136,7 @@ const partInput = z.object({
 export const listSpareParts = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
   .handler(async ({ data }) => {
-    assertMaint(data.token);
+    assertMaintOrAdmin(data.token);
     const { data: rows, error } = await supabaseAdmin
       .from("spare_parts").select("*")
       .order("active", { ascending: false })
@@ -150,7 +150,7 @@ export const upsertSparePart = createServerFn({ method: "POST" })
     z.object({ token: tokenStr, part: partInput }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertMaint(data.token);
+    assertMaintOrAdmin(data.token);
     const p = data.part;
     const payload = {
       code: p.code ?? null,
@@ -181,7 +181,7 @@ export const deleteSparePart = createServerFn({ method: "POST" })
     z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertMaint(data.token);
+    assertMaintOrAdmin(data.token);
     const { error } = await supabaseAdmin.from("spare_parts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -200,7 +200,7 @@ export const restockPart = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    assertMaint(data.token);
+    assertMaintOrAdmin(data.token);
     const { data: part, error: e0 } = await supabaseAdmin
       .from("spare_parts").select("stock_qty").eq("id", data.spare_part_id).single();
     if (e0 || !part) throw new Error(e0?.message || "ไม่พบอะไหล่");
@@ -435,7 +435,7 @@ export const maintenanceUploadMedia = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    assertMaint(data.token);
+    assertMaintOrAdmin(data.token);
     const bytes = Uint8Array.from(Buffer.from(data.dataBase64, "base64"));
     if (bytes.length === 0) throw new Error("ไฟล์ว่างเปล่า");
     const max = data.kind === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
