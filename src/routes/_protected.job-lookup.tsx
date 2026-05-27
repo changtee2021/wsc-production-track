@@ -18,6 +18,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { MediaLightbox } from "@/components/MediaLightbox";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
