@@ -453,7 +453,7 @@ export const maintenanceUploadMedia = createServerFn({ method: "POST" })
 export const adminMaintenanceSummary = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
   .handler(async ({ data }) => {
-    assertMaint(data.token);
+    if (!verifyAdminToken(data.token)) throw new Error("Unauthorized");
     const [tickets, lowStock] = await Promise.all([
       supabaseAdmin
         .from("maintenance_tickets")
