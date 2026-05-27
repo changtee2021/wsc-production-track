@@ -23,6 +23,7 @@ import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-r
 import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
 import { Route as ProtectedPackingReportsRouteImport } from './routes/_protected.packing-reports'
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
+import { Route as ProtectedMaintenanceMasterRouteImport } from './routes/_protected.maintenance-master'
 import { Route as ProtectedMaintenanceAdminRouteImport } from './routes/_protected.maintenance-admin'
 import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
@@ -99,6 +100,12 @@ const ProtectedManageRoute = ProtectedManageRouteImport.update({
   path: '/manage',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedMaintenanceMasterRoute =
+  ProtectedMaintenanceMasterRouteImport.update({
+    id: '/maintenance-master',
+    path: '/maintenance-master',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedMaintenanceAdminRoute =
   ProtectedMaintenanceAdminRouteImport.update({
     id: '/maintenance-admin',
@@ -145,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
   '/maintenance-admin': typeof ProtectedMaintenanceAdminRoute
+  '/maintenance-master': typeof ProtectedMaintenanceMasterRoute
   '/manage': typeof ProtectedManageRoute
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
@@ -166,6 +174,7 @@ export interface FileRoutesByTo {
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
   '/maintenance-admin': typeof ProtectedMaintenanceAdminRoute
+  '/maintenance-master': typeof ProtectedMaintenanceMasterRoute
   '/manage': typeof ProtectedManageRoute
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
@@ -189,6 +198,7 @@ export interface FileRoutesById {
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/logs-update': typeof ProtectedLogsUpdateRoute
   '/_protected/maintenance-admin': typeof ProtectedMaintenanceAdminRoute
+  '/_protected/maintenance-master': typeof ProtectedMaintenanceMasterRoute
   '/_protected/manage': typeof ProtectedManageRoute
   '/_protected/packing-reports': typeof ProtectedPackingReportsRoute
   '/_protected/packing-summary': typeof ProtectedPackingSummaryRoute
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/logs-update'
     | '/maintenance-admin'
+    | '/maintenance-master'
     | '/manage'
     | '/packing-reports'
     | '/packing-summary'
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/logs-update'
     | '/maintenance-admin'
+    | '/maintenance-master'
     | '/manage'
     | '/packing-reports'
     | '/packing-summary'
@@ -255,6 +267,7 @@ export interface FileRouteTypes {
     | '/_protected/logs'
     | '/_protected/logs-update'
     | '/_protected/maintenance-admin'
+    | '/_protected/maintenance-master'
     | '/_protected/manage'
     | '/_protected/packing-reports'
     | '/_protected/packing-summary'
@@ -376,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedManageRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/maintenance-master': {
+      id: '/_protected/maintenance-master'
+      path: '/maintenance-master'
+      fullPath: '/maintenance-master'
+      preLoaderRoute: typeof ProtectedMaintenanceMasterRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/maintenance-admin': {
       id: '/_protected/maintenance-admin'
       path: '/maintenance-admin'
@@ -427,6 +447,7 @@ interface ProtectedRouteChildren {
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedLogsUpdateRoute: typeof ProtectedLogsUpdateRoute
   ProtectedMaintenanceAdminRoute: typeof ProtectedMaintenanceAdminRoute
+  ProtectedMaintenanceMasterRoute: typeof ProtectedMaintenanceMasterRoute
   ProtectedManageRoute: typeof ProtectedManageRoute
   ProtectedPackingReportsRoute: typeof ProtectedPackingReportsRoute
   ProtectedPackingSummaryRoute: typeof ProtectedPackingSummaryRoute
@@ -441,6 +462,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedLogsUpdateRoute: ProtectedLogsUpdateRoute,
   ProtectedMaintenanceAdminRoute: ProtectedMaintenanceAdminRoute,
+  ProtectedMaintenanceMasterRoute: ProtectedMaintenanceMasterRoute,
   ProtectedManageRoute: ProtectedManageRoute,
   ProtectedPackingReportsRoute: ProtectedPackingReportsRoute,
   ProtectedPackingSummaryRoute: ProtectedPackingSummaryRoute,
