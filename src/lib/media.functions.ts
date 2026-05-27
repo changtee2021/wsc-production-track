@@ -22,6 +22,7 @@ type AllowedBucket = (typeof ALLOWED)[number];
 async function signRefs(
   refs: string[],
   defaultBucket: AllowedBucket | null,
+  allowed: readonly AllowedBucket[] = ALLOWED,
 ): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   // Dedupe
@@ -31,8 +32,8 @@ async function signRefs(
   const byBucket = new Map<string, { ref: string; path: string }[]>();
   for (const ref of unique) {
     const parsed = defaultBucket
-      ? parseStorageRefWithDefault(ref, defaultBucket, ALLOWED)
-      : parseStorageRef(ref, ALLOWED);
+      ? parseStorageRefWithDefault(ref, defaultBucket, allowed)
+      : parseStorageRef(ref, allowed);
     if (!parsed) continue;
     const list = byBucket.get(parsed.bucket) ?? [];
     list.push({ ref, path: parsed.path });
@@ -51,6 +52,7 @@ async function signRefs(
   }
   return out;
 }
+
 
 const refsSchema = z.array(z.string().min(1).max(2000)).max(200);
 
