@@ -276,7 +276,7 @@ function TicketDetailDialog({ token, id, onClose }: { token: string; id: string;
 
   const refresh = async () => {
     const r = await get({ data: { token, id } });
-    setData(r as typeof data);
+    setData(r as unknown as typeof data);
     setAssignee(r.ticket.assignee_name ?? "");
     setFixMethod(r.ticket.fix_method ?? "");
     setFixMedia((r.ticket.fix_media as MediaItem[]) ?? []);
