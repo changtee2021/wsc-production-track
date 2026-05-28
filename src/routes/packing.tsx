@@ -428,7 +428,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
               <div className="grid grid-cols-3 gap-2">
                 {media.map((m, i) => (
                   <div key={i} className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
-                    {m.type === "image" ? <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" /> : <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" muted />}
+                    {m.type === "image" ? <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" /> : <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" preload="metadata" muted playsInline />}
                     <button type="button" onClick={() => setMedia((prev) => prev.filter((_, j) => j !== i))} aria-label="ลบ" className="absolute top-1 right-1 rounded-full bg-background/90 p-1 shadow"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 ))}
@@ -496,7 +496,7 @@ function PackingRow({ index, item, state, uploading, onPass, onRemark, onUpload,
             <div className="grid grid-cols-4 gap-1.5">
               {state.media.map((m, i) => (
                 <div key={i} className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
-                  {m.type === "image" ? <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" /> : <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" muted />}
+                  {m.type === "image" ? <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" /> : <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" preload="metadata" muted playsInline />}
                   <button type="button" onClick={() => onRemoveMedia(i)} aria-label="ลบ" className="absolute top-0.5 right-0.5 rounded-full bg-background/90 p-0.5 shadow"><X className="h-3 w-3" /></button>
                 </div>
               ))}

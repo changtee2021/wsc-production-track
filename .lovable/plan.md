@@ -1,33 +1,26 @@
-สิ่งที่ตรวจพบแล้ว
-- Bucket `qc-media` เป็น private ตามระบบความปลอดภัยเดิม จึงต้องดูผ่าน signed URL ไม่ควรเปลี่ยนเป็น public
-- สิทธิ์ Storage ไม่ได้เป็นสาเหตุหลัก: แอปใช้ server function สร้าง signed URL ด้วยสิทธิ์ฝั่งเซิร์ฟเวอร์
-- ลิงก์ใน Database ตรงกับไฟล์จริงใน Storage เช่น `video/...mp4` และ `video/...mov`
-- พื้นที่เก็บข้อมูลยังไม่เต็ม: ใช้ประมาณ 3.99GB, ฐานข้อมูล/บริการ Cloud ปกติ
-- ไฟล์ล่าสุดมีทั้ง MP4 ขนาด ~14–29MB และ MOV จาก iPhone ขนาด ~1–2.6MB
-- จุดน่าสงสัยหลักคือ component ตรวจ `.mov` จาก signed URL ไม่เจอ เพราะ signed URL ไม่มีนามสกุลไฟล์ท้าย URL ทำให้ขึ้นข้อความทั่วไป และไม่มี fallback/metadata ช่วยผู้ใช้
+## เป้าหมาย
+แก้ปัญหากดเล่นวิดีโอไม่ได้บนมือถือ/iOS Safari และปรับ thumbnail ทุกจุดให้โหลดเบาขึ้น
 
-แผนดำเนินการ
-1. ปรับ `MediaLightbox`
-   - เพิ่ม Dialog title/description แบบซ่อนเพื่อแก้ warning accessibility ที่เห็นใน Console
-   - ส่ง reference เดิมของไฟล์เข้าไปด้วย เพื่อรู้ว่าเป็น `.mov`, `.mp4` หรือชนิดอื่น แม้ URL ที่เล่นจริงจะเป็น signed URL
-   - แสดงข้อความสาเหตุให้ถูกต้อง โดยเฉพาะ `.mov` จาก iPhone ที่ Chrome/Edge บน Windows อาจเล่นไม่ได้
-   - ปรับปุ่ม “เปิดในแท็บใหม่” และ “ดาวน์โหลด” ให้ใช้ signed URL เดิม แต่ชื่อ/ข้อความชัดเจนขึ้น
+## ไฟล์ที่จะแก้
 
-2. ปรับหน้า `qc-reports`
-   - ส่งข้อมูลไฟล์ต้นทางให้ `MediaLightbox` เพื่อให้ตรวจชนิดไฟล์ได้ถูกต้อง
-   - คงการสร้าง signed URL แบบ `defaultBucket: qc-media` เหมือนเดิม เพราะ bucket เป็น private
-   - เพิ่ม handling กรณี signed URL สร้างไม่ได้ ให้แจ้งเตือนว่าเป็นปัญหาสิทธิ์/ลิงก์ แทนปล่อยให้ player เปิด path ดิบแล้วพังเงียบ
+### 1. `src/components/MediaLightbox.tsx` (ตัวเล่นใน Modal)
+- ถอด `autoPlay` ออก (iOS Safari บล็อก autoplay มี audio)
+- เพิ่ม `preload="metadata"`
+- เพิ่ม `onPointerDownCapture={(e) => e.stopPropagation()}` กัน Radix Dialog ดักจับ touch
+- คง `controls`, `playsInline`, `key={src}`, `onError` ไว้
 
-3. ปรับ flow อัปโหลดวิดีโอ QC
-   - จำกัดและเตือนวิดีโอที่เสี่ยงเปิดไม่ได้ให้ชัดเจนขึ้นก่อนอัปโหลด
-   - สำหรับ `.mov` ให้เตือนแบบ actionable ว่าอาจต้องเปิดในแท็บใหม่/ดาวน์โหลด หรือถ่ายแบบ “เข้ากันได้สูงสุด” เพื่อได้ MP4
-   - ยังไม่ทำ server-side transcode เพราะ runtime ปัจจุบันไม่เหมาะกับ ffmpeg/ไฟล์วิดีโอหนัก และอาจกระทบเสถียรภาพ
+### 2. Thumbnail `<video>` ในไฟล์ต่อไปนี้ — เติม `preload="metadata" muted playsInline` ให้ครบทุกจุด
+- `src/routes/_protected.qc-reports.tsx` (2 จุด: บรรทัด 406, 517)
+- `src/routes/_protected.packing-reports.tsx` (2 จุด: 406, 517)
+- `src/routes/_protected.job-lookup.tsx` (1 จุด: 644)
+- `src/routes/qc.tsx` (2 จุด: 835, 1045) — มี `muted` แล้ว เติม `preload="metadata" playsInline`
+- `src/routes/packing.tsx` (2 จุด: 431, 499) — มี `muted` แล้ว เติม `preload="metadata" playsInline`
 
-4. ตรวจสอบข้อมูล/สิทธิ์หลังแก้
-   - ทดสอบ TypeScript เฉพาะจุดตามที่ harness รองรับ
-   - บันทึก `system_logs` เป็นภาษาไทยตามกฎโปรเจกต์ ระบุไฟล์ที่แก้และสรุปการแก้ปัญหาวิดีโอ QC
+ไม่แตะ `QrScannerDialog.tsx` (ใช้สำหรับสแกน QR ไม่ใช่ media)
 
-ผลลัพธ์ที่คาดหวัง
-- วิดีโอ MP4 ที่ browser รองรับจะเปิดด้วย signed URL ได้ตามปกติ
-- วิดีโอ MOV/codec ที่ browser ไม่รองรับจะไม่ดูเหมือนลิงก์เสีย แต่จะแจ้งสาเหตุและให้เปิดแท็บใหม่/ดาวน์โหลดได้ชัดเจน
-- Console warning เรื่อง Dialog title/description จะหายไป
+## หลังแก้
+- รัน `bunx tsc --noEmit` ตรวจ TS
+- INSERT `system_logs` (category: `fix`, summary ภาษาไทย, paths รายชื่อไฟล์ที่แก้)
+
+## หมายเหตุ (ไม่ทำในรอบนี้)
+ระบบ transcode `.mov`/HEVC → MP4/H.264 ฝั่ง server (FFmpeg) ยังไม่ทำ — runtime ของ Cloudflare Worker รัน FFmpeg ไม่ได้ ต้องใช้บริการภายนอกหรือย้ายไปประมวลผลที่อื่น ค่อยคุยแยกถ้าต้องการ

@@ -403,7 +403,7 @@ function QcReportsPage() {
                                       <img src={signedSrc(m.url)} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                                     ) : (
                                       <>
-                                        <video src={signedSrc(m.url)} muted className="h-full w-full object-cover" />
+                                        <video src={signedSrc(m.url)} preload="metadata" muted playsInline className="h-full w-full object-cover" />
                                         <span className="absolute inset-0 flex items-center justify-center bg-black/30">
                                           <VideoIcon className="h-6 w-6 text-white" />
                                         </span>
@@ -514,7 +514,7 @@ function QcReportsPage() {
                           <img src={signedSrc(m.url)} alt="" loading="lazy" className="h-full w-full object-cover" />
                         ) : (
                           <>
-                            <video src={signedSrc(m.url)} muted className="h-full w-full object-cover" />
+                            <video src={signedSrc(m.url)} preload="metadata" muted playsInline className="h-full w-full object-cover" />
                             <span className="absolute inset-0 flex items-center justify-center bg-black/30">
                               <VideoIcon className="h-6 w-6 text-white" />
                             </span>
