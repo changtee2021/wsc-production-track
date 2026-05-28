@@ -103,6 +103,7 @@ export const adminListAllStaff = createServerFn({ method: "POST" })
     ingest(qc, "qc");
     ingest(pack, "packing");
     ingest(maint, "maintenance");
+    ingest(office, "office");
 
     const rows = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
     return { rows };
