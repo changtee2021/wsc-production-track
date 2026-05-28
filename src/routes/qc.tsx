@@ -832,7 +832,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                     {m.type === "image" ? (
                       <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" muted />
+                      <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" preload="metadata" muted playsInline />
                     )}
 
                     <button
@@ -1042,7 +1042,7 @@ function ChecklistRow({
                   {m.type === "image" ? (
                     <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" muted />
+                    <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" preload="metadata" muted playsInline />
                   )}
 
                   <button

@@ -55,10 +55,11 @@ function VideoView({ src, originalRef }: { src: string; originalRef: string }) {
           key={src}
           src={src}
           controls
-          autoPlay
           playsInline
+          preload="metadata"
           className="mx-auto max-h-[80vh] w-auto"
           onError={() => setFailed(true)}
+          onPointerDownCapture={(e) => e.stopPropagation()}
         />
       ) : (
         <div className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-lg bg-background p-6 text-center">
