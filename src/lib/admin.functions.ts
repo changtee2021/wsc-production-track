@@ -944,6 +944,64 @@ export const adminDeleteMaintenanceEmployee = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---- Office Employees ----------------------------------------------------
+// `office_employees` table; admin CRUD mirrors maintenance employees.
+
+type OfficeEmpTable = {
+  select: (s: string) => { order: (c: string) => Promise<{ data: MaintEmpRow[] | null; error: { message: string } | null }> };
+  insert: (row: Partial<MaintEmpRow>) => Promise<{ error: { message: string } | null }>;
+  update: (row: Partial<MaintEmpRow>) => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
+  delete: () => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
+};
+
+function officeEmpTbl() {
+  return supabaseAdmin.from("office_employees" as never) as unknown as OfficeEmpTable;
+}
+
+export const adminListOfficeEmployees = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { data: rows, error } = await officeEmpTbl()
+      .select("id, name, emp_code, avatar_url, active")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+export const adminUpsertOfficeEmployee = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => maintEmployeePayload.parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const row: Partial<MaintEmpRow> = {
+      name: data.name,
+      emp_code: data.emp_code ?? null,
+      avatar_url: data.avatar_url ?? null,
+      ...(data.active !== undefined ? { active: data.active } : {}),
+    };
+    if (data.id) {
+      const { error } = await officeEmpTbl().update(row).eq("id", data.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await officeEmpTbl().insert(row);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const adminDeleteOfficeEmployee = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await officeEmpTbl().delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
+
 
 export const adminFetchPackingChecklists = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>

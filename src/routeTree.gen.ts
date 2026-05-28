@@ -32,6 +32,7 @@ import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.log
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
 import { Route as ProtectedJobLookupRouteImport } from './routes/_protected.job-lookup'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
+import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 
 const SuppliesRoute = SuppliesRouteImport.update({
@@ -151,6 +152,11 @@ const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedControlRoute = ProtectedControlRouteImport.update({
+  id: '/control',
+  path: '/control',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ApiPublicHooksLineDailySendRoute =
   ApiPublicHooksLineDailySendRouteImport.update({
     id: '/api/public/hooks/line-daily-send',
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/supplies': typeof SuppliesRoute
+  '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
@@ -192,6 +199,7 @@ export interface FileRoutesByTo {
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/supplies': typeof SuppliesRoute
+  '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/supplies': typeof SuppliesRoute
+  '/_protected/control': typeof ProtectedControlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
   '/_protected/job-lookup': typeof ProtectedJobLookupRoute
   '/_protected/logs': typeof ProtectedLogsRoute
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/sitemap.xml'
     | '/supplies'
+    | '/control'
     | '/dashboard'
     | '/job-lookup'
     | '/logs'
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/sitemap.xml'
     | '/supplies'
+    | '/control'
     | '/dashboard'
     | '/job-lookup'
     | '/logs'
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/sitemap.xml'
     | '/supplies'
+    | '/_protected/control'
     | '/_protected/dashboard'
     | '/_protected/job-lookup'
     | '/_protected/logs'
@@ -490,6 +502,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedDashboardRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/control': {
+      id: '/_protected/control'
+      path: '/control'
+      fullPath: '/control'
+      preLoaderRoute: typeof ProtectedControlRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/api/public/hooks/line-daily-send': {
       id: '/api/public/hooks/line-daily-send'
       path: '/api/public/hooks/line-daily-send'
@@ -501,6 +520,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface ProtectedRouteChildren {
+  ProtectedControlRoute: typeof ProtectedControlRoute
   ProtectedDashboardRoute: typeof ProtectedDashboardRoute
   ProtectedJobLookupRoute: typeof ProtectedJobLookupRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
@@ -518,6 +538,7 @@ interface ProtectedRouteChildren {
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
+  ProtectedControlRoute: ProtectedControlRoute,
   ProtectedDashboardRoute: ProtectedDashboardRoute,
   ProtectedJobLookupRoute: ProtectedJobLookupRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,

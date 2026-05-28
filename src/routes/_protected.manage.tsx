@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -10,12 +10,6 @@ import {
   adminUpsertStep,
   adminDeleteStep,
   adminCreateUploadUrl,
-  adminInsertBanner,
-  adminUpdateBanner,
-  adminDeleteBanner,
-  adminInsertAnnouncement,
-  adminUpdateAnnouncement,
-  adminDeleteAnnouncement,
   adminUpsertQcEmployee,
   adminDeleteQcEmployee,
   adminListQcEmployees,
@@ -39,6 +33,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Plus,
   Trash2,
   Pencil,
@@ -49,15 +48,12 @@ import {
   Upload,
   Loader2,
   Layers,
-  Image as ImageIcon,
-  ArrowUp,
-  ArrowDown,
   Eye,
   EyeOff,
-  Megaphone,
   ClipboardCheck,
   Package,
   Wrench,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -65,6 +61,8 @@ import { flagFor, initialsOf } from "@/lib/i18n";
 import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
 import { PackingChecklistsPanel } from "@/components/PackingChecklistsPanel";
 import { AllStaffPanel } from "@/components/AllStaffPanel";
+import { OfficeEmployeesPanel } from "@/components/OfficeEmployeesPanel";
+
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
@@ -90,32 +88,57 @@ interface Step {
 
 const NATIONALITIES = ["Thai", "Burmese", "Lao", "Khmer", "Other"];
 
+type SectionDef = { id: string; title: string; node: React.ReactNode };
+
+function Section({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  return (
+    <Collapsible defaultOpen={defaultOpen} className="group/collapsible rounded-2xl border border-border bg-card shadow-sm">
+      <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-2xl px-5 py-3 text-left font-semibold hover:bg-muted/40">
+        <span className="text-base">{title}</span>
+        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="border-t border-border">
+        <div className="p-1">{children}</div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function Manage() {
+  const sections: SectionDef[] = [
+    { id: "all", title: "พนักงานทั้งหมด (ทุกแผนก)", node: <AllStaffPanel /> },
+    { id: "prod", title: "พนักงานฝ่ายผลิต", node: <EmployeesPanel /> },
+    { id: "qc", title: "พนักงาน QC", node: <QcEmployeesPanel /> },
+    { id: "pack", title: "พนักงานแพ็คของ", node: <PackingEmployeesPanel /> },
+    { id: "maint", title: "ช่างซ่อม / พนักงานแผนกซ่อม", node: <MaintenanceEmployeesPanel /> },
+    { id: "office", title: "พนักงานออฟฟิศ", node: <OfficeEmployeesPanel /> },
+    { id: "cat", title: "หมวดหมู่งานม่าน", node: <CategoriesPanel /> },
+    { id: "step", title: "ขั้นตอนการผลิต", node: <StepsPanel /> },
+    { id: "qc-check", title: "เช็คลิสต์ QC", node: <QcChecklistsPanel /> },
+    { id: "pack-check", title: "เช็คลิสต์แพ็คของ", node: <PackingChecklistsPanel /> },
+  ];
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
       <Toaster richColors position="top-center" />
-      <h1 className="mb-1 text-2xl font-bold tracking-tight">จัดการข้อมูล</h1>
+      <h1 className="mb-1 text-2xl font-bold tracking-tight">พนักงาน</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        เพิ่ม แก้ไข ลบหมวดหมู่งานม่าน พนักงาน และขั้นตอนการผลิต พร้อมอัปโหลดรูปและตั้งเวลามาตรฐาน
+        จัดการพนักงานทุกแผนก หมวดหมู่ ขั้นตอนการผลิต และเช็คลิสต์ (คลิกหัวข้อเพื่อเปิด/ปิด)
       </p>
-      <div className="mb-6">
-        <AllStaffPanel />
-      </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <BannersPanel />
-        <AnnouncementsPanel />
-        <CategoriesPanel />
-        <EmployeesPanel />
-        <StepsPanel />
-        <QcEmployeesPanel />
-        <QcChecklistsPanel />
-        <PackingEmployeesPanel />
-        <PackingChecklistsPanel />
-        <MaintenanceEmployeesPanel />
+      <div className="space-y-4">
+        {sections.map((s, i) => (
+          <div key={s.id}>
+            <Section title={s.title} defaultOpen={i === 0}>
+              {s.node}
+            </Section>
+            {i < sections.length - 1 && <div className="mx-2 my-3 border-t border-dashed border-border/60" />}
+          </div>
+        ))}
       </div>
     </main>
   );
 }
+
 
 interface Category {
   id: string;
@@ -817,452 +840,9 @@ function StepEditor({
   );
 }
 
-// ─── Banners panel ──────────────────────────────────────────────────────────
+// Banners + Announcements panels were moved to /control (src/components/BannersPanel.tsx, AnnouncementsPanel.tsx)
 
-interface Banner {
-  id: string;
-  image_path: string;
-  sort_order: number;
-  active: boolean;
-}
 
-function BannersPanel() {
-  const insertFn = useServerFn(adminInsertBanner);
-  const updateFn = useServerFn(adminUpdateBanner);
-  const deleteFn = useServerFn(adminDeleteBanner);
-  const createUrl = useServerFn(adminCreateUploadUrl);
-  const [items, setItems] = useState<Banner[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const load = async () => {
-    const { data, error } = await supabase
-      .from("home_banners")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true });
-    if (error) toast.error(error.message);
-    setItems((data as Banner[]) ?? []);
-  };
-  useEffect(() => {
-    load();
-  }, []);
-
-  const publicUrlOf = (path: string) =>
-    supabase.storage.from("banners").getPublicUrl(path).data.publicUrl;
-
-  const MAX_BANNERS = 3;
-
-  const onPick = async (file: File) => {
-    if (items.length >= MAX_BANNERS) {
-      toast.error(`เพิ่มแบนเนอร์ได้สูงสุด ${MAX_BANNERS} รูป`);
-      return;
-    }
-    setUploading(true);
-    try {
-      const { path } = await adminUpload("banners", file, createUrl);
-      const nextOrder =
-        items.length > 0 ? Math.max(...items.map((b) => b.sort_order)) + 1 : 0;
-      await insertFn({
-        data: { token: requireToken(), image_path: path, sort_order: nextOrder },
-      });
-      toast.success("เพิ่มแบนเนอร์สำเร็จ");
-      await load();
-    } catch (err) {
-      showError(err);
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
-
-  const toggleActive = async (b: Banner) => {
-    try {
-      await updateFn({
-        data: { token: requireToken(), id: b.id, active: !b.active },
-      });
-      await load();
-    } catch (err) {
-      showError(err);
-    }
-  };
-
-  const move = async (b: Banner, dir: -1 | 1) => {
-    const idx = items.findIndex((x) => x.id === b.id);
-    const swap = items[idx + dir];
-    if (!swap) return;
-    try {
-      await Promise.all([
-        updateFn({
-          data: { token: requireToken(), id: b.id, sort_order: swap.sort_order },
-        }),
-        updateFn({
-          data: { token: requireToken(), id: swap.id, sort_order: b.sort_order },
-        }),
-      ]);
-      await load();
-    } catch (err) {
-      showError(err);
-    }
-  };
-
-  const remove = async (b: Banner) => {
-    if (!confirm("ลบแบนเนอร์นี้?")) return;
-    try {
-      await deleteFn({
-        data: { token: requireToken(), id: b.id, image_path: b.image_path },
-      });
-      toast.success("ลบสำเร็จ");
-      await load();
-    } catch (err) {
-      showError(err);
-    }
-  };
-
-  return (
-    <section className="lg:col-span-2 rounded-2xl border bg-card p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ImageIcon className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">แบนเนอร์หน้าแรก</h2>
-        </div>
-        <div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onPick(f);
-            }}
-          />
-          <Button
-            size="sm"
-            disabled={uploading || items.length >= MAX_BANNERS}
-            onClick={() => fileRef.current?.click()}
-          >
-            {uploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
-            )}
-            เพิ่มแบนเนอร์ ({items.length}/{MAX_BANNERS})
-          </Button>
-        </div>
-      </div>
-      <p className="mb-3 text-xs text-muted-foreground">
-        แนะนำสัดส่วนแนวตั้ง 3:4 หรือ 9:16 เพื่อให้แสดงผลเต็มพื้นที่บนมือถือ
-      </p>
-      {items.length === 0 ? (
-        <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-          ยังไม่มีแบนเนอร์ — กดเพิ่มแบนเนอร์เพื่ออัปโหลดรูปแรก
-        </div>
-      ) : (
-        <ul className="grid grid-cols-3 gap-2">
-          {items.map((b, i) => (
-            <li
-              key={b.id}
-              className="overflow-hidden rounded-xl border bg-background"
-            >
-              <div className="relative aspect-[3/4] w-full bg-muted">
-                <img
-                  src={publicUrlOf(b.image_path)}
-                  alt="banner"
-                  className={`h-full w-full object-cover ${
-                    b.active ? "" : "opacity-40 grayscale"
-                  }`}
-                />
-                <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                  #{i + 1}
-                </span>
-              </div>
-              <div className="grid grid-cols-4 gap-0.5 p-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-full"
-                  disabled={i === 0}
-                  onClick={() => move(b, -1)}
-                >
-                  <ArrowUp className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-full"
-                  disabled={i === items.length - 1}
-                  onClick={() => move(b, 1)}
-                >
-                  <ArrowDown className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-full"
-                  onClick={() => toggleActive(b)}
-                  title={b.active ? "ซ่อน" : "แสดง"}
-                >
-                  {b.active ? (
-                    <Eye className="h-3.5 w-3.5" />
-                  ) : (
-                    <EyeOff className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-full text-destructive hover:text-destructive"
-                  onClick={() => remove(b)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-// ─── Announcements panel ────────────────────────────────────────────────────
-
-interface Announcement {
-  id: string;
-  message: string;
-  active: boolean;
-  sort_order: number;
-}
-
-function AnnouncementsPanel() {
-  const insertFn = useServerFn(adminInsertAnnouncement);
-  const updateFn = useServerFn(adminUpdateAnnouncement);
-  const deleteFn = useServerFn(adminDeleteAnnouncement);
-  const [items, setItems] = useState<Announcement[]>([]);
-  const [newMsg, setNewMsg] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editMsg, setEditMsg] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const load = async () => {
-    const { data, error } = await supabase
-      .from("announcements")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true });
-    if (error) toast.error(error.message);
-    setItems((data as Announcement[]) ?? []);
-  };
-  useEffect(() => {
-    load();
-  }, []);
-
-  const add = async () => {
-    const m = newMsg.trim();
-    if (!m) return;
-    setBusy(true);
-    try {
-      const nextOrder =
-        items.length > 0 ? Math.max(...items.map((b) => b.sort_order)) + 1 : 0;
-      await insertFn({
-        data: { token: requireToken(), message: m, sort_order: nextOrder },
-      });
-      toast.success("เพิ่มประกาศสำเร็จ");
-      setNewMsg("");
-      await load();
-    } catch (err) {
-      showError(err);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const startEdit = (a: Announcement) => {
-    setEditingId(a.id);
-    setEditMsg(a.message);
-  };
-
-  const saveEdit = async () => {
-    if (!editingId) return;
-    const m = editMsg.trim();
-    if (!m) return;
-    try {
-      await updateFn({
-        data: { token: requireToken(), id: editingId, message: m },
-      });
-      toast.success("บันทึกแล้ว");
-      setEditingId(null);
-      await load();
-    } catch (err) {
-      showError(err);
-    }
-  };
-
-  const toggleActive = async (a: Announcement) => {
-    try {
-      await updateFn({
-        data: { token: requireToken(), id: a.id, active: !a.active },
-      });
-      await load();
-    } catch (err) {
-      showError(err);
-    }
-  };
-
-  const move = async (a: Announcement, dir: -1 | 1) => {
-    const idx = items.findIndex((x) => x.id === a.id);
-    const swap = items[idx + dir];
-    if (!swap) return;
-    try {
-      await Promise.all([
-        updateFn({
-          data: { token: requireToken(), id: a.id, sort_order: swap.sort_order },
-        }),
-        updateFn({
-          data: { token: requireToken(), id: swap.id, sort_order: a.sort_order },
-        }),
-      ]);
-      await load();
-    } catch (err) {
-      showError(err);
-    }
-  };
-
-  const remove = async (a: Announcement) => {
-    if (!confirm("ลบประกาศนี้?")) return;
-    try {
-      await deleteFn({ data: { token: requireToken(), id: a.id } });
-      toast.success("ลบสำเร็จ");
-      await load();
-    } catch (err) {
-      showError(err);
-    }
-  };
-
-  return (
-    <section className="lg:col-span-2 rounded-2xl border bg-card p-5 shadow-sm">
-      <div className="mb-4 flex items-center gap-2">
-        <Megaphone className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">ประกาศ</h2>
-      </div>
-
-      <div className="mb-4 flex gap-2">
-        <Input
-          value={newMsg}
-          onChange={(e) => setNewMsg(e.target.value)}
-          placeholder="ข้อความประกาศใหม่..."
-          maxLength={500}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") add();
-          }}
-        />
-        <Button onClick={add} disabled={busy || !newMsg.trim()} className="shrink-0">
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          เพิ่ม
-        </Button>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-          ยังไม่มีประกาศ
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {items.map((a, i) => (
-            <li
-              key={a.id}
-              className={`rounded-xl border p-3 ${
-                a.active ? "bg-background" : "bg-muted/40 opacity-70"
-              }`}
-            >
-              {editingId === a.id ? (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    value={editMsg}
-                    onChange={(e) => setEditMsg(e.target.value)}
-                    maxLength={500}
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") saveEdit();
-                      if (e.key === "Escape") setEditingId(null);
-                    }}
-                  />
-                  <div className="flex gap-1">
-                    <Button size="sm" onClick={saveEdit} className="gap-1">
-                      <Save className="h-4 w-4" /> บันทึก
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditingId(null)}
-                      className="gap-1"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-start gap-2">
-                  <p className="flex-1 break-words text-sm">{a.message}</p>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      disabled={i === 0}
-                      onClick={() => move(a, -1)}
-                    >
-                      <ArrowUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      disabled={i === items.length - 1}
-                      onClick={() => move(a, 1)}
-                    >
-                      <ArrowDown className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() => toggleActive(a)}
-                      title={a.active ? "ซ่อน" : "แสดง"}
-                    >
-                      {a.active ? (
-                        <Eye className="h-4 w-4" />
-                      ) : (
-                        <EyeOff className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() => startEdit(a)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={() => remove(a)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
 
 interface QcEmp {
   id: string;
