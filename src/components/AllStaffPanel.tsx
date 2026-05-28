@@ -39,6 +39,7 @@ const DEPT_LABEL: Record<Department, string> = {
   qc: "QC",
   packing: "แพ็ค",
   maintenance: "ซ่อม",
+  office: "ออฟฟิศ",
 };
 
 const DEPT_COLOR: Record<Department, string> = {
@@ -46,6 +47,7 @@ const DEPT_COLOR: Record<Department, string> = {
   qc: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
   packing: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   maintenance: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+  office: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
 };
 
 const NATIONALITIES = ["Thai", "Burmese", "Lao", "Khmer", "Other"];
