@@ -66,11 +66,12 @@ export const adminListAllStaff = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const [prod, qc, pack, maint] = await Promise.all([
+    const [prod, qc, pack, maint, office] = await Promise.all([
       fetchDept("production"),
       fetchDept("qc"),
       fetchDept("packing"),
       fetchDept("maintenance"),
+      fetchDept("office"),
     ]);
 
     const map = new Map<string, StaffEntry>();
