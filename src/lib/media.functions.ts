@@ -54,7 +54,7 @@ async function signRefs(
 }
 
 
-const refsSchema = z.array(z.string().min(1).max(2000)).max(200);
+const refsSchema = z.array(z.string().min(1).max(2000)).max(2000);
 
 export const adminSignMediaUrls = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
