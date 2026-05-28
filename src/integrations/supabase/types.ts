@@ -441,6 +441,33 @@ export type Database = {
           },
         ]
       }
+      office_employees: {
+        Row: {
+          active: boolean
+          avatar_url: string | null
+          created_at: string
+          emp_code: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          emp_code?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          avatar_url?: string | null
+          created_at?: string
+          emp_code?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       packing_checklists: {
         Row: {
           category_id: string
