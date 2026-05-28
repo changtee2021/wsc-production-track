@@ -13,7 +13,7 @@ function assertAdmin(token: string | undefined) {
 
 const tokenStr = z.string().min(1);
 
-export const DEPARTMENTS = ["production", "qc", "packing", "maintenance"] as const;
+export const DEPARTMENTS = ["production", "qc", "packing", "maintenance", "office"] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 
 const DEPT_TABLE: Record<Department, string> = {
@@ -21,6 +21,7 @@ const DEPT_TABLE: Record<Department, string> = {
   qc: "qc_employees",
   packing: "packing_employees",
   maintenance: "maintenance_employees",
+  office: "office_employees",
 };
 
 type Row = {
