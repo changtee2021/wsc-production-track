@@ -10,12 +10,6 @@ import {
   adminUpsertStep,
   adminDeleteStep,
   adminCreateUploadUrl,
-  adminInsertBanner,
-  adminUpdateBanner,
-  adminDeleteBanner,
-  adminInsertAnnouncement,
-  adminUpdateAnnouncement,
-  adminDeleteAnnouncement,
   adminUpsertQcEmployee,
   adminDeleteQcEmployee,
   adminListQcEmployees,
@@ -39,6 +33,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Plus,
   Trash2,
   Pencil,
@@ -49,15 +48,12 @@ import {
   Upload,
   Loader2,
   Layers,
-  Image as ImageIcon,
-  ArrowUp,
-  ArrowDown,
   Eye,
   EyeOff,
-  Megaphone,
   ClipboardCheck,
   Package,
   Wrench,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -65,6 +61,8 @@ import { flagFor, initialsOf } from "@/lib/i18n";
 import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
 import { PackingChecklistsPanel } from "@/components/PackingChecklistsPanel";
 import { AllStaffPanel } from "@/components/AllStaffPanel";
+import { OfficeEmployeesPanel } from "@/components/OfficeEmployeesPanel";
+
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
