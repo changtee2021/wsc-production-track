@@ -1,43 +1,33 @@
-## 1. ย้ายปุ่ม "เจ้าหนูแจ้งซ่อม" ขึ้นไปบนขวาข้างปุ่ม LINE
+สิ่งที่ตรวจพบแล้ว
+- Bucket `qc-media` เป็น private ตามระบบความปลอดภัยเดิม จึงต้องดูผ่าน signed URL ไม่ควรเปลี่ยนเป็น public
+- สิทธิ์ Storage ไม่ได้เป็นสาเหตุหลัก: แอปใช้ server function สร้าง signed URL ด้วยสิทธิ์ฝั่งเซิร์ฟเวอร์
+- ลิงก์ใน Database ตรงกับไฟล์จริงใน Storage เช่น `video/...mp4` และ `video/...mov`
+- พื้นที่เก็บข้อมูลยังไม่เต็ม: ใช้ประมาณ 3.99GB, ฐานข้อมูล/บริการ Cloud ปกติ
+- ไฟล์ล่าสุดมีทั้ง MP4 ขนาด ~14–29MB และ MOV จาก iPhone ขนาด ~1–2.6MB
+- จุดน่าสงสัยหลักคือ component ตรวจ `.mov` จาก signed URL ไม่เจอ เพราะ signed URL ไม่มีนามสกุลไฟล์ท้าย URL ทำให้ขึ้นข้อความทั่วไป และไม่มี fallback/metadata ช่วยผู้ใช้
 
-ที่ `src/routes/index.tsx`:
-- ลบปุ่ม "เจ้าหนูแจ้งซ่อม" สีส้มขนาดเต็ม ที่ด้านล่าง
-- เพิ่มปุ่มไอคอนเล็ก `<Wrench>` สีส้มในแถบ header ขวาบน วางก่อนปุ่ม LINE (ลำดับ: ซ่อม → LINE → แอดมิน) — สไตล์เดียวกับปุ่ม LINE (rounded-full, sm:inline label "แจ้งซ่อม")
+แผนดำเนินการ
+1. ปรับ `MediaLightbox`
+   - เพิ่ม Dialog title/description แบบซ่อนเพื่อแก้ warning accessibility ที่เห็นใน Console
+   - ส่ง reference เดิมของไฟล์เข้าไปด้วย เพื่อรู้ว่าเป็น `.mov`, `.mp4` หรือชนิดอื่น แม้ URL ที่เล่นจริงจะเป็น signed URL
+   - แสดงข้อความสาเหตุให้ถูกต้อง โดยเฉพาะ `.mov` จาก iPhone ที่ Chrome/Edge บน Windows อาจเล่นไม่ได้
+   - ปรับปุ่ม “เปิดในแท็บใหม่” และ “ดาวน์โหลด” ให้ใช้ signed URL เดิม แต่ชื่อ/ข้อความชัดเจนขึ้น
 
-## 2. เพิ่มอัปโหลดรูปในรายการทรัพย์สิน/อะไหล่
+2. ปรับหน้า `qc-reports`
+   - ส่งข้อมูลไฟล์ต้นทางให้ `MediaLightbox` เพื่อให้ตรวจชนิดไฟล์ได้ถูกต้อง
+   - คงการสร้าง signed URL แบบ `defaultBucket: qc-media` เหมือนเดิม เพราะ bucket เป็น private
+   - เพิ่ม handling กรณี signed URL สร้างไม่ได้ ให้แจ้งเตือนว่าเป็นปัญหาสิทธิ์/ลิงก์ แทนปล่อยให้ player เปิด path ดิบแล้วพังเงียบ
 
-`src/routes/maintenance.tsx` (และหน้าใหม่ในข้อ 3):
-- ใน `AssetDialog` และ `PartDialog` เพิ่มฟิลด์ "รูปภาพ" — ใช้ `MediaUploader` ที่มีอยู่แล้ว (หรือ helper เล็กกว่า) แล้วบันทึก URL ลง `image_url` (server fn รองรับอยู่แล้ว)
-- แสดงรูปเป็น thumbnail ในแต่ละการ์ดของ `AssetsPanel`/`PartsPanel`
+3. ปรับ flow อัปโหลดวิดีโอ QC
+   - จำกัดและเตือนวิดีโอที่เสี่ยงเปิดไม่ได้ให้ชัดเจนขึ้นก่อนอัปโหลด
+   - สำหรับ `.mov` ให้เตือนแบบ actionable ว่าอาจต้องเปิดในแท็บใหม่/ดาวน์โหลด หรือถ่ายแบบ “เข้ากันได้สูงสุด” เพื่อได้ MP4
+   - ยังไม่ทำ server-side transcode เพราะ runtime ปัจจุบันไม่เหมาะกับ ffmpeg/ไฟล์วิดีโอหนัก และอาจกระทบเสถียรภาพ
 
-## 3. ย้ายหน้าจัดการทรัพย์สิน + อะไหล่ ไปอยู่กับแอดมิน
+4. ตรวจสอบข้อมูล/สิทธิ์หลังแก้
+   - ทดสอบ TypeScript เฉพาะจุดตามที่ harness รองรับ
+   - บันทึก `system_logs` เป็นภาษาไทยตามกฎโปรเจกต์ ระบุไฟล์ที่แก้และสรุปการแก้ปัญหาวิดีโอ QC
 
-- สร้าง route ใหม่ `src/routes/_protected.maintenance-master.tsx` (หัวข้อ "ทรัพย์สิน & อะไหล่") รวม 2 tab: ทรัพย์สิน / อะไหล่ — reuse component `AssetsPanel` / `PartsPanel` (export จาก maintenance.tsx หรือย้ายเป็น component แยก)
-- ใน `src/routes/maintenance.tsx` ตัด tab "ทรัพย์สิน" และ "อะไหล่" ออก เหลือเฉพาะ "แจ้งซ่อม" — หน้าช่างซ่อมโฟกัสเฉพาะ tickets
-- เพิ่มลิงก์ "ทรัพย์สิน & อะไหล่" ใน `AdminSidebar` กลุ่ม "ซ่อมบำรุง"
-- ปรับ `assertMaint` (หรือเพิ่ม helper) ให้ยอมรับทั้ง maintenance token **และ** admin token เพื่อให้ server fns ที่จัดการ asset/part เรียกจากหน้าแอดมินได้
-
-## 4. Dropdown พนักงานซ่อม + จัดการพนักงานซ่อมในแอดมิน
-
-- Migration: สร้างตาราง `maintenance_employees` (โครงสร้างเหมือน `qc_employees`/`packing_employees`) + RLS block anon เหมือนกัน
-- Server fns: `adminListMaintenanceEmployees`, `adminUpsertMaintenanceEmployee`, `adminDeleteMaintenanceEmployee` + `maintenanceListEmployees` (ใช้ token ช่างซ่อม)
-- ใน `TicketDetailDialog` (maintenance.tsx) เปลี่ยน Input "ผู้รับผิดชอบซ่อม" เป็น `<Select>` จากรายชื่อ + ช่องพิมพ์เองได้ (fallback)
-- เพิ่ม `MaintenanceEmployeesPanel` ใน `_protected.manage.tsx` (รูปแบบเดียวกับ `QcEmployeesPanel`) พร้อมอัปโหลดรูป/รหัสพนักงาน
-
-## 5. รวมรายชื่อพนักงานทุกแผนก ไว้บนสุดของหน้าจัดการพนักงาน
-
-- Server fn ใหม่ `adminListAllStaff`: รวมข้อมูลจาก 4 ตาราง (`employees`, `qc_employees`, `packing_employees`, `maintenance_employees`) คืนเป็น list ที่จับคู่ด้วย `name+emp_code` แล้วระบุ `departments: ("production"|"qc"|"packing"|"maintenance")[]` พร้อม `ids` ของแต่ละแผนก
-- Server fn `adminToggleStaffDepartment({ name, emp_code, avatar_url, department, enabled })`: ถ้า `enabled=true` ไม่มีในแผนกนั้น → INSERT, ถ้า `enabled=false` → DELETE จากตารางแผนกนั้น (คงข้อมูลเดิมในแผนกอื่นไว้)
-- เพิ่ม `AllStaffPanel` ที่ด้านบนสุดของหน้า manage.tsx: แสดงตารางทุกคน คอลัมน์ ชื่อ/รูป/รหัส/แผนก (checkbox 4 ช่อง) — ติ๊กถูก = เพิ่มเข้าแผนก, ติ๊กออก = ลบจากแผนก; แสดง badge แผนกที่มีอยู่; แก้ไขชื่อ/รหัส = sync ทุกแผนกที่ผูกอยู่
-
-## ไฟล์ที่เกี่ยวข้อง
-
-- `src/routes/index.tsx` (ข้อ 1)
-- `src/routes/maintenance.tsx` (ข้อ 2, 3, 4)
-- `src/routes/_protected.maintenance-master.tsx` (ใหม่ — ข้อ 3)
-- `src/components/AdminSidebar.tsx` (ข้อ 3)
-- `src/lib/maintenance.functions.ts` (ข้อ 3, 4)
-- `src/lib/staff-directory.functions.ts` (ใหม่ — ข้อ 5)
-- `src/routes/_protected.manage.tsx` (ข้อ 4, 5)
-- Migration: `maintenance_employees` table + RLS + GRANT (ข้อ 4)
-- Log ลง `system_logs` ทุกการเปลี่ยนแปลง
+ผลลัพธ์ที่คาดหวัง
+- วิดีโอ MP4 ที่ browser รองรับจะเปิดด้วย signed URL ได้ตามปกติ
+- วิดีโอ MOV/codec ที่ browser ไม่รองรับจะไม่ดูเหมือนลิงก์เสีย แต่จะแจ้งสาเหตุและให้เปิดแท็บใหม่/ดาวน์โหลดได้ชัดเจน
+- Console warning เรื่อง Dialog title/description จะหายไป
