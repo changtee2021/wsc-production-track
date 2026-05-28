@@ -14,6 +14,7 @@ import {
   Package,
   Wrench,
   Boxes,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   Sidebar,
@@ -71,9 +72,15 @@ const NAV_GROUPS: Array<{
     ],
   },
   {
+    label: "Control",
+    items: [
+      { title: "แบนเนอร์ & ประกาศ", url: "/control", icon: SlidersHorizontal },
+    ],
+  },
+  {
     label: "ระบบ",
     items: [
-      { title: "จัดการข้อมูล", url: "/manage", icon: Users },
+      { title: "พนักงาน", url: "/manage", icon: Users },
       { title: "พื้นที่จัดเก็บ", url: "/storage", icon: HardDrive },
     ],
   },
