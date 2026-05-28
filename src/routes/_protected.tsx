@@ -27,6 +27,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/storage": "พื้นที่จัดเก็บ",
   "/logs-update": "LogUpdate",
   "/maintenance-admin": "สรุปงานซ่อมบำรุง",
+  "/supplies-admin": "จัดการสินทรัพย์ออฟฟิศ",
+  "/supplies-reports": "รายงานค่าเสื่อมสินทรัพย์",
 };
 
 function AdminLayout() {

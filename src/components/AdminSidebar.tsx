@@ -13,6 +13,7 @@ import {
   Search,
   Package,
   Wrench,
+  Boxes,
 } from "lucide-react";
 import {
   Sidebar,
@@ -60,6 +61,13 @@ const NAV_GROUPS: Array<{
     items: [
       { title: "สรุปงานซ่อม", url: "/maintenance-admin", icon: Wrench },
       { title: "ทรัพย์สิน & อะไหล่", url: "/maintenance-master", icon: Package },
+    ],
+  },
+  {
+    label: "สต๊อกออฟฟิศ",
+    items: [
+      { title: "จัดการสินทรัพย์", url: "/supplies-admin", icon: Boxes },
+      { title: "รายงานค่าเสื่อม", url: "/supplies-reports", icon: BarChart3 },
     ],
   },
   {
