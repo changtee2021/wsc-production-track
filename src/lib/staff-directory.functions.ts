@@ -1,5 +1,5 @@
-// Unified staff directory across 4 department tables:
-//   employees (production), qc_employees, packing_employees, maintenance_employees.
+// Unified staff directory across 5 department tables:
+//   employees (production), qc_employees, packing_employees, maintenance_employees, office_employees.
 // Rows are grouped by (name + emp_code) — same person can belong to several departments.
 
 import { createServerFn } from "@tanstack/react-start";
@@ -13,7 +13,7 @@ function assertAdmin(token: string | undefined) {
 
 const tokenStr = z.string().min(1);
 
-export const DEPARTMENTS = ["production", "qc", "packing", "maintenance"] as const;
+export const DEPARTMENTS = ["production", "qc", "packing", "maintenance", "office"] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 
 const DEPT_TABLE: Record<Department, string> = {
@@ -21,6 +21,7 @@ const DEPT_TABLE: Record<Department, string> = {
   qc: "qc_employees",
   packing: "packing_employees",
   maintenance: "maintenance_employees",
+  office: "office_employees",
 };
 
 type Row = {
@@ -65,11 +66,12 @@ export const adminListAllStaff = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const [prod, qc, pack, maint] = await Promise.all([
+    const [prod, qc, pack, maint, office] = await Promise.all([
       fetchDept("production"),
       fetchDept("qc"),
       fetchDept("packing"),
       fetchDept("maintenance"),
+      fetchDept("office"),
     ]);
 
     const map = new Map<string, StaffEntry>();
@@ -101,6 +103,7 @@ export const adminListAllStaff = createServerFn({ method: "POST" })
     ingest(qc, "qc");
     ingest(pack, "packing");
     ingest(maint, "maintenance");
+    ingest(office, "office");
 
     const rows = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
     return { rows };
