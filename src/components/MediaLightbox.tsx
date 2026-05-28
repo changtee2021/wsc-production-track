@@ -34,7 +34,7 @@ export function MediaLightbox({ item, signedSrc, onClose }: Props) {
               className="mx-auto max-h-[85vh] w-auto object-contain"
             />
           ) : (
-            <VideoView src={signedSrc(item.url)} ref={item.url} />
+            <VideoView src={signedSrc(item.url)} originalRef={item.url} />
           )
         )}
       </DialogContent>
@@ -42,9 +42,9 @@ export function MediaLightbox({ item, signedSrc, onClose }: Props) {
   );
 }
 
-function VideoView({ src, ref }: { src: string; ref: string }) {
+function VideoView({ src, originalRef }: { src: string; originalRef: string }) {
   const [failed, setFailed] = useState(false);
-  const ext = detectExt(ref);
+  const ext = detectExt(originalRef);
   const isMov = ext === "mov" || ext === "qt";
   const isM4v = ext === "m4v";
 
