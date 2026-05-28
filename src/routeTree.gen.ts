@@ -18,6 +18,8 @@ import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protected.supplies-reports'
+import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
@@ -75,6 +77,17 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProtectedSuppliesReportsRoute =
+  ProtectedSuppliesReportsRouteImport.update({
+    id: '/supplies-reports',
+    path: '/supplies-reports',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedSuppliesAdminRoute = ProtectedSuppliesAdminRouteImport.update({
+  id: '/supplies-admin',
+  path: '/supplies-admin',
+  getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedStorageRoute = ProtectedStorageRouteImport.update({
   id: '/storage',
@@ -166,6 +179,8 @@ export interface FileRoutesByFullPath {
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
+  '/supplies-admin': typeof ProtectedSuppliesAdminRoute
+  '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRoutesByTo {
@@ -189,6 +204,8 @@ export interface FileRoutesByTo {
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
+  '/supplies-admin': typeof ProtectedSuppliesAdminRoute
+  '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRoutesById {
@@ -214,6 +231,8 @@ export interface FileRoutesById {
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
   '/_protected/storage': typeof ProtectedStorageRoute
+  '/_protected/supplies-admin': typeof ProtectedSuppliesAdminRoute
+  '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRouteTypes {
@@ -239,6 +258,8 @@ export interface FileRouteTypes {
     | '/qc-reports'
     | '/qc-summary'
     | '/storage'
+    | '/supplies-admin'
+    | '/supplies-reports'
     | '/api/public/hooks/line-daily-send'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -262,6 +283,8 @@ export interface FileRouteTypes {
     | '/qc-reports'
     | '/qc-summary'
     | '/storage'
+    | '/supplies-admin'
+    | '/supplies-reports'
     | '/api/public/hooks/line-daily-send'
   id:
     | '__root__'
@@ -286,6 +309,8 @@ export interface FileRouteTypes {
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
     | '/_protected/storage'
+    | '/_protected/supplies-admin'
+    | '/_protected/supplies-reports'
     | '/api/public/hooks/line-daily-send'
   fileRoutesById: FileRoutesById
 }
@@ -366,6 +391,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_protected/supplies-reports': {
+      id: '/_protected/supplies-reports'
+      path: '/supplies-reports'
+      fullPath: '/supplies-reports'
+      preLoaderRoute: typeof ProtectedSuppliesReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/supplies-admin': {
+      id: '/_protected/supplies-admin'
+      path: '/supplies-admin'
+      fullPath: '/supplies-admin'
+      preLoaderRoute: typeof ProtectedSuppliesAdminRouteImport
+      parentRoute: typeof ProtectedRoute
     }
     '/_protected/storage': {
       id: '/_protected/storage'
@@ -474,6 +513,8 @@ interface ProtectedRouteChildren {
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
+  ProtectedSuppliesAdminRoute: typeof ProtectedSuppliesAdminRoute
+  ProtectedSuppliesReportsRoute: typeof ProtectedSuppliesReportsRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
@@ -489,6 +530,8 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,
+  ProtectedSuppliesAdminRoute: ProtectedSuppliesAdminRoute,
+  ProtectedSuppliesReportsRoute: ProtectedSuppliesReportsRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
