@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SuppliesRouteImport } from './routes/supplies'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QcRouteImport } from './routes/qc'
@@ -17,6 +18,8 @@ import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protected.supplies-reports'
+import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
@@ -31,6 +34,11 @@ import { Route as ProtectedJobLookupRouteImport } from './routes/_protected.job-
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 
+const SuppliesRoute = SuppliesRouteImport.update({
+  id: '/supplies',
+  path: '/supplies',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -69,6 +77,17 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProtectedSuppliesReportsRoute =
+  ProtectedSuppliesReportsRouteImport.update({
+    id: '/supplies-reports',
+    path: '/supplies-reports',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedSuppliesAdminRoute = ProtectedSuppliesAdminRouteImport.update({
+  id: '/supplies-admin',
+  path: '/supplies-admin',
+  getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedStorageRoute = ProtectedStorageRouteImport.update({
   id: '/storage',
@@ -147,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/supplies': typeof SuppliesRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
@@ -159,6 +179,8 @@ export interface FileRoutesByFullPath {
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
+  '/supplies-admin': typeof ProtectedSuppliesAdminRoute
+  '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRoutesByTo {
@@ -169,6 +191,7 @@ export interface FileRoutesByTo {
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/supplies': typeof SuppliesRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
@@ -181,6 +204,8 @@ export interface FileRoutesByTo {
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
+  '/supplies-admin': typeof ProtectedSuppliesAdminRoute
+  '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRoutesById {
@@ -193,6 +218,7 @@ export interface FileRoutesById {
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/supplies': typeof SuppliesRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
   '/_protected/job-lookup': typeof ProtectedJobLookupRoute
   '/_protected/logs': typeof ProtectedLogsRoute
@@ -205,6 +231,8 @@ export interface FileRoutesById {
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
   '/_protected/storage': typeof ProtectedStorageRoute
+  '/_protected/supplies-admin': typeof ProtectedSuppliesAdminRoute
+  '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRouteTypes {
@@ -217,6 +245,7 @@ export interface FileRouteTypes {
     | '/qc'
     | '/scan'
     | '/sitemap.xml'
+    | '/supplies'
     | '/dashboard'
     | '/job-lookup'
     | '/logs'
@@ -229,6 +258,8 @@ export interface FileRouteTypes {
     | '/qc-reports'
     | '/qc-summary'
     | '/storage'
+    | '/supplies-admin'
+    | '/supplies-reports'
     | '/api/public/hooks/line-daily-send'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -239,6 +270,7 @@ export interface FileRouteTypes {
     | '/qc'
     | '/scan'
     | '/sitemap.xml'
+    | '/supplies'
     | '/dashboard'
     | '/job-lookup'
     | '/logs'
@@ -251,6 +283,8 @@ export interface FileRouteTypes {
     | '/qc-reports'
     | '/qc-summary'
     | '/storage'
+    | '/supplies-admin'
+    | '/supplies-reports'
     | '/api/public/hooks/line-daily-send'
   id:
     | '__root__'
@@ -262,6 +296,7 @@ export interface FileRouteTypes {
     | '/qc'
     | '/scan'
     | '/sitemap.xml'
+    | '/supplies'
     | '/_protected/dashboard'
     | '/_protected/job-lookup'
     | '/_protected/logs'
@@ -274,6 +309,8 @@ export interface FileRouteTypes {
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
     | '/_protected/storage'
+    | '/_protected/supplies-admin'
+    | '/_protected/supplies-reports'
     | '/api/public/hooks/line-daily-send'
   fileRoutesById: FileRoutesById
 }
@@ -286,11 +323,19 @@ export interface RootRouteChildren {
   QcRoute: typeof QcRoute
   ScanRoute: typeof ScanRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SuppliesRoute: typeof SuppliesRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/supplies': {
+      id: '/supplies'
+      path: '/supplies'
+      fullPath: '/supplies'
+      preLoaderRoute: typeof SuppliesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -346,6 +391,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_protected/supplies-reports': {
+      id: '/_protected/supplies-reports'
+      path: '/supplies-reports'
+      fullPath: '/supplies-reports'
+      preLoaderRoute: typeof ProtectedSuppliesReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/supplies-admin': {
+      id: '/_protected/supplies-admin'
+      path: '/supplies-admin'
+      fullPath: '/supplies-admin'
+      preLoaderRoute: typeof ProtectedSuppliesAdminRouteImport
+      parentRoute: typeof ProtectedRoute
     }
     '/_protected/storage': {
       id: '/_protected/storage'
@@ -454,6 +513,8 @@ interface ProtectedRouteChildren {
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
+  ProtectedSuppliesAdminRoute: typeof ProtectedSuppliesAdminRoute
+  ProtectedSuppliesReportsRoute: typeof ProtectedSuppliesReportsRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
@@ -469,6 +530,8 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,
+  ProtectedSuppliesAdminRoute: ProtectedSuppliesAdminRoute,
+  ProtectedSuppliesReportsRoute: ProtectedSuppliesReportsRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
@@ -484,6 +547,7 @@ const rootRouteChildren: RootRouteChildren = {
   QcRoute: QcRoute,
   ScanRoute: ScanRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SuppliesRoute: SuppliesRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
 }
 export const routeTree = rootRouteImport
