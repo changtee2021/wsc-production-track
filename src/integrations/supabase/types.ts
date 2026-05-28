@@ -331,6 +331,116 @@ export type Database = {
           },
         ]
       }
+      office_asset_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          default_useful_life_months: number
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          default_useful_life_months?: number
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          default_useful_life_months?: number
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      office_assets: {
+        Row: {
+          active: boolean
+          assignee: string | null
+          brand: string | null
+          category_id: string | null
+          code: string
+          created_at: string
+          id: string
+          image_url: string | null
+          location: string | null
+          model: string | null
+          name: string
+          note: string | null
+          purchase_date: string | null
+          purchase_price: number | null
+          salvage_value: number
+          serial_no: string | null
+          status: string
+          updated_at: string
+          useful_life_months: number | null
+          vendor: string | null
+          warranty_until: string | null
+        }
+        Insert: {
+          active?: boolean
+          assignee?: string | null
+          brand?: string | null
+          category_id?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          model?: string | null
+          name: string
+          note?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          salvage_value?: number
+          serial_no?: string | null
+          status?: string
+          updated_at?: string
+          useful_life_months?: number | null
+          vendor?: string | null
+          warranty_until?: string | null
+        }
+        Update: {
+          active?: boolean
+          assignee?: string | null
+          brand?: string | null
+          category_id?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          model?: string | null
+          name?: string
+          note?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          salvage_value?: number
+          serial_no?: string | null
+          status?: string
+          updated_at?: string
+          useful_life_months?: number | null
+          vendor?: string | null
+          warranty_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "office_assets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "office_asset_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packing_checklists: {
         Row: {
           category_id: string
