@@ -1,5 +1,5 @@
-// Unified staff directory across 4 department tables:
-//   employees (production), qc_employees, packing_employees, maintenance_employees.
+// Unified staff directory across 5 department tables:
+//   employees (production), qc_employees, packing_employees, maintenance_employees, office_employees.
 // Rows are grouped by (name + emp_code) — same person can belong to several departments.
 
 import { createServerFn } from "@tanstack/react-start";
