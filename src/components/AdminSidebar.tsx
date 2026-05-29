@@ -67,6 +67,7 @@ const NAV_GROUPS: Array<{
   {
     label: "สต๊อกออฟฟิศ",
     items: [
+      { title: "แดชบอร์ดเบิก-สต๊อก", url: "/supplies-dashboard", icon: LayoutDashboard },
       { title: "จัดการสินทรัพย์", url: "/supplies-admin", icon: Boxes },
       { title: "รายงานค่าเสื่อม", url: "/supplies-reports", icon: BarChart3 },
     ],
