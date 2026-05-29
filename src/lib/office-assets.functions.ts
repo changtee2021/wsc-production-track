@@ -237,6 +237,9 @@ const assetInput = z.object({
   vendor: z.string().trim().max(200).nullable().optional(),
   status: z.enum(["in_use", "repair", "retired", "lost"]).default("in_use"),
   active: z.boolean().default(true),
+  stock_qty: z.number().int().min(0).max(999999).default(0),
+  min_qty: z.number().int().min(0).max(999999).default(0),
+  unit: z.string().trim().min(1).max(30).default("ชิ้น"),
 });
 
 export const adminUpsertOfficeAsset = createServerFn({ method: "POST" })
