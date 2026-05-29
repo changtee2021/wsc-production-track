@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SuppliesRequestRouteImport } from './routes/supplies-request'
 import { Route as SuppliesRouteImport } from './routes/supplies'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ScanRouteImport } from './routes/scan'
@@ -35,6 +36,11 @@ import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dash
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 
+const SuppliesRequestRoute = SuppliesRequestRouteImport.update({
+  id: '/supplies-request',
+  path: '/supplies-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SuppliesRoute = SuppliesRouteImport.update({
   id: '/supplies',
   path: '/supplies',
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/supplies': typeof SuppliesRoute
+  '/supplies-request': typeof SuppliesRequestRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
@@ -199,6 +206,7 @@ export interface FileRoutesByTo {
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/supplies': typeof SuppliesRoute
+  '/supplies-request': typeof SuppliesRequestRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
@@ -227,6 +235,7 @@ export interface FileRoutesById {
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/supplies': typeof SuppliesRoute
+  '/supplies-request': typeof SuppliesRequestRoute
   '/_protected/control': typeof ProtectedControlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
   '/_protected/job-lookup': typeof ProtectedJobLookupRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/sitemap.xml'
     | '/supplies'
+    | '/supplies-request'
     | '/control'
     | '/dashboard'
     | '/job-lookup'
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/sitemap.xml'
     | '/supplies'
+    | '/supplies-request'
     | '/control'
     | '/dashboard'
     | '/job-lookup'
@@ -308,6 +319,7 @@ export interface FileRouteTypes {
     | '/scan'
     | '/sitemap.xml'
     | '/supplies'
+    | '/supplies-request'
     | '/_protected/control'
     | '/_protected/dashboard'
     | '/_protected/job-lookup'
@@ -336,11 +348,19 @@ export interface RootRouteChildren {
   ScanRoute: typeof ScanRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SuppliesRoute: typeof SuppliesRoute
+  SuppliesRequestRoute: typeof SuppliesRequestRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/supplies-request': {
+      id: '/supplies-request'
+      path: '/supplies-request'
+      fullPath: '/supplies-request'
+      preLoaderRoute: typeof SuppliesRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/supplies': {
       id: '/supplies'
       path: '/supplies'
@@ -569,6 +589,7 @@ const rootRouteChildren: RootRouteChildren = {
   ScanRoute: ScanRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SuppliesRoute: SuppliesRoute,
+  SuppliesRequestRoute: SuppliesRequestRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
 }
 export const routeTree = rootRouteImport

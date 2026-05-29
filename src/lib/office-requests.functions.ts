@@ -387,3 +387,17 @@ export const adminOfficeMovements = createServerFn({ method: "POST" })
       })),
     };
   });
+
+// ============ PUBLIC: list office employees (for request form) ============
+export const officeListEmployees = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertOfficeOrAdmin(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("office_employees")
+      .select("id, name, emp_code, avatar_url, active")
+      .eq("active", true)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
