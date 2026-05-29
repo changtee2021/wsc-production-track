@@ -107,6 +107,7 @@ type AssetRow = {
   warranty_until: string | null; location: string | null; assignee: string | null;
   image_url: string | null; note: string | null; vendor: string | null;
   status: string; active: boolean;
+  stock_qty: number; min_qty: number; unit: string;
   created_at: string; updated_at: string;
 };
 
