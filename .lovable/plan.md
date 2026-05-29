@@ -1,101 +1,102 @@
-## ขอบเขต Phase 1 (B1)
 
-ระบบทะเบียนสินทรัพย์ออฟฟิศ/โรงงานที่ไม่ใช่เครื่องจักร (ใช้แยกจากตาราง `assets` ของฝั่ง Maintenance) พร้อมการคำนวณค่าเสื่อมราคาแบบเส้นตรง (straight-line) และรายงานสรุปต่อหมวด/ต่อปี เปิดให้พนักงานทั่วไปเข้าดู+ค้นได้โดยไม่ต้องใช้รหัส ส่วนการเพิ่ม/แก้/ลบ ทำผ่านหน้า Admin
+# ระบบเบิกอุปกรณ์ออฟฟิศ (B2 — Requests & Stock)
 
-ไม่รวมในรอบนี้: การเบิก/คืน (B2) จะทำเฟสถัดไป
+## ภาพรวม
+เพิ่ม flow การเบิก-อนุมัติ-ตัดสต๊อก สำหรับอุปกรณ์ในตาราง `office_assets` (ที่มีอยู่แล้ว) พร้อมแดชบอร์ดสำหรับแอดมินดูคำขอ/ค่าใช้จ่าย/สต๊อกใกล้หมด
 
----
+## 1) Database (migration)
 
-## โครงสร้างข้อมูลใหม่
+**แก้ `office_assets` เพิ่มคอลัมน์สต๊อก:**
+- `stock_qty` integer not null default 0
+- `min_qty` integer not null default 0  (เกณฑ์เตือน "ใกล้หมด")
+- `unit` text not null default 'ชิ้น'
 
-### `office_asset_categories` (lookup หมวดหมู่)
-- `name` (เช่น เครื่องเขียน, กระดาษ, อุปกรณ์ไฟฟ้า, เฟอร์นิเจอร์, เครื่องใช้สำนักงาน)
-- `default_useful_life_months` (อายุใช้งานเริ่มต้นของหมวดเป็นเดือน เช่น 36, 60)
-- `active`, `sort_order`
+**ตารางใหม่ `office_requests` (หัวคำขอ):**
+- `id`, `req_no` (auto: `REQ-YYMM-####`)
+- `requester_employee_id` (uuid → office_employees / ไม่ FK เพื่อความยืดหยุ่น)
+- `requester_name` (snapshot)
+- `status` text: `pending` / `approved` / `rejected` / `cancelled`
+- `note` text
+- `approver_employee_id`, `approver_name` (snapshot, set ตอน approve)
+- `approved_at`, `created_at`, `updated_at`
 
-### `office_assets` (ทะเบียนสินทรัพย์รายชิ้น)
-- `code` (รหัสภายใน เช่น OFF-0001 — generate อัตโนมัติ)
-- `name`, `category_id`
-- `brand`, `model`, `serial_no`, `vendor`
-- `purchase_date`, `purchase_price`, `salvage_value` (มูลค่าซาก, default 0)
-- `useful_life_months` (override default หมวด)
-- `warranty_until`, `location` (สถานที่/โซน), `assignee` (ผู้ใช้ — text field)
-- `image_url`, `note`
-- `status`: `in_use` | `repair` | `retired` | `lost`
-- `active`
+**ตารางใหม่ `office_request_items`:**
+- `id`, `request_id` → office_requests
+- `asset_id` → office_assets, `asset_name_snapshot`, `unit_price_snapshot`
+- `qty` int (≥1)
 
-### RLS
-- `office_asset_categories`: SELECT เปิด public (อ่านได้ทุกคน), เขียนผ่าน service role เท่านั้น
-- `office_assets`: บล็อก anon/authenticated แบบ RESTRICTIVE — เข้าถึงผ่าน server functions ทั้งหมด
+**ตารางใหม่ `office_stock_movements` (log การเคลื่อนสต๊อก):**
+- `id`, `asset_id`, `delta` int (− เบิก / + เติม)
+- `reason` text: `issue` / `restock` / `adjust`
+- `request_id` (nullable), `note`, `created_at`
 
----
+GRANTs ครบ + RLS block anon/authenticated (เข้าผ่าน server fn เท่านั้น เหมือนของเดิม)
 
-## Server functions (`src/lib/office-assets.functions.ts`)
+## 2) Server functions (`src/lib/office-requests.functions.ts`)
 
-แนวเดียวกับ Packing — token ออกฟรีไม่ตรวจรหัสผ่าน (HMAC token, อายุ 12 ชม.) เพื่อใช้กับ rate-limit/abuse tracking และให้ TypeScript/server-side validation ทำงานได้
+**สำหรับพนักงาน (token = office session ที่มีอยู่):**
+- `officeSubmitRequest({ token, requester_employee_id, items:[{asset_id, qty}], note })` — สร้าง pending request
+- `officeListMyRequests` (optional, แสดงสถานะของตัวเอง)
 
-- `issueOfficeSession()` — ออก token ทันที
-- `officeListAssets({ token, search, category_id, status })` — list + filter
-- `officeGetAsset({ token, id })` — รายละเอียดชิ้นเดียว พร้อมค่าเสื่อมคำนวณ ณ ปัจจุบัน
-- `officeListCategories({ token })` — รายการหมวด
-- `officeSummary({ token, year? })` — สรุปต่อหมวด/ต่อปี: รวมจำนวนชิ้น, มูลค่าทุน, ค่าเสื่อมสะสม, มูลค่าคงเหลือ
-- กลุ่ม admin (ต้อง `verifyAdminToken`):
-  - `adminUpsertOfficeAsset(...)`, `adminDeleteOfficeAsset({ id })`
-  - `adminUpsertOfficeCategory(...)`, `adminDeleteOfficeCategory({ id })`
-  - `adminUploadOfficeAssetImage` — ใช้ bucket `office-assets` ใหม่ (private + signed URL ผ่าน `media.functions.ts`)
+**สำหรับแอดมิน (admin token):**
+- `adminListOfficeRequests({ status })` — รายการคำขอ + items
+- `adminApproveOfficeRequest({ id, approver_employee_id })` — ตรวจสต๊อกพอ → ตัด `stock_qty` ทุก item, log movement, set approved
+- `adminRejectOfficeRequest({ id, reason })`
+- `adminOfficeRestock({ asset_id, qty, note })` — เติมสต๊อก + movement
+- `adminOfficeStockDashboard()` — รวม:
+  - คำขอ pending (count + list)
+  - ของใกล้หมด (`stock_qty <= min_qty`)
+  - ค่าใช้จ่ายเดือนนี้ / รวมทั้งหมด (จาก movements * unit_price)
+  - top รายการที่ถูกเบิกบ่อย
 
-### สูตรค่าเสื่อม (คำนวณฝั่ง server, ไม่เก็บลง DB)
-```
-months_in_use   = max(0, months_between(purchase_date, today))
-months_capped   = min(months_in_use, useful_life_months)
-monthly_dep     = (purchase_price - salvage_value) / useful_life_months
-accumulated_dep = monthly_dep * months_capped
-book_value      = purchase_price - accumulated_dep
-fully_depreciated = months_in_use >= useful_life_months
-```
-ค่าทั้งหมดส่งกลับใน response เพื่อให้ UI โชว์ได้ทันที
+## 3) UI — หน้าแรก (`src/routes/index.tsx`)
 
----
+- ปุ่ม **"เบิกอุปกรณ์ออฟฟิศ"** มุมบนขวา → ลิงก์ไป `/supplies-request`
 
-## หน้าเว็บ
+## 4) UI — หน้าเบิก (`src/routes/supplies-request.tsx`, public)
 
-### `/supplies` (public — เปิดให้พนักงานเข้าดู)
-- หน้า list สินทรัพย์: card/table + search + filter หมวด/สถานะ
-- คลิกเข้าดูรายละเอียด: รูป, สเปก, วันซื้อ, ประกัน, ค่าเสื่อมปัจจุบัน, สถานะ
-- ใช้ `office-session` (sessionStorage) — ออก token อัตโนมัติเหมือน Packing
+- ใช้ office session (free issue เหมือน Packing — ไม่ต้องรหัส)
+- ขั้น 1: เลือกพนักงาน (จาก `office_employees`)
+- ขั้น 2: แท็บ/dropdown เลือกหมวด (จาก `office_asset_categories`) — เลือกแล้วโชว์เฉพาะรายการในหมวดนั้น
+- ช่องค้นหาชื่อ/รหัส filter รายการแบบ realtime
+- แต่ละรายการ: รูป + ชื่อ + สต๊อกคงเหลือ + ปุ่ม +/− จำนวน (max = stock_qty)
+- ตะกร้ารวมด้านล่าง + ช่อง note + ปุ่ม **"ยื่นขอเบิก"**
+- toast แสดง `req_no` หลังส่ง
 
-### `/supplies-admin` (อยู่ใต้ `_protected`, เฉพาะแอดมิน)
-- ตาราง CRUD สินทรัพย์ + dialog เพิ่ม/แก้
-- จัดการหมวดหมู่ (panel แยก)
-- อัปโหลดรูป (compress ก่อนส่งเหมือนของเดิม)
+## 5) UI — แดชบอร์ดแอดมิน (`src/routes/_protected.supplies-dashboard.tsx`)
 
-### `/supplies-reports` (อยู่ใต้ `_protected`)
-- รายงานสรุป:
-  - เลือกปี → ตารางต่อหมวด: จำนวนชิ้น, มูลค่าทุนรวม, ค่าเสื่อมปีนี้, ค่าเสื่อมสะสม, มูลค่าคงเหลือ
-  - กราฟแท่ง: มูลค่าคงเหลือต่อหมวด
-  - ตารางสินทรัพย์ที่หมดอายุการใช้งานแล้ว (fully depreciated)
-- ปุ่ม export CSV
+แท็บ/section ในหน้าเดียว:
+- **สรุปบน**: จำนวน pending, ของใกล้หมด, ค่าใช้จ่ายเดือนนี้, ค่าใช้จ่ายสะสม
+- **คำขอรออนุมัติ**: card แต่ละคำขอ — ผู้ขอ, รายการ + จำนวน, มูลค่ารวม, dropdown "ผู้อนุมัติ" (เลือก office_employee), ปุ่ม Approve / Reject
+- **สต๊อกใกล้หมด**: ตารางรายการ + ปุ่ม "เติมสต๊อก" (modal ใส่จำนวน + หมายเหตุ)
+- **ประวัติคำขอ** (filter status)
+- **รายงานการใช้** (สรุปต่อหมวด / ต่อเดือน — ใช้ movements)
 
-### Sidebar
-เพิ่มลิงก์ใน `AdminSidebar` (สำหรับแอดมิน) และเพิ่มทางเข้าจากหน้า Home/More สำหรับพนักงาน
+เพิ่มเมนู "แดชบอร์ดสต๊อก" ใน `AdminSidebar` หมวด Stock Office
 
----
+## 6) อัปเดต admin panel ของเดิม
 
-## รายละเอียดเทคนิค
+- `_protected.supplies-admin.tsx`: ฟอร์มแก้สินทรัพย์ เพิ่มช่อง `stock_qty`, `min_qty`, `unit`
 
-- ตาราง category seed ค่าเริ่มต้น: เครื่องเขียน (36 เดือน), กระดาษ (12), อุปกรณ์ไฟฟ้า (60), เฟอร์นิเจอร์ (60), คอมพิวเตอร์/อุปกรณ์ IT (36), อื่นๆ (36)
-- Sequence สำหรับ `code`: `office_asset_seq` → format `OFF-NNNN`
-- ใช้รูปจาก bucket `office-assets` (สร้างใหม่, private, signed URL TTL 1 ชม.) — เพิ่มใน `media.functions.ts` allowed list และ `adminSignMediaUrls`
-- ปรับ `AdminAiAssistant`/AI tools: ยังไม่ต้องในรอบนี้
-- ทุกการเปลี่ยน schema/โค้ด INSERT ลง `system_logs` ตาม core memory
+## ไฟล์ที่จะสร้าง/แก้
 
----
+**สร้าง:**
+- `supabase/migrations/<ts>_office_requests.sql`
+- `src/lib/office-requests.functions.ts`
+- `src/routes/supplies-request.tsx`
+- `src/routes/_protected.supplies-dashboard.tsx`
 
-## ขั้นตอนการ implement
-1. Migration: ตาราง + sequence + bucket + RLS + grants + seed หมวด
-2. Server functions `office-assets.functions.ts` + ขยาย `media.functions.ts` ให้รองรับ bucket ใหม่
-3. หน้า public `/supplies` + session helper
-4. หน้า admin `/supplies-admin` (CRUD)
-5. หน้า report `/supplies-reports` + export CSV
-6. ลิงก์เข้าเมนู Home / AdminSidebar
-7. บันทึก `system_logs`
+**แก้:**
+- `src/lib/office-assets.functions.ts` (รวม stock fields ใน schema/return)
+- `src/routes/index.tsx` (ปุ่มมุมขวาบน)
+- `src/routes/_protected.supplies-admin.tsx` (เพิ่มช่อง stock/min/unit)
+- `src/components/AdminSidebar.tsx` (เพิ่มเมนูแดชบอร์ด)
+- `src/routes/_protected.tsx` (title route ใหม่)
+- `src/integrations/supabase/types.ts` (auto)
+
+**Log:** insert `system_logs` (category: feature) อธิบายฟีเจอร์เบิก/อนุมัติ/สต๊อก
+
+## ความปลอดภัย
+- พนักงานยื่นเบิกผ่าน office token (free) → สร้างได้แค่ pending, ไม่ตัดสต๊อก
+- เฉพาะ admin token เท่านั้นที่ approve/reject/restock → ตัดสต๊อกใน transaction (เช็คก่อนว่าพอ ไม่งั้น throw)
+- Movement log ทุกการเปลี่ยนแปลง

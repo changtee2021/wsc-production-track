@@ -107,6 +107,7 @@ type AssetRow = {
   warranty_until: string | null; location: string | null; assignee: string | null;
   image_url: string | null; note: string | null; vendor: string | null;
   status: string; active: boolean;
+  stock_qty: number; min_qty: number; unit: string;
   created_at: string; updated_at: string;
 };
 
@@ -236,6 +237,9 @@ const assetInput = z.object({
   vendor: z.string().trim().max(200).nullable().optional(),
   status: z.enum(["in_use", "repair", "retired", "lost"]).default("in_use"),
   active: z.boolean().default(true),
+  stock_qty: z.number().int().min(0).max(999999).default(0),
+  min_qty: z.number().int().min(0).max(999999).default(0),
+  unit: z.string().trim().min(1).max(30).default("ชิ้น"),
 });
 
 export const adminUpsertOfficeAsset = createServerFn({ method: "POST" })
@@ -263,6 +267,9 @@ export const adminUpsertOfficeAsset = createServerFn({ method: "POST" })
       vendor: a.vendor ?? null,
       status: a.status,
       active: a.active,
+      stock_qty: a.stock_qty,
+      min_qty: a.min_qty,
+      unit: a.unit,
     };
     if (a.id) {
       const { error } = await supabaseAdmin

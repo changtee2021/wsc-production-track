@@ -372,6 +372,7 @@ export type Database = {
           id: string
           image_url: string | null
           location: string | null
+          min_qty: number
           model: string | null
           name: string
           note: string | null
@@ -380,6 +381,8 @@ export type Database = {
           salvage_value: number
           serial_no: string | null
           status: string
+          stock_qty: number
+          unit: string
           updated_at: string
           useful_life_months: number | null
           vendor: string | null
@@ -395,6 +398,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          min_qty?: number
           model?: string | null
           name: string
           note?: string | null
@@ -403,6 +407,8 @@ export type Database = {
           salvage_value?: number
           serial_no?: string | null
           status?: string
+          stock_qty?: number
+          unit?: string
           updated_at?: string
           useful_life_months?: number | null
           vendor?: string | null
@@ -418,6 +424,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          min_qty?: number
           model?: string | null
           name?: string
           note?: string | null
@@ -426,6 +433,8 @@ export type Database = {
           salvage_value?: number
           serial_no?: string | null
           status?: string
+          stock_qty?: number
+          unit?: string
           updated_at?: string
           useful_life_months?: number | null
           vendor?: string | null
@@ -465,6 +474,122 @@ export type Database = {
           emp_code?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      office_request_items: {
+        Row: {
+          asset_id: string
+          asset_name_snapshot: string
+          created_at: string
+          id: string
+          qty: number
+          request_id: string
+          unit_price_snapshot: number
+        }
+        Insert: {
+          asset_id: string
+          asset_name_snapshot: string
+          created_at?: string
+          id?: string
+          qty: number
+          request_id: string
+          unit_price_snapshot?: number
+        }
+        Update: {
+          asset_id?: string
+          asset_name_snapshot?: string
+          created_at?: string
+          id?: string
+          qty?: number
+          request_id?: string
+          unit_price_snapshot?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "office_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "office_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      office_requests: {
+        Row: {
+          approved_at: string | null
+          approver_employee_id: string | null
+          approver_name: string | null
+          created_at: string
+          id: string
+          note: string | null
+          reject_reason: string | null
+          req_no: string
+          requester_employee_id: string | null
+          requester_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approver_employee_id?: string | null
+          approver_name?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          reject_reason?: string | null
+          req_no?: string
+          requester_employee_id?: string | null
+          requester_name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approver_employee_id?: string | null
+          approver_name?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          reject_reason?: string | null
+          req_no?: string
+          requester_employee_id?: string | null
+          requester_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      office_stock_movements: {
+        Row: {
+          asset_id: string
+          created_at: string
+          delta: number
+          id: string
+          note: string | null
+          reason: string
+          request_id: string | null
+          unit_price_snapshot: number
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          delta: number
+          id?: string
+          note?: string | null
+          reason: string
+          request_id?: string | null
+          unit_price_snapshot?: number
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          delta?: number
+          id?: string
+          note?: string | null
+          reason?: string
+          request_id?: string | null
+          unit_price_snapshot?: number
         }
         Relationships: []
       }
