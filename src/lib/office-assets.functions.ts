@@ -267,6 +267,9 @@ export const adminUpsertOfficeAsset = createServerFn({ method: "POST" })
       vendor: a.vendor ?? null,
       status: a.status,
       active: a.active,
+      stock_qty: a.stock_qty,
+      min_qty: a.min_qty,
+      unit: a.unit,
     };
     if (a.id) {
       const { error } = await supabaseAdmin
