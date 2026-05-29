@@ -100,14 +100,14 @@ function RequestForm() {
     (async () => {
       try {
         const token = getOfficeToken() ?? "";
-        const mod = await import("@/lib/office-requests-public.functions");
-        const res = await mod.officeListEmployees({ data: { token } });
+        const res = await listEmps({ data: { token } });
         setEmps(res.rows as Emp[]);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "โหลดพนักงานไม่สำเร็จ");
       }
     })();
-  }, []);
+  }, [listEmps]);
+
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
