@@ -18,12 +18,10 @@ import { toast } from "sonner";
 import {
   issueOfficeSession, officeListAssets, officeListCategories,
 } from "@/lib/office-assets.functions";
-import { officeSubmitRequest } from "@/lib/office-requests.functions";
-import { adminListPackingEmployees } from "@/lib/admin.functions";
+import { officeSubmitRequest, officeListEmployees } from "@/lib/office-requests.functions";
 import {
   getOfficeToken, setOfficeToken, isOfficeSession,
 } from "@/lib/office-session";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/supplies-request")({
   head: () => ({
