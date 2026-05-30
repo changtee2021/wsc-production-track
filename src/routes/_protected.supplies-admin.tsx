@@ -48,6 +48,7 @@ type Asset = {
   warranty_until: string | null; location: string | null; assignee: string | null;
   image_url: string | null; note: string | null; vendor: string | null;
   status: string; active: boolean;
+  stock_qty: number; min_qty: number; unit: string;
   depreciation?: {
     monthly_dep: number; accumulated_dep: number; book_value: number;
     months_in_use: number; useful_life_months: number | null;
