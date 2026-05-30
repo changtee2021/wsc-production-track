@@ -253,7 +253,7 @@ function RequestForm() {
                         {out ? (
                           <Badge variant="destructive">หมด</Badge>
                         ) : low ? (
-                          <Badge variant="secondary">ใกล้หมด</Badge>
+                          <Badge className="bg-amber-500 hover:bg-amber-500 text-white">ใกล้หมด</Badge>
                         ) : null}
                       </div>
                       <div className="text-[11px] text-muted-foreground">
