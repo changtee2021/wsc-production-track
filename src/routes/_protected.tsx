@@ -29,6 +29,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/logs-update": "LogUpdate",
   "/maintenance-admin": "สรุปงานซ่อมบำรุง",
   "/supplies-admin": "จัดการสินทรัพย์ออฟฟิศ",
+  "/supplies-dashboard": "แดชบอร์ดเบิก-สต๊อก",
   "/supplies-reports": "รายงานค่าเสื่อมสินทรัพย์",
 };
 

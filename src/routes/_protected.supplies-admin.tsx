@@ -48,6 +48,7 @@ type Asset = {
   warranty_until: string | null; location: string | null; assignee: string | null;
   image_url: string | null; note: string | null; vendor: string | null;
   status: string; active: boolean;
+  stock_qty: number; min_qty: number; unit: string;
   depreciation?: {
     monthly_dep: number; accumulated_dep: number; book_value: number;
     months_in_use: number; useful_life_months: number | null;
@@ -178,6 +179,7 @@ function AssetDialog({
     warranty_until: null, location: null, assignee: null,
     image_url: null, note: null, vendor: null,
     status: "in_use", active: true,
+    stock_qty: 0, min_qty: 0, unit: "ชิ้น",
   } as Asset));
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -254,6 +256,22 @@ function AssetDialog({
                   <SelectItem value="lost">สูญหาย</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+          <div className="rounded-md border border-dashed p-2">
+            <div className="mb-1 text-xs font-medium text-muted-foreground">สต๊อก (สำหรับเบิก)</div>
+            <div className="grid grid-cols-3 gap-2">
+              <div><Label>คงเหลือ</Label>
+                <Input type="number" min="0" step="1" value={f.stock_qty}
+                  onChange={(e) => setF({ ...f, stock_qty: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
+              </div>
+              <div><Label>เตือนต่ำ</Label>
+                <Input type="number" min="0" step="1" value={f.min_qty}
+                  onChange={(e) => setF({ ...f, min_qty: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
+              </div>
+              <div><Label>หน่วย</Label>
+                <Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder="ชิ้น" />
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -333,6 +351,9 @@ function AssetDialog({
                     vendor: f.vendor,
                     status: f.status as "in_use" | "repair" | "retired" | "lost",
                     active: f.active,
+                    stock_qty: f.stock_qty,
+                    min_qty: f.min_qty,
+                    unit: f.unit || "ชิ้น",
                   },
                 },
               });
