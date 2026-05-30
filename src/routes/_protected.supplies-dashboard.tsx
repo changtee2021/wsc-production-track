@@ -63,6 +63,7 @@ function DashboardPage() {
       setSummary(s);
       setRequests(r.rows as unknown as Req[]);
       setEmps(e.rows as Emp[]);
+      window.dispatchEvent(new Event("wsc:office-refresh"));
     } catch (err) { showError(err); }
     finally { setLoading(false); }
   };
