@@ -63,6 +63,7 @@ function DashboardPage() {
       setSummary(s);
       setRequests(r.rows as unknown as Req[]);
       setEmps(e.rows as Emp[]);
+      window.dispatchEvent(new Event("wsc:office-refresh"));
     } catch (err) { showError(err); }
     finally { setLoading(false); }
   };
@@ -72,14 +73,41 @@ function DashboardPage() {
     return <div className="flex h-[60vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
+  const outOfStock = summary.low_stock.filter((a) => a.stock_qty <= 0).length;
+  const nearLow = summary.low_stock.length - outOfStock;
+
   return (
     <main className="mx-auto max-w-5xl space-y-4 p-4">
       <Toaster richColors position="top-center" />
 
+      {/* Alert banners */}
+      {(summary.pending_count > 0 || summary.low_stock_count > 0) && (
+        <div className="space-y-2">
+          {summary.pending_count > 0 && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+              <Package className="h-4 w-4 shrink-0" />
+              <span>
+                มี <b>{summary.pending_count}</b> คำขอเบิกรออนุมัติ — เลื่อนลงเพื่อดูรายการ
+              </span>
+            </div>
+          )}
+          {summary.low_stock_count > 0 && (
+            <div className="flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>
+                {outOfStock > 0 && <><b>{outOfStock}</b> รายการ <b>หมดสต๊อก</b> · </>}
+                {nearLow > 0 && <><b>{nearLow}</b> รายการ <b>ใกล้หมด</b> · </>}
+                ต้องสั่งซื้อเพิ่ม
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Summary */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <StatCard label="คำขอรออนุมัติ" value={summary.pending_count} icon={<Package className="h-4 w-4" />} tone="primary" />
-        <StatCard label="ของใกล้หมด" value={summary.low_stock_count} icon={<AlertTriangle className="h-4 w-4" />} tone="warn" />
+        <StatCard label="คำขอรออนุมัติ" value={summary.pending_count} icon={<Package className="h-4 w-4" />} tone={summary.pending_count > 0 ? "primary" : undefined} />
+        <StatCard label="ของใกล้หมด" value={summary.low_stock_count} icon={<AlertTriangle className="h-4 w-4" />} tone={summary.low_stock_count > 0 ? "warn" : undefined} />
         <StatCard label={`ค่าใช้จ่ายเดือนนี้`} value={`฿${summary.month_spend.toLocaleString()}`} icon={<TrendingDown className="h-4 w-4" />} />
         <StatCard label="ค่าใช้จ่ายสะสม" value={`฿${summary.total_spend.toLocaleString()}`} icon={<TrendingDown className="h-4 w-4" />} />
       </div>
@@ -101,26 +129,45 @@ function DashboardPage() {
           <p className="text-sm text-muted-foreground">— สต๊อกเพียงพอ —</p>
         ) : (
           <div className="space-y-1.5">
-            {summary.low_stock.map((a) => (
-              <Card key={a.id}>
-                <CardContent className="flex items-center gap-3 p-3">
-                  {a.image_url ? (
-                    <img src={a.image_url} alt="" className="h-10 w-10 rounded border object-cover" />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded border bg-muted"><Package className="h-4 w-4 text-muted-foreground" /></div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold">{a.name}</div>
-                    <div className="text-[11px] text-muted-foreground">
-                      <span className="font-mono">{a.code}</span> · เหลือ <b className="text-rose-600">{a.stock_qty}</b> / ขั้นต่ำ {a.min_qty} {a.unit}
+            {summary.low_stock.map((a) => {
+              const out = a.stock_qty <= 0;
+              return (
+                <Card
+                  key={a.id}
+                  className={
+                    out
+                      ? "border-rose-300 bg-rose-50/60 dark:border-rose-900/50 dark:bg-rose-950/30"
+                      : "border-amber-300 bg-amber-50/60 dark:border-amber-900/50 dark:bg-amber-950/30"
+                  }
+                >
+                  <CardContent className="flex items-center gap-3 p-3">
+                    {a.image_url ? (
+                      <img src={a.image_url} alt="" className="h-10 w-10 rounded border object-cover" />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded border bg-muted"><Package className="h-4 w-4 text-muted-foreground" /></div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold truncate">{a.name}</span>
+                        {out ? (
+                          <Badge variant="destructive">หมด</Badge>
+                        ) : (
+                          <Badge className="bg-amber-500 hover:bg-amber-500 text-white">ใกล้หมด</Badge>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        <span className="font-mono">{a.code}</span> · เหลือ{" "}
+                        <b className={out ? "text-rose-600" : "text-amber-700 dark:text-amber-400"}>{a.stock_qty}</b>{" "}
+                        / ขั้นต่ำ {a.min_qty} {a.unit}
+                      </div>
                     </div>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => setRestockFor(a)}>
-                    <Plus className="mr-1 h-3.5 w-3.5" />เติม
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <Button size="sm" variant={out ? "default" : "outline"} onClick={() => setRestockFor(a)}>
+                      <Plus className="mr-1 h-3.5 w-3.5" />เติม
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>

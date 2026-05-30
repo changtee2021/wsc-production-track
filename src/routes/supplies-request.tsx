@@ -227,9 +227,18 @@ function RequestForm() {
             {filtered.map((a) => {
               const inCart = cart[a.id] ?? 0;
               const out = (a.stock_qty ?? 0) <= 0;
-              const low = (a.stock_qty ?? 0) <= (a.min_qty ?? 0);
+              const low = !out && (a.stock_qty ?? 0) <= (a.min_qty ?? 0);
               return (
-                <Card key={a.id} className={out ? "opacity-60" : ""}>
+                <Card
+                  key={a.id}
+                  className={
+                    out
+                      ? "opacity-70 border-rose-300 bg-rose-50/50 dark:border-rose-900/50 dark:bg-rose-950/20"
+                      : low
+                        ? "border-amber-300 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20"
+                        : ""
+                  }
+                >
                   <CardContent className="flex items-center gap-3 p-3">
                     {a.image_url ? (
                       <img src={a.image_url} alt={a.name} className="h-14 w-14 shrink-0 rounded border object-cover" />
@@ -244,7 +253,7 @@ function RequestForm() {
                         {out ? (
                           <Badge variant="destructive">หมด</Badge>
                         ) : low ? (
-                          <Badge variant="secondary">ใกล้หมด</Badge>
+                          <Badge className="bg-amber-500 hover:bg-amber-500 text-white">ใกล้หมด</Badge>
                         ) : null}
                       </div>
                       <div className="text-[11px] text-muted-foreground">

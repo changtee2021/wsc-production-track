@@ -401,3 +401,29 @@ export const officeListEmployees = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { rows: rows ?? [] };
   });
+
+// ============ ADMIN: lightweight badge counts for sidebar ============
+export const adminOfficeBadgeCounts = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const [pendingRes, lowRes] = await Promise.all([
+      supabaseAdmin
+        .from("office_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
+      supabaseAdmin
+        .from("office_assets")
+        .select("id, stock_qty, min_qty")
+        .eq("active", true),
+    ]);
+    if (pendingRes.error) throw new Error(pendingRes.error.message);
+    if (lowRes.error) throw new Error(lowRes.error.message);
+    const lowStock = (lowRes.data ?? []).filter(
+      (a) => (a.stock_qty ?? 0) <= (a.min_qty ?? 0),
+    ).length;
+    return {
+      pending: pendingRes.count ?? 0,
+      low_stock: lowStock,
+    };
+  });
