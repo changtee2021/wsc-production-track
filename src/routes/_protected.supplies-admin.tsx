@@ -256,6 +256,21 @@ function AssetDialog({
                   <SelectItem value="lost">สูญหาย</SelectItem>
                 </SelectContent>
               </Select>
+          </div>
+          <div className="rounded-md border border-dashed p-2">
+            <div className="mb-1 text-xs font-medium text-muted-foreground">สต๊อก (สำหรับเบิก)</div>
+            <div className="grid grid-cols-3 gap-2">
+              <div><Label>คงเหลือ</Label>
+                <Input type="number" min="0" step="1" value={f.stock_qty}
+                  onChange={(e) => setF({ ...f, stock_qty: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
+              </div>
+              <div><Label>เตือนต่ำ</Label>
+                <Input type="number" min="0" step="1" value={f.min_qty}
+                  onChange={(e) => setF({ ...f, min_qty: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
+              </div>
+              <div><Label>หน่วย</Label>
+                <Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder="ชิ้น" />
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
