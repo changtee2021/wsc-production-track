@@ -129,6 +129,16 @@ function WelcomePage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/supplies-request" aria-label="เบิกอุปกรณ์ออฟฟิศ">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 rounded-full bg-indigo-600 text-white ring-1 ring-white/30 hover:bg-indigo-700 hover:text-white"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                <span className="hidden sm:inline">เบิกของ</span>
+              </Button>
+            </Link>
             <Link to="/maintenance" aria-label="เจ้าหนูแจ้งซ่อม">
               <Button
                 variant="ghost"
