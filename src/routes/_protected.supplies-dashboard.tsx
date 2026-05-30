@@ -73,14 +73,41 @@ function DashboardPage() {
     return <div className="flex h-[60vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
+  const outOfStock = summary.low_stock.filter((a) => a.stock_qty <= 0).length;
+  const nearLow = summary.low_stock.length - outOfStock;
+
   return (
     <main className="mx-auto max-w-5xl space-y-4 p-4">
       <Toaster richColors position="top-center" />
 
+      {/* Alert banners */}
+      {(summary.pending_count > 0 || summary.low_stock_count > 0) && (
+        <div className="space-y-2">
+          {summary.pending_count > 0 && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+              <Package className="h-4 w-4 shrink-0" />
+              <span>
+                มี <b>{summary.pending_count}</b> คำขอเบิกรออนุมัติ — เลื่อนลงเพื่อดูรายการ
+              </span>
+            </div>
+          )}
+          {summary.low_stock_count > 0 && (
+            <div className="flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>
+                {outOfStock > 0 && <><b>{outOfStock}</b> รายการ <b>หมดสต๊อก</b> · </>}
+                {nearLow > 0 && <><b>{nearLow}</b> รายการ <b>ใกล้หมด</b> · </>}
+                ต้องสั่งซื้อเพิ่ม
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Summary */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <StatCard label="คำขอรออนุมัติ" value={summary.pending_count} icon={<Package className="h-4 w-4" />} tone="primary" />
-        <StatCard label="ของใกล้หมด" value={summary.low_stock_count} icon={<AlertTriangle className="h-4 w-4" />} tone="warn" />
+        <StatCard label="คำขอรออนุมัติ" value={summary.pending_count} icon={<Package className="h-4 w-4" />} tone={summary.pending_count > 0 ? "primary" : undefined} />
+        <StatCard label="ของใกล้หมด" value={summary.low_stock_count} icon={<AlertTriangle className="h-4 w-4" />} tone={summary.low_stock_count > 0 ? "warn" : undefined} />
         <StatCard label={`ค่าใช้จ่ายเดือนนี้`} value={`฿${summary.month_spend.toLocaleString()}`} icon={<TrendingDown className="h-4 w-4" />} />
         <StatCard label="ค่าใช้จ่ายสะสม" value={`฿${summary.total_spend.toLocaleString()}`} icon={<TrendingDown className="h-4 w-4" />} />
       </div>
