@@ -179,6 +179,7 @@ function AssetDialog({
     warranty_until: null, location: null, assignee: null,
     image_url: null, note: null, vendor: null,
     status: "in_use", active: true,
+    stock_qty: 0, min_qty: 0, unit: "ชิ้น",
   } as Asset));
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
