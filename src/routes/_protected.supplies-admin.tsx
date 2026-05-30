@@ -351,6 +351,9 @@ function AssetDialog({
                     vendor: f.vendor,
                     status: f.status as "in_use" | "repair" | "retired" | "lost",
                     active: f.active,
+                    stock_qty: f.stock_qty,
+                    min_qty: f.min_qty,
+                    unit: f.unit || "ชิ้น",
                   },
                 },
               });
