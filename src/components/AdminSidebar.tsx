@@ -28,6 +28,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { adminGetLatestSystemLog } from "@/lib/system-logs.functions";
+import { adminOfficeBadgeCounts } from "@/lib/office-requests.functions";
 import { getAdminToken } from "@/lib/admin-session";
 import { hasUnseen } from "@/lib/log-seen";
 
