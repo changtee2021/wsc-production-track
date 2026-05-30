@@ -256,6 +256,7 @@ function AssetDialog({
                   <SelectItem value="lost">สูญหาย</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
           </div>
           <div className="rounded-md border border-dashed p-2">
             <div className="mb-1 text-xs font-medium text-muted-foreground">สต๊อก (สำหรับเบิก)</div>
