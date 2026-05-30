@@ -129,26 +129,45 @@ function DashboardPage() {
           <p className="text-sm text-muted-foreground">— สต๊อกเพียงพอ —</p>
         ) : (
           <div className="space-y-1.5">
-            {summary.low_stock.map((a) => (
-              <Card key={a.id}>
-                <CardContent className="flex items-center gap-3 p-3">
-                  {a.image_url ? (
-                    <img src={a.image_url} alt="" className="h-10 w-10 rounded border object-cover" />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded border bg-muted"><Package className="h-4 w-4 text-muted-foreground" /></div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold">{a.name}</div>
-                    <div className="text-[11px] text-muted-foreground">
-                      <span className="font-mono">{a.code}</span> · เหลือ <b className="text-rose-600">{a.stock_qty}</b> / ขั้นต่ำ {a.min_qty} {a.unit}
+            {summary.low_stock.map((a) => {
+              const out = a.stock_qty <= 0;
+              return (
+                <Card
+                  key={a.id}
+                  className={
+                    out
+                      ? "border-rose-300 bg-rose-50/60 dark:border-rose-900/50 dark:bg-rose-950/30"
+                      : "border-amber-300 bg-amber-50/60 dark:border-amber-900/50 dark:bg-amber-950/30"
+                  }
+                >
+                  <CardContent className="flex items-center gap-3 p-3">
+                    {a.image_url ? (
+                      <img src={a.image_url} alt="" className="h-10 w-10 rounded border object-cover" />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded border bg-muted"><Package className="h-4 w-4 text-muted-foreground" /></div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold truncate">{a.name}</span>
+                        {out ? (
+                          <Badge variant="destructive">หมด</Badge>
+                        ) : (
+                          <Badge className="bg-amber-500 hover:bg-amber-500 text-white">ใกล้หมด</Badge>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        <span className="font-mono">{a.code}</span> · เหลือ{" "}
+                        <b className={out ? "text-rose-600" : "text-amber-700 dark:text-amber-400"}>{a.stock_qty}</b>{" "}
+                        / ขั้นต่ำ {a.min_qty} {a.unit}
+                      </div>
                     </div>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => setRestockFor(a)}>
-                    <Plus className="mr-1 h-3.5 w-3.5" />เติม
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <Button size="sm" variant={out ? "default" : "outline"} onClick={() => setRestockFor(a)}>
+                      <Plus className="mr-1 h-3.5 w-3.5" />เติม
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
