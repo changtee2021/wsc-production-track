@@ -446,7 +446,7 @@ export const expenseResubmit = createServerFn({ method: "POST" })
     }
 
     const { error: upErr } = await supabaseAdmin
-      .from("expenses").update(patch).eq("id", data.id);
+      .from("expenses").update(patch as never).eq("id", data.id);
     if (upErr) throw new Error(upErr.message);
 
     await supabaseAdmin.from("expense_status_history").insert({
