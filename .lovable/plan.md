@@ -1,102 +1,160 @@
 
-# ระบบเบิกอุปกรณ์ออฟฟิศ (B2 — Requests & Stock)
+# แผนพัฒนา: AI Receipt Scanner + ระบบเบิกค่าใช้จ่าย + รายงานประจำเดือน
 
-## ภาพรวม
-เพิ่ม flow การเบิก-อนุมัติ-ตัดสต๊อก สำหรับอุปกรณ์ในตาราง `office_assets` (ที่มีอยู่แล้ว) พร้อมแดชบอร์ดสำหรับแอดมินดูคำขอ/ค่าใช้จ่าย/สต๊อกใกล้หมด
+ทำครบทั้ง 3 ส่วนในเฟสเดียว: สแกนใบเสร็จด้วย AI → Workflow อนุมัติ 5 สถานะ → แจ้งเตือน LINE → Dashboard รายงานเดือน + VAT + ค่าเสื่อมราคา
 
-## 1) Database (migration)
+---
 
-**แก้ `office_assets` เพิ่มคอลัมน์สต๊อก:**
-- `stock_qty` integer not null default 0
-- `min_qty` integer not null default 0  (เกณฑ์เตือน "ใกล้หมด")
-- `unit` text not null default 'ชิ้น'
+## 1) โครงสร้างฐานข้อมูล (Migration)
 
-**ตารางใหม่ `office_requests` (หัวคำขอ):**
-- `id`, `req_no` (auto: `REQ-YYMM-####`)
-- `requester_employee_id` (uuid → office_employees / ไม่ FK เพื่อความยืดหยุ่น)
-- `requester_name` (snapshot)
-- `status` text: `pending` / `approved` / `rejected` / `cancelled`
-- `note` text
-- `approver_employee_id`, `approver_name` (snapshot, set ตอน approve)
-- `approved_at`, `created_at`, `updated_at`
+**ตารางใหม่:**
 
-**ตารางใหม่ `office_request_items`:**
-- `id`, `request_id` → office_requests
-- `asset_id` → office_assets, `asset_name_snapshot`, `unit_price_snapshot`
-- `qty` int (≥1)
+- `expense_categories` — หมวดค่าใช้จ่าย (น้ำมัน, อุปกรณ์, ค่าซ่อม, อาหาร, อื่นๆ) — มีฟิลด์ `keywords[]` ให้ AI ใช้ auto-map
+- `expenses` — รายการเบิก 1 ใบเสร็จ = 1 แถว
+  - `exp_no` (EXP-YYMM-NNNN auto)
+  - `requester_employee_id`, `requester_name`
+  - `bill_type` (`cash` | `short_tax` | `full_tax`)
+  - `merchant_name`, `tax_id`, `receipt_no`, `receipt_date`
+  - `subtotal`, `vat_amount`, `total_amount`
+  - `category_id`, `note`
+  - `image_paths[]` (รูปใบเสร็จ — เก็บใน private bucket `expense-receipts`)
+  - `buyer_match_wsc` (bool — กรณีบิลเต็ม)
+  - `linked_office_request_id` (nullable — ผูกกับการเบิกของ office ได้)
+  - `ai_extracted` jsonb (raw output จาก AI เก็บไว้ debug)
+  - `ai_confidence` numeric
+  - `status` (`pending` | `under_review` | `approved` | `rejected` | `paid`)
+  - `approver_employee_id`, `approver_name`, `approved_at`
+  - `reject_reason`, `paid_at`, `paid_by`
+  - `duplicate_of` uuid (nullable — ชี้ใบเสร็จที่ซ้ำ)
+- `expense_status_history` — log ทุกการเปลี่ยนสถานะ (who, when, from→to, note)
 
-**ตารางใหม่ `office_stock_movements` (log การเคลื่อนสต๊อก):**
-- `id`, `asset_id`, `delta` int (− เบิก / + เติม)
-- `reason` text: `issue` / `restock` / `adjust`
-- `request_id` (nullable), `note`, `created_at`
+**Storage bucket:** `expense-receipts` (private, อ่านผ่าน signed URL — pattern เดียวกับ `qc-media`)
 
-GRANTs ครบ + RLS block anon/authenticated (เข้าผ่าน server fn เท่านั้น เหมือนของเดิม)
+**Unique partial index** บน `(merchant_name, receipt_no, receipt_date)` where status != 'rejected' → ใช้ตรวจซ้ำ
 
-## 2) Server functions (`src/lib/office-requests.functions.ts`)
+**RLS:** block anon ทั้งหมด (server-only ผ่าน `supabaseAdmin` + token เดิม), grant `service_role`
 
-**สำหรับพนักงาน (token = office session ที่มีอยู่):**
-- `officeSubmitRequest({ token, requester_employee_id, items:[{asset_id, qty}], note })` — สร้าง pending request
-- `officeListMyRequests` (optional, แสดงสถานะของตัวเอง)
+**Seed:** หมวดเริ่มต้น 6 หมวด (อุปกรณ์ออฟฟิศ / ค่าน้ำมัน / ค่าซ่อม / ค่าอาหาร-รับรอง / ค่าขนส่ง / อื่นๆ)
 
-**สำหรับแอดมิน (admin token):**
-- `adminListOfficeRequests({ status })` — รายการคำขอ + items
-- `adminApproveOfficeRequest({ id, approver_employee_id })` — ตรวจสต๊อกพอ → ตัด `stock_qty` ทุก item, log movement, set approved
-- `adminRejectOfficeRequest({ id, reason })`
-- `adminOfficeRestock({ asset_id, qty, note })` — เติมสต๊อก + movement
-- `adminOfficeStockDashboard()` — รวม:
-  - คำขอ pending (count + list)
-  - ของใกล้หมด (`stock_qty <= min_qty`)
-  - ค่าใช้จ่ายเดือนนี้ / รวมทั้งหมด (จาก movements * unit_price)
-  - top รายการที่ถูกเบิกบ่อย
+---
 
-## 3) UI — หน้าแรก (`src/routes/index.tsx`)
+## 2) Server Functions
 
-- ปุ่ม **"เบิกอุปกรณ์ออฟฟิศ"** มุมบนขวา → ลิงก์ไป `/supplies-request`
+ไฟล์ใหม่ใน `src/lib/`:
 
-## 4) UI — หน้าเบิก (`src/routes/supplies-request.tsx`, public)
+- `expense-session.ts` + `expense-token.server.ts` — token แบบเดียวกับ office (pattern เดิม)
+- `expenses.functions.ts`:
+  - `issueExpenseSession` — เปิด session พนักงาน
+  - `expenseScanReceipt` — รับ image_path (อัปโหลดเข้า bucket ก่อน) → เรียก Gemini 2.5 Pro vision → คืน structured JSON (merchant, tax_id, receipt_no, date, subtotal, vat, total, bill_type, suggested_category_id, buyer_match_wsc)
+  - `expenseCheckDuplicate` — query หาใบที่ merchant+receipt_no+date ซ้ำ
+  - `expenseSubmit` — บันทึก expense (status=pending) พร้อม image_paths
+  - `expenseListMine` — รายการของพนักงานคนนั้น
+  - `expenseResubmit` — แก้รายการที่ rejected ส่งใหม่
+  - `expenseGetSignedUrls` — signed URLs สำหรับรูป
+- `expenses-admin.functions.ts`:
+  - `adminExpenseList` — filter status/dept/date
+  - `adminExpenseOpenReview` — เปลี่ยน pending → under_review (กันแย่งกัน review)
+  - `adminExpenseApprove` — เลือก approver_employee_id (พนักงานออฟฟิศ) → status=approved
+  - `adminExpenseReject` — ต้องระบุ reason
+  - `adminExpenseMarkPaid` — paid + paid_at
+  - `adminExpenseBulkApprove` — รับ ids[]
+  - `adminExpenseBadgeCounts` — pending count (สำหรับ sidebar badge)
+  - `adminExpenseMonthlyReport` — aggregate สำหรับ dashboard
+- `line-notify.functions.ts` (เพิ่ม):
+  - `notifyExpenseSubmitted` / `notifyExpenseStatusChanged` — ใช้ LINE_CHANNEL_ACCESS_TOKEN + LINE_TARGET_GROUP_ID ที่มีอยู่
+- `depreciation.server.ts` — สูตรเส้นตรง: `monthly_dep = (purchase_price - salvage_value) / useful_life_months` ใช้กับ `office_assets`
 
-- ใช้ office session (free issue เหมือน Packing — ไม่ต้องรหัส)
-- ขั้น 1: เลือกพนักงาน (จาก `office_employees`)
-- ขั้น 2: แท็บ/dropdown เลือกหมวด (จาก `office_asset_categories`) — เลือกแล้วโชว์เฉพาะรายการในหมวดนั้น
-- ช่องค้นหาชื่อ/รหัส filter รายการแบบ realtime
-- แต่ละรายการ: รูป + ชื่อ + สต๊อกคงเหลือ + ปุ่ม +/− จำนวน (max = stock_qty)
-- ตะกร้ารวมด้านล่าง + ช่อง note + ปุ่ม **"ยื่นขอเบิก"**
-- toast แสดง `req_no` หลังส่ง
+**AI:** Lovable AI Gateway, model `google/gemini-2.5-pro`, ส่ง image + system prompt ภาษาไทย, ใช้ structured output (Output.object + zod schema). Handle 429/402 → คืน error ให้ UI
 
-## 5) UI — แดชบอร์ดแอดมิน (`src/routes/_protected.supplies-dashboard.tsx`)
+---
 
-แท็บ/section ในหน้าเดียว:
-- **สรุปบน**: จำนวน pending, ของใกล้หมด, ค่าใช้จ่ายเดือนนี้, ค่าใช้จ่ายสะสม
-- **คำขอรออนุมัติ**: card แต่ละคำขอ — ผู้ขอ, รายการ + จำนวน, มูลค่ารวม, dropdown "ผู้อนุมัติ" (เลือก office_employee), ปุ่ม Approve / Reject
-- **สต๊อกใกล้หมด**: ตารางรายการ + ปุ่ม "เติมสต๊อก" (modal ใส่จำนวน + หมายเหตุ)
-- **ประวัติคำขอ** (filter status)
-- **รายงานการใช้** (สรุปต่อหมวด / ต่อเดือน — ใช้ movements)
+## 3) หน้าจอ Frontend
 
-เพิ่มเมนู "แดชบอร์ดสต๊อก" ใน `AdminSidebar` หมวด Stock Office
+**Public (พนักงาน):**
 
-## 6) อัปเดต admin panel ของเดิม
+- `/expense-scan` — หน้าหลักของฟีเจอร์
+  - เลือกพนักงาน (เหมือน `/supplies-request`)
+  - ปุ่ม **ถ่ายภาพ** (camera capture) / **อัปโหลด** (PDF/image, รองรับหลายไฟล์)
+  - แสดง spinner "กำลังอ่านข้อมูล..." ขณะเรียก AI
+  - **Review screen** แบ่ง 2 ส่วน: รูปด้านบน / ฟอร์มที่ AI กรอก (แก้ไขได้ทุกฟิลด์)
+  - Badge `bill_type` (เงินสด / ย่อ / เต็ม) เปลี่ยนตามที่ AI ตรวจ
+  - แจ้งเตือนสีแดงถ้า duplicate / `buyer_match_wsc=false`
+  - เลือกหมวด (AI suggest ไว้แล้ว) + ผูกกับ office_request ได้ (optional dropdown)
+  - ปุ่ม "ส่งขออนุมัติ"
+- `/expense-mine` — ประวัติของพนักงาน, แสดงสถานะสี, ถ้า rejected กดเข้าไปดูเหตุผล + Re-submit ได้
+- ปุ่มที่หน้าแรก (`/`) มุมขวาบน: **"เบิกค่าใช้จ่าย"** (icon Receipt)
 
-- `_protected.supplies-admin.tsx`: ฟอร์มแก้สินทรัพย์ เพิ่มช่อง `stock_qty`, `min_qty`, `unit`
+**Admin (ผ่าน `_protected`):**
+
+- `/_protected/expenses-dashboard` — Inbox อนุมัติ
+  - Filter: status / date / requester / category
+  - Card ต่อรายการ: thumbnail รูป + ข้อมูลที่ AI สแกน
+  - ปุ่ม Approve (เปิด dialog เลือก `approver_employee_id` จากพนักงานออฟฟิศ) / Reject (กรอกเหตุผล) / Mark Paid
+  - **Bulk approve** checkbox + ปุ่ม
+  - กดรูปเปิด lightbox เทียบกับฟอร์ม
+- `/_protected/expenses-reports` — รายงานประจำเดือน
+  - **KPI cards:** ยอดอนุมัติเดือนนี้ / รออนุมัติ / ใบซ้ำที่ถูกบล็อก / ค่าเสื่อมรวมเดือนนี้
+  - **Pie chart:** spending by category (Recharts — มีอยู่แล้ว)
+  - **Bar chart:** ค่าใช้จ่ายรายเดือนย้อนหลัง 6 เดือน
+  - **ตาราง VAT Summary:** Net / VAT / รวม แยกบิลเต็ม
+  - **ตารางค่าเสื่อมราคา:** อ่านจาก `office_assets` คำนวณ straight-line
+  - **ตาราง Reimbursement:** approved ที่ยังไม่ paid
+  - **ปุ่ม Export:** CSV (สำหรับบัญชี) + Print → PDF (window.print + CSS print)
+  - Date range picker + filter department
+- **Sidebar:** หมวด "ค่าใช้จ่าย" → "Inbox อนุมัติ" (badge แสดง pending) + "รายงานประจำเดือน"
+
+---
+
+## 4) LINE Notifications
+
+ใช้ secret ที่มีอยู่ (`LINE_CHANNEL_ACCESS_TOKEN`, `LINE_TARGET_GROUP_ID`):
+
+- **Submitted:** แจ้งกลุ่มแอดมิน — "เบิกใหม่ EXP-XXXX จาก {ชื่อ} ยอด ฿{total} — {merchant}"
+- **Approved/Rejected/Paid:** แจ้งกลุ่ม + (ถ้ามี) DM พนักงาน
+- ส่งเฉพาะตอน status เปลี่ยน (เรียกใน `expenses-admin.functions.ts`)
+
+---
+
+## 5) AI Prompt (สรุป)
+
+System prompt ภาษาไทย สั่ง Gemini 2.5 Pro:
+- อ่านใบเสร็จไทย คืน JSON ตาม zod schema
+- ระบุ `bill_type` จากการมี/ไม่มี Tax ID และคำว่า "ใบกำกับภาษี"
+- ถ้าเป็นบิลย่อ → คำนวณ VAT ย้อนกลับ (total × 7/107)
+- เช็คชื่อผู้ซื้อมีคำว่า "WSC" หรือ "วิสุทธิ์ศิลป์" → `buyer_match_wsc=true`
+- เดาหมวดจาก keywords ของ `expense_categories`
+- คืน `ai_confidence` 0-1
+
+---
+
+## รายละเอียดทางเทคนิค
+
+- ใช้ pattern เดียวกับ `office-requests` ทุกอย่าง (token, RLS, server fn, signed URLs)
+- AI call ผ่าน `createServerFn` (server-only), ไม่เรียกจาก browser ตรง
+- Image upload: browser → `expenseUploadReceipt` server fn → bucket
+- Duplicate check: query DB ก่อน submit + แสดง warning ใน UI
+- ค่าเสื่อม: คำนวณตอน query report ไม่เก็บ snapshot
+- `system_logs` insert ทุก migration + ฟีเจอร์ใหม่ตามกฎ memory
+
+---
 
 ## ไฟล์ที่จะสร้าง/แก้
 
-**สร้าง:**
-- `supabase/migrations/<ts>_office_requests.sql`
-- `src/lib/office-requests.functions.ts`
-- `src/routes/supplies-request.tsx`
-- `src/routes/_protected.supplies-dashboard.tsx`
+**สร้างใหม่:**
+- `supabase/migrations/XXX_expense_scanner.sql`
+- `src/lib/expense-session.ts`, `expense-token.server.ts`
+- `src/lib/expenses.functions.ts`, `expenses-admin.functions.ts`
+- `src/lib/line-notify.functions.ts` (ถ้ายังไม่มี helper)
+- `src/lib/depreciation.server.ts`
+- `src/routes/expense-scan.tsx`, `expense-mine.tsx`
+- `src/routes/_protected.expenses-dashboard.tsx`
+- `src/routes/_protected.expenses-reports.tsx`
 
 **แก้:**
-- `src/lib/office-assets.functions.ts` (รวม stock fields ใน schema/return)
-- `src/routes/index.tsx` (ปุ่มมุมขวาบน)
-- `src/routes/_protected.supplies-admin.tsx` (เพิ่มช่อง stock/min/unit)
-- `src/components/AdminSidebar.tsx` (เพิ่มเมนูแดชบอร์ด)
-- `src/routes/_protected.tsx` (title route ใหม่)
-- `src/integrations/supabase/types.ts` (auto)
+- `src/routes/index.tsx` — ปุ่ม "เบิกค่าใช้จ่าย" มุมขวาบน
+- `src/components/AdminSidebar.tsx` — เพิ่มหมวด "ค่าใช้จ่าย" + badge
+- `src/routes/_protected.tsx` — title routes ใหม่
 
-**Log:** insert `system_logs` (category: feature) อธิบายฟีเจอร์เบิก/อนุมัติ/สต๊อก
+---
 
-## ความปลอดภัย
-- พนักงานยื่นเบิกผ่าน office token (free) → สร้างได้แค่ pending, ไม่ตัดสต๊อก
-- เฉพาะ admin token เท่านั้นที่ approve/reject/restock → ตัดสต๊อกใน transaction (เช็คก่อนว่าพอ ไม่งั้น throw)
-- Movement log ทุกการเปลี่ยนแปลง
+หลังอนุมัติแผน ผมจะเริ่มจาก migration → server functions → UI → LINE → reports ตามลำดับ
