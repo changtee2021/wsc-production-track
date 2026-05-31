@@ -360,14 +360,14 @@ export const expenseSubmit = createServerFn({ method: "POST" })
       image_paths: data.image_paths,
       buyer_match_wsc: data.buyer_match_wsc,
       linked_office_request_id: data.linked_office_request_id ?? null,
-      ai_extracted: (data.ai_extracted ?? null) as object | null,
+      ai_extracted: (data.ai_extracted ?? null) as never,
       ai_confidence: data.ai_confidence ?? null,
       status: "pending" as const,
       duplicate_of: duplicateOf,
     };
 
     const { data: created, error } = await supabaseAdmin
-      .from("expenses").insert([insertRow]).select("id, exp_no").single();
+      .from("expenses").insert(insertRow as never).select("id, exp_no").single();
     if (error) {
       if (error.message.toLowerCase().includes("uniq_expenses_dedupe")) {
         throw new Error("ใบเสร็จนี้ถูกบันทึกซ้ำในระบบ (ร้าน + เลขที่ + วันที่)");
