@@ -170,6 +170,185 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          keywords: string[]
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expense_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          expense_id: string
+          from_status: string | null
+          id: string
+          note: string | null
+          to_status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          expense_id: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          expense_id?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_status_history_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          ai_confidence: number | null
+          ai_extracted: Json | null
+          approved_at: string | null
+          approver_employee_id: string | null
+          approver_name: string | null
+          bill_type: string
+          buyer_match_wsc: boolean
+          category_id: string | null
+          created_at: string
+          duplicate_of: string | null
+          exp_no: string
+          id: string
+          image_paths: string[]
+          linked_office_request_id: string | null
+          merchant_name: string | null
+          note: string | null
+          paid_at: string | null
+          paid_by: string | null
+          receipt_date: string | null
+          receipt_no: string | null
+          reject_reason: string | null
+          requester_employee_id: string | null
+          requester_name: string
+          status: string
+          subtotal: number
+          tax_id: string | null
+          total_amount: number
+          updated_at: string
+          vat_amount: number
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_extracted?: Json | null
+          approved_at?: string | null
+          approver_employee_id?: string | null
+          approver_name?: string | null
+          bill_type?: string
+          buyer_match_wsc?: boolean
+          category_id?: string | null
+          created_at?: string
+          duplicate_of?: string | null
+          exp_no?: string
+          id?: string
+          image_paths?: string[]
+          linked_office_request_id?: string | null
+          merchant_name?: string | null
+          note?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          receipt_date?: string | null
+          receipt_no?: string | null
+          reject_reason?: string | null
+          requester_employee_id?: string | null
+          requester_name: string
+          status?: string
+          subtotal?: number
+          tax_id?: string | null
+          total_amount?: number
+          updated_at?: string
+          vat_amount?: number
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_extracted?: Json | null
+          approved_at?: string | null
+          approver_employee_id?: string | null
+          approver_name?: string | null
+          bill_type?: string
+          buyer_match_wsc?: boolean
+          category_id?: string | null
+          created_at?: string
+          duplicate_of?: string | null
+          exp_no?: string
+          id?: string
+          image_paths?: string[]
+          linked_office_request_id?: string | null
+          merchant_name?: string | null
+          note?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          receipt_date?: string | null
+          receipt_no?: string | null
+          reject_reason?: string | null
+          requester_employee_id?: string | null
+          requester_name?: string
+          status?: string
+          subtotal?: number
+          tax_id?: string | null
+          total_amount?: number
+          updated_at?: string
+          vat_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       home_banners: {
         Row: {
           active: boolean
