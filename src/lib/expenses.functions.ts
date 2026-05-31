@@ -367,7 +367,7 @@ export const expenseSubmit = createServerFn({ method: "POST" })
     };
 
     const { data: created, error } = await supabaseAdmin
-      .from("expenses").insert(insertRow).select("id, exp_no").single();
+      .from("expenses").insert([insertRow]).select("id, exp_no").single();
     if (error) {
       if (error.message.toLowerCase().includes("uniq_expenses_dedupe")) {
         throw new Error("ใบเสร็จนี้ถูกบันทึกซ้ำในระบบ (ร้าน + เลขที่ + วันที่)");
