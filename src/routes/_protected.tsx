@@ -31,6 +31,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/supplies-admin": "จัดการสินทรัพย์ออฟฟิศ",
   "/supplies-dashboard": "แดชบอร์ดเบิก-สต๊อก",
   "/supplies-reports": "รายงานค่าเสื่อมสินทรัพย์",
+  "/expenses-dashboard": "เบิกค่าใช้จ่าย (AI Scan)",
+  "/expenses-reports": "รายงานค่าใช้จ่ายรายเดือน",
 };
 
 function AdminLayout() {
