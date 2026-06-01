@@ -15,6 +15,7 @@ import {
   Wrench,
   Boxes,
   SlidersHorizontal,
+  Receipt,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 import { adminGetLatestSystemLog } from "@/lib/system-logs.functions";
 import { adminOfficeBadgeCounts } from "@/lib/office-requests.functions";
+import { adminExpenseBadgeCounts } from "@/lib/expenses-admin.functions";
 import { getAdminToken } from "@/lib/admin-session";
 import { hasUnseen } from "@/lib/log-seen";
 
@@ -74,6 +76,13 @@ const NAV_GROUPS: Array<{
     ],
   },
   {
+    label: "ค่าใช้จ่าย",
+    items: [
+      { title: "เบิกค่าใช้จ่าย", url: "/expenses-dashboard", icon: Receipt },
+      { title: "รายงานรายเดือน", url: "/expenses-reports", icon: BarChart3 },
+    ],
+  },
+  {
     label: "Control",
     items: [
       { title: "แบนเนอร์ & ประกาศ", url: "/control", icon: SlidersHorizontal },
@@ -98,25 +107,29 @@ export function AdminSidebar() {
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
   const getLatest = useServerFn(adminGetLatestSystemLog);
   const getBadge = useServerFn(adminOfficeBadgeCounts);
+  const getExpBadge = useServerFn(adminExpenseBadgeCounts);
   const [hasNew, setHasNew] = useState(false);
   const [pendingReq, setPendingReq] = useState(0);
   const [lowStock, setLowStock] = useState(0);
+  const [pendingExp, setPendingExp] = useState(0);
 
   const check = useCallback(async () => {
     const token = getAdminToken();
     if (!token) return;
     try {
-      const [res, badge] = await Promise.all([
+      const [res, badge, exp] = await Promise.all([
         getLatest({ data: { token } }),
         getBadge({ data: { token } }),
+        getExpBadge({ data: { token } }),
       ]);
       setHasNew(hasUnseen(res.latest?.created_at));
       setPendingReq(badge.pending);
       setLowStock(badge.low_stock);
+      setPendingExp(exp.pending);
     } catch {
       // silent
     }
-  }, [getLatest, getBadge]);
+  }, [getLatest, getBadge, getExpBadge]);
 
   useEffect(() => {
     check();
@@ -161,6 +174,8 @@ export function AdminSidebar() {
                   const isSupply = item.url === "/supplies-dashboard";
                   const supplyCount = isSupply ? pendingReq : 0;
                   const supplyDot = isSupply && (pendingReq > 0 || lowStock > 0);
+                  const isExp = item.url === "/expenses-dashboard";
+                  const expCount = isExp ? pendingExp : 0;
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
@@ -183,6 +198,18 @@ export function AdminSidebar() {
                           {isSupply && supplyDot && (
                             <span className="ml-auto hidden h-2 w-2 rounded-full bg-amber-500 group-data-[collapsible=icon]:inline-block" />
                           )}
+                          {isExp && expCount > 0 && (
+                            <span className="ml-auto inline-flex min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white group-data-[collapsible=icon]:hidden">
+                              {expCount > 99 ? "99+" : expCount}
+                            </span>
+                          )}
+                          {isExp && expCount > 0 && (
+                            <span className="ml-auto hidden h-2 w-2 rounded-full bg-rose-500 group-data-[collapsible=icon]:inline-block" />
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
