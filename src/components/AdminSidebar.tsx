@@ -107,25 +107,29 @@ export function AdminSidebar() {
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
   const getLatest = useServerFn(adminGetLatestSystemLog);
   const getBadge = useServerFn(adminOfficeBadgeCounts);
+  const getExpBadge = useServerFn(adminExpenseBadgeCounts);
   const [hasNew, setHasNew] = useState(false);
   const [pendingReq, setPendingReq] = useState(0);
   const [lowStock, setLowStock] = useState(0);
+  const [pendingExp, setPendingExp] = useState(0);
 
   const check = useCallback(async () => {
     const token = getAdminToken();
     if (!token) return;
     try {
-      const [res, badge] = await Promise.all([
+      const [res, badge, exp] = await Promise.all([
         getLatest({ data: { token } }),
         getBadge({ data: { token } }),
+        getExpBadge({ data: { token } }),
       ]);
       setHasNew(hasUnseen(res.latest?.created_at));
       setPendingReq(badge.pending);
       setLowStock(badge.low_stock);
+      setPendingExp(exp.pending);
     } catch {
       // silent
     }
-  }, [getLatest, getBadge]);
+  }, [getLatest, getBadge, getExpBadge]);
 
   useEffect(() => {
     check();
