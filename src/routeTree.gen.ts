@@ -16,6 +16,8 @@ import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QcRouteImport } from './routes/qc'
 import { Route as PackingRouteImport } from './routes/packing'
 import { Route as MaintenanceRouteImport } from './routes/maintenance'
+import { Route as ExpenseScanRouteImport } from './routes/expense-scan'
+import { Route as ExpenseMineRouteImport } from './routes/expense-mine'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
@@ -33,6 +35,8 @@ import { Route as ProtectedMaintenanceAdminRouteImport } from './routes/_protect
 import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
 import { Route as ProtectedJobLookupRouteImport } from './routes/_protected.job-lookup'
+import { Route as ProtectedExpensesReportsRouteImport } from './routes/_protected.expenses-reports'
+import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protected.expenses-dashboard'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
@@ -70,6 +74,16 @@ const PackingRoute = PackingRouteImport.update({
 const MaintenanceRoute = MaintenanceRouteImport.update({
   id: '/maintenance',
   path: '/maintenance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpenseScanRoute = ExpenseScanRouteImport.update({
+  id: '/expense-scan',
+  path: '/expense-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpenseMineRoute = ExpenseMineRouteImport.update({
+  id: '/expense-mine',
+  path: '/expense-mine',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -160,6 +174,18 @@ const ProtectedJobLookupRoute = ProtectedJobLookupRouteImport.update({
   path: '/job-lookup',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedExpensesReportsRoute =
+  ProtectedExpensesReportsRouteImport.update({
+    id: '/expenses-reports',
+    path: '/expenses-reports',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedExpensesDashboardRoute =
+  ProtectedExpensesDashboardRouteImport.update({
+    id: '/expenses-dashboard',
+    path: '/expenses-dashboard',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -180,6 +206,8 @@ const ApiPublicHooksLineDailySendRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/expense-mine': typeof ExpenseMineRoute
+  '/expense-scan': typeof ExpenseScanRoute
   '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
@@ -189,6 +217,8 @@ export interface FileRoutesByFullPath {
   '/supplies-request': typeof SuppliesRequestRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
+  '/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
+  '/expenses-reports': typeof ProtectedExpensesReportsRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
@@ -208,6 +238,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/expense-mine': typeof ExpenseMineRoute
+  '/expense-scan': typeof ExpenseScanRoute
   '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
@@ -217,6 +249,8 @@ export interface FileRoutesByTo {
   '/supplies-request': typeof SuppliesRequestRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
+  '/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
+  '/expenses-reports': typeof ProtectedExpensesReportsRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
@@ -238,6 +272,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_protected': typeof ProtectedRouteWithChildren
   '/admin': typeof AdminRoute
+  '/expense-mine': typeof ExpenseMineRoute
+  '/expense-scan': typeof ExpenseScanRoute
   '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
@@ -247,6 +283,8 @@ export interface FileRoutesById {
   '/supplies-request': typeof SuppliesRequestRoute
   '/_protected/control': typeof ProtectedControlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
+  '/_protected/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
+  '/_protected/expenses-reports': typeof ProtectedExpensesReportsRoute
   '/_protected/job-lookup': typeof ProtectedJobLookupRoute
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/logs-update': typeof ProtectedLogsUpdateRoute
@@ -268,6 +306,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/expense-mine'
+    | '/expense-scan'
     | '/maintenance'
     | '/packing'
     | '/qc'
@@ -277,6 +317,8 @@ export interface FileRouteTypes {
     | '/supplies-request'
     | '/control'
     | '/dashboard'
+    | '/expenses-dashboard'
+    | '/expenses-reports'
     | '/job-lookup'
     | '/logs'
     | '/logs-update'
@@ -296,6 +338,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/expense-mine'
+    | '/expense-scan'
     | '/maintenance'
     | '/packing'
     | '/qc'
@@ -305,6 +349,8 @@ export interface FileRouteTypes {
     | '/supplies-request'
     | '/control'
     | '/dashboard'
+    | '/expenses-dashboard'
+    | '/expenses-reports'
     | '/job-lookup'
     | '/logs'
     | '/logs-update'
@@ -325,6 +371,8 @@ export interface FileRouteTypes {
     | '/'
     | '/_protected'
     | '/admin'
+    | '/expense-mine'
+    | '/expense-scan'
     | '/maintenance'
     | '/packing'
     | '/qc'
@@ -334,6 +382,8 @@ export interface FileRouteTypes {
     | '/supplies-request'
     | '/_protected/control'
     | '/_protected/dashboard'
+    | '/_protected/expenses-dashboard'
+    | '/_protected/expenses-reports'
     | '/_protected/job-lookup'
     | '/_protected/logs'
     | '/_protected/logs-update'
@@ -355,6 +405,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProtectedRoute: typeof ProtectedRouteWithChildren
   AdminRoute: typeof AdminRoute
+  ExpenseMineRoute: typeof ExpenseMineRoute
+  ExpenseScanRoute: typeof ExpenseScanRoute
   MaintenanceRoute: typeof MaintenanceRoute
   PackingRoute: typeof PackingRoute
   QcRoute: typeof QcRoute
@@ -414,6 +466,20 @@ declare module '@tanstack/react-router' {
       path: '/maintenance'
       fullPath: '/maintenance'
       preLoaderRoute: typeof MaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expense-scan': {
+      id: '/expense-scan'
+      path: '/expense-scan'
+      fullPath: '/expense-scan'
+      preLoaderRoute: typeof ExpenseScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expense-mine': {
+      id: '/expense-mine'
+      path: '/expense-mine'
+      fullPath: '/expense-mine'
+      preLoaderRoute: typeof ExpenseMineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -535,6 +601,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedJobLookupRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/expenses-reports': {
+      id: '/_protected/expenses-reports'
+      path: '/expenses-reports'
+      fullPath: '/expenses-reports'
+      preLoaderRoute: typeof ProtectedExpensesReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/expenses-dashboard': {
+      id: '/_protected/expenses-dashboard'
+      path: '/expenses-dashboard'
+      fullPath: '/expenses-dashboard'
+      preLoaderRoute: typeof ProtectedExpensesDashboardRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/dashboard': {
       id: '/_protected/dashboard'
       path: '/dashboard'
@@ -562,6 +642,8 @@ declare module '@tanstack/react-router' {
 interface ProtectedRouteChildren {
   ProtectedControlRoute: typeof ProtectedControlRoute
   ProtectedDashboardRoute: typeof ProtectedDashboardRoute
+  ProtectedExpensesDashboardRoute: typeof ProtectedExpensesDashboardRoute
+  ProtectedExpensesReportsRoute: typeof ProtectedExpensesReportsRoute
   ProtectedJobLookupRoute: typeof ProtectedJobLookupRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedLogsUpdateRoute: typeof ProtectedLogsUpdateRoute
@@ -581,6 +663,8 @@ interface ProtectedRouteChildren {
 const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedControlRoute: ProtectedControlRoute,
   ProtectedDashboardRoute: ProtectedDashboardRoute,
+  ProtectedExpensesDashboardRoute: ProtectedExpensesDashboardRoute,
+  ProtectedExpensesReportsRoute: ProtectedExpensesReportsRoute,
   ProtectedJobLookupRoute: ProtectedJobLookupRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedLogsUpdateRoute: ProtectedLogsUpdateRoute,
@@ -605,6 +689,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProtectedRoute: ProtectedRouteWithChildren,
   AdminRoute: AdminRoute,
+  ExpenseMineRoute: ExpenseMineRoute,
+  ExpenseScanRoute: ExpenseScanRoute,
   MaintenanceRoute: MaintenanceRoute,
   PackingRoute: PackingRoute,
   QcRoute: QcRoute,
@@ -617,12 +703,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

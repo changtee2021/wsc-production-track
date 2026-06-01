@@ -15,6 +15,7 @@ import {
   Wrench,
   Boxes,
   SlidersHorizontal,
+  Receipt,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 import { adminGetLatestSystemLog } from "@/lib/system-logs.functions";
 import { adminOfficeBadgeCounts } from "@/lib/office-requests.functions";
+import { adminExpenseBadgeCounts } from "@/lib/expenses-admin.functions";
 import { getAdminToken } from "@/lib/admin-session";
 import { hasUnseen } from "@/lib/log-seen";
 
@@ -71,6 +73,13 @@ const NAV_GROUPS: Array<{
       { title: "แดชบอร์ดเบิก-สต๊อก", url: "/supplies-dashboard", icon: LayoutDashboard },
       { title: "จัดการสินทรัพย์", url: "/supplies-admin", icon: Boxes },
       { title: "รายงานค่าเสื่อม", url: "/supplies-reports", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "ค่าใช้จ่าย",
+    items: [
+      { title: "เบิกค่าใช้จ่าย", url: "/expenses-dashboard", icon: Receipt },
+      { title: "รายงานรายเดือน", url: "/expenses-reports", icon: BarChart3 },
     ],
   },
   {
