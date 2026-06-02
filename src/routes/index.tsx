@@ -128,7 +128,7 @@ function WelcomePage() {
               WSC ProductionTrack
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
             <Link to="/expense-scan" aria-label="เบิกค่าใช้จ่าย (AI สแกน)">
               <Button
                 variant="ghost"
