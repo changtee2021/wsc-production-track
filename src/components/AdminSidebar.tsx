@@ -210,11 +210,7 @@ export function AdminSidebar() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
+                  })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
