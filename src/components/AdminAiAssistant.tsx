@@ -1,26 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, X, Send, Loader2 } from "lucide-react";
+import { Bot, X, Send, Loader2, Wrench } from "lucide-react";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getAdminToken } from "@/lib/admin-session";
 import { aiAdminAsk } from "@/lib/ai-admin.functions";
 import { cn } from "@/lib/utils";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; toolsUsed?: string[] };
 type Mode = "qa" | "plan";
 
 const SUGGESTIONS: Record<Mode, string[]> = {
   qa: [
     "พนักงานคนไหนทำงานเสร็จมากสุดใน 30 วัน",
     "ขั้นตอนไหนใช้เวลาเฉลี่ยนานที่สุด",
-    "มี QC report ค้างกี่รายการ",
+    "QC report ที่ยังไม่ปิดมีกี่รายการ",
+    "ใบแจ้งซ่อมที่ยังไม่ปิดมีกี่ใบ MTTR เท่าไหร่",
+    "อะไหล่ตัวไหนใกล้หมดบ้าง",
+    "วัสดุสำนักงานอะไรใกล้หมด",
+    "ค่าใช้จ่ายเดือนนี้รวมเท่าไหร่ VAT เท่าไหร่",
+    "ค่าเสื่อมราคารายเดือนรวมเท่าไหร่",
   ],
   plan: [
     "แนะนำการจัดคนสำหรับสัปดาห์หน้า",
     "ขั้นตอนไหนควรเพิ่มคน",
     "จุดที่ควรปรับปรุงเพื่อลดเวลา",
+    "อะไหล่ตัวไหนควรสั่งซื้อด่วน",
+    "หมวดค่าใช้จ่ายไหนเพิ่มขึ้นผิดปกติ",
   ],
 };
 
@@ -51,12 +60,12 @@ export function AdminAiAssistant() {
     setInput("");
     setLoading(true);
     try {
-      const res = await ask({ data: { token, mode, messages: next } });
+      const res = await ask({ data: { token, mode, messages: next.map(({ role, content }) => ({ role, content })) } });
       if (!res.ok) {
         toast.error(res.error);
         setMessages((m) => [...m, { role: "assistant", content: `❌ ${res.error}` }]);
       } else {
-        setMessages((m) => [...m, { role: "assistant", content: res.reply }]);
+        setMessages((m) => [...m, { role: "assistant", content: res.reply, toolsUsed: res.toolsUsed }]);
         setRemaining(res.remaining);
       }
     } catch (e) {
@@ -79,7 +88,7 @@ export function AdminAiAssistant() {
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-4 z-40 flex h-[min(560px,calc(100vh-7rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+        <div className="fixed bottom-24 right-4 z-40 flex h-[min(620px,calc(100vh-7rem))] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
           <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-primary" />
@@ -131,22 +140,37 @@ export function AdminAiAssistant() {
               </div>
             )}
             {messages.map((m, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words",
-                  m.role === "user"
-                    ? "ml-auto bg-primary text-primary-foreground"
-                    : "mr-auto bg-muted text-foreground",
+              <div key={i} className={cn("flex flex-col gap-1", m.role === "user" ? "items-end" : "items-start")}>
+                <div
+                  className={cn(
+                    "max-w-[90%] rounded-2xl px-3 py-2 text-sm break-words",
+                    m.role === "user"
+                      ? "bg-primary text-primary-foreground whitespace-pre-wrap"
+                      : "bg-muted text-foreground",
+                  )}
+                >
+                  {m.role === "assistant" ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-table:my-2 prose-headings:my-2">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    m.content
+                  )}
+                </div>
+                {m.role === "assistant" && m.toolsUsed && m.toolsUsed.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 px-1 text-[10px] text-muted-foreground">
+                    <Wrench className="h-3 w-3" />
+                    {m.toolsUsed.map((t) => (
+                      <span key={t} className="rounded bg-muted px-1.5 py-0.5">{t}</span>
+                    ))}
+                  </div>
                 )}
-              >
-                {m.content}
               </div>
             ))}
             {loading && (
               <div className="mr-auto flex items-center gap-2 rounded-2xl bg-muted px-3 py-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                กำลังคิด...
+                กำลังดึงข้อมูล...
               </div>
             )}
           </div>
