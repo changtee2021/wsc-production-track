@@ -211,7 +211,6 @@ export function AdminSidebar() {
                     </SidebarMenuItem>
                   );
                   })}
-                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
