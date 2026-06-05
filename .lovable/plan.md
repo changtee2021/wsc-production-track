@@ -1,33 +1,52 @@
 ## ปัญหา
 
-หน้า `/scan` ดึงรายชื่อพนักงานจาก client ตรงๆ ผ่าน `supabase.from("employees").select(...)` แต่ตาราง `employees` มี policy แบบ **RESTRICTIVE สำหรับทุกคำสั่ง (ALL) ด้วยเงื่อนไข `false`** ครอบไว้ ทำให้นอกจากจะบล็อก INSERT/UPDATE/DELETE แล้วยังบล็อก **SELECT** ของผู้ใช้ทั่วไป (anon/authenticated) ไปด้วย — รายชื่อพนักงานเลยไม่ขึ้นเลย
-
-ปัญหาเดียวกันยังซ่อนอยู่กับตารางอื่นที่ตั้งใจให้ client อ่านได้ (เช่น `app_settings`) ที่ใช้ลายเซ็น `FOR ALL USING(false)` แบบเดียวกัน
+Panel **"พนักงานฝ่ายผลิต"** ในหน้า `/manage` แสดง "ยังไม่มีพนักงาน" ทั้งที่ในฐานข้อมูลมี 30 คน เพราะ `EmployeesPanel` ใน `src/routes/_protected.manage.tsx` ดึงข้อมูลผ่าน browser client ตรงๆ (`supabase.from("employees").select("*")`) ซึ่งพึ่งพา RLS — ไม่สอดคล้องกับ panel แผนกอื่น (QC, แพ็ค, ช่างซ่อม, ออฟฟิศ) ที่ใช้ admin server function (`supabaseAdmin`) อ่านผ่าน service_role อย่างปลอดภัย
 
 ## แนวทางแก้
 
-สร้าง migration เปลี่ยน policy ป้องกันการเขียนให้แยกตามคำสั่ง **INSERT / UPDATE / DELETE** เท่านั้น (ไม่ครอบ SELECT) บนตาราง `employees` เพื่อ:
+ทำให้ EmployeesPanel โหลดข้อมูลผ่าน server function เหมือนแผนกอื่น
 
-- คง RESTRICTIVE block สำหรับการเขียนจาก anon/authenticated เหมือนเดิม (defense-in-depth)
-- ปลดล็อก SELECT ให้ permissive policy "Anyone can read employees" ทำงานได้ตามปกติ
+### 1. เพิ่ม `adminListEmployees` ใน `src/lib/admin.functions.ts`
 
-ขั้นตอน SQL:
+วางถัดจาก `adminDeleteEmployee` (รอบๆ บรรทัด 121–145) ใช้รูปแบบเดียวกับ `adminListQcEmployees`:
 
-1. `DROP POLICY "Block anon write employees" ON public.employees;`
-2. สร้างใหม่ 3 ตัว:
-   - `FOR INSERT TO anon, authenticated WITH CHECK (false)` (RESTRICTIVE)
-   - `FOR UPDATE TO anon, authenticated USING (false) WITH CHECK (false)` (RESTRICTIVE)
-   - `FOR DELETE TO anon, authenticated USING (false)` (RESTRICTIVE)
+```ts
+export const adminListEmployees = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("employees")
+      .select("id, name, emp_code, nationality, avatar_url, active")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+```
 
-## ไม่แตะอะไรในโค้ดฝั่ง client
+### 2. แก้ `EmployeesPanel` ใน `src/routes/_protected.manage.tsx`
 
-โค้ดหน้า `/scan` ใช้ pattern เดิม (`supabase.from("employees").select(...).eq("active", true)`) ได้ทันทีหลัง migration ผ่าน
+- เพิ่ม `adminListEmployees` ใน import จาก `@/lib/admin.functions`
+- เพิ่ม `const list = useServerFn(adminListEmployees);`
+- เปลี่ยน `load()` จาก
+  ```ts
+  const { data, error } = await supabase.from("employees").select("*").order("name");
+  ```
+  เป็น
+  ```ts
+  try {
+    const { rows } = await list({ data: { token: requireToken() } });
+    setItems((rows as Employee[]) ?? []);
+  } catch (e) { showError(e); }
+  ```
+- เอา `import { supabase } from "@/integrations/supabase/client"` ออก **เฉพาะกรณี**ที่ไฟล์ไม่ได้ใช้ที่อื่นในไฟล์เดียวกัน (เช็คก่อนลบ)
 
 ## บันทึก system_logs
 
-แนบ `INSERT INTO public.system_logs (...)` ท้าย migration ตามมาตรฐานโปรเจกต์
+แนบ INSERT แถวลง `public.system_logs` (category=`fix`) อธิบายว่าได้เปลี่ยน EmployeesPanel ให้โหลดผ่าน server function
 
-## หมายเหตุ
+## ผลลัพธ์
 
-- ไม่แก้ตารางอื่นในรอบนี้ (เช่น `production_logs`, `expenses`, ฯลฯ) เพราะตั้งใจให้บล็อก SELECT จาก client จริงๆ และอ่านผ่าน server functions/service_role อยู่แล้ว
-- ถ้าหลัง migration ยังพบปัญหาเดียวกันกับตารางอื่นที่ client ต้องอ่าน (เช่น `app_settings`) จะแก้แยกอีก migration ต่อไป
+- Panel "พนักงานฝ่ายผลิต" แสดงรายชื่อพนักงานทั้ง 30 คนได้ทันทีเหมือนเดิม
+- พฤติกรรมสอดคล้องกับ QC / แพ็ค / ช่างซ่อม / ออฟฟิศ ที่ใช้ admin token
+- ไม่ต้องพึ่ง RLS policy ของตาราง `employees` อีก

@@ -13,6 +13,7 @@ import {
   adminUpsertQcEmployee,
   adminDeleteQcEmployee,
   adminListQcEmployees,
+  adminListEmployees,
   adminUpsertPackingEmployee,
   adminDeletePackingEmployee,
   adminListPackingEmployees,
@@ -259,6 +260,7 @@ function CategoriesPanel() {
 function EmployeesPanel() {
   const upsert = useServerFn(adminUpsertEmployee);
   const del = useServerFn(adminDeleteEmployee);
+  const list = useServerFn(adminListEmployees);
   const createUrl = useServerFn(adminCreateUploadUrl);
   const [items, setItems] = useState<Employee[]>([]);
   const [name, setName] = useState("");
@@ -270,16 +272,17 @@ function EmployeesPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    const { data, error } = await supabase
-      .from("employees")
-      .select("*")
-      .order("name");
-    if (error) toast.error(error.message);
-    setItems((data as Employee[]) ?? []);
+    try {
+      const { rows } = await list({ data: { token: requireToken() } });
+      setItems((rows as Employee[]) ?? []);
+    } catch (e) {
+      showError(e);
+    }
   };
   useEffect(() => {
     load();
   }, []);
+
 
   const handleUpload = async (file: File, target: "new" | "edit") => {
     setUploading(true);
