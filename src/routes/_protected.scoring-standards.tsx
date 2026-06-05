@@ -18,7 +18,7 @@ import { requireToken, showError } from "@/lib/admin-helpers";
 import {
   adminListStandards, adminUpsertStandard, adminDeleteStandard,
 } from "@/lib/scoring-admin.functions";
-import { adminListCategories, adminListSteps } from "@/lib/admin.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_protected/scoring-standards")({
   head: () => ({ meta: [{ title: "มาตรฐานคะแนน — WSC ProductionTrack" }] }),
