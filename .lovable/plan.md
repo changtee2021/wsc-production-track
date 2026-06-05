@@ -1,117 +1,33 @@
+## ปัญหา
 
-# แผน 2 ส่วน
+หน้า `/scan` ดึงรายชื่อพนักงานจาก client ตรงๆ ผ่าน `supabase.from("employees").select(...)` แต่ตาราง `employees` มี policy แบบ **RESTRICTIVE สำหรับทุกคำสั่ง (ALL) ด้วยเงื่อนไข `false`** ครอบไว้ ทำให้นอกจากจะบล็อก INSERT/UPDATE/DELETE แล้วยังบล็อก **SELECT** ของผู้ใช้ทั่วไป (anon/authenticated) ไปด้วย — รายชื่อพนักงานเลยไม่ขึ้นเลย
 
-## ส่วน A — ไอเดียฟีเจอร์เพิ่มเติมสำหรับโรงงานผลิต
+ปัญหาเดียวกันยังซ่อนอยู่กับตารางอื่นที่ตั้งใจให้ client อ่านได้ (เช่น `app_settings`) ที่ใช้ลายเซ็น `FOR ALL USING(false)` แบบเดียวกัน
 
-แบ่งเป็น 5 กลุ่ม เรียงตาม ROI / ความเหมาะสมกับฐานข้อมูลที่มีอยู่:
+## แนวทางแก้
 
-### 1. การผลิต & ประสิทธิภาพ (Production)
-- **OEE Dashboard** — คำนวณ Availability × Performance × Quality ต่อเครื่อง/พนักงาน/วัน (ใช้ `production_logs` + `qc_reports` + `maintenance_tickets` ที่มีอยู่)
-- **ใบสั่งผลิต (Work Order)** — ผูกหลาย job_id เป็นใบสั่งเดียว มีลูกค้า/กำหนดส่ง/จำนวน/สถานะ พร้อม progress bar อัตโนมัติจาก step ที่ปิด
-- **Bottleneck Alert** — ตรวจจับ step ที่ใช้เวลาเกิน std_duration_minutes เกิน X% แจ้ง LINE
-- **Shift Planner** — ตารางกะ เช้า/บ่าย/ดึก ผูกพนักงาน → คำนวณ workload และส่ง LINE เตือนก่อนเข้ากะ
-- **Job Timeline / Gantt** — ดูไหลของแต่ละ job ผ่าน step ทั้งหมดในรูป Gantt
+สร้าง migration เปลี่ยน policy ป้องกันการเขียนให้แยกตามคำสั่ง **INSERT / UPDATE / DELETE** เท่านั้น (ไม่ครอบ SELECT) บนตาราง `employees` เพื่อ:
 
-### 2. คุณภาพ & ของเสีย (Quality)
-- **Defect Catalog** — บันทึก defect type (รอย, ขาด, สีเพี้ยน ฯลฯ) + Pareto chart หาสาเหตุหลัก
-- **Rework Tracking** — เมื่อ QC fail สร้าง rework ticket อัตโนมัติ ติดตามจน pass
-- **First Pass Yield (FPY)** — % ที่ผ่านครั้งแรกต่อ step / ต่อพนักงาน
+- คง RESTRICTIVE block สำหรับการเขียนจาก anon/authenticated เหมือนเดิม (defense-in-depth)
+- ปลดล็อก SELECT ให้ permissive policy "Anyone can read employees" ทำงานได้ตามปกติ
 
-### 3. ซ่อมบำรุง & สินทรัพย์ (Maintenance)
-- **Preventive Maintenance (PM) Schedule** — กำหนดรอบ PM ต่อเครื่อง (ทุก X ชม. ใช้งาน หรือทุกเดือน) แจ้งเตือนล่วงหน้า
-- **MTBF / MTTR** — เวลาเฉลี่ยระหว่างเสีย และเวลาซ่อม ต่อเครื่อง
-- **QR Code ติดเครื่อง** — สแกนปุ๊บเปิดประวัติซ่อม + แจ้งซ่อมได้เลย (มีอยู่บางส่วนแล้ว ขยายเพิ่ม)
-- **Low-stock alert ของอะไหล่** — auto-PR เมื่อ spare_parts.stock_qty ≤ min_qty
+ขั้นตอน SQL:
 
-### 4. คน & ความปลอดภัย (People & Safety)
-- **Time Clock / เช็คอินด้วย QR + selfie** — บันทึกเข้า-ออกงานจริง
-- **Training & Skill Matrix** — ใครทำ step ไหนได้บ้าง พร้อมวันหมดอายุใบรับรอง
-- **Safety Incident** — บันทึกอุบัติเหตุ/near miss + รูป + การแก้ไข
-- **Daily Toolbox Talk** — หัวข้อความปลอดภัยประจำวัน + ลงชื่อ ack
+1. `DROP POLICY "Block anon write employees" ON public.employees;`
+2. สร้างใหม่ 3 ตัว:
+   - `FOR INSERT TO anon, authenticated WITH CHECK (false)` (RESTRICTIVE)
+   - `FOR UPDATE TO anon, authenticated USING (false) WITH CHECK (false)` (RESTRICTIVE)
+   - `FOR DELETE TO anon, authenticated USING (false)` (RESTRICTIVE)
 
-### 5. การเงิน & คลังสินค้า (Finance & Inventory)
-- **PO / ใบสั่งซื้อ** — ขั้นตอนก่อนรับสินค้า ผูกกับ `expenses` ที่มี
-- **Budget vs Actual** — งบประมาณรายเดือน เทียบยอด expenses จริง
-- **Inventory เต็มรูป** — วัตถุดิบ + สินค้าระหว่างผลิต (WIP) + สินค้าสำเร็จรูป (FG)
-- **Cost per Job** — คำนวณต้นทุนจริงต่อ job (คน + อะไหล่ + ค่าใช้จ่าย)
+## ไม่แตะอะไรในโค้ดฝั่ง client
 
-> เลือกเฟสได้ตามต้องการ ผมแนะนำเริ่มจาก **OEE + Work Order + PM Schedule + Defect Catalog** ก่อน เพราะใช้ข้อมูลที่มีอยู่และเห็นผลเร็ว
+โค้ดหน้า `/scan` ใช้ pattern เดิม (`supabase.from("employees").select(...).eq("active", true)`) ได้ทันทีหลัง migration ผ่าน
 
----
+## บันทึก system_logs
 
-## ส่วน B — อัปเกรด AI Chatbot ให้ตอบได้ครบทุกโมดูล
+แนบ `INSERT INTO public.system_logs (...)` ท้าย migration ตามมาตรฐานโปรเจกต์
 
-### ปัญหาปัจจุบัน
-`buildContext()` ใน `src/lib/ai-admin.functions.ts` รู้แค่ 30 วันของ:
-- production_logs, qc_reports, employees, steps, categories
+## หมายเหตุ
 
-**ไม่รู้:** packing, maintenance tickets, spare parts, office supplies/requests, office assets, expenses, announcements, asset depreciation
-
-### แนวทาง: Tool-Calling Agent
-เลิกยัด context ทุกอย่างเป็น JSON ก้อนใหญ่ (เปลือง token + ตอบไม่ตรง) → ใช้ **AI SDK + tool calling** ให้ Gemini เลือก query ที่ต้องการเอง
-
-### โครงสร้างใหม่
-
-**1. แทนที่ `aiAdminAsk` ด้วย streaming chat route** `src/routes/api/ai-admin-chat.ts`
-- ใช้ `streamText` จาก `ai` package + Lovable AI Gateway provider
-- model: `google/gemini-3-flash-preview` (เร็ว) หรือ `google/gemini-2.5-flash` (สมดุล)
-- ตรวจ admin token ใน body ก่อน stream
-- เก็บโควต้า 30 ข้อความ/วัน/token (เพิ่มจาก 20)
-
-**2. กำหนด tools (~12 ตัว) ใน `src/lib/ai-admin-tools.server.ts`**
-- `getProductionSummary({days})` — สรุป logs (ของเดิม)
-- `getEmployeeStats({days, limit})` — ranking, avg time
-- `getStepStats({days})` — bottleneck
-- `getQcSummary({days, status?})` — open/resolved + รายการล่าสุด
-- `getPackingSummary({days})` — รายงานแพ็คของ
-- `getMaintenanceTickets({status?, days})` — รายการแจ้งซ่อม + MTTR
-- `getSparePartsLowStock()` — อะไหล่ใกล้หมด
-- `getOfficeStockLow()` — supplies ใกล้หมด
-- `getOfficeRequests({status?, days})` — การเบิกของ
-- `getExpensesSummary({month?, status?})` — สรุปค่าใช้จ่าย + VAT
-- `getAssetDepreciation({month})` — ค่าเสื่อมตามสูตรเส้นตรง (เรียก `depreciation.server.ts`)
-- `searchJob({jobId})` — รวม logs + qc + packing ของ job เดียว
-- `getAnnouncements()` — ประกาศที่ active
-
-ทุก tool ใช้ `supabaseAdmin` + zod input schema + ส่งกลับเฉพาะ field ที่ใช้ตอบ (compact)
-
-**3. System prompt ใหม่**
-```
-คุณคือผู้ช่วยแอดมิน WSC ProductionTrack
-ใช้ tools ที่มีเพื่อดึงข้อมูลก่อนตอบ — ห้ามเดา ห้ามแต่งตัวเลข
-ถ้าผู้ใช้ถามนอกขอบเขตแอป ตอบว่า "ตอบได้เฉพาะเรื่องในระบบ WSC"
-ตอบเป็นภาษาไทย กระชับ ใช้ bullet/ตาราง markdown
-หากเป็นโหมด plan: ให้คำแนะนำเชิงปฏิบัติพร้อมตัวเลขสนับสนุน
-```
-
-**4. Frontend: `AdminAiAssistant.tsx`**
-- เปลี่ยนเป็น `useChat` จาก `@ai-sdk/react` + `DefaultChatTransport`
-- เพิ่ม markdown rendering (`react-markdown` + `remark-gfm`) — ตอนนี้แสดง plain text
-- แสดง tool-call status เล็ก ๆ ใต้ข้อความ ("🔍 กำลังดึงข้อมูลซ่อมบำรุง...")
-- เพิ่ม suggestion ใหม่ครอบคลุมทุกโมดูล:
-  - "อะไหล่ตัวไหนใกล้หมด"
-  - "ค่าใช้จ่ายเดือนนี้รวมเท่าไหร่ VAT เท่าไหร่"
-  - "ใบแจ้งซ่อมที่ยังไม่ปิดมีกี่ใบ"
-  - "job XYZ ตอนนี้ถึงขั้นตอนไหน"
-- ใช้ `stopWhen: stepCountIs(50)` เพื่อให้เรียกหลาย tool ได้
-
-**5. Performance & ความปลอดภัย**
-- ทุก tool query มี `.limit()` ป้องกันดึงเกิน
-- cache ระดับ request: ถ้า tool เดียวเรียกซ้ำใน turn เดียว ใช้ผลเดิม
-- log การเรียก tool ลง console สำหรับ debug
-
-### ไฟล์ที่ต้องสร้าง / แก้
-- สร้าง: `src/routes/api/ai-admin-chat.ts` (streaming route)
-- สร้าง: `src/lib/ai-admin-tools.server.ts` (tool definitions)
-- สร้าง: `src/lib/ai-gateway.server.ts` (provider helper ตาม best practice)
-- แก้: `src/components/AdminAiAssistant.tsx` (เปลี่ยนเป็น useChat + markdown)
-- ลบ/ยุบ: `src/lib/ai-admin.functions.ts` (เก็บไว้เป็น fallback ก่อน หรือลบ)
-- แพ็กเกจที่ต้องเพิ่ม: `ai`, `@ai-sdk/react`, `@ai-sdk/openai-compatible`, `react-markdown`, `remark-gfm`
-- บันทึก `system_logs` อัตโนมัติหลัง deploy
-
----
-
-## คำถามก่อนเริ่ม
-
-1. **ส่วน A:** อยากให้ผม implement ฟีเจอร์ใดบ้างต่อจากแผนนี้ (เลือกได้หลายข้อ) หรือยังแค่อยากเก็บไอเดียไว้?
-2. **ส่วน B:** ทำเลยใช่ไหม? และต้องการ markdown rendering + streaming หรือเก็บ UI ปัจจุบัน (ไม่ stream) แค่ขยาย tools?
+- ไม่แก้ตารางอื่นในรอบนี้ (เช่น `production_logs`, `expenses`, ฯลฯ) เพราะตั้งใจให้บล็อก SELECT จาก client จริงๆ และอ่านผ่าน server functions/service_role อยู่แล้ว
+- ถ้าหลัง migration ยังพบปัญหาเดียวกันกับตารางอื่นที่ client ต้องอ่าน (เช่น `app_settings`) จะแก้แยกอีก migration ต่อไป
