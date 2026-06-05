@@ -121,6 +121,7 @@ function ScanPage() {
   const noteFileRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
   const uploadNote = useServerFn(uploadWorkerNoteImage);
+  const submitLog = useServerFn(submitProductionLog);
 
   const activeKey = job_id && employeeId && stepId ? `wsc:active-start:${job_id}:${stepId}:${employeeId}` : null;
   const [activeStartAt, setActiveStartAt] = useState<number | null>(null);
