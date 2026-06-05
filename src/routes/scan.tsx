@@ -37,6 +37,7 @@ import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 
 import { useServerFn } from "@tanstack/react-start";
 import { uploadWorkerNoteImage } from "@/lib/worker-upload.functions";
+import { submitProductionLog } from "@/lib/scan.functions";
 
 const ALLOWED_NOTE_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_NOTE_BYTES = 5 * 1024 * 1024;
