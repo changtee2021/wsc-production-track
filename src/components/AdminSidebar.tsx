@@ -16,7 +16,6 @@ import {
   Boxes,
   SlidersHorizontal,
   Receipt,
-  Trophy,
 } from "lucide-react";
 import {
   Sidebar,
@@ -81,13 +80,6 @@ const NAV_GROUPS: Array<{
     items: [
       { title: "เบิกค่าใช้จ่าย", url: "/expenses-dashboard", icon: Receipt },
       { title: "รายงานรายเดือน", url: "/expenses-reports", icon: BarChart3 },
-    ],
-  },
-  {
-    label: "คะแนนพนักงาน",
-    items: [
-      { title: "แดชบอร์ดคะแนน", url: "/scoring-dashboard", icon: Trophy },
-      { title: "มาตรฐานคะแนน", url: "/scoring-standards", icon: SlidersHorizontal },
     ],
   },
   {

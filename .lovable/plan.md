@@ -1,124 +1,117 @@
-## Gamified Production Scoring & Leaderboard
 
-ระบบให้คะแนนพนักงานอัตโนมัติจากเวลาที่ใช้ทำแต่ละขั้นตอน เทียบกับมาตรฐานที่แอดมินตั้งไว้ — แยกตามหมวด/ขั้นตอน พร้อม Leaderboard และ Badge
+# แผน 2 ส่วน
 
----
+## ส่วน A — ไอเดียฟีเจอร์เพิ่มเติมสำหรับโรงงานผลิต
 
-### 1) Database (migration)
+แบ่งเป็น 5 กลุ่ม เรียงตาม ROI / ความเหมาะสมกับฐานข้อมูลที่มีอยู่:
 
-ตารางใหม่:
+### 1. การผลิต & ประสิทธิภาพ (Production)
+- **OEE Dashboard** — คำนวณ Availability × Performance × Quality ต่อเครื่อง/พนักงาน/วัน (ใช้ `production_logs` + `qc_reports` + `maintenance_tickets` ที่มีอยู่)
+- **ใบสั่งผลิต (Work Order)** — ผูกหลาย job_id เป็นใบสั่งเดียว มีลูกค้า/กำหนดส่ง/จำนวน/สถานะ พร้อม progress bar อัตโนมัติจาก step ที่ปิด
+- **Bottleneck Alert** — ตรวจจับ step ที่ใช้เวลาเกิน std_duration_minutes เกิน X% แจ้ง LINE
+- **Shift Planner** — ตารางกะ เช้า/บ่าย/ดึก ผูกพนักงาน → คำนวณ workload และส่ง LINE เตือนก่อนเข้ากะ
+- **Job Timeline / Gantt** — ดูไหลของแต่ละ job ผ่าน step ทั้งหมดในรูป Gantt
 
-- **`production_standards`** — เกณฑ์เวลามาตรฐานต่อ (category, step)
-  - `category_id`, `step_id` (UNIQUE คู่กัน, category_id nullable = ใช้ได้ทุกหมวด)
-  - `target_seconds` (int) — เวลามาตรฐานเป็นวินาที
-  - `fast_seconds` (int, nullable) — เกณฑ์โบนัส "โคตรเร็ว"
-  - `on_time_points`, `late_points`, `bonus_points` (int)
-  - `active` (bool)
+### 2. คุณภาพ & ของเสีย (Quality)
+- **Defect Catalog** — บันทึก defect type (รอย, ขาด, สีเพี้ยน ฯลฯ) + Pareto chart หาสาเหตุหลัก
+- **Rework Tracking** — เมื่อ QC fail สร้าง rework ticket อัตโนมัติ ติดตามจน pass
+- **First Pass Yield (FPY)** — % ที่ผ่านครั้งแรกต่อ step / ต่อพนักงาน
 
-- **`employee_scores`** — บันทึกคะแนนรายครั้ง (1 แถว = 1 รอบงาน start→finish)
-  - `employee_id`, `job_id`, `step_id`, `category_id`
-  - `start_log_id`, `finish_log_id` (FK → production_logs)
-  - `actual_seconds` (int), `target_seconds` (int)
-  - `points` (int), `tier` (enum: `bonus` | `on_time` | `late`)
-  - `scored_at` (timestamptz)
-  - UNIQUE (finish_log_id) เพื่อกัน insert ซ้ำ
+### 3. ซ่อมบำรุง & สินทรัพย์ (Maintenance)
+- **Preventive Maintenance (PM) Schedule** — กำหนดรอบ PM ต่อเครื่อง (ทุก X ชม. ใช้งาน หรือทุกเดือน) แจ้งเตือนล่วงหน้า
+- **MTBF / MTTR** — เวลาเฉลี่ยระหว่างเสีย และเวลาซ่อม ต่อเครื่อง
+- **QR Code ติดเครื่อง** — สแกนปุ๊บเปิดประวัติซ่อม + แจ้งซ่อมได้เลย (มีอยู่บางส่วนแล้ว ขยายเพิ่ม)
+- **Low-stock alert ของอะไหล่** — auto-PR เมื่อ spare_parts.stock_qty ≤ min_qty
 
-- **`employee_badges`** — เหรียญที่ได้รับ
-  - `employee_id`, `badge_code` (เช่น `flash`, `precision`, `streak_7`)
-  - `awarded_at`, `meta jsonb`
+### 4. คน & ความปลอดภัย (People & Safety)
+- **Time Clock / เช็คอินด้วย QR + selfie** — บันทึกเข้า-ออกงานจริง
+- **Training & Skill Matrix** — ใครทำ step ไหนได้บ้าง พร้อมวันหมดอายุใบรับรอง
+- **Safety Incident** — บันทึกอุบัติเหตุ/near miss + รูป + การแก้ไข
+- **Daily Toolbox Talk** — หัวข้อความปลอดภัยประจำวัน + ลงชื่อ ack
 
-Trigger / RPC:
-- ฟังก์ชัน `fn_score_on_finish()` — รัน AFTER INSERT บน `production_logs` เมื่อ `action='finish'`:
-  หา start log ล่าสุดของ (job_id, step_id, employee_id) ที่ยังไม่ถูก score → คำนวณ `actual_seconds` → match `production_standards` → insert `employee_scores`
-- ฟังก์ชัน `fn_award_badges()` — ตรวจเงื่อนไข badge หลัง insert คะแนน
+### 5. การเงิน & คลังสินค้า (Finance & Inventory)
+- **PO / ใบสั่งซื้อ** — ขั้นตอนก่อนรับสินค้า ผูกกับ `expenses` ที่มี
+- **Budget vs Actual** — งบประมาณรายเดือน เทียบยอด expenses จริง
+- **Inventory เต็มรูป** — วัตถุดิบ + สินค้าระหว่างผลิต (WIP) + สินค้าสำเร็จรูป (FG)
+- **Cost per Job** — คำนวณต้นทุนจริงต่อ job (คน + อะไหล่ + ค่าใช้จ่าย)
 
-GRANT + RLS:
-- `production_standards`: anon SELECT (แอปคนงานต้องอ่านได้), service_role ALL
-- `employee_scores`, `employee_badges`: anon SELECT (Leaderboard เปิดให้คนงานดูได้), service_role ALL
-
----
-
-### 2) Server functions
-
-**`src/lib/scoring-admin.functions.ts`** (ต้องมี admin token)
-- `adminListStandards({ category_id?, step_id? })`
-- `adminUpsertStandard(...)`
-- `adminDeleteStandard(id)`
-- `adminScoringOverview({ range })` — สรุปจำนวน on_time/late, ขั้นตอนที่ late บ่อย (bottleneck)
-
-**`src/lib/scoring.functions.ts`** (public read)
-- `getLeaderboard({ range: 'today'|'week'|'month' })` → top 10 พร้อม avatar, points, on_time%, badge count
-- `getEmployeeScoreSummary({ employee_id, range })` → คะแนนวันนี้/สัปดาห์, สถิติส่วนตัว, badge ล่าสุด
-- `getMyRecentScores({ employee_id, limit })`
+> เลือกเฟสได้ตามต้องการ ผมแนะนำเริ่มจาก **OEE + Work Order + PM Schedule + Defect Catalog** ก่อน เพราะใช้ข้อมูลที่มีอยู่และเห็นผลเร็ว
 
 ---
 
-### 3) Admin UI
+## ส่วน B — อัปเกรด AI Chatbot ให้ตอบได้ครบทุกโมดูล
 
-**Route ใหม่: `/_protected.scoring-standards.tsx`**
-- ตารางมาตรฐาน filter ตาม Category + Step
-- ปุ่ม "เพิ่มมาตรฐาน" → dialog เลือก category+step, target (นาที:วินาที), fast time, คะแนน 3 ช่อง
-- Bulk apply: เลือกหลาย step แล้วใส่เวลาเดียวกัน
+### ปัญหาปัจจุบัน
+`buildContext()` ใน `src/lib/ai-admin.functions.ts` รู้แค่ 30 วันของ:
+- production_logs, qc_reports, employees, steps, categories
 
-**Route ใหม่: `/_protected.scoring-dashboard.tsx`**
-- Card: คะแนนรวมทีมวันนี้ / สัปดาห์
-- Top 5 พนักงานเดือนนี้ + avatar
-- กราฟ "ขั้นตอนเจ้าปัญหา" (top 5 step ที่ late %)
-- ตารางคะแนนรายคน (ส่งออก CSV ได้)
+**ไม่รู้:** packing, maintenance tickets, spare parts, office supplies/requests, office assets, expenses, announcements, asset depreciation
 
-เพิ่ม 2 รายการในกลุ่ม "ระบบ" ของ `AdminSidebar`
+### แนวทาง: Tool-Calling Agent
+เลิกยัด context ทุกอย่างเป็น JSON ก้อนใหญ่ (เปลือง token + ตอบไม่ตรง) → ใช้ **AI SDK + tool calling** ให้ Gemini เลือก query ที่ต้องการเอง
+
+### โครงสร้างใหม่
+
+**1. แทนที่ `aiAdminAsk` ด้วย streaming chat route** `src/routes/api/ai-admin-chat.ts`
+- ใช้ `streamText` จาก `ai` package + Lovable AI Gateway provider
+- model: `google/gemini-3-flash-preview` (เร็ว) หรือ `google/gemini-2.5-flash` (สมดุล)
+- ตรวจ admin token ใน body ก่อน stream
+- เก็บโควต้า 30 ข้อความ/วัน/token (เพิ่มจาก 20)
+
+**2. กำหนด tools (~12 ตัว) ใน `src/lib/ai-admin-tools.server.ts`**
+- `getProductionSummary({days})` — สรุป logs (ของเดิม)
+- `getEmployeeStats({days, limit})` — ranking, avg time
+- `getStepStats({days})` — bottleneck
+- `getQcSummary({days, status?})` — open/resolved + รายการล่าสุด
+- `getPackingSummary({days})` — รายงานแพ็คของ
+- `getMaintenanceTickets({status?, days})` — รายการแจ้งซ่อม + MTTR
+- `getSparePartsLowStock()` — อะไหล่ใกล้หมด
+- `getOfficeStockLow()` — supplies ใกล้หมด
+- `getOfficeRequests({status?, days})` — การเบิกของ
+- `getExpensesSummary({month?, status?})` — สรุปค่าใช้จ่าย + VAT
+- `getAssetDepreciation({month})` — ค่าเสื่อมตามสูตรเส้นตรง (เรียก `depreciation.server.ts`)
+- `searchJob({jobId})` — รวม logs + qc + packing ของ job เดียว
+- `getAnnouncements()` — ประกาศที่ active
+
+ทุก tool ใช้ `supabaseAdmin` + zod input schema + ส่งกลับเฉพาะ field ที่ใช้ตอบ (compact)
+
+**3. System prompt ใหม่**
+```
+คุณคือผู้ช่วยแอดมิน WSC ProductionTrack
+ใช้ tools ที่มีเพื่อดึงข้อมูลก่อนตอบ — ห้ามเดา ห้ามแต่งตัวเลข
+ถ้าผู้ใช้ถามนอกขอบเขตแอป ตอบว่า "ตอบได้เฉพาะเรื่องในระบบ WSC"
+ตอบเป็นภาษาไทย กระชับ ใช้ bullet/ตาราง markdown
+หากเป็นโหมด plan: ให้คำแนะนำเชิงปฏิบัติพร้อมตัวเลขสนับสนุน
+```
+
+**4. Frontend: `AdminAiAssistant.tsx`**
+- เปลี่ยนเป็น `useChat` จาก `@ai-sdk/react` + `DefaultChatTransport`
+- เพิ่ม markdown rendering (`react-markdown` + `remark-gfm`) — ตอนนี้แสดง plain text
+- แสดง tool-call status เล็ก ๆ ใต้ข้อความ ("🔍 กำลังดึงข้อมูลซ่อมบำรุง...")
+- เพิ่ม suggestion ใหม่ครอบคลุมทุกโมดูล:
+  - "อะไหล่ตัวไหนใกล้หมด"
+  - "ค่าใช้จ่ายเดือนนี้รวมเท่าไหร่ VAT เท่าไหร่"
+  - "ใบแจ้งซ่อมที่ยังไม่ปิดมีกี่ใบ"
+  - "job XYZ ตอนนี้ถึงขั้นตอนไหน"
+- ใช้ `stopWhen: stepCountIs(50)` เพื่อให้เรียกหลาย tool ได้
+
+**5. Performance & ความปลอดภัย**
+- ทุก tool query มี `.limit()` ป้องกันดึงเกิน
+- cache ระดับ request: ถ้า tool เดียวเรียกซ้ำใน turn เดียว ใช้ผลเดิม
+- log การเรียก tool ลง console สำหรับ debug
+
+### ไฟล์ที่ต้องสร้าง / แก้
+- สร้าง: `src/routes/api/ai-admin-chat.ts` (streaming route)
+- สร้าง: `src/lib/ai-admin-tools.server.ts` (tool definitions)
+- สร้าง: `src/lib/ai-gateway.server.ts` (provider helper ตาม best practice)
+- แก้: `src/components/AdminAiAssistant.tsx` (เปลี่ยนเป็น useChat + markdown)
+- ลบ/ยุบ: `src/lib/ai-admin.functions.ts` (เก็บไว้เป็น fallback ก่อน หรือลบ)
+- แพ็กเกจที่ต้องเพิ่ม: `ai`, `@ai-sdk/react`, `@ai-sdk/openai-compatible`, `react-markdown`, `remark-gfm`
+- บันทึก `system_logs` อัตโนมัติหลัง deploy
 
 ---
 
-### 4) Worker-facing UI
+## คำถามก่อนเริ่ม
 
-**Route ใหม่: `/leaderboard`** (public, ไม่ต้องล็อกอิน — เปิดบนจอในโรงงาน)
-- Hero: Top 3 podium พร้อมรูป + คะแนน
-- ตาราง 4–10
-- Toggle: วันนี้ / สัปดาห์ / เดือน
-- Auto-refresh 30 วินาที
-
-**ใน `/scan` (หน้าคนงานเดิม)** เพิ่ม widget เล็กๆ หลังกด finish:
-- Toast แสดง "+15 คะแนน! ทันเวลา ⚡" หรือ "+25 คะแนน! โคตรเร็ว 🔥"
-- ลิงก์ไป `/my-score?emp=<code>` แสดง progress bar เทียบกับเมื่อวาน + badge ล่าสุด
-
----
-
-### 5) AI Chatbot integration
-
-เพิ่ม tools ใน `src/lib/ai-admin-tools.server.ts`:
-- `getLeaderboard(range)`
-- `getEmployeeScoreDetail(employeeName, range)`
-- `getBottleneckSteps(range)`
-- `getStandardsCoverage()` — เช็คว่า step ไหนยังไม่ตั้งมาตรฐาน
-
-อัพเดต system prompt + suggestion chips ใหม่ เช่น "ใครคะแนนสูงสุดสัปดาห์นี้", "ขั้นตอนไหน late บ่อยสุด"
-
----
-
-### 6) Badges (เริ่มแบบ MVP)
-
-| Code | เงื่อนไข | ไอคอน |
-|---|---|---|
-| `flash` | ได้ tier=bonus 5 ครั้งติดใน 1 วัน | ⚡ |
-| `precision` | finish ผ่านครบทุก step ของ 1 job โดยไม่มี late | 🎯 |
-| `streak_7` | ทำงาน on_time+ ทุกวัน 7 วันติด | 🔥 |
-| `top_month` | อันดับ 1 ของเดือนที่แล้ว | 👑 |
-
-ตรวจใน trigger หลัง insert score
-
----
-
-### หมายเหตุเทคนิค
-
-- เวลาเริ่ม/จบดึงจาก `production_logs` (มี action=start/finish อยู่แล้ว) — ไม่ต้องแก้หน้าคนงาน
-- การ backfill: หลัง deploy รัน job ครั้งเดียวเพื่อ score logs ย้อนหลัง 30 วัน (optional)
-- ใส่ `system_logs` ทุก migration ตามกฎโปรเจกต์
-
----
-
-### คำถามก่อนเริ่มสร้าง
-
-1. **ขอบเขตคะแนน** — นับเฉพาะ production (สาย start/finish) หรือรวม QC + Packing ด้วย?
-2. **Leaderboard** — เปิด public ที่ `/leaderboard` ให้คนงานเปิดดูเอง หรือซ่อนไว้หลัง admin login?
-3. **เริ่มทำส่วนไหนก่อน** — (a) Standards + Auto-scoring + Admin dashboard เท่านั้น (MVP) หรือ (b) ลุยครบ Badges + Worker leaderboard + AI tools ทีเดียว?
+1. **ส่วน A:** อยากให้ผม implement ฟีเจอร์ใดบ้างต่อจากแผนนี้ (เลือกได้หลายข้อ) หรือยังแค่อยากเก็บไอเดียไว้?
+2. **ส่วน B:** ทำเลยใช่ไหม? และต้องการ markdown rendering + streaming หรือเก็บ UI ปัจจุบัน (ไม่ stream) แค่ขยาย tools?
