@@ -16,6 +16,7 @@ import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QcRouteImport } from './routes/qc'
 import { Route as PackingRouteImport } from './routes/packing'
 import { Route as MaintenanceRouteImport } from './routes/maintenance'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as ExpenseScanRouteImport } from './routes/expense-scan'
 import { Route as ExpenseMineRouteImport } from './routes/expense-mine'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -26,6 +27,7 @@ import { Route as ProtectedSuppliesDashboardRouteImport } from './routes/_protec
 import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
 import { Route as ProtectedScoringStandardsRouteImport } from './routes/_protected.scoring-standards'
+import { Route as ProtectedScoringDashboardRouteImport } from './routes/_protected.scoring-dashboard'
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
@@ -75,6 +77,11 @@ const PackingRoute = PackingRouteImport.update({
 const MaintenanceRoute = MaintenanceRouteImport.update({
   id: '/maintenance',
   path: '/maintenance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpenseScanRoute = ExpenseScanRouteImport.update({
@@ -127,6 +134,12 @@ const ProtectedScoringStandardsRoute =
   ProtectedScoringStandardsRouteImport.update({
     id: '/scoring-standards',
     path: '/scoring-standards',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedScoringDashboardRoute =
+  ProtectedScoringDashboardRouteImport.update({
+    id: '/scoring-dashboard',
+    path: '/scoring-dashboard',
     getParentRoute: () => ProtectedRoute,
   } as any)
 const ProtectedQcSummaryRoute = ProtectedQcSummaryRouteImport.update({
@@ -215,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/expense-mine': typeof ExpenseMineRoute
   '/expense-scan': typeof ExpenseScanRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
@@ -236,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/scoring-dashboard': typeof ProtectedScoringDashboardRoute
   '/scoring-standards': typeof ProtectedScoringStandardsRoute
   '/storage': typeof ProtectedStorageRoute
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
@@ -248,6 +263,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/expense-mine': typeof ExpenseMineRoute
   '/expense-scan': typeof ExpenseScanRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
@@ -269,6 +285,7 @@ export interface FileRoutesByTo {
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/scoring-dashboard': typeof ProtectedScoringDashboardRoute
   '/scoring-standards': typeof ProtectedScoringStandardsRoute
   '/storage': typeof ProtectedStorageRoute
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
@@ -283,6 +300,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/expense-mine': typeof ExpenseMineRoute
   '/expense-scan': typeof ExpenseScanRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
@@ -304,6 +322,7 @@ export interface FileRoutesById {
   '/_protected/packing-summary': typeof ProtectedPackingSummaryRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
+  '/_protected/scoring-dashboard': typeof ProtectedScoringDashboardRoute
   '/_protected/scoring-standards': typeof ProtectedScoringStandardsRoute
   '/_protected/storage': typeof ProtectedStorageRoute
   '/_protected/supplies-admin': typeof ProtectedSuppliesAdminRoute
@@ -318,6 +337,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/expense-mine'
     | '/expense-scan'
+    | '/leaderboard'
     | '/maintenance'
     | '/packing'
     | '/qc'
@@ -339,6 +359,7 @@ export interface FileRouteTypes {
     | '/packing-summary'
     | '/qc-reports'
     | '/qc-summary'
+    | '/scoring-dashboard'
     | '/scoring-standards'
     | '/storage'
     | '/supplies-admin'
@@ -351,6 +372,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/expense-mine'
     | '/expense-scan'
+    | '/leaderboard'
     | '/maintenance'
     | '/packing'
     | '/qc'
@@ -372,6 +394,7 @@ export interface FileRouteTypes {
     | '/packing-summary'
     | '/qc-reports'
     | '/qc-summary'
+    | '/scoring-dashboard'
     | '/scoring-standards'
     | '/storage'
     | '/supplies-admin'
@@ -385,6 +408,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/expense-mine'
     | '/expense-scan'
+    | '/leaderboard'
     | '/maintenance'
     | '/packing'
     | '/qc'
@@ -406,6 +430,7 @@ export interface FileRouteTypes {
     | '/_protected/packing-summary'
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
+    | '/_protected/scoring-dashboard'
     | '/_protected/scoring-standards'
     | '/_protected/storage'
     | '/_protected/supplies-admin'
@@ -420,6 +445,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ExpenseMineRoute: typeof ExpenseMineRoute
   ExpenseScanRoute: typeof ExpenseScanRoute
+  LeaderboardRoute: typeof LeaderboardRoute
   MaintenanceRoute: typeof MaintenanceRoute
   PackingRoute: typeof PackingRoute
   QcRoute: typeof QcRoute
@@ -479,6 +505,13 @@ declare module '@tanstack/react-router' {
       path: '/maintenance'
       fullPath: '/maintenance'
       preLoaderRoute: typeof MaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/expense-scan': {
@@ -549,6 +582,13 @@ declare module '@tanstack/react-router' {
       path: '/scoring-standards'
       fullPath: '/scoring-standards'
       preLoaderRoute: typeof ProtectedScoringStandardsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/scoring-dashboard': {
+      id: '/_protected/scoring-dashboard'
+      path: '/scoring-dashboard'
+      fullPath: '/scoring-dashboard'
+      preLoaderRoute: typeof ProtectedScoringDashboardRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/qc-summary': {
@@ -674,6 +714,7 @@ interface ProtectedRouteChildren {
   ProtectedPackingSummaryRoute: typeof ProtectedPackingSummaryRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
+  ProtectedScoringDashboardRoute: typeof ProtectedScoringDashboardRoute
   ProtectedScoringStandardsRoute: typeof ProtectedScoringStandardsRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
   ProtectedSuppliesAdminRoute: typeof ProtectedSuppliesAdminRoute
@@ -696,6 +737,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedPackingSummaryRoute: ProtectedPackingSummaryRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
+  ProtectedScoringDashboardRoute: ProtectedScoringDashboardRoute,
   ProtectedScoringStandardsRoute: ProtectedScoringStandardsRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,
   ProtectedSuppliesAdminRoute: ProtectedSuppliesAdminRoute,
@@ -713,6 +755,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ExpenseMineRoute: ExpenseMineRoute,
   ExpenseScanRoute: ExpenseScanRoute,
+  LeaderboardRoute: LeaderboardRoute,
   MaintenanceRoute: MaintenanceRoute,
   PackingRoute: PackingRoute,
   QcRoute: QcRoute,
