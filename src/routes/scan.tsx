@@ -176,20 +176,26 @@ function ScanPage() {
       return;
     }
     setSubmitting(action);
-    const { error } = await supabase.from("production_logs").insert({
-      job_id,
-      employee_id: employeeId,
-      step_id: stepId,
-      category_id: categoryId,
-      action,
-      note: action === "finish" && hasIssue ? note.trim() : null,
-      note_image_url: action === "finish" && hasIssue ? (noteImage?.path ?? null) : null,
-    });
-    setSubmitting(null);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await submitLog({
+        data: {
+          job_id,
+          employee_id: employeeId,
+          step_id: stepId,
+          category_id: categoryId,
+          action,
+          note: action === "finish" && hasIssue ? note.trim() : null,
+          note_image_url:
+            action === "finish" && hasIssue ? noteImage?.path ?? null : null,
+        },
+      });
+    } catch (e) {
+      setSubmitting(null);
+      toast.error(e instanceof Error ? e.message : String(e));
       return;
     }
+    setSubmitting(null);
+
     const at = new Date().toLocaleString("th-TH");
     setLastSubmit({ action, at });
     if (action === "start" && activeKey) {
