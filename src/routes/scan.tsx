@@ -37,6 +37,7 @@ import { flagFor, initialsOf, useI18n } from "@/lib/i18n";
 
 import { useServerFn } from "@tanstack/react-start";
 import { uploadWorkerNoteImage } from "@/lib/worker-upload.functions";
+import { submitProductionLog } from "@/lib/scan.functions";
 
 const ALLOWED_NOTE_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_NOTE_BYTES = 5 * 1024 * 1024;
@@ -120,6 +121,7 @@ function ScanPage() {
   const noteFileRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
   const uploadNote = useServerFn(uploadWorkerNoteImage);
+  const submitLog = useServerFn(submitProductionLog);
 
   const activeKey = job_id && employeeId && stepId ? `wsc:active-start:${job_id}:${stepId}:${employeeId}` : null;
   const [activeStartAt, setActiveStartAt] = useState<number | null>(null);
@@ -174,20 +176,26 @@ function ScanPage() {
       return;
     }
     setSubmitting(action);
-    const { error } = await supabase.from("production_logs").insert({
-      job_id,
-      employee_id: employeeId,
-      step_id: stepId,
-      category_id: categoryId,
-      action,
-      note: action === "finish" && hasIssue ? note.trim() : null,
-      note_image_url: action === "finish" && hasIssue ? (noteImage?.path ?? null) : null,
-    });
-    setSubmitting(null);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await submitLog({
+        data: {
+          job_id,
+          employee_id: employeeId,
+          step_id: stepId,
+          category_id: categoryId,
+          action,
+          note: action === "finish" && hasIssue ? note.trim() : null,
+          note_image_url:
+            action === "finish" && hasIssue ? noteImage?.path ?? null : null,
+        },
+      });
+    } catch (e) {
+      setSubmitting(null);
+      toast.error(e instanceof Error ? e.message : String(e));
       return;
     }
+    setSubmitting(null);
+
     const at = new Date().toLocaleString("th-TH");
     setLastSubmit({ action, at });
     if (action === "start" && activeKey) {
