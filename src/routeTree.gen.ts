@@ -25,6 +25,7 @@ import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protecte
 import { Route as ProtectedSuppliesDashboardRouteImport } from './routes/_protected.supplies-dashboard'
 import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
+import { Route as ProtectedScoringStandardsRouteImport } from './routes/_protected.scoring-standards'
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
@@ -122,6 +123,12 @@ const ProtectedStorageRoute = ProtectedStorageRouteImport.update({
   path: '/storage',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedScoringStandardsRoute =
+  ProtectedScoringStandardsRouteImport.update({
+    id: '/scoring-standards',
+    path: '/scoring-standards',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedQcSummaryRoute = ProtectedQcSummaryRouteImport.update({
   id: '/qc-summary',
   path: '/qc-summary',
@@ -229,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/scoring-standards': typeof ProtectedScoringStandardsRoute
   '/storage': typeof ProtectedStorageRoute
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
@@ -261,6 +269,7 @@ export interface FileRoutesByTo {
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/scoring-standards': typeof ProtectedScoringStandardsRoute
   '/storage': typeof ProtectedStorageRoute
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
@@ -295,6 +304,7 @@ export interface FileRoutesById {
   '/_protected/packing-summary': typeof ProtectedPackingSummaryRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
+  '/_protected/scoring-standards': typeof ProtectedScoringStandardsRoute
   '/_protected/storage': typeof ProtectedStorageRoute
   '/_protected/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/_protected/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
@@ -329,6 +339,7 @@ export interface FileRouteTypes {
     | '/packing-summary'
     | '/qc-reports'
     | '/qc-summary'
+    | '/scoring-standards'
     | '/storage'
     | '/supplies-admin'
     | '/supplies-dashboard'
@@ -361,6 +372,7 @@ export interface FileRouteTypes {
     | '/packing-summary'
     | '/qc-reports'
     | '/qc-summary'
+    | '/scoring-standards'
     | '/storage'
     | '/supplies-admin'
     | '/supplies-dashboard'
@@ -394,6 +406,7 @@ export interface FileRouteTypes {
     | '/_protected/packing-summary'
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
+    | '/_protected/scoring-standards'
     | '/_protected/storage'
     | '/_protected/supplies-admin'
     | '/_protected/supplies-dashboard'
@@ -531,6 +544,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedStorageRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/scoring-standards': {
+      id: '/_protected/scoring-standards'
+      path: '/scoring-standards'
+      fullPath: '/scoring-standards'
+      preLoaderRoute: typeof ProtectedScoringStandardsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/qc-summary': {
       id: '/_protected/qc-summary'
       path: '/qc-summary'
@@ -654,6 +674,7 @@ interface ProtectedRouteChildren {
   ProtectedPackingSummaryRoute: typeof ProtectedPackingSummaryRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
+  ProtectedScoringStandardsRoute: typeof ProtectedScoringStandardsRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
   ProtectedSuppliesAdminRoute: typeof ProtectedSuppliesAdminRoute
   ProtectedSuppliesDashboardRoute: typeof ProtectedSuppliesDashboardRoute
@@ -675,6 +696,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedPackingSummaryRoute: ProtectedPackingSummaryRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
+  ProtectedScoringStandardsRoute: ProtectedScoringStandardsRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,
   ProtectedSuppliesAdminRoute: ProtectedSuppliesAdminRoute,
   ProtectedSuppliesDashboardRoute: ProtectedSuppliesDashboardRoute,
