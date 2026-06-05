@@ -48,8 +48,6 @@ function Page() {
   const list = useServerFn(adminListStandards);
   const upsert = useServerFn(adminUpsertStandard);
   const del = useServerFn(adminDeleteStandard);
-  const listCats = useServerFn(adminListCategories);
-  const listSteps = useServerFn(adminListSteps);
 
   const [rows, setRows] = useState<Std[]>([]);
   const [cats, setCats] = useState<Array<{ id: string; name: string }>>([]);
@@ -64,15 +62,15 @@ function Page() {
       const token = requireToken();
       const [r, c, s] = await Promise.all([
         list({ data: { token } }),
-        listCats({ data: { token } }),
-        listSteps({ data: { token } }),
+        supabase.from("categories").select("id, name").eq("active", true).order("name"),
+        supabase.from("steps").select("id, step_name").eq("active", true).order("step_name"),
       ]);
       setRows(r.rows as Std[]);
-      setCats(c.rows);
-      setSteps(s.rows);
+      setCats(c.data ?? []);
+      setSteps(s.data ?? []);
     } catch (e) { showError(e); }
     finally { setLoading(false); }
-  }, [list, listCats, listSteps]);
+  }, [list]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
