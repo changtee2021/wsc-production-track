@@ -33,6 +33,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/supplies-reports": "รายงานค่าเสื่อมสินทรัพย์",
   "/expenses-dashboard": "เบิกค่าใช้จ่าย (AI Scan)",
   "/expenses-reports": "รายงานค่าใช้จ่ายรายเดือน",
+  "/scoring-dashboard": "แดชบอร์ดคะแนนพนักงาน",
+  "/scoring-standards": "มาตรฐานคะแนน",
 };
 
 function AdminLayout() {

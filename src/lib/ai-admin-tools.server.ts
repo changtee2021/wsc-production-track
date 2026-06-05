@@ -379,4 +379,73 @@ export const adminTools = {
       return { items: data ?? [] };
     },
   }),
+
+  getScoringLeaderboard: tool({
+    description:
+      "อันดับคะแนนพนักงาน (gamified scoring) ตามช่วงเวลา today|week|month — คืนคะแนนรวม, รอบงาน, %ทันเวลา",
+    inputSchema: z.object({ range: z.enum(["today", "week", "month"]).default("week"), limit: z.number().int().min(1).max(20).default(10) }),
+    execute: async ({ range, limit }) => {
+      const days = range === "today" ? 1 : range === "week" ? 7 : 30;
+      const since = range === "today"
+        ? new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
+        : sinceISO(days);
+      const { data: scores } = await supabaseAdmin.from("employee_scores")
+        .select("employee_id, points, tier").gte("scored_at", since);
+      const agg = new Map<string, { p: number; c: number; on: number; late: number; bonus: number }>();
+      for (const s of scores ?? []) {
+        const cur = agg.get(s.employee_id) ?? { p: 0, c: 0, on: 0, late: 0, bonus: 0 };
+        cur.p += s.points; cur.c += 1;
+        if (s.tier === "on_time") cur.on += 1; else if (s.tier === "late") cur.late += 1; else cur.bonus += 1;
+        agg.set(s.employee_id, cur);
+      }
+      const ids = Array.from(agg.keys());
+      if (ids.length === 0) return { range, rows: [] };
+      const { data: emps } = await supabaseAdmin.from("employees").select("id, name").in("id", ids);
+      const rows = (emps ?? []).map((e) => {
+        const a = agg.get(e.id)!;
+        return { name: e.name, points: a.p, jobs: a.c, bonus: a.bonus, on_time: a.on, late: a.late,
+          on_time_pct: a.c ? Math.round(((a.on + a.bonus) / a.c) * 100) : 0 };
+      }).sort((a, b) => b.points - a.points).slice(0, limit);
+      return { range, rows };
+    },
+  }),
+
+  getBottleneckSteps: tool({
+    description: "ขั้นตอนที่พนักงานทำเลทบ่อยที่สุด (% late) — ใช้สำหรับวิเคราะห์ปรับปรุงกระบวนการ",
+    inputSchema: z.object({ range: z.enum(["today", "week", "month"]).default("month") }),
+    execute: async ({ range }) => {
+      const days = range === "today" ? 1 : range === "week" ? 7 : 30;
+      const since = sinceISO(days);
+      const { data: scores } = await supabaseAdmin.from("employee_scores")
+        .select("step_id, tier").gte("scored_at", since);
+      const by = new Map<string, { total: number; late: number }>();
+      for (const s of scores ?? []) {
+        const cur = by.get(s.step_id) ?? { total: 0, late: 0 };
+        cur.total += 1; if (s.tier === "late") cur.late += 1;
+        by.set(s.step_id, cur);
+      }
+      const ids = Array.from(by.keys());
+      if (ids.length === 0) return { range, rows: [] };
+      const { data: steps } = await supabaseAdmin.from("steps").select("id, step_name").in("id", ids);
+      const rows = (steps ?? []).map((s) => {
+        const a = by.get(s.id)!;
+        return { step: s.step_name, total: a.total, late: a.late, late_pct: Math.round((a.late / a.total) * 100) };
+      }).filter((r) => r.total >= 3).sort((a, b) => b.late_pct - a.late_pct).slice(0, 10);
+      return { range, rows };
+    },
+  }),
+
+  getStandardsCoverage: tool({
+    description: "ตรวจว่าขั้นตอน (steps) ใดยังไม่มีการตั้งมาตรฐานเวลา (production_standards)",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const [{ data: steps }, { data: stds }] = await Promise.all([
+        supabaseAdmin.from("steps").select("id, step_name").eq("active", true),
+        supabaseAdmin.from("production_standards").select("step_id").eq("active", true),
+      ]);
+      const covered = new Set((stds ?? []).map((s) => s.step_id));
+      const missing = (steps ?? []).filter((s) => !covered.has(s.id)).map((s) => s.step_name);
+      return { total_steps: steps?.length ?? 0, with_standard: covered.size, missing };
+    },
+  }),
 };

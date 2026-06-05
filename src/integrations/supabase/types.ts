@@ -140,6 +140,119 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_badges: {
+        Row: {
+          awarded_at: string
+          badge_code: string
+          employee_id: string
+          id: string
+          meta: Json
+        }
+        Insert: {
+          awarded_at?: string
+          badge_code: string
+          employee_id: string
+          id?: string
+          meta?: Json
+        }
+        Update: {
+          awarded_at?: string
+          badge_code?: string
+          employee_id?: string
+          id?: string
+          meta?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_badges_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_scores: {
+        Row: {
+          actual_seconds: number
+          category_id: string | null
+          employee_id: string
+          finish_log_id: string
+          id: string
+          job_id: string
+          points: number
+          scored_at: string
+          start_log_id: string | null
+          step_id: string
+          target_seconds: number
+          tier: string
+        }
+        Insert: {
+          actual_seconds: number
+          category_id?: string | null
+          employee_id: string
+          finish_log_id: string
+          id?: string
+          job_id: string
+          points: number
+          scored_at?: string
+          start_log_id?: string | null
+          step_id: string
+          target_seconds: number
+          tier: string
+        }
+        Update: {
+          actual_seconds?: number
+          category_id?: string | null
+          employee_id?: string
+          finish_log_id?: string
+          id?: string
+          job_id?: string
+          points?: number
+          scored_at?: string
+          start_log_id?: string | null
+          step_id?: string
+          target_seconds?: number
+          tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_scores_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_scores_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_scores_finish_log_id_fkey"
+            columns: ["finish_log_id"]
+            isOneToOne: false
+            referencedRelation: "production_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_scores_start_log_id_fkey"
+            columns: ["start_log_id"]
+            isOneToOne: false
+            referencedRelation: "production_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_scores_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           active: boolean
@@ -1026,6 +1139,63 @@ export type Database = {
           },
           {
             foreignKeyName: "production_logs_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_standards: {
+        Row: {
+          active: boolean
+          bonus_points: number
+          category_id: string | null
+          created_at: string
+          fast_seconds: number | null
+          id: string
+          late_points: number
+          on_time_points: number
+          step_id: string
+          target_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          bonus_points?: number
+          category_id?: string | null
+          created_at?: string
+          fast_seconds?: number | null
+          id?: string
+          late_points?: number
+          on_time_points?: number
+          step_id: string
+          target_seconds: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          bonus_points?: number
+          category_id?: string | null
+          created_at?: string
+          fast_seconds?: number | null
+          id?: string
+          late_points?: number
+          on_time_points?: number
+          step_id?: string
+          target_seconds?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_standards_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_standards_step_id_fkey"
             columns: ["step_id"]
             isOneToOne: false
             referencedRelation: "steps"
