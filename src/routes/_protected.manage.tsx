@@ -67,6 +67,7 @@ import { OfficeEmployeesPanel } from "@/components/OfficeEmployeesPanel";
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s.tab === "string" ? s.tab : undefined }),
   component: Manage,
 });
 
