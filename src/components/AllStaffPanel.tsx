@@ -283,8 +283,15 @@ export function AllStaffPanel() {
                                 </Button>
                               </div>
                             </div>
+                          ) : r.ids.production ? (
+                            <button
+                              type="button"
+                              onClick={() => navigate({ to: "/employee-profile/$id", params: { id: r.ids.production! } })}
+                              className="text-left font-semibold hover:text-primary hover:underline"
+                              title="ดูโปรไฟล์การผลิต"
+                            >{r.name}</button>
                           ) : (
-                            <div className="font-semibold">{r.name}</div>
+                            <div className="font-semibold" title="ต้องมีในแผนกผลิตเพื่อดูโปรไฟล์">{r.name}</div>
                           )}
                           {!editing && (
                             <div className="mt-0.5 flex flex-wrap gap-1">
