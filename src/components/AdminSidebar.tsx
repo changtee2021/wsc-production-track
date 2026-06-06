@@ -16,6 +16,11 @@ import {
   Boxes,
   SlidersHorizontal,
   Receipt,
+  Layers,
+  ListChecks,
+  ClipboardCheck,
+  Activity,
+  Timer,
 } from "lucide-react";
 import {
   Sidebar,

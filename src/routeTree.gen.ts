@@ -27,6 +27,8 @@ import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
+import { Route as ProtectedProductionStandardsRouteImport } from './routes/_protected.production-standards'
+import { Route as ProtectedProductionDashboardRouteImport } from './routes/_protected.production-dashboard'
 import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
 import { Route as ProtectedPackingReportsRouteImport } from './routes/_protected.packing-reports'
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
@@ -39,6 +41,7 @@ import { Route as ProtectedExpensesReportsRouteImport } from './routes/_protecte
 import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protected.expenses-dashboard'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
+import { Route as ProtectedEmployeeProfileIdRouteImport } from './routes/_protected.employee-profile.$id'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 
 const SuppliesRequestRoute = SuppliesRequestRouteImport.update({
@@ -132,6 +135,18 @@ const ProtectedQcReportsRoute = ProtectedQcReportsRouteImport.update({
   path: '/qc-reports',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedProductionStandardsRoute =
+  ProtectedProductionStandardsRouteImport.update({
+    id: '/production-standards',
+    path: '/production-standards',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedProductionDashboardRoute =
+  ProtectedProductionDashboardRouteImport.update({
+    id: '/production-dashboard',
+    path: '/production-dashboard',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedPackingSummaryRoute = ProtectedPackingSummaryRouteImport.update({
   id: '/packing-summary',
   path: '/packing-summary',
@@ -196,6 +211,12 @@ const ProtectedControlRoute = ProtectedControlRouteImport.update({
   path: '/control',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedEmployeeProfileIdRoute =
+  ProtectedEmployeeProfileIdRouteImport.update({
+    id: '/employee-profile/$id',
+    path: '/employee-profile/$id',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ApiPublicHooksLineDailySendRoute =
   ApiPublicHooksLineDailySendRouteImport.update({
     id: '/api/public/hooks/line-daily-send',
@@ -227,12 +248,15 @@ export interface FileRoutesByFullPath {
   '/manage': typeof ProtectedManageRoute
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
+  '/production-dashboard': typeof ProtectedProductionDashboardRoute
+  '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRoutesByTo {
@@ -259,12 +283,15 @@ export interface FileRoutesByTo {
   '/manage': typeof ProtectedManageRoute
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
+  '/production-dashboard': typeof ProtectedProductionDashboardRoute
+  '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
   '/storage': typeof ProtectedStorageRoute
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRoutesById {
@@ -293,12 +320,15 @@ export interface FileRoutesById {
   '/_protected/manage': typeof ProtectedManageRoute
   '/_protected/packing-reports': typeof ProtectedPackingReportsRoute
   '/_protected/packing-summary': typeof ProtectedPackingSummaryRoute
+  '/_protected/production-dashboard': typeof ProtectedProductionDashboardRoute
+  '/_protected/production-standards': typeof ProtectedProductionStandardsRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
   '/_protected/storage': typeof ProtectedStorageRoute
   '/_protected/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/_protected/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
 }
 export interface FileRouteTypes {
@@ -327,12 +357,15 @@ export interface FileRouteTypes {
     | '/manage'
     | '/packing-reports'
     | '/packing-summary'
+    | '/production-dashboard'
+    | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
     | '/storage'
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
+    | '/employee-profile/$id'
     | '/api/public/hooks/line-daily-send'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -359,12 +392,15 @@ export interface FileRouteTypes {
     | '/manage'
     | '/packing-reports'
     | '/packing-summary'
+    | '/production-dashboard'
+    | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
     | '/storage'
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
+    | '/employee-profile/$id'
     | '/api/public/hooks/line-daily-send'
   id:
     | '__root__'
@@ -392,12 +428,15 @@ export interface FileRouteTypes {
     | '/_protected/manage'
     | '/_protected/packing-reports'
     | '/_protected/packing-summary'
+    | '/_protected/production-dashboard'
+    | '/_protected/production-standards'
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
     | '/_protected/storage'
     | '/_protected/supplies-admin'
     | '/_protected/supplies-dashboard'
     | '/_protected/supplies-reports'
+    | '/_protected/employee-profile/$id'
     | '/api/public/hooks/line-daily-send'
   fileRoutesById: FileRoutesById
 }
@@ -545,6 +584,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedQcReportsRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/production-standards': {
+      id: '/_protected/production-standards'
+      path: '/production-standards'
+      fullPath: '/production-standards'
+      preLoaderRoute: typeof ProtectedProductionStandardsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/production-dashboard': {
+      id: '/_protected/production-dashboard'
+      path: '/production-dashboard'
+      fullPath: '/production-dashboard'
+      preLoaderRoute: typeof ProtectedProductionDashboardRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/packing-summary': {
       id: '/_protected/packing-summary'
       path: '/packing-summary'
@@ -629,6 +682,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedControlRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/employee-profile/$id': {
+      id: '/_protected/employee-profile/$id'
+      path: '/employee-profile/$id'
+      fullPath: '/employee-profile/$id'
+      preLoaderRoute: typeof ProtectedEmployeeProfileIdRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/api/public/hooks/line-daily-send': {
       id: '/api/public/hooks/line-daily-send'
       path: '/api/public/hooks/line-daily-send'
@@ -652,12 +712,15 @@ interface ProtectedRouteChildren {
   ProtectedManageRoute: typeof ProtectedManageRoute
   ProtectedPackingReportsRoute: typeof ProtectedPackingReportsRoute
   ProtectedPackingSummaryRoute: typeof ProtectedPackingSummaryRoute
+  ProtectedProductionDashboardRoute: typeof ProtectedProductionDashboardRoute
+  ProtectedProductionStandardsRoute: typeof ProtectedProductionStandardsRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
   ProtectedSuppliesAdminRoute: typeof ProtectedSuppliesAdminRoute
   ProtectedSuppliesDashboardRoute: typeof ProtectedSuppliesDashboardRoute
   ProtectedSuppliesReportsRoute: typeof ProtectedSuppliesReportsRoute
+  ProtectedEmployeeProfileIdRoute: typeof ProtectedEmployeeProfileIdRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
@@ -673,12 +736,15 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedManageRoute: ProtectedManageRoute,
   ProtectedPackingReportsRoute: ProtectedPackingReportsRoute,
   ProtectedPackingSummaryRoute: ProtectedPackingSummaryRoute,
+  ProtectedProductionDashboardRoute: ProtectedProductionDashboardRoute,
+  ProtectedProductionStandardsRoute: ProtectedProductionStandardsRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,
   ProtectedSuppliesAdminRoute: ProtectedSuppliesAdminRoute,
   ProtectedSuppliesDashboardRoute: ProtectedSuppliesDashboardRoute,
   ProtectedSuppliesReportsRoute: ProtectedSuppliesReportsRoute,
+  ProtectedEmployeeProfileIdRoute: ProtectedEmployeeProfileIdRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
