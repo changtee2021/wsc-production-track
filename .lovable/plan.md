@@ -1,41 +1,56 @@
-## เป้าหมาย
-แสดงรหัสเวอร์ชันแอปในรูปแบบ `APP-QC-000 R.00 bfd 06.06.26` โดย:
-- `R.00 → R.01 → R.02 …` รันเพิ่มทุกครั้งที่มีการอัปเดตแอป
-- `bfd DD.MM.YY` = วันที่อัปเดตล่าสุด (เริ่มที่ `06.06.26`)
-- ค่ามาจากไฟล์เดียว ผมจะแก้ให้อัตโนมัติทุกครั้งที่แก้โค้ด/เพิ่มฟีเจอร์
+## ภาพรวม
+ใช้ตารางเดิมทั้งหมด (`production_logs`, `production_standards`, `employees`, `categories`, `steps`) — ไม่สร้างตารางใหม่ ใช้ `app_settings` เก็บ threshold (default 3)
 
-## ไฟล์ที่จะสร้าง/แก้
+## 1) Sidebar — เพิ่มกลุ่ม "การผลิต"
+แก้ `src/components/AdminSidebar.tsx` เพิ่ม `SidebarGroup` ชื่อ **การผลิต** ครอบเมนูใหม่:
+- หมวดหมู่งานม่าน → `/manage?tab=cat`
+- ขั้นตอนการผลิต → `/manage?tab=step`
+- เช็คลิสต์ QC → `/manage?tab=qc-check`
+- เช็คลิสต์แพ็คของ → `/manage?tab=pack-check`
+- **แดชบอร์ดไลน์ผลิต** (ใหม่) → `/production-dashboard`
+- **ตั้งค่าเวลามาตรฐาน** (ใหม่) → `/production-standards`
 
-### 1. สร้าง `src/lib/utils/version.ts` (single source of truth)
-```ts
-export const APP_VERSION = {
-  code: "APP-QC-000",
-  revision: "R.00",
-  date: "06.06.26", // DD.MM.YY
-} as const;
+แก้ `_protected.manage.tsx` ให้รับ query `?tab=` เพื่อเปิด accordion ตรงนั้นอัตโนมัติ (เก็บเมนูเดิมไว้ — ไม่ลบ)
 
-export const APP_VERSION_STRING =
-  `${APP_VERSION.code} ${APP_VERSION.revision} bfd ${APP_VERSION.date}`;
-```
+## 2) Employee Production Profile
+**เพิ่ม route**: `src/routes/_protected.employee-profile.$id.tsx`
+- คลิกชื่อพนักงานใน `AllStaffPanel` → นำทางไปหน้านี้ (ใช้ `employees.id` ของแผนก production; ถ้าไม่มีจะ disable)
+- แสดง: avatar, ชื่อ, รหัส, แผนก, สถิติวันนี้ (ชิ้นเสร็จ, นาทีทำงานรวม, จำนวนครั้งเกินมาตรฐาน, ป้ายแดงถ้า ≥ threshold)
+- **Timeline** เรียงเวลาจากใหม่→เก่า: จับคู่ `production_logs` action=start/finish ของ job+step เดียวกัน คำนวณ `actual_seconds = finish.created_at - start.created_at` เทียบ `production_standards.target_seconds` แสดงชิป 🟢/🔴
+- กรองวันที่ได้ (default = วันนี้)
 
-### 2. สร้าง `src/components/AppVersion.tsx`
-คอมโพเนนต์เล็ก ๆ แสดงข้อความเวอร์ชัน รับ `className` ปรับสีได้ ใช้ `text-xs text-muted-foreground tracking-wide` เป็นค่าเริ่มต้น
+**Server fn ใหม่**: `src/lib/features/employee-profile.functions.ts`
+- `adminGetEmployeeTimeline({ token, employee_id, date })` → คืน rows {job_id, category_name, step_name, started_at, finished_at, actual_seconds, target_seconds, exceeded}
+- `adminGetEmployeeDailyStats({ token, employee_id, date })` → คืน {finished_count, total_seconds, exceeded_count}
 
-### 3. แสดงผล 3 จุด
-- **หน้าแรก (`src/routes/index.tsx`)** — ใต้ข้อความ `WSC ProductionTrack` ใน hero header (บรรทัด ~128) ใช้สีอ่อนบนพื้น hero
-- **Admin sidebar (`src/components/AdminSidebar.tsx`)** — เพิ่ม `<SidebarFooter>` ล่างสุด ก่อนปิด `<Sidebar>` ซ่อนเมื่อ collapsed
-- **ทุกหน้าที่ไม่ใช่แอดมิน** — เพิ่ม `<footer>` ใน `src/routes/__root.tsx` (RootComponent) แสดงเฉพาะเมื่อ path ไม่ขึ้นต้นด้วย admin layout (`/dashboard`, `/manage`, `/logs`, `/storage`, `/qc-summary`, `/qc-reports`, `/packing-summary`, `/packing-reports`, `/expenses-*`, `/supplies-admin`, `/supplies-dashboard`, `/supplies-reports`, `/maintenance-admin`, `/maintenance-master`, `/job-lookup`, `/logs-update`) — กล่าวอีกอย่าง: ทุก route ที่ matched กับ `_protected` layout ให้ซ่อน เพราะ admin มี sidebar footer อยู่แล้ว
-  - ใช้ `useRouterState({ select: s => s.matches })` ตรวจว่ามี match id ที่มี `_protected` หรือไม่
-  - footer style: `text-center text-[10px] text-muted-foreground py-2`
+แก้ `AllStaffPanel.tsx`: ทำให้แต่ละ row คลิกได้ → `navigate({ to: "/employee-profile/$id", params: { id: ids.production ?? firstId } })`
 
-## กฎการรันเลขในอนาคต
-ทุกครั้งที่ผมแก้โค้ด/เพิ่มฟีเจอร์/แก้บั๊ก (event ที่บันทึก system_logs อยู่แล้ว) จะ:
-1. เปิด `src/lib/utils/version.ts`
-2. บวก `revision` ทีละ 1 (`R.00` → `R.01` → … → `R.99` → `R.100`)
-3. อัปเดต `date` เป็นวันปัจจุบันรูปแบบ `DD.MM.YY`
-4. แนบไปกับ commit/migration เดียวกัน
+## 3) Production Line Dashboard
+**เพิ่ม route**: `src/routes/_protected.production-dashboard.tsx`
+- Tab ตาม `categories` (ดึงจาก DB จริง — ไม่ hardcode รุ่น)
+- ใต้แต่ละ tab แบ่งคอลัมน์ตาม `steps.step_name` (ขั้นตอนย่อย)
+- แต่ละคอลัมน์แสดงการ์ดพนักงานที่กำลัง active (`start` ที่ยังไม่มี `finish` ใน ~8h ล่าสุด) + progress bar เทียบ `target_seconds`
+- การ์ดของพนักงานที่ exceeded ≥ threshold วันนี้ → กรอบกะพริบสีแดง/ส้ม (Tailwind animate-pulse + ring-destructive)
+- Auto refresh ทุก 15 วิ (React Query refetchInterval)
 
-## สิ่งที่จะ**ไม่**ทำ
-- ไม่ดึงจาก git commit (รัน runtime ไม่ได้)
-- ไม่ดึงจาก system_logs (ทำให้ทุกหน้ายิง query เพิ่ม)
-- ไม่แตะ `_protected.tsx`, sidebar layout, หรือ business logic อื่น
+**Server fn**: `adminGetActiveProduction({ token })` → คืน {category_id, step_id, employee, job_id, started_at, elapsed_seconds, target_seconds, employee_exceeded_today}
+
+## 4) Production Standards & Settings
+**เพิ่ม route**: `src/routes/_protected.production-standards.tsx`
+- ตาราง matrix: หมวดหมู่ × ขั้นตอน → ช่อง target_seconds (แก้ inline บันทึก)
+- ช่องตั้งค่า **"จำนวนครั้งเกินเวลาที่ขึ้นไฟแดง"** (default 3) → เก็บใน `app_settings` key `production_red_threshold`
+
+**Server fn**: `adminListProductionStandards`, `adminUpsertProductionStandard`, `adminGetRedThreshold`, `adminSetRedThreshold`
+
+## 5) Migration
+- INSERT row default ใน `app_settings` (`production_red_threshold` = "3")
+- ไม่แก้ schema อื่น
+
+## 6) System logs
+INSERT แถวลง `system_logs` สรุปการเพิ่ม "การผลิต hub + profile + dashboard + ไฟแดง"
+
+## สิ่งที่ไม่ทำ
+- ไม่สร้างตารางใหม่ (`production_standard_times`/`employee_production_logs` ไม่ต้อง — ของเดิมครอบคลุมแล้ว)
+- ไม่ลบเมนูเดิม
+- ไม่แตะระบบสแกน/QC/Packing
+- ไม่เปลี่ยน design tokens

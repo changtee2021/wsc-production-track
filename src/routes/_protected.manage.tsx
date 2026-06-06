@@ -67,6 +67,7 @@ import { OfficeEmployeesPanel } from "@/components/OfficeEmployeesPanel";
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s.tab === "string" ? s.tab : undefined }),
   component: Manage,
 });
 
@@ -106,6 +107,7 @@ function Section({ title, defaultOpen = false, children }: { title: string; defa
 }
 
 function Manage() {
+  const { tab } = Route.useSearch();
   const sections: SectionDef[] = [
     { id: "all", title: "พนักงานทั้งหมด (ทุกแผนก)", node: <AllStaffPanel /> },
     { id: "prod", title: "พนักงานฝ่ายผลิต", node: <EmployeesPanel /> },
@@ -118,6 +120,7 @@ function Manage() {
     { id: "qc-check", title: "เช็คลิสต์ QC", node: <QcChecklistsPanel /> },
     { id: "pack-check", title: "เช็คลิสต์แพ็คของ", node: <PackingChecklistsPanel /> },
   ];
+  const openId = tab && sections.some((s) => s.id === tab) ? tab : "all";
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
@@ -128,8 +131,8 @@ function Manage() {
       </p>
       <div className="space-y-4">
         {sections.map((s, i) => (
-          <div key={s.id}>
-            <Section title={s.title} defaultOpen={i === 0}>
+          <div key={s.id} id={`section-${s.id}`}>
+            <Section title={s.title} defaultOpen={s.id === openId}>
               {s.node}
             </Section>
             {i < sections.length - 1 && <div className="mx-2 my-3 border-t border-dashed border-border/60" />}

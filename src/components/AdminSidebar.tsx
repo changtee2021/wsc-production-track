@@ -16,6 +16,10 @@ import {
   Boxes,
   SlidersHorizontal,
   Receipt,
+  Layers,
+  ListChecks,
+  Activity,
+  Timer,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,7 +42,7 @@ import { AppVersion } from "@/components/AppVersion";
 
 const NAV_GROUPS: Array<{
   label: string;
-  items: Array<{ title: string; url: string; icon: typeof LayoutDashboard }>;
+  items: Array<{ title: string; url: string; icon: typeof LayoutDashboard; search?: Record<string, string> }>;
 }> = [
   {
     label: "ภาพรวม",
@@ -46,6 +50,17 @@ const NAV_GROUPS: Array<{
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
       { title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search },
       { title: "ประวัติงานผลิต", url: "/logs", icon: FileText },
+    ],
+  },
+  {
+    label: "การผลิต",
+    items: [
+      { title: "แดชบอร์ดไลน์ผลิต", url: "/production-dashboard", icon: Activity },
+      { title: "หมวดหมู่งานม่าน", url: "/manage", icon: Layers, search: { tab: "cat" } },
+      { title: "ขั้นตอนการผลิต", url: "/manage", icon: Factory, search: { tab: "step" } },
+      { title: "เช็คลิสต์ QC", url: "/manage", icon: ListChecks, search: { tab: "qc-check" } },
+      { title: "เช็คลิสต์แพ็คของ", url: "/manage", icon: ListChecks, search: { tab: "pack-check" } },
+      { title: "เวลามาตรฐาน & ไฟแดง", url: "/production-standards", icon: Timer },
     ],
   },
   {
@@ -181,7 +196,7 @@ export function AdminSidebar() {
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                        <Link to={item.url} className="flex items-center gap-2">
+                        <Link to={item.url} search={item.search as never} className="flex items-center gap-2">
                           <item.icon className="h-4 w-4" />
                           <span className="flex-1">{item.title}</span>
                           {showNewBadge && (
