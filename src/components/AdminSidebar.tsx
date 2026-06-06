@@ -34,6 +34,7 @@ import { adminOfficeBadgeCounts } from "@/lib/features/office-requests.functions
 import { adminExpenseBadgeCounts } from "@/lib/features/expenses-admin.functions";
 import { getAdminToken } from "@/lib/auth/admin-session";
 import { hasUnseen } from "@/lib/utils/log-seen";
+import { AppVersion } from "@/components/AppVersion";
 
 const NAV_GROUPS: Array<{
   label: string;

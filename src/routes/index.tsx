@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/welcome-hero.png";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
+import { AppVersion } from "@/components/AppVersion";
 
 export const Route = createFileRoute("/")({
   head: () => ({
