@@ -1,18 +1,8 @@
-// Expense session token (free-issue, sessionStorage).
-const KEY = "ptrack_expense_token";
+import { createDeptSession } from "./dept-session";
 
-export function setExpenseToken(token: string) {
-  if (typeof window === "undefined") return;
-  sessionStorage.setItem(KEY, token);
-}
-export function getExpenseToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(KEY);
-}
-export function clearExpenseSession() {
-  if (typeof window === "undefined") return;
-  sessionStorage.removeItem(KEY);
-}
-export function isExpenseSession(): boolean {
-  return !!getExpenseToken();
-}
+const s = createDeptSession("ptrack_expense_token");
+
+export const setExpenseToken = s.setToken;
+export const getExpenseToken = s.getToken;
+export const clearExpenseSession = s.clearSession;
+export const isExpenseSession = s.isSession;

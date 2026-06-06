@@ -1,20 +1,9 @@
-const KEY = "ptrack_admin_token";
+// Admin sessionStorage helpers — thin wrapper around createDeptSession.
+import { createDeptSession } from "./dept-session";
 
-export function setAdminToken(token: string) {
-  if (typeof window === "undefined") return;
-  sessionStorage.setItem(KEY, token);
-}
+const s = createDeptSession("ptrack_admin_token");
 
-export function getAdminToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(KEY);
-}
-
-export function clearAdminSession() {
-  if (typeof window === "undefined") return;
-  sessionStorage.removeItem(KEY);
-}
-
-export function isAdminSession(): boolean {
-  return !!getAdminToken();
-}
+export const setAdminToken = s.setToken;
+export const getAdminToken = s.getToken;
+export const clearAdminSession = s.clearSession;
+export const isAdminSession = s.isSession;
