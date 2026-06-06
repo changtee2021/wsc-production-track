@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getAdminToken } from "@/lib/auth/admin-session";
-import { aiAdminAsk } from "@/lib/ai-admin.functions";
+import { aiAdminAsk } from "@/lib/ai/ai-admin.functions";
 import { cn } from "@/lib/utils";
 
 type Msg = { role: "user" | "assistant"; content: string; toolsUsed?: string[] };

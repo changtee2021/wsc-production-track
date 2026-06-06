@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import {
   issueExpenseSession, expenseUploadReceipt, expenseScanReceipt,
   expenseSubmit, expenseListEmployees, expenseListCategories, expenseCheckDuplicate,
-} from "@/lib/expenses.functions";
+} from "@/lib/features/expenses.functions";
 import {
   getExpenseToken, setExpenseToken, isExpenseSession,
 } from "@/lib/auth/expense-session";

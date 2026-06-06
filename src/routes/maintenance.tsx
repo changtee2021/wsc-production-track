@@ -19,7 +19,7 @@ import {
   listSpareParts,
   maintenanceUploadMedia,
   listMaintenanceEmployees,
-} from "@/lib/maintenance.functions";
+} from "@/lib/features/maintenance.functions";
 import { setMaintenanceToken, getMaintenanceToken, clearMaintenanceSession } from "@/lib/auth/maintenance-session";
 import { compressMedia } from "@/lib/utils/media-compress";
 import { warnIfMovFiles } from "@/components/MediaLightbox";

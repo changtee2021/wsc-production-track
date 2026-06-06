@@ -5,9 +5,9 @@ import {
   adminFetchSystemLogs,
   adminInsertSystemLog,
   adminDeleteSystemLog,
-} from "@/lib/system-logs.functions";
-import { adminSendLineTest } from "@/lib/line.functions";
-import { adminGetLineSchedule, adminSetLineSchedule } from "@/lib/line-schedule.functions";
+} from "@/lib/features/system-logs.functions";
+import { adminSendLineTest } from "@/lib/integrations/line.functions";
+import { adminGetLineSchedule, adminSetLineSchedule } from "@/lib/integrations/line-schedule.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

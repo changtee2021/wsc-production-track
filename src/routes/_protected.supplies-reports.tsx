@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { adminOfficeSummary } from "@/lib/office-assets.functions";
+import { adminOfficeSummary } from "@/lib/features/office-assets.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 
 export const Route = createFileRoute("/_protected/supplies-reports")({

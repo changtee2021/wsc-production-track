@@ -6,7 +6,7 @@ import {
   adminUpsertOfficeEmployee,
   adminDeleteOfficeEmployee,
   adminCreateUploadUrl,
-} from "@/lib/admin.functions";
+} from "@/lib/features/admin.functions";
 import { adminUpload, requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -10,8 +10,8 @@ import {
   adminUpdateStaffMeta,
   DEPARTMENTS,
   type Department,
-} from "@/lib/staff-directory.functions";
-import { adminCreateUploadUrl } from "@/lib/admin.functions";
+} from "@/lib/features/staff-directory.functions";
+import { adminCreateUploadUrl } from "@/lib/features/admin.functions";
 import { adminUpload, requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -14,7 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
   issueExpenseSession, expenseListMine, expenseListEmployees, expenseSignReceiptUrls,
-} from "@/lib/expenses.functions";
+} from "@/lib/features/expenses.functions";
 import { getExpenseToken, setExpenseToken, isExpenseSession } from "@/lib/auth/expense-session";
 
 export const Route = createFileRoute("/expense-mine")({

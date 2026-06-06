@@ -7,7 +7,7 @@ import {
   adminInsertBanner,
   adminUpdateBanner,
   adminDeleteBanner,
-} from "@/lib/admin.functions";
+} from "@/lib/features/admin.functions";
 import { adminUpload, requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import {

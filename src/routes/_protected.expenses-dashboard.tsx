@@ -23,8 +23,8 @@ import { toast } from "sonner";
 import {
   adminExpenseList, adminExpenseApprove, adminExpenseReject,
   adminExpenseMarkPaid, adminExpenseBulkApprove,
-} from "@/lib/expenses-admin.functions";
-import { officeListEmployees } from "@/lib/office-requests.functions";
+} from "@/lib/features/expenses-admin.functions";
+import { officeListEmployees } from "@/lib/features/office-requests.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 
 export const Route = createFileRoute("/_protected/expenses-dashboard")({

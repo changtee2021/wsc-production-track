@@ -40,7 +40,7 @@ import {
   qcSubmitReport,
   qcUploadMedia,
   qcListEmployees,
-} from "@/lib/qc.functions";
+} from "@/lib/features/qc.functions";
 import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
 import { compressMedia } from "@/lib/utils/media-compress";
 

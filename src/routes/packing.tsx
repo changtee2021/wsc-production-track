@@ -24,7 +24,7 @@ import {
   packingSubmitReport,
   packingUploadMedia,
   packingListEmployees,
-} from "@/lib/packing.functions";
+} from "@/lib/features/packing.functions";
 import {
   isPackingSession, setPackingToken, getPackingToken, clearPackingSession,
 } from "@/lib/auth/packing-session";

@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import {
   adminListOfficeRequests, adminApproveOfficeRequest, adminRejectOfficeRequest,
   adminOfficeRestock, adminOfficeStockDashboard, officeListEmployees,
-} from "@/lib/office-requests.functions";
+} from "@/lib/features/office-requests.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 
 export const Route = createFileRoute("/_protected/supplies-dashboard")({

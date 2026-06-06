@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getStorageUsage } from "@/lib/storage-usage.functions";
+import { getStorageUsage } from "@/lib/features/storage-usage.functions";
 import { formatBytes, requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";

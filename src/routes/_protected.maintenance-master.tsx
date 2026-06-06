@@ -16,8 +16,8 @@ import { toast } from "sonner";
 import {
   listAssets, upsertAsset, deleteAsset,
   listSpareParts, upsertSparePart, deleteSparePart, restockPart,
-} from "@/lib/maintenance.functions";
-import { adminCreateUploadUrl } from "@/lib/admin.functions";
+} from "@/lib/features/maintenance.functions";
+import { adminCreateUploadUrl } from "@/lib/features/admin.functions";
 import { adminUpload, requireToken, showError } from "@/lib/utils/admin-helpers";
 
 export const Route = createFileRoute("/_protected/maintenance-master")({
