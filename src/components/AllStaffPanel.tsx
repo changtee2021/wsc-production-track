@@ -54,6 +54,7 @@ const DEPT_COLOR: Record<Department, string> = {
 const NATIONALITIES = ["Thai", "Burmese", "Lao", "Khmer", "Other"];
 
 export function AllStaffPanel() {
+  const navigate = useNavigate();
   const listFn = useServerFn(adminListAllStaff);
   const toggleFn = useServerFn(adminToggleStaffDepartment);
   const updateFn = useServerFn(adminUpdateStaffMeta);
