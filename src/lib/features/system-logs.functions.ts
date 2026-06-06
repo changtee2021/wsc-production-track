@@ -3,7 +3,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { verifyAdminToken } from "./admin-token.server";
+import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 
 function assertAdmin(token: string | undefined) {
   if (!verifyAdminToken(token)) {

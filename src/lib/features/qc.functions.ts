@@ -2,7 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { issueQcToken, verifyQcToken, checkQcPassword } from "./qc-token.server";
+import { issueQcToken, verifyQcToken, checkQcPassword } from "@/lib/auth/qc-token.server";
 
 function assertQc(token: string | undefined) {
   if (!verifyQcToken(token)) throw new Error("Unauthorized");

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { verifyAdminToken } from "./admin-token.server";
+import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 
 const BUCKETS = ["avatars", "step-images", "banners", "log-notes", "qc-media"] as const;
 

@@ -4,8 +4,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { verifyAdminToken } from "./admin-token.server";
-import { verifyOfficeToken } from "./office-token.server";
+import { verifyAdminToken } from "@/lib/auth/admin-token.server";
+import { verifyOfficeToken } from "@/lib/auth/office-token.server";
 
 const tokenStr = z.string().min(1);
 

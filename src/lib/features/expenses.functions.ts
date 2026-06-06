@@ -9,9 +9,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { issueExpenseToken, verifyExpenseToken } from "./expense-token.server";
-import { verifyAdminToken } from "./admin-token.server";
-import { notifyExpenseSubmitted } from "./line-notify.server";
+import { issueExpenseToken, verifyExpenseToken } from "@/lib/auth/expense-token.server";
+import { verifyAdminToken } from "@/lib/auth/admin-token.server";
+import { notifyExpenseSubmitted } from "@/lib/integrations/line-notify.server";
 
 const BUCKET = "expense-receipts";
 const MAX_BYTES = 6 * 1024 * 1024; // 6 MB / receipt image

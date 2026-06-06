@@ -2,12 +2,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { verifyAdminToken } from "./admin-token.server";
-import { notifyExpenseStatusChanged } from "./line-notify.server";
+import { verifyAdminToken } from "@/lib/auth/admin-token.server";
+import { notifyExpenseStatusChanged } from "@/lib/integrations/line-notify.server";
 import {
   monthlyDepreciation, accumulatedDepreciation, bookValue,
   type DepreciableAsset,
-} from "./depreciation.server";
+} from "@/lib/features/depreciation.server";
 
 const tokenStr = z.string().min(1);
 function assertAdmin(t: string | undefined) {
