@@ -18,7 +18,6 @@ import {
   Receipt,
   Layers,
   ListChecks,
-  ClipboardCheck,
   Activity,
   Timer,
 } from "lucide-react";
