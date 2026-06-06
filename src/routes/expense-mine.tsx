@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import {
   issueExpenseSession, expenseListMine, expenseListEmployees, expenseSignReceiptUrls,
 } from "@/lib/expenses.functions";
-import { getExpenseToken, setExpenseToken, isExpenseSession } from "@/lib/expense-session";
+import { getExpenseToken, setExpenseToken, isExpenseSession } from "@/lib/auth/expense-session";
 
 export const Route = createFileRoute("/expense-mine")({
   validateSearch: z.object({ emp: z.string().optional() }),

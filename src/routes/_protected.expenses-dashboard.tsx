@@ -25,7 +25,7 @@ import {
   adminExpenseMarkPaid, adminExpenseBulkApprove,
 } from "@/lib/expenses-admin.functions";
 import { officeListEmployees } from "@/lib/office-requests.functions";
-import { requireToken, showError } from "@/lib/admin-helpers";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
 
 export const Route = createFileRoute("/_protected/expenses-dashboard")({
   head: () => ({ meta: [{ title: "เบิกค่าใช้จ่าย — WSC ProductionTrack" }] }),

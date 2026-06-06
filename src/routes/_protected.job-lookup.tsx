@@ -3,9 +3,9 @@ import { useCallback, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminFetchJobDetail } from "@/lib/admin.functions";
 import { adminSignMediaUrls } from "@/lib/media.functions";
-import { requireToken, showError } from "@/lib/admin-helpers";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
-import { downloadMediaAsZip } from "@/lib/media-zip";
+import { downloadMediaAsZip } from "@/lib/utils/media-zip";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

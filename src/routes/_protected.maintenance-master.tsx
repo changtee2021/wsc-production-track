@@ -18,7 +18,7 @@ import {
   listSpareParts, upsertSparePart, deleteSparePart, restockPart,
 } from "@/lib/maintenance.functions";
 import { adminCreateUploadUrl } from "@/lib/admin.functions";
-import { adminUpload, requireToken, showError } from "@/lib/admin-helpers";
+import { adminUpload, requireToken, showError } from "@/lib/utils/admin-helpers";
 
 export const Route = createFileRoute("/_protected/maintenance-master")({
   head: () => ({ meta: [{ title: "ทรัพย์สิน & อะไหล่ — WSC ProductionTrack" }] }),

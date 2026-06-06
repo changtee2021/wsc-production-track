@@ -21,7 +21,7 @@ import {
 import { officeSubmitRequest, officeListEmployees } from "@/lib/office-requests.functions";
 import {
   getOfficeToken, setOfficeToken, isOfficeSession,
-} from "@/lib/office-session";
+} from "@/lib/auth/office-session";
 
 export const Route = createFileRoute("/supplies-request")({
   head: () => ({

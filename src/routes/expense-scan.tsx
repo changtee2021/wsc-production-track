@@ -22,7 +22,7 @@ import {
 } from "@/lib/expenses.functions";
 import {
   getExpenseToken, setExpenseToken, isExpenseSession,
-} from "@/lib/expense-session";
+} from "@/lib/auth/expense-session";
 
 export const Route = createFileRoute("/expense-scan")({
   head: () => ({ meta: [{ title: "AI สแกนใบเสร็จ — WSC ProductionTrack" }] }),

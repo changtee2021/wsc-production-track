@@ -7,7 +7,7 @@ import {
   adminUpdateAnnouncement,
   adminDeleteAnnouncement,
 } from "@/lib/admin.functions";
-import { requireToken, showError } from "@/lib/admin-helpers";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

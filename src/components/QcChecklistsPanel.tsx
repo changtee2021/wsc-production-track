@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getAdminToken, clearAdminSession } from "@/lib/admin-session";
+import { getAdminToken, clearAdminSession } from "@/lib/auth/admin-session";
 import {
   adminFetchChecklists,
   adminUpsertChecklistItem,

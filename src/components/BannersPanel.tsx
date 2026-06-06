@@ -8,7 +8,7 @@ import {
   adminUpdateBanner,
   adminDeleteBanner,
 } from "@/lib/admin.functions";
-import { adminUpload, requireToken, showError } from "@/lib/admin-helpers";
+import { adminUpload, requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import {
   Plus, Trash2, Upload, Loader2, Image as ImageIcon,

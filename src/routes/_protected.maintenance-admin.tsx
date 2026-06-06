@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { adminMaintenanceSummary } from "@/lib/maintenance.functions";
-import { getAdminToken } from "@/lib/admin-session";
+import { getAdminToken } from "@/lib/auth/admin-session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

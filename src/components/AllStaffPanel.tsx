@@ -12,7 +12,7 @@ import {
   type Department,
 } from "@/lib/staff-directory.functions";
 import { adminCreateUploadUrl } from "@/lib/admin.functions";
-import { adminUpload, requireToken, showError } from "@/lib/admin-helpers";
+import { adminUpload, requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Users, Pencil, Save, X, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { initialsOf } from "@/lib/i18n";
+import { initialsOf } from "@/lib/utils/i18n";
 
 type StaffEntry = {
   key: string;

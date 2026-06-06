@@ -8,8 +8,8 @@ import {
   adminFetchJobWorkers,
 } from "@/lib/admin.functions";
 import { adminSignMediaUrls } from "@/lib/media.functions";
-import { requireToken, showError } from "@/lib/admin-helpers";
-import { downloadQcReportsCsv } from "@/lib/qc-export";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
+import { downloadQcReportsCsv } from "@/lib/utils/qc-export";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

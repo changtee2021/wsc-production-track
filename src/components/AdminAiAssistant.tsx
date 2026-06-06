@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { getAdminToken } from "@/lib/admin-session";
+import { getAdminToken } from "@/lib/auth/admin-session";
 import { aiAdminAsk } from "@/lib/ai-admin.functions";
 import { cn } from "@/lib/utils";
 

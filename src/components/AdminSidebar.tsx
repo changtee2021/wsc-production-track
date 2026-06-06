@@ -31,8 +31,8 @@ import {
 import { adminGetLatestSystemLog } from "@/lib/system-logs.functions";
 import { adminOfficeBadgeCounts } from "@/lib/office-requests.functions";
 import { adminExpenseBadgeCounts } from "@/lib/expenses-admin.functions";
-import { getAdminToken } from "@/lib/admin-session";
-import { hasUnseen } from "@/lib/log-seen";
+import { getAdminToken } from "@/lib/auth/admin-session";
+import { hasUnseen } from "@/lib/utils/log-seen";
 
 const NAV_GROUPS: Array<{
   label: string;

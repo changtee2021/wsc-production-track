@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { useServerFn } from "@tanstack/react-start";
 import { verifyAdminPassword } from "@/lib/admin.functions";
-import { isAdminSession, setAdminToken } from "@/lib/admin-session";
+import { isAdminSession, setAdminToken } from "@/lib/auth/admin-session";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -4,8 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { adminFetchLogs } from "@/lib/admin.functions";
 
-import { getAdminToken } from "@/lib/admin-session";
-import { requireToken, showError } from "@/lib/admin-helpers";
+import { getAdminToken } from "@/lib/auth/admin-session";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { AdminAiAssistant } from "@/components/AdminAiAssistant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

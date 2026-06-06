@@ -17,7 +17,7 @@ import {
 } from "@/lib/office-assets.functions";
 import {
   getOfficeToken, setOfficeToken, isOfficeSession,
-} from "@/lib/office-session";
+} from "@/lib/auth/office-session";
 
 export const Route = createFileRoute("/supplies")({
   head: () => ({

@@ -20,8 +20,8 @@ import {
   maintenanceUploadMedia,
   listMaintenanceEmployees,
 } from "@/lib/maintenance.functions";
-import { setMaintenanceToken, getMaintenanceToken, clearMaintenanceSession } from "@/lib/maintenance-session";
-import { compressMedia } from "@/lib/media-compress";
+import { setMaintenanceToken, getMaintenanceToken, clearMaintenanceSession } from "@/lib/auth/maintenance-session";
+import { compressMedia } from "@/lib/utils/media-compress";
 import { warnIfMovFiles } from "@/components/MediaLightbox";
 
 export const Route = createFileRoute("/maintenance")({

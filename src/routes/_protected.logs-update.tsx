@@ -8,7 +8,7 @@ import {
 } from "@/lib/system-logs.functions";
 import { adminSendLineTest } from "@/lib/line.functions";
 import { adminGetLineSchedule, adminSetLineSchedule } from "@/lib/line-schedule.functions";
-import { requireToken, showError } from "@/lib/admin-helpers";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,7 +33,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Search, Clock, FileCode, Send, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import { markLogsSeen } from "@/lib/log-seen";
+import { markLogsSeen } from "@/lib/utils/log-seen";
 
 export const Route = createFileRoute("/_protected/logs-update")({
   head: () => ({ meta: [{ title: "LogUpdate — WSC ProductionTrack" }] }),
