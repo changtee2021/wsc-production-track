@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -261,6 +261,7 @@ function CategoriesPanel() {
 
 
 function EmployeesPanel() {
+  const navigate = useNavigate();
   const upsert = useServerFn(adminUpsertEmployee);
   const del = useServerFn(adminDeleteEmployee);
   const list = useServerFn(adminListEmployees);
@@ -439,7 +440,12 @@ function EmployeesPanel() {
                   <div>
                     <div className="flex items-center gap-1 font-medium">
                       <span>{flagFor(e.nationality)}</span>
-                      {e.name}
+                      <button
+                        type="button"
+                        onClick={() => navigate({ to: "/employee-profile/$id", params: { id: e.id } })}
+                        className="hover:text-primary hover:underline"
+                        title="ดูโปรไฟล์การผลิต"
+                      >{e.name}</button>
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {e.emp_code ? <span className="font-mono">{e.emp_code} · </span> : null}
