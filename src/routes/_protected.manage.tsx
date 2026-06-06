@@ -440,7 +440,12 @@ function EmployeesPanel() {
                   <div>
                     <div className="flex items-center gap-1 font-medium">
                       <span>{flagFor(e.nationality)}</span>
-                      {e.name}
+                      <button
+                        type="button"
+                        onClick={() => navigate({ to: "/employee-profile/$id", params: { id: e.id } })}
+                        className="hover:text-primary hover:underline"
+                        title="ดูโปรไฟล์การผลิต"
+                      >{e.name}</button>
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {e.emp_code ? <span className="font-mono">{e.emp_code} · </span> : null}
