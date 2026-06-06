@@ -7,8 +7,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { generateText, stepCountIs, type ModelMessage } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { verifyAdminToken } from "./admin-token.server";
-import { adminTools } from "./ai-admin-tools.server";
+import { verifyAdminToken } from "@/lib/auth/admin-token.server";
+import { adminTools } from "@/lib/ai/ai-admin-tools.server";
 
 const DAILY_LIMIT = 40;
 const usage = new Map<string, { date: string; count: number }>();

@@ -2,8 +2,8 @@
 // API push. Delegates to the shared helper in line.server.ts.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { verifyAdminToken } from "./admin-token.server";
-import { sendDailySummary } from "./line.server";
+import { verifyAdminToken } from "@/lib/auth/admin-token.server";
+import { sendDailySummary } from "@/lib/integrations/line.server";
 
 function assertAdmin(token: string | undefined) {
   if (!verifyAdminToken(token)) throw new Error("Unauthorized");

@@ -12,8 +12,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Toaster } from "@/components/ui/sonner";
-import { adminExpenseMonthlyReport } from "@/lib/expenses-admin.functions";
-import { requireToken, showError } from "@/lib/admin-helpers";
+import { adminExpenseMonthlyReport } from "@/lib/features/expenses-admin.functions";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
 
 export const Route = createFileRoute("/_protected/expenses-reports")({
   head: () => ({ meta: [{ title: "รายงานค่าใช้จ่ายรายเดือน — WSC" }] }),

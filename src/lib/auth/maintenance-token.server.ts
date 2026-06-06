@@ -1,5 +1,5 @@
 // Maintenance session HMAC token — thin wrapper around the shared dept-token factory.
-import { createDeptTokenVerifier } from "./dept-token.server";
+import { createDeptTokenVerifier } from "@/lib/auth/dept-token.server";
 
 const maintenance = createDeptTokenVerifier({
   prefix: "maint:",

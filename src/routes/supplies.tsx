@@ -14,10 +14,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
   issueOfficeSession, officeListAssets, officeListCategories,
-} from "@/lib/office-assets.functions";
+} from "@/lib/features/office-assets.functions";
 import {
   getOfficeToken, setOfficeToken, isOfficeSession,
-} from "@/lib/office-session";
+} from "@/lib/auth/office-session";
 
 export const Route = createFileRoute("/supplies")({
   head: () => ({

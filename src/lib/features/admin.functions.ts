@@ -8,7 +8,7 @@ import {
   issueAdminToken,
   verifyAdminToken,
   constantTimePasswordEquals,
-} from "./admin-token.server";
+} from "@/lib/auth/admin-token.server";
 
 function assertAdmin(token: string | undefined) {
   if (!verifyAdminToken(token)) {

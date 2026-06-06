@@ -6,7 +6,7 @@ import {
   issuePackingToken,
   verifyPackingToken,
   checkPackingPassword,
-} from "./packing-token.server";
+} from "@/lib/auth/packing-token.server";
 
 function assertPacking(token: string | undefined) {
   if (!verifyPackingToken(token)) throw new Error("Unauthorized");

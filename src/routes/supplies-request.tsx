@@ -17,11 +17,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
   issueOfficeSession, officeListAssets, officeListCategories,
-} from "@/lib/office-assets.functions";
-import { officeSubmitRequest, officeListEmployees } from "@/lib/office-requests.functions";
+} from "@/lib/features/office-assets.functions";
+import { officeSubmitRequest, officeListEmployees } from "@/lib/features/office-requests.functions";
 import {
   getOfficeToken, setOfficeToken, isOfficeSession,
-} from "@/lib/office-session";
+} from "@/lib/auth/office-session";
 
 export const Route = createFileRoute("/supplies-request")({
   head: () => ({

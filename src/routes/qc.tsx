@@ -40,9 +40,9 @@ import {
   qcSubmitReport,
   qcUploadMedia,
   qcListEmployees,
-} from "@/lib/qc.functions";
-import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/qc-session";
-import { compressMedia } from "@/lib/media-compress";
+} from "@/lib/features/qc.functions";
+import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
+import { compressMedia } from "@/lib/utils/media-compress";
 
 const qcSearch = z.object({
   job_id: fallback(z.string(), "").default(""),

@@ -3,7 +3,7 @@
 // window) and we haven't already sent today, sends the daily summary.
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { sendDailySummary, bangkokNowParts } from "@/lib/line.server";
+import { sendDailySummary, bangkokNowParts } from "@/lib/integrations/line.server";
 
 export const Route = createFileRoute("/api/public/hooks/line-daily-send")({
   server: {

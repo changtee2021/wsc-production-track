@@ -9,7 +9,7 @@ import {
   accumulatedDepreciation,
   bookValue,
   type DepreciableAsset,
-} from "./depreciation.server";
+} from "@/lib/features/depreciation.server";
 
 const sinceISO = (days: number) =>
   new Date(Date.now() - Math.max(1, days) * 86400000).toISOString();

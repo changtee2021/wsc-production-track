@@ -1,5 +1,5 @@
 // Office Supplies session HMAC token — thin wrapper around the dept-token factory.
-import { createDeptTokenVerifier } from "./dept-token.server";
+import { createDeptTokenVerifier } from "@/lib/auth/dept-token.server";
 
 const office = createDeptTokenVerifier({
   prefix: "off:",

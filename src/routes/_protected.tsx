@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
-import { isAdminSession, clearAdminSession } from "@/lib/admin-session";
+import { isAdminSession, clearAdminSession } from "@/lib/auth/admin-session";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";

@@ -1,6 +1,6 @@
 // Admin session HMAC token — thin wrapper around the shared dept-token factory.
 import { createHmac, timingSafeEqual } from "crypto";
-import { createDeptTokenVerifier } from "./dept-token.server";
+import { createDeptTokenVerifier } from "@/lib/auth/dept-token.server";
 
 const admin = createDeptTokenVerifier({
   prefix: "",

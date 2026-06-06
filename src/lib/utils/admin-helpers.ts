@@ -2,7 +2,7 @@
 // formatting, and signed-upload flow in one place so route files stay focused.
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getAdminToken, clearAdminSession } from "@/lib/admin-session";
+import { getAdminToken, clearAdminSession } from "@/lib/auth/admin-session";
 
 /** Read the current admin token or kick the user back to /admin. */
 export function requireToken(): string {

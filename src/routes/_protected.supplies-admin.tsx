@@ -25,8 +25,8 @@ import {
   officeListAssets, adminUpsertOfficeAsset, adminDeleteOfficeAsset,
   adminListOfficeCategoriesAll, adminUpsertOfficeCategory, adminDeleteOfficeCategory,
   adminOfficeCreateUploadUrl,
-} from "@/lib/office-assets.functions";
-import { requireToken, showError } from "@/lib/admin-helpers";
+} from "@/lib/features/office-assets.functions";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
 
 export const Route = createFileRoute("/_protected/supplies-admin")({
   head: () => ({ meta: [{ title: "สต๊อกอุปกรณ์ออฟฟิศ — WSC ProductionTrack" }] }),

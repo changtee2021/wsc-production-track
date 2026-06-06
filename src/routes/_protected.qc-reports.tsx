@@ -6,10 +6,10 @@ import {
   adminUpdateQcReportStatus,
   adminDeleteQcReport,
   adminFetchJobWorkers,
-} from "@/lib/admin.functions";
-import { adminSignMediaUrls } from "@/lib/media.functions";
-import { requireToken, showError } from "@/lib/admin-helpers";
-import { downloadQcReportsCsv } from "@/lib/qc-export";
+} from "@/lib/features/admin.functions";
+import { adminSignMediaUrls } from "@/lib/integrations/media.functions";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
+import { downloadQcReportsCsv } from "@/lib/utils/qc-export";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

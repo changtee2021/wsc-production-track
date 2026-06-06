@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getAdminToken, clearAdminSession } from "@/lib/admin-session";
+import { getAdminToken, clearAdminSession } from "@/lib/auth/admin-session";
 import {
   adminFetchChecklists,
   adminUpsertChecklistItem,
   adminDeleteChecklistItem,
   adminReorderChecklist,
-} from "@/lib/admin.functions";
+} from "@/lib/features/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

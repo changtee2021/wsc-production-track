@@ -19,8 +19,8 @@ import { toast } from "sonner";
 import {
   adminListOfficeRequests, adminApproveOfficeRequest, adminRejectOfficeRequest,
   adminOfficeRestock, adminOfficeStockDashboard, officeListEmployees,
-} from "@/lib/office-requests.functions";
-import { requireToken, showError } from "@/lib/admin-helpers";
+} from "@/lib/features/office-requests.functions";
+import { requireToken, showError } from "@/lib/utils/admin-helpers";
 
 export const Route = createFileRoute("/_protected/supplies-dashboard")({
   head: () => ({ meta: [{ title: "แดชบอร์ดสต๊อกออฟฟิศ — WSC ProductionTrack" }] }),
