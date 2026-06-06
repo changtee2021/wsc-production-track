@@ -261,6 +261,7 @@ function CategoriesPanel() {
 
 
 function EmployeesPanel() {
+  const navigate = useNavigate();
   const upsert = useServerFn(adminUpsertEmployee);
   const del = useServerFn(adminDeleteEmployee);
   const list = useServerFn(adminListEmployees);
