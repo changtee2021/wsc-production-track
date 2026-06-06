@@ -1,20 +1,8 @@
-const KEY = "ptrack_qc_token";
+import { createDeptSession } from "./dept-session";
 
-export function setQcToken(token: string) {
-  if (typeof window === "undefined") return;
-  sessionStorage.setItem(KEY, token);
-}
+const s = createDeptSession("ptrack_qc_token");
 
-export function getQcToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(KEY);
-}
-
-export function clearQcSession() {
-  if (typeof window === "undefined") return;
-  sessionStorage.removeItem(KEY);
-}
-
-export function isQcSession(): boolean {
-  return !!getQcToken();
-}
+export const setQcToken = s.setToken;
+export const getQcToken = s.getToken;
+export const clearQcSession = s.clearSession;
+export const isQcSession = s.isSession;

@@ -1,21 +1,8 @@
-// Office Supplies session token (free-issue, like Packing).
-const KEY = "ptrack_office_token";
+import { createDeptSession } from "./dept-session";
 
-export function setOfficeToken(token: string) {
-  if (typeof window === "undefined") return;
-  sessionStorage.setItem(KEY, token);
-}
+const s = createDeptSession("ptrack_office_token");
 
-export function getOfficeToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(KEY);
-}
-
-export function clearOfficeSession() {
-  if (typeof window === "undefined") return;
-  sessionStorage.removeItem(KEY);
-}
-
-export function isOfficeSession(): boolean {
-  return !!getOfficeToken();
-}
+export const setOfficeToken = s.setToken;
+export const getOfficeToken = s.getToken;
+export const clearOfficeSession = s.clearSession;
+export const isOfficeSession = s.isSession;

@@ -1,20 +1,8 @@
-const KEY = "ptrack_maintenance_token";
+import { createDeptSession } from "./dept-session";
 
-export function setMaintenanceToken(token: string) {
-  if (typeof window === "undefined") return;
-  sessionStorage.setItem(KEY, token);
-}
+const s = createDeptSession("ptrack_maintenance_token");
 
-export function getMaintenanceToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem(KEY);
-}
-
-export function clearMaintenanceSession() {
-  if (typeof window === "undefined") return;
-  sessionStorage.removeItem(KEY);
-}
-
-export function isMaintenanceSession(): boolean {
-  return !!getMaintenanceToken();
-}
+export const setMaintenanceToken = s.setToken;
+export const getMaintenanceToken = s.getToken;
+export const clearMaintenanceSession = s.clearSession;
+export const isMaintenanceSession = s.isSession;
