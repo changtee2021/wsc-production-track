@@ -42,7 +42,7 @@ import { AppVersion } from "@/components/AppVersion";
 
 const NAV_GROUPS: Array<{
   label: string;
-  items: Array<{ title: string; url: string; icon: typeof LayoutDashboard }>;
+  items: Array<{ title: string; url: string; icon: typeof LayoutDashboard; search?: Record<string, string> }>;
 }> = [
   {
     label: "ภาพรวม",
