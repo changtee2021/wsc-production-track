@@ -3,6 +3,7 @@
 // department membership via checkboxes (auto insert/delete in dept table).
 
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   adminListAllStaff,
