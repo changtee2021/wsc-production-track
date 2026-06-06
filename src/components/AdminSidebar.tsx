@@ -53,6 +53,17 @@ const NAV_GROUPS: Array<{
     ],
   },
   {
+    label: "การผลิต",
+    items: [
+      { title: "แดชบอร์ดไลน์ผลิต", url: "/production-dashboard", icon: Activity },
+      { title: "หมวดหมู่งานม่าน", url: "/manage?tab=cat", icon: Layers },
+      { title: "ขั้นตอนการผลิต", url: "/manage?tab=step", icon: Factory },
+      { title: "เช็คลิสต์ QC", url: "/manage?tab=qc-check", icon: ClipboardCheck },
+      { title: "เช็คลิสต์แพ็คของ", url: "/manage?tab=pack-check", icon: ListChecks },
+      { title: "เวลามาตรฐาน & ไฟแดง", url: "/production-standards", icon: Timer },
+    ],
+  },
+  {
     label: "QC",
     items: [
       { title: "รายงาน QC", url: "/qc-reports", icon: ClipboardCheck },
