@@ -196,7 +196,7 @@ export function AdminSidebar() {
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                        <Link to={item.url} className="flex items-center gap-2">
+                        <Link to={item.url} search={item.search as never} className="flex items-center gap-2">
                           <item.icon className="h-4 w-4" />
                           <span className="flex-1">{item.title}</span>
                           {showNewBadge && (
