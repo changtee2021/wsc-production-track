@@ -24,6 +24,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -216,6 +217,11 @@ export function AdminSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+      <SidebarFooter className="border-t border-sidebar-border">
+        <div className="flex items-center justify-center px-2 py-2 group-data-[collapsible=icon]:hidden">
+          <AppVersion className="text-sidebar-foreground/60" />
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }
