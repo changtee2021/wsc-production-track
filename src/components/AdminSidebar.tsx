@@ -24,6 +24,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -33,6 +34,7 @@ import { adminOfficeBadgeCounts } from "@/lib/features/office-requests.functions
 import { adminExpenseBadgeCounts } from "@/lib/features/expenses-admin.functions";
 import { getAdminToken } from "@/lib/auth/admin-session";
 import { hasUnseen } from "@/lib/utils/log-seen";
+import { AppVersion } from "@/components/AppVersion";
 
 const NAV_GROUPS: Array<{
   label: string;
@@ -216,6 +218,11 @@ export function AdminSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+      <SidebarFooter className="border-t border-sidebar-border">
+        <div className="flex items-center justify-center px-2 py-2 group-data-[collapsible=icon]:hidden">
+          <AppVersion className="text-sidebar-foreground/60" />
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

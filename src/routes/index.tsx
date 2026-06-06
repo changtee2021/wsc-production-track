@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/welcome-hero.png";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
+import { AppVersion } from "@/components/AppVersion";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -124,9 +125,12 @@ function WelcomePage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.07] backdrop-blur-md ring-1 ring-white/20">
               <Factory className="h-5 w-5" />
             </div>
-            <span className="font-bold tracking-tight drop-shadow">
-              WSC ProductionTrack
-            </span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-bold tracking-tight drop-shadow">
+                WSC ProductionTrack
+              </span>
+              <AppVersion className="text-white/70 drop-shadow" />
+            </div>
           </div>
           <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
             <Link to="/expense-scan" aria-label="เบิกค่าใช้จ่าย (AI สแกน)">

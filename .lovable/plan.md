@@ -1,86 +1,41 @@
-# รายงานตรวจสอบโค้ดทั้งโปรเจกต์
+## เป้าหมาย
+แสดงรหัสเวอร์ชันแอปในรูปแบบ `APP-QC-000 R.00 bfd 06.06.26` โดย:
+- `R.00 → R.01 → R.02 …` รันเพิ่มทุกครั้งที่มีการอัปเดตแอป
+- `bfd DD.MM.YY` = วันที่อัปเดตล่าสุด (เริ่มที่ `06.06.26`)
+- ค่ามาจากไฟล์เดียว ผมจะแก้ให้อัตโนมัติทุกครั้งที่แก้โค้ด/เพิ่มฟีเจอร์
 
-สแกนแล้ว 141 ไฟล์ TS/TSX, 67 dependencies, 26 route, 14 lib helper, 13 component
-**ขอบเขตยกเว้น**: ไม่แตะส่วนข้อมูลพนักงาน/staff-directory (รักษาให้ทำงานต่อได้)
+## ไฟล์ที่จะสร้าง/แก้
 
----
+### 1. สร้าง `src/lib/utils/version.ts` (single source of truth)
+```ts
+export const APP_VERSION = {
+  code: "APP-QC-000",
+  revision: "R.00",
+  date: "06.06.26", // DD.MM.YY
+} as const;
 
-## 1) บั๊ก/ความเสี่ยง Security & RLS
-
-### A. Database linter เตือน 12 รายการ
-- **WARN 1** Function search_path mutable — มี DB function ที่ยังไม่ตั้ง `search_path` (`fn_touch_updated_at`)
-- **WARN 2** Extension อยู่ใน schema `public`
-- **WARN 3–6** Public buckets เปิด listing กว้าง (`avatars`, `step-images`, `banners`, `office-assets`) — ใครก็ list ไฟล์ทั้ง bucket ได้
-- **WARN 7–12** SECURITY DEFINER functions เปิดให้ `anon`/`authenticated` เรียก execute โดยตรง (ควร REVOKE แล้วเรียกผ่าน server fn เท่านั้น)
-
-### B. รูปแบบ auth ปัจจุบัน (ข้อสังเกต ไม่ใช่บั๊กเฉียบพลัน)
-- ใช้ **password เดียวต่อแผนก** เก็บใน secrets (`ADMIN_PASSWORD`, `QC_PASSWORD`, `PACKING_PASSWORD`, `MAINTENANCE_PASSWORD`) + token เก็บใน `sessionStorage`
-- ไม่ได้ผูกกับ Supabase Auth → ไม่มี per-user accountability, token ไม่หมดอายุชัดเจน
-- **ดีแล้ว**: ไม่มี direct `supabase.from(...).insert/update/delete` จาก browser เลย — ทุก write ผ่าน server fn
-
-### C. จุดอื่น
-- ไฟล์ใหญ่มาก เสี่ยง regression: `_protected.dashboard.tsx` 1940 บรรทัด, `_protected.manage.tsx` 1365, `qc.tsx` 1064, `QrScannerDialog.tsx` 783
-- console.log ค้างใน production code 3 จุด (QrScannerDialog, ai-admin.functions, line-notify.server)
-
----
-
-## 2) ความซ้ำซ้อน / Dead code
-
-### A. Session/token pattern ซ้ำ 6 ชุด (โครงสร้างเหมือนกันเป๊ะ)
-ทุกแผนกมีไฟล์คู่ `*-session.ts` (client) + `*-token.server.ts` (server verify) เหมือนกันทุกบรรทัด ต่างแค่ `KEY` constant:
-- admin / qc / packing / maintenance / expense / office
-→ รวมเป็น **factory เดียว** `createDeptSession(key)` + `createDeptTokenVerifier(secret)` ลดได้ ~12 ไฟล์เหลือ 2
-
-### B. ไฟล์ orphan (ไม่มีใคร import)
-- `src/components/SlideToConfirm.tsx` (138 บรรทัด)
-- `src/lib/download.ts`
-→ ลบทิ้งได้
-
-### C. Export pattern คล้ายกันใน `*-export.ts`
-- `qc-export.ts`, `packing-export.ts` — อาจรวม helper ส่วน CSV/XLSX
-
----
-
-## 3) จัดระเบียบโครงสร้าง
-
-ปัจจุบัน `src/lib/` มี 41 ไฟล์ flat ปนกัน (sessions, tokens, server fns, helpers, AI tools, line, media) → อ่านยาก
-
-แนะนำจัดเป็น sub-folders (ไม่บังคับ ขึ้นกับว่ายอมรับ rename หรือไม่):
-```
-src/lib/
-  auth/        admin-session, *-token.server, dept-session factory
-  features/    admin, qc, packing, maintenance, expense, office, scan (.functions.ts)
-  integrations/line.*, media.*, worker-upload
-  ai/          ai-admin.*, ai-admin-tools.server
-  utils/       i18n, utils, log-seen, media-compress, media-zip, exports
+export const APP_VERSION_STRING =
+  `${APP_VERSION.code} ${APP_VERSION.revision} bfd ${APP_VERSION.date}`;
 ```
 
-### Route ใหญ่ที่ควรซอย
-- `_protected.dashboard.tsx` 1940 → แยกเป็น tabs/sections (charts, leaderboard, filters, exports)
-- `_protected.manage.tsx` 1365 → แยกตามแท็บ (categories, employees, steps, dept-employees)
-- `qc.tsx` 1064 → แยก form/list/upload
-- `QrScannerDialog.tsx` 783 → แยก hook สแกน + UI dialog
+### 2. สร้าง `src/components/AppVersion.tsx`
+คอมโพเนนต์เล็ก ๆ แสดงข้อความเวอร์ชัน รับ `className` ปรับสีได้ ใช้ `text-xs text-muted-foreground tracking-wide` เป็นค่าเริ่มต้น
 
----
+### 3. แสดงผล 3 จุด
+- **หน้าแรก (`src/routes/index.tsx`)** — ใต้ข้อความ `WSC ProductionTrack` ใน hero header (บรรทัด ~128) ใช้สีอ่อนบนพื้น hero
+- **Admin sidebar (`src/components/AdminSidebar.tsx`)** — เพิ่ม `<SidebarFooter>` ล่างสุด ก่อนปิด `<Sidebar>` ซ่อนเมื่อ collapsed
+- **ทุกหน้าที่ไม่ใช่แอดมิน** — เพิ่ม `<footer>` ใน `src/routes/__root.tsx` (RootComponent) แสดงเฉพาะเมื่อ path ไม่ขึ้นต้นด้วย admin layout (`/dashboard`, `/manage`, `/logs`, `/storage`, `/qc-summary`, `/qc-reports`, `/packing-summary`, `/packing-reports`, `/expenses-*`, `/supplies-admin`, `/supplies-dashboard`, `/supplies-reports`, `/maintenance-admin`, `/maintenance-master`, `/job-lookup`, `/logs-update`) — กล่าวอีกอย่าง: ทุก route ที่ matched กับ `_protected` layout ให้ซ่อน เพราะ admin มี sidebar footer อยู่แล้ว
+  - ใช้ `useRouterState({ select: s => s.matches })` ตรวจว่ามี match id ที่มี `_protected` หรือไม่
+  - footer style: `text-center text-[10px] text-muted-foreground py-2`
 
-## 4) ของที่ "ดีอยู่แล้ว" ไม่ต้องแตะ
-- ไม่มี direct browser write ไป DB
-- ทุก server fn ที่ดูใช้ zod validate input
-- มี `system_logs` audit + memory rule แล้ว
-- Private buckets (qc-media, log-notes, packing-media, maintenance-media, expense-receipts) ใช้ signed URL
+## กฎการรันเลขในอนาคต
+ทุกครั้งที่ผมแก้โค้ด/เพิ่มฟีเจอร์/แก้บั๊ก (event ที่บันทึก system_logs อยู่แล้ว) จะ:
+1. เปิด `src/lib/utils/version.ts`
+2. บวก `revision` ทีละ 1 (`R.00` → `R.01` → … → `R.99` → `R.100`)
+3. อัปเดต `date` เป็นวันปัจจุบันรูปแบบ `DD.MM.YY`
+4. แนบไปกับ commit/migration เดียวกัน
 
----
-
-## ขั้นถัดไป — เลือกได้ว่าให้แก้ส่วนไหน (ทำทีละชุด)
-
-| # | กลุ่มงาน | ความเสี่ยง | ผลกระทบ |
-|---|---|---|---|
-| **A** | Fix DB linter ทั้ง 12 ข้อ (search_path, REVOKE EXECUTE, bucket listing) | ต่ำ–ปานกลาง | ปลอดภัยขึ้น ไม่กระทบ UX |
-| **B** | ลบ orphan + console.log + dead code | ต่ำมาก | สะอาดขึ้น |
-| **C** | รวม session/token 12 ไฟล์ → factory 2 ไฟล์ | ต่ำ (ต้องเทสล็อกอินทุกแผนก) | โค้ดลด ~80% ในส่วนนี้ |
-| **D** | จัดโฟลเดอร์ `src/lib/` ใหม่ | ปานกลาง (import path เปลี่ยนเยอะ) | อ่านง่ายขึ้นถาวร |
-| **E** | ซอย route ใหญ่ (dashboard, manage, qc, QrScanner) | ปานกลาง–สูง | บำรุงรักษาดีขึ้น แต่ diff เยอะ |
-
-**คำแนะนำ**: เริ่มจาก A + B (เสี่ยงต่ำ ผลชัด) → ค่อยทำ C → ค่อย D/E ถ้ายังต้องการ
-
-โปรดบอกว่าจะให้เริ่มชุดไหน (เลือกได้หลายตัว เช่น "A+B" หรือ "ทั้งหมด ทำเป็น migration หลายรอบ")
+## สิ่งที่จะ**ไม่**ทำ
+- ไม่ดึงจาก git commit (รัน runtime ไม่ได้)
+- ไม่ดึงจาก system_logs (ทำให้ทุกหน้ายิง query เพิ่ม)
+- ไม่แตะ `_protected.tsx`, sidebar layout, หรือ business logic อื่น

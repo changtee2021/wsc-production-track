@@ -1,4 +1,5 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
+import { AppVersion } from "@/components/AppVersion";
 
 import appCss from "../styles.css?url";
 
@@ -84,5 +85,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  const isAdmin = useRouterState({
+    select: (s) => s.matches.some((m) => m.routeId.includes("_protected")),
+  });
+  return (
+    <>
+      <Outlet />
+      {!isAdmin && (
+        <footer className="flex items-center justify-center py-2">
+          <AppVersion />
+        </footer>
+      )}
+    </>
+  );
 }
