@@ -445,7 +445,8 @@ export const expenseListMine = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertExpenseOrAdmin(data.token);
+    // Mine-token must be bound to the requested employee_id; admin token bypasses.
+    assertExpenseOwner(data.token, data.requester_employee_id);
     const { data: rows, error } = await supabaseAdmin
       .from("expenses")
       .select("*")
