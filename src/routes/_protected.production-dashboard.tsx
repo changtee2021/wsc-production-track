@@ -30,6 +30,7 @@ type Active = {
   started_at: string;
   elapsed_seconds: number;
   target_seconds: number | null;
+  red_threshold: number | null;
   exceeded_today: number;
   is_red: boolean;
 };
@@ -47,8 +48,7 @@ function DashboardPage() {
     categories: { id: string; name: string }[];
     steps: { id: string; step_name: string }[];
     active: Active[];
-    threshold: number;
-  }>({ categories: [], steps: [], active: [], threshold: 3 });
+  }>({ categories: [], steps: [], active: [] });
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<string>("");
 
