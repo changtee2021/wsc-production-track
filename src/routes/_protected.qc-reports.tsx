@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { encodeStaffKey } from "@/lib/utils/staff-key";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -297,7 +298,7 @@ function QcReportsPage() {
                           <Link
                             to="/employee-profile/$id"
                             params={{ id: encodeStaffKey(r.qc_employees.name, r.qc_employees.emp_code) }}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
                             className="font-semibold hover:text-primary hover:underline"
                           >{r.qc_employees.name}</Link>
                         ) : <span className="font-semibold">—</span>}
