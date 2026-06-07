@@ -1,56 +1,36 @@
 ## เป้าหมาย
-ทำหน้า `/employee-profile/$id` ให้ใช้ได้กับพนักงาน "ทุกแผนก" รวมข้อมูลในหน้าเดียว เลือกช่วงเวลาได้ (วัน/สัปดาห์/เดือน) และทำให้ชื่อพนักงาน+ปุ่ม 👁 คลิกได้จากทุกหน้าที่มีชื่อพนักงาน
+เปลี่ยน "ไฟแดง" จากค่ากลางตัวเดียว → กำหนดได้ต่อ (ขั้นตอน × หมวด) เหมือนตารางเวลามาตรฐาน และ prefill ค่าเริ่มต้นด้วยค่ากลางปัจจุบัน (3)
 
 ## ขอบเขต
 
-### 1) Server function ใหม่: `adminGetEmployeeProfile`
-ไฟล์: `src/lib/features/employee-profile.functions.ts`
+### 1) Schema (`supabase--migration`)
+เพิ่มคอลัมน์ `red_threshold integer` ลงในตาราง `production_standards` (nullable ก็พอ แต่ UI จะบังคับให้ตั้งทุกแถวที่มีเวลามาตรฐาน)
 
-รับ input: `{ token, staff_key, range: "day"|"week"|"month", anchor_date }`
-- `staff_key` = คีย์รวมจาก AllStaff (lowercase name + emp_code) — ใช้หาแถวที่ตรงกันในทุกตารางแผนก
-- คืน:
-  - `employee`: ข้อมูลรวม (name, emp_code, avatar_url, nationality, departments[])
-  - `production`: timeline + stats (เหมือนเดิมจาก production_logs/standards)
-  - `qc`: จำนวน qc_reports + รายการล่าสุด (จาก `qc_employees.id` ที่ match)
-  - `packing`: จำนวน packing_reports + รายการล่าสุด
-  - `maintenance`: จำนวน maintenance_tickets ที่ assign + สถานะ
-  - `office`: จำนวน office_requests ที่เบิก
-  - `expenses`: จำนวน expenses + ยอดรวม
+### 2) Server functions (`src/lib/features/production-monitor.functions.ts`)
+- **`adminUpsertProductionStandard`**: รับ `red_threshold: number (1..50)` เพิ่มเข้าไป บันทึกพร้อม target_seconds
+- **`adminListProductionStandards`**: คืน `red_threshold` ในแต่ละแถวด้วย
+- **`fetchStandardsMap()` + `getRedThresholdValue()` callers**: เปลี่ยนเป็น map คืน `{ target_seconds, red_threshold }` ต่อ key
+- **`adminGetProductionDashboard`**: ใช้ threshold ต่อ (step, category) ของพนักงานคนนั้นในรอบวัน — นับ exceeded แล้วเทียบกับ threshold ของขั้นตอนที่กำลังทำ (หรือถ้าจะ aggregate: แดงเมื่อใดก็ตามที่มีขั้นตอนใดเกินจำนวน threshold ของขั้นตอนนั้น)
+- **`adminGetEmployeeTimeline`**: ส่ง `red_threshold` กลับต่อแถว + นับ exceeded แยกตาม (step, category) เทียบ threshold ของแต่ละขั้น แทนการใช้ค่าเดียว
+- **ลบ** `adminGetRedThreshold`, `adminSetRedThreshold`, `getRedThresholdValue` และลบ key `production_red_threshold` ใน `app_settings`
 
-ใช้ `supabaseAdmin` + verify admin token
+### 3) UI หน้าเวลามาตรฐาน (`src/routes/_protected.production-standards.tsx`)
+- ลบ section "ไฟแดงเมื่อเกินมาตรฐานวันละ ___ ครั้ง" ตัวเดียวออก
+- ในแต่ละช่องของ matrix เพิ่มอินพุตที่สอง: "ไฟแดง (ครั้ง/วัน)" ข้างใต้ "เวลา (นาที)"
+  - ค่าเริ่มต้น prefill = 3 เมื่อยังไม่มีค่า
+  - บังคับกรอกทั้งสองช่องก่อน save
+  - ปุ่ม save เดียวบันทึกทั้งคู่
+- หัวข้อ + คำอธิบายใหม่: "ตั้งเวลามาตรฐาน + จำนวนครั้งที่ถือว่าไฟแดง ของแต่ละขั้นตอน × หมวด"
 
-### 2) ปรับหน้าโปรไฟล์ `_protected.employee-profile.$id.tsx`
-- เปลี่ยน param ให้รับ `staff_key` (ใช้ `id` parameter เดิม โดยให้ค่าเป็น staff_key) — backward compat: ถ้า uuid ก็ map → staff_key
-- เพิ่ม segmented control: **วัน / สัปดาห์ / เดือน** + date picker (anchor)
-- Header: avatar, ชื่อ, รหัส, สัญชาติ, badge แสดงแผนกทั้งหมดที่สังกัด
-- KPI cards (รวม): งานเสร็จ, เวลาทำงานรวม, เกินเวลา, สถานะไฟแดง
-- Tabs/sections: ผลิต (timeline เดิม) | QC | แพ็ค | ซ่อม | ออฟฟิศ | ค่าใช้จ่าย — แต่ละแท็บโชว์สรุปจำนวน + รายการล่าสุด
-- ถ้าไม่มีข้อมูลในแผนกใด แสดง empty state
+### 4) ที่อื่นที่อ้างถึง threshold เดิม
+- `src/routes/_protected.employee-profile.$id.tsx` — `stats.is_red` คำนวณใหม่จาก per-step counters (server function ใหม่จะ return is_red มาให้แล้ว) UI ไม่เปลี่ยน
+- `src/routes/_protected.production-dashboard.tsx` — ใช้ `is_red` ที่ส่งมาจาก server ต่อ active card (server คำนวณตาม threshold ของขั้นตอนนั้น)
 
-### 3) ลิงก์เข้าโปรไฟล์ทุกจุด
-ทุกที่เปลี่ยนเป็น `<Link to="/employee-profile/$id" params={{ id: staffKey }}>` หรือปุ่ม 👁
-
-**A. `src/components/AllStaffPanel.tsx`**
-- ลบเงื่อนไข `r.ids.production` — ทำให้ชื่อคลิกได้ทุกแถว
-- เพิ่มคอลัมน์ "ดู" หรือปุ่ม 👁 (Eye icon) ในคอลัมน์ Actions ทุกแถว
-
-**B. หน้าที่มีชื่อพนักงาน — เพิ่มปุ่ม 👁/ทำชื่อคลิกได้**
-- `_protected.production-dashboard.tsx` — การ์ดในไลน์ผลิต
-- `_protected.qc-reports.tsx` — ตารางผู้ตรวจ QC
-- `_protected.packing-reports.tsx` — ตารางผู้แพ็ค
-- `_protected.expenses-dashboard.tsx` — รายการคนเบิก
-- `_protected.supplies-dashboard.tsx` — คนเบิกออฟฟิศ
-- `_protected.dashboard.tsx` — ถ้ามี leaderboard/รายชื่อ
-
-### 4) Helper รวม staff_key
-ไฟล์: `src/lib/utils/staff-key.ts` — function `makeStaffKey(name, emp_code)` ใช้ logic เดียวกับ `staff-directory.functions.ts` เพื่อให้ทุกหน้าสร้างคีย์ลิงก์ได้ตรงกัน
-
-### 5) Logging
-- เพิ่มแถว `system_logs` (category=`feature`) สรุปการเพิ่มโปรไฟล์รวมทุกแผนก + จุดคลิกใหม่
-- อัปเดต `src/lib/utils/version.ts` → R.05
+### 5) Logging + version
+- INSERT แถว `system_logs` (category=`feature`) สรุปการเปลี่ยน threshold เป็น per-step×category + ลบ global setting
+- bump `src/lib/utils/version.ts` → R.06
 
 ## หมายเหตุ
-- ไม่แตะ schema database — ใช้ตารางและคอลัมน์ที่มีอยู่
-- ไม่กระทบ logic การบันทึก production_logs/standards เดิม
-- ช่วงเวลา: คำนวณช่วง start/end ตาม anchor + range ที่ฝั่ง server
-- กราฟ performance รายวันใน 30 วัน — ตัดออก (ไม่อยู่ในขอบ
+- ไม่กระทบ logic การจับคู่ start/finish หรือการให้คะแนนใน `fn_score_on_finish`
+- migration ลบ key `production_red_threshold` ออกจาก `app_settings` (one-time cleanup)
+- prefill = 3 ฝั่ง UI เท่านั้น (DB เก็บเฉพ

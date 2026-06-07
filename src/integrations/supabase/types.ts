@@ -1156,6 +1156,7 @@ export type Database = {
           id: string
           late_points: number
           on_time_points: number
+          red_threshold: number | null
           step_id: string
           target_seconds: number
           updated_at: string
@@ -1169,6 +1170,7 @@ export type Database = {
           id?: string
           late_points?: number
           on_time_points?: number
+          red_threshold?: number | null
           step_id: string
           target_seconds: number
           updated_at?: string
@@ -1182,6 +1184,7 @@ export type Database = {
           id?: string
           late_points?: number
           on_time_points?: number
+          red_threshold?: number | null
           step_id?: string
           target_seconds?: number
           updated_at?: string

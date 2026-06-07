@@ -85,12 +85,7 @@ function rangeBounds(range: "day" | "week" | "month", anchor: string) {
   return { startISO: start.toISOString(), endISO: end.toISOString() };
 }
 
-async function getRedThreshold(): Promise<number> {
-  const { data } = await supabaseAdmin
-    .from("app_settings").select("value").eq("key", "production_red_threshold").maybeSingle();
-  const v = (data?.value as { count?: number } | null)?.count;
-  return typeof v === "number" && v > 0 ? v : 3;
-}
+const DEFAULT_RED_THRESHOLD = 3;
 
 const DEPT_TABLES = [
   { dept: "production", table: "employees", extra: "nationality" },
@@ -154,26 +149,26 @@ export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" 
     const { startISO, endISO } = rangeBounds(data.range, data.anchor);
 
     // ---- Production timeline (only if person is in production) ----
+    type ProdRow = {
+      job_id: string;
+      step_id: string;
+      category_id: string | null;
+      step_name: string;
+      category_name: string | null;
+      started_at: string;
+      finished_at: string;
+      actual_seconds: number;
+      target_seconds: number | null;
+      red_threshold: number | null;
+      exceeded: boolean;
+    };
     let production: {
       finished_count: number;
       total_seconds: number;
       exceeded_count: number;
-      threshold: number;
       is_red: boolean;
-      rows: Array<{
-        job_id: string;
-        step_name: string;
-        category_name: string | null;
-        started_at: string;
-        finished_at: string;
-        actual_seconds: number;
-        target_seconds: number | null;
-        exceeded: boolean;
-      }>;
-    } = { finished_count: 0, total_seconds: 0, exceeded_count: 0, threshold: 3, is_red: false, rows: [] };
-
-    const threshold = await getRedThreshold();
-    production.threshold = threshold;
+      rows: ProdRow[];
+    } = { finished_count: 0, total_seconds: 0, exceeded_count: 0, is_red: false, rows: [] };
 
     if (staff.ids.production) {
       const [logsRes, stdRes, stepsRes, catsRes] = await Promise.all([
@@ -184,41 +179,60 @@ export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" 
           .gte("created_at", startISO).lte("created_at", endISO)
           .order("created_at", { ascending: true }),
         supabaseAdmin.from("production_standards")
-          .select("step_id, category_id, target_seconds").eq("active", true),
+          .select("step_id, category_id, target_seconds, red_threshold").eq("active", true),
         supabaseAdmin.from("steps").select("id, step_name"),
         supabaseAdmin.from("categories").select("id, name"),
       ]);
-      const stdMap = new Map<string, number>();
+      type Std = { target_seconds: number; red_threshold: number };
+      const stdMap = new Map<string, Std>();
       for (const r of stdRes.data ?? [])
-        stdMap.set(`${r.step_id}|${r.category_id ?? ""}`, r.target_seconds);
+        stdMap.set(`${r.step_id}|${r.category_id ?? ""}`, {
+          target_seconds: r.target_seconds,
+          red_threshold:
+            typeof r.red_threshold === "number" && r.red_threshold > 0
+              ? r.red_threshold
+              : DEFAULT_RED_THRESHOLD,
+        });
+      const lookup = (sid: string, cid: string | null) =>
+        stdMap.get(`${sid}|${cid ?? ""}`) ?? stdMap.get(`${sid}|`) ?? null;
       const stepName = new Map((stepsRes.data ?? []).map((s) => [s.id, s.step_name]));
       const catName = new Map((catsRes.data ?? []).map((c) => [c.id, c.name]));
 
       const pairs = pairLogs((logsRes.data ?? []) as LogRow[]);
-      const rows = pairs.map((p) => {
-        const target =
-          stdMap.get(`${p.step_id}|${p.category_id ?? ""}`) ??
-          stdMap.get(`${p.step_id}|`) ?? null;
+      const rows: ProdRow[] = pairs.map((p) => {
+        const std = lookup(p.step_id, p.category_id);
         return {
           job_id: p.job_id,
+          step_id: p.step_id,
+          category_id: p.category_id,
           step_name: stepName.get(p.step_id) ?? "—",
           category_name: p.category_id ? catName.get(p.category_id) ?? null : null,
           started_at: p.started_at,
           finished_at: p.finished_at,
           actual_seconds: p.actual_seconds,
-          target_seconds: target,
-          exceeded: target != null && p.actual_seconds > target,
+          target_seconds: std?.target_seconds ?? null,
+          red_threshold: std?.red_threshold ?? null,
+          exceeded: std != null && p.actual_seconds > std.target_seconds,
         };
       }).sort((a, b) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
 
+      // per-(step,category) exceed counts vs. each row's own threshold
+      const excByKey = new Map<string, { count: number; threshold: number }>();
+      for (const r of rows) {
+        if (!r.exceeded || r.red_threshold == null) continue;
+        const k = `${r.step_id}|${r.category_id ?? ""}`;
+        const cur = excByKey.get(k) ?? { count: 0, threshold: r.red_threshold };
+        cur.count += 1;
+        excByKey.set(k, cur);
+      }
       const exc = rows.filter((r) => r.exceeded).length;
       const tot = rows.reduce((s, r) => s + r.actual_seconds, 0);
+      const isRed = Array.from(excByKey.values()).some((v) => v.count >= v.threshold);
       production = {
         finished_count: rows.length,
         total_seconds: tot,
         exceeded_count: exc,
-        threshold,
-        is_red: exc >= threshold,
+        is_red: isRed,
         rows,
       };
     }

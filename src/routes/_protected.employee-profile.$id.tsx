@@ -103,7 +103,7 @@ function EmployeeProfilePage() {
               ))}
               {prod?.is_red && (
                 <Badge variant="destructive" className="gap-1">
-                  <Flame className="h-3 w-3" /> เกินมาตรฐาน ≥ {prod.threshold} ครั้ง
+                  <Flame className="h-3 w-3" /> ไฟแดง (เกินมาตรฐานครบเกณฑ์)
                 </Badge>
               )}
             </div>

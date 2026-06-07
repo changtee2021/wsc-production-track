@@ -30,6 +30,7 @@ type Active = {
   started_at: string;
   elapsed_seconds: number;
   target_seconds: number | null;
+  red_threshold: number | null;
   exceeded_today: number;
   is_red: boolean;
 };
@@ -47,8 +48,7 @@ function DashboardPage() {
     categories: { id: string; name: string }[];
     steps: { id: string; step_name: string }[];
     active: Active[];
-    threshold: number;
-  }>({ categories: [], steps: [], active: [], threshold: 3 });
+  }>({ categories: [], steps: [], active: [] });
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<string>("");
 
@@ -85,7 +85,7 @@ function DashboardPage() {
             <Factory className="h-6 w-6 text-primary" /> แดชบอร์ดไลน์การผลิต
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            ติดตามช่างที่กำลังทำงานอยู่ • ไฟแดงเมื่อเกินมาตรฐาน ≥ {data.threshold} ครั้ง/วัน
+            ติดตามช่างที่กำลังทำงานอยู่ • ไฟแดงเมื่อเกินมาตรฐานครบจำนวนครั้งที่กำหนดในแต่ละขั้นตอน
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={load} className="gap-1">
