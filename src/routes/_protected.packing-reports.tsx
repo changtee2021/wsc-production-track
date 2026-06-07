@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { encodeStaffKey } from "@/lib/utils/staff-key";
+import { createFileRoute } from "@tanstack/react-router";
+import { useOpenEmployeeProfile } from "@/components/EmployeeProfileProvider";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -295,12 +295,11 @@ function PackingReportsPage() {
                       <span className="text-sm">
                         <span className="text-muted-foreground">แพ็ค: </span>
                         {r.packing_employees?.name ? (
-                          <Link
-                            to="/employee-profile/$id"
-                            params={{ id: encodeStaffKey(r.packing_employees.name, r.packing_employees.emp_code) }}
-                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); openProfile({ name: r.packing_employees!.name, emp_code: r.packing_employees!.emp_code }); }}
                             className="font-semibold hover:text-primary hover:underline"
-                          >{r.packing_employees.name}</Link>
+                          >{r.packing_employees.name}</button>
                         ) : <span className="font-semibold">—</span>}
                         {r.packing_employees?.emp_code && (
                           <span className="ml-1 font-mono text-[10px] text-muted-foreground">
