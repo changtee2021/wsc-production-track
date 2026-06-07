@@ -293,7 +293,14 @@ function QcReportsPage() {
                       </span>
                       <span className="text-sm">
                         <span className="text-muted-foreground">QC: </span>
-                        <span className="font-semibold">{r.qc_employees?.name ?? "—"}</span>
+                        {r.qc_employees?.name ? (
+                          <Link
+                            to="/employee-profile/$id"
+                            params={{ id: encodeStaffKey(r.qc_employees.name, r.qc_employees.emp_code) }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-semibold hover:text-primary hover:underline"
+                          >{r.qc_employees.name}</Link>
+                        ) : <span className="font-semibold">—</span>}
                         {r.qc_employees?.emp_code && (
                           <span className="ml-1 font-mono text-[10px] text-muted-foreground">
                             ({r.qc_employees.emp_code})

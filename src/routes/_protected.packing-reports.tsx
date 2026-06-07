@@ -293,7 +293,14 @@ function PackingReportsPage() {
                       </span>
                       <span className="text-sm">
                         <span className="text-muted-foreground">แพ็ค: </span>
-                        <span className="font-semibold">{r.packing_employees?.name ?? "—"}</span>
+                        {r.packing_employees?.name ? (
+                          <Link
+                            to="/employee-profile/$id"
+                            params={{ id: encodeStaffKey(r.packing_employees.name, r.packing_employees.emp_code) }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-semibold hover:text-primary hover:underline"
+                          >{r.packing_employees.name}</Link>
+                        ) : <span className="font-semibold">—</span>}
                         {r.packing_employees?.emp_code && (
                           <span className="ml-1 font-mono text-[10px] text-muted-foreground">
                             ({r.packing_employees.emp_code})
