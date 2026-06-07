@@ -74,6 +74,30 @@ export const issueExpenseSession = createServerFn({ method: "POST" })
     return { token: issueExpenseToken() };
   });
 
+// Employee-bound session for /expense-mine. Binds employee_id into the signed token
+// so a session token cannot be replayed to read another employee's expense history.
+export const issueExpenseMineSession = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({
+      token: tokenStr,
+      employee_id: z.string().uuid(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertExpenseOrAdmin(data.token);
+    // Validate the employee actually exists (any group) before binding.
+    const tables = ["office_employees", "employees", "qc_employees", "packing_employees", "maintenance_employees"] as const;
+    let exists = false;
+    for (const t of tables) {
+      const { data: emp } = await supabaseAdmin
+        .from(t).select("id, active").eq("id", data.employee_id).maybeSingle();
+      if (emp?.active) { exists = true; break; }
+    }
+    if (!exists) throw new Error("ไม่พบพนักงาน");
+    return { token: issueExpenseMineToken(data.employee_id) };
+  });
+
+
 // ============ LIST CATEGORIES ============
 export const expenseListCategories = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
