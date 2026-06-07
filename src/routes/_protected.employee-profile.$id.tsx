@@ -83,7 +83,7 @@ function EmployeeProfilePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/manage" })} className="mb-3 gap-1">
+      <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/manage", search: {} })} className="mb-3 gap-1">
         <ArrowLeft className="h-4 w-4" /> กลับไปหน้าพนักงาน
       </Button>
 
@@ -170,7 +170,7 @@ function EmployeeProfilePage() {
                       <div className="mt-1">
                         {r.exceeded ? <span className="text-xs font-semibold text-rose-600">🔴 เกินเวลามาตรฐาน</span>
                           : target ? <span className="text-xs font-semibold text-emerald-600">🟢 ผ่านเกณฑ์</span>
-                          : <span className="text-xs text-muted-foreground">— ยังไม่ตั้งค่ามาตรฐาน — <Link to="/production-setup" className="underline">ตั้งค่า</Link></span>}
+                          : <span className="text-xs text-muted-foreground">— ยังไม่ตั้งค่ามาตรฐาน — <Link to="/production-setup" search={{}} className="underline">ตั้งค่า</Link></span>}
                       </div>
                     </li>
                   );

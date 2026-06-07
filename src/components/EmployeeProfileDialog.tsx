@@ -7,7 +7,7 @@ import { Link } from "@tanstack/react-router";
 import { adminGetEmployeeAggregateProfile } from "@/lib/features/employee-profile.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { downloadProfileXlsx } from "@/lib/utils/production-export";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,6 +121,9 @@ export function EmployeeProfileDialog({
           <DialogTitle className="flex items-center gap-2 text-base">
             <Activity className="h-4 w-4 text-primary" /> โปรไฟล์พนักงาน
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            ข้อมูลพนักงานรวมทุกแผนก พร้อมประวัติงานและ Export รายงาน
+          </DialogDescription>
         </DialogHeader>
 
         <div className="px-5 py-4">
@@ -214,7 +217,7 @@ export function EmployeeProfileDialog({
                               ? <span className="text-xs font-semibold text-rose-600">🔴 เกินเวลามาตรฐาน</span>
                               : r.target_seconds
                                 ? <span className="text-xs font-semibold text-emerald-600">🟢 ผ่านเกณฑ์</span>
-                                : <span className="text-xs text-muted-foreground">— ยังไม่ตั้งค่ามาตรฐาน — <Link to="/production-setup" className="underline">ตั้งค่า</Link></span>}
+                                : <span className="text-xs text-muted-foreground">— ยังไม่ตั้งค่ามาตรฐาน — <Link to="/production-setup" search={{}} className="underline">ตั้งค่า</Link></span>}
                           </div>
                         </li>
                       );
