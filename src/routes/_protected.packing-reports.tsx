@@ -86,6 +86,7 @@ interface PackingReportRow {
 }
 
 function PackingReportsPage() {
+  const openProfile = useOpenEmployeeProfile();
   const fetchReports = useServerFn(adminFetchPackingReports);
   const updateStatus = useServerFn(adminUpdatePackingReportStatus);
   const del = useServerFn(adminDeletePackingReport);

@@ -86,6 +86,7 @@ interface QcReportRow {
 }
 
 function QcReportsPage() {
+  const openProfile = useOpenEmployeeProfile();
   const fetchReports = useServerFn(adminFetchQcReports);
   const updateStatus = useServerFn(adminUpdateQcReportStatus);
   const del = useServerFn(adminDeleteQcReport);
