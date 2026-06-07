@@ -512,12 +512,26 @@ export const expenseSignReceiptUrls = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertExpenseOrAdmin(data.token);
+    // Admin token signs any path; otherwise the caller must hold a mine-token, and
+    // we restrict signing to paths that belong to expenses owned by that employee.
+    let allowedPaths = data.paths;
+    if (!verifyAdminToken(data.token)) {
+      const empId = verifyExpenseMineToken(data.token);
+      if (!empId) throw new Error("Unauthorized");
+      const { data: rows } = await supabaseAdmin
+        .from("expenses")
+        .select("image_paths")
+        .eq("requester_employee_id", empId);
+      const owned = new Set<string>();
+      for (const r of rows ?? []) for (const p of r.image_paths ?? []) owned.add(p);
+      allowedPaths = data.paths.filter((p) => owned.has(p));
+      if (allowedPaths.length === 0) return { urlMap: {} };
+    }
     const { data: signed } = await supabaseAdmin.storage
-      .from(BUCKET).createSignedUrls(data.paths, SIGN_TTL);
+      .from(BUCKET).createSignedUrls(allowedPaths, SIGN_TTL);
     const urlMap: Record<string, string> = {};
     (signed ?? []).forEach((row, i) => {
-      if (row.signedUrl) urlMap[data.paths[i]] = row.signedUrl;
+      if (row.signedUrl) urlMap[allowedPaths[i]] = row.signedUrl;
     });
     return { urlMap };
   });
