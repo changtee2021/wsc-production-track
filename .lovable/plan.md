@@ -1,44 +1,56 @@
-# แยกหมวดการผลิตออกจากหน้าพนักงาน
-
 ## เป้าหมาย
-ย้าย 4 หมวดนี้ออกจากหน้า `/manage` (พนักงาน) ไปอยู่หน้าใหม่ของตัวเอง โดย**ไม่แตะข้อมูลในฐานข้อมูล** ปรับเฉพาะ UX/ตำแหน่งเมนู:
-- หมวดหมู่งานม่าน
-- ขั้นตอนการผลิต
-- เช็คลิสต์ QC
-- เช็คลิสต์แพ็คของ
+ทำหน้า `/employee-profile/$id` ให้ใช้ได้กับพนักงาน "ทุกแผนก" รวมข้อมูลในหน้าเดียว เลือกช่วงเวลาได้ (วัน/สัปดาห์/เดือน) และทำให้ชื่อพนักงาน+ปุ่ม 👁 คลิกได้จากทุกหน้าที่มีชื่อพนักงาน
 
-## สิ่งที่จะทำ
+## ขอบเขต
 
-### 1. สร้างหน้าใหม่ `src/routes/_protected.production-setup.tsx`
-- ใช้ `validateSearch` รับ `?tab=cat|step|qc-check|pack-check` เหมือนเดิม
-- ใช้คอมโพเนนต์เดิมที่มีอยู่ทั้งหมด (re-export จาก `_protected.manage.tsx` หรือย้าย `CategoriesPanel` + `StepsPanel` มาไฟล์ใหม่ และ import `QcChecklistsPanel` / `PackingChecklistsPanel` จากที่เดิม)
-- หัวข้อหน้า: "ตั้งค่าการผลิต" — แสดงเป็น Section/Collapsible 4 อันแบบเดียวกับ manage เพื่อให้ผู้ใช้คุ้นเคย
-- เปิด section อัตโนมัติตาม `tab`
+### 1) Server function ใหม่: `adminGetEmployeeProfile`
+ไฟล์: `src/lib/features/employee-profile.functions.ts`
 
-### 2. เอา 4 sections ออกจาก `_protected.manage.tsx`
-- ลบ `cat`, `step`, `qc-check`, `pack-check` จาก `sections[]`
-- ลบ import `QcChecklistsPanel` / `PackingChecklistsPanel` ที่ไม่ใช้แล้ว
-- ย้าย `CategoriesPanel` + `StepsPanel` ไปไฟล์ใหม่ (พร้อม import ของมัน) — ฟังก์ชัน server เดิม (`adminUpsertCategory` ฯลฯ) ไม่เปลี่ยน
-- หน้า manage เหลือเฉพาะหมวดพนักงาน (all/prod/qc/pack/maint/office)
-- ปรับคำอธิบายหัวเรื่องให้ตรง: "จัดการพนักงานทุกแผนก"
+รับ input: `{ token, staff_key, range: "day"|"week"|"month", anchor_date }`
+- `staff_key` = คีย์รวมจาก AllStaff (lowercase name + emp_code) — ใช้หาแถวที่ตรงกันในทุกตารางแผนก
+- คืน:
+  - `employee`: ข้อมูลรวม (name, emp_code, avatar_url, nationality, departments[])
+  - `production`: timeline + stats (เหมือนเดิมจาก production_logs/standards)
+  - `qc`: จำนวน qc_reports + รายการล่าสุด (จาก `qc_employees.id` ที่ match)
+  - `packing`: จำนวน packing_reports + รายการล่าสุด
+  - `maintenance`: จำนวน maintenance_tickets ที่ assign + สถานะ
+  - `office`: จำนวน office_requests ที่เบิก
+  - `expenses`: จำนวน expenses + ยอดรวม
 
-### 3. อัปเดต Sidebar (`AdminSidebar.tsx`)
-ในกลุ่ม **"การผลิต"** เปลี่ยน url ของ 4 รายการจาก `/manage?tab=...` → `/production-setup?tab=...`:
-- หมวดหมู่งานม่าน → `/production-setup` + `{tab:"cat"}`
-- ขั้นตอนการผลิต → `/production-setup` + `{tab:"step"}`
-- เช็คลิสต์ QC → `/production-setup` + `{tab:"qc-check"}`
-- เช็คลิสต์แพ็คของ → `/production-setup` + `{tab:"pack-check"}`
+ใช้ `supabaseAdmin` + verify admin token
 
-(รายการอื่น เช่น แดชบอร์ดไลน์ผลิต / เวลามาตรฐาน คงเดิม)
+### 2) ปรับหน้าโปรไฟล์ `_protected.employee-profile.$id.tsx`
+- เปลี่ยน param ให้รับ `staff_key` (ใช้ `id` parameter เดิม โดยให้ค่าเป็น staff_key) — backward compat: ถ้า uuid ก็ map → staff_key
+- เพิ่ม segmented control: **วัน / สัปดาห์ / เดือน** + date picker (anchor)
+- Header: avatar, ชื่อ, รหัส, สัญชาติ, badge แสดงแผนกทั้งหมดที่สังกัด
+- KPI cards (รวม): งานเสร็จ, เวลาทำงานรวม, เกินเวลา, สถานะไฟแดง
+- Tabs/sections: ผลิต (timeline เดิม) | QC | แพ็ค | ซ่อม | ออฟฟิศ | ค่าใช้จ่าย — แต่ละแท็บโชว์สรุปจำนวน + รายการล่าสุด
+- ถ้าไม่มีข้อมูลในแผนกใด แสดง empty state
 
-### 4. บันทึก system_logs + อัปเดต `src/lib/utils/version.ts` (รัน R เพิ่ม 1)
+### 3) ลิงก์เข้าโปรไฟล์ทุกจุด
+ทุกที่เปลี่ยนเป็น `<Link to="/employee-profile/$id" params={{ id: staffKey }}>` หรือปุ่ม 👁
 
-## สิ่งที่จะไม่ทำ
-- ไม่แตะ schema/ตาราง/ข้อมูลเดิม (categories, steps, qc_checklists, packing_checklists)
-- ไม่แก้ server functions
-- ไม่เปลี่ยนหน้า production-dashboard / production-standards
-- ไม่ลบ route `/manage` (ยังใช้สำหรับพนักงาน) — แค่ลบ 4 sections ออก
+**A. `src/components/AllStaffPanel.tsx`**
+- ลบเงื่อนไข `r.ids.production` — ทำให้ชื่อคลิกได้ทุกแถว
+- เพิ่มคอลัมน์ "ดู" หรือปุ่ม 👁 (Eye icon) ในคอลัมน์ Actions ทุกแถว
 
-## ผลลัพธ์ UX
-- เมนู "พนักงาน" (ระบบ → พนักงาน) → จัดการคนล้วน ๆ
-- เมนู "การผลิต" 4 รายการ → ไปหน้าใหม่ `/production-setup` ที่รวมการตั้งค่าการผลิตไว้ที่เดียว
+**B. หน้าที่มีชื่อพนักงาน — เพิ่มปุ่ม 👁/ทำชื่อคลิกได้**
+- `_protected.production-dashboard.tsx` — การ์ดในไลน์ผลิต
+- `_protected.qc-reports.tsx` — ตารางผู้ตรวจ QC
+- `_protected.packing-reports.tsx` — ตารางผู้แพ็ค
+- `_protected.expenses-dashboard.tsx` — รายการคนเบิก
+- `_protected.supplies-dashboard.tsx` — คนเบิกออฟฟิศ
+- `_protected.dashboard.tsx` — ถ้ามี leaderboard/รายชื่อ
+
+### 4) Helper รวม staff_key
+ไฟล์: `src/lib/utils/staff-key.ts` — function `makeStaffKey(name, emp_code)` ใช้ logic เดียวกับ `staff-directory.functions.ts` เพื่อให้ทุกหน้าสร้างคีย์ลิงก์ได้ตรงกัน
+
+### 5) Logging
+- เพิ่มแถว `system_logs` (category=`feature`) สรุปการเพิ่มโปรไฟล์รวมทุกแผนก + จุดคลิกใหม่
+- อัปเดต `src/lib/utils/version.ts` → R.05
+
+## หมายเหตุ
+- ไม่แตะ schema database — ใช้ตารางและคอลัมน์ที่มีอยู่
+- ไม่กระทบ logic การบันทึก production_logs/standards เดิม
+- ช่วงเวลา: คำนวณช่วง start/end ตาม anchor + range ที่ฝั่ง server
+- กราฟ performance รายวันใน 30 วัน — ตัดออก (ไม่อยู่ในขอบ
