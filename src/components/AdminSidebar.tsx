@@ -20,6 +20,7 @@ import {
   ListChecks,
   Activity,
   Timer,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar,
