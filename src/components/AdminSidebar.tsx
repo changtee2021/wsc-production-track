@@ -56,10 +56,7 @@ const NAV_GROUPS: Array<{
     label: "การผลิต",
     items: [
       { title: "แดชบอร์ดไลน์ผลิต", url: "/production-dashboard", icon: Activity },
-      { title: "หมวดหมู่งานม่าน", url: "/production-setup", icon: Layers, search: { tab: "cat" } },
-      { title: "ขั้นตอนการผลิต", url: "/production-setup", icon: Factory, search: { tab: "step" } },
-      { title: "เช็คลิสต์ QC", url: "/production-setup", icon: ListChecks, search: { tab: "qc-check" } },
-      { title: "เช็คลิสต์แพ็คของ", url: "/production-setup", icon: ListChecks, search: { tab: "pack-check" } },
+      { title: "ตั้งค่าการผลิต", url: "/production-setup", icon: Layers },
       { title: "เวลามาตรฐาน & ไฟแดง", url: "/production-standards", icon: Timer },
     ],
   },
