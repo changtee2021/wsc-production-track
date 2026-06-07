@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SuppliesRequestRouteImport } from './routes/supplies-request'
 import { Route as SuppliesRouteImport } from './routes/supplies'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -32,6 +33,7 @@ import { Route as ProtectedProductionSetupRouteImport } from './routes/_protecte
 import { Route as ProtectedProductionDashboardRouteImport } from './routes/_protected.production-dashboard'
 import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
 import { Route as ProtectedPackingReportsRouteImport } from './routes/_protected.packing-reports'
+import { Route as ProtectedManagePoliciesRouteImport } from './routes/_protected.manage-policies'
 import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
 import { Route as ProtectedMaintenanceMasterRouteImport } from './routes/_protected.maintenance-master'
 import { Route as ProtectedMaintenanceAdminRouteImport } from './routes/_protected.maintenance-admin'
@@ -42,9 +44,15 @@ import { Route as ProtectedExpensesReportsRouteImport } from './routes/_protecte
 import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protected.expenses-dashboard'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
+import { Route as ProtectedAdminPolicyRouteImport } from './routes/_protected.admin-policy'
 import { Route as ProtectedEmployeeProfileIdRouteImport } from './routes/_protected.employee-profile.$id'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SuppliesRequestRoute = SuppliesRequestRouteImport.update({
   id: '/supplies-request',
   path: '/supplies-request',
@@ -164,6 +172,11 @@ const ProtectedPackingReportsRoute = ProtectedPackingReportsRouteImport.update({
   path: '/packing-reports',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedManagePoliciesRoute = ProtectedManagePoliciesRouteImport.update({
+  id: '/manage-policies',
+  path: '/manage-policies',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedManageRoute = ProtectedManageRouteImport.update({
   id: '/manage',
   path: '/manage',
@@ -218,6 +231,11 @@ const ProtectedControlRoute = ProtectedControlRouteImport.update({
   path: '/control',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedAdminPolicyRoute = ProtectedAdminPolicyRouteImport.update({
+  id: '/admin-policy',
+  path: '/admin-policy',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedEmployeeProfileIdRoute =
   ProtectedEmployeeProfileIdRouteImport.update({
     id: '/employee-profile/$id',
@@ -243,6 +261,8 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
+  '/terms': typeof TermsRoute
+  '/admin-policy': typeof ProtectedAdminPolicyRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
@@ -253,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/maintenance-admin': typeof ProtectedMaintenanceAdminRoute
   '/maintenance-master': typeof ProtectedMaintenanceMasterRoute
   '/manage': typeof ProtectedManageRoute
+  '/manage-policies': typeof ProtectedManagePoliciesRoute
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/production-dashboard': typeof ProtectedProductionDashboardRoute
@@ -279,6 +300,8 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
+  '/terms': typeof TermsRoute
+  '/admin-policy': typeof ProtectedAdminPolicyRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
   '/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
@@ -289,6 +312,7 @@ export interface FileRoutesByTo {
   '/maintenance-admin': typeof ProtectedMaintenanceAdminRoute
   '/maintenance-master': typeof ProtectedMaintenanceMasterRoute
   '/manage': typeof ProtectedManageRoute
+  '/manage-policies': typeof ProtectedManagePoliciesRoute
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/production-dashboard': typeof ProtectedProductionDashboardRoute
@@ -317,6 +341,8 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
+  '/terms': typeof TermsRoute
+  '/_protected/admin-policy': typeof ProtectedAdminPolicyRoute
   '/_protected/control': typeof ProtectedControlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
   '/_protected/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
@@ -327,6 +353,7 @@ export interface FileRoutesById {
   '/_protected/maintenance-admin': typeof ProtectedMaintenanceAdminRoute
   '/_protected/maintenance-master': typeof ProtectedMaintenanceMasterRoute
   '/_protected/manage': typeof ProtectedManageRoute
+  '/_protected/manage-policies': typeof ProtectedManagePoliciesRoute
   '/_protected/packing-reports': typeof ProtectedPackingReportsRoute
   '/_protected/packing-summary': typeof ProtectedPackingSummaryRoute
   '/_protected/production-dashboard': typeof ProtectedProductionDashboardRoute
@@ -355,6 +382,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/supplies'
     | '/supplies-request'
+    | '/terms'
+    | '/admin-policy'
     | '/control'
     | '/dashboard'
     | '/expenses-dashboard'
@@ -365,6 +394,7 @@ export interface FileRouteTypes {
     | '/maintenance-admin'
     | '/maintenance-master'
     | '/manage'
+    | '/manage-policies'
     | '/packing-reports'
     | '/packing-summary'
     | '/production-dashboard'
@@ -391,6 +421,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/supplies'
     | '/supplies-request'
+    | '/terms'
+    | '/admin-policy'
     | '/control'
     | '/dashboard'
     | '/expenses-dashboard'
@@ -401,6 +433,7 @@ export interface FileRouteTypes {
     | '/maintenance-admin'
     | '/maintenance-master'
     | '/manage'
+    | '/manage-policies'
     | '/packing-reports'
     | '/packing-summary'
     | '/production-dashboard'
@@ -428,6 +461,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/supplies'
     | '/supplies-request'
+    | '/terms'
+    | '/_protected/admin-policy'
     | '/_protected/control'
     | '/_protected/dashboard'
     | '/_protected/expenses-dashboard'
@@ -438,6 +473,7 @@ export interface FileRouteTypes {
     | '/_protected/maintenance-admin'
     | '/_protected/maintenance-master'
     | '/_protected/manage'
+    | '/_protected/manage-policies'
     | '/_protected/packing-reports'
     | '/_protected/packing-summary'
     | '/_protected/production-dashboard'
@@ -466,11 +502,19 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SuppliesRoute: typeof SuppliesRoute
   SuppliesRequestRoute: typeof SuppliesRequestRoute
+  TermsRoute: typeof TermsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/supplies-request': {
       id: '/supplies-request'
       path: '/supplies-request'
@@ -632,6 +676,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedPackingReportsRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/manage-policies': {
+      id: '/_protected/manage-policies'
+      path: '/manage-policies'
+      fullPath: '/manage-policies'
+      preLoaderRoute: typeof ProtectedManagePoliciesRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/manage': {
       id: '/_protected/manage'
       path: '/manage'
@@ -702,6 +753,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedControlRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/admin-policy': {
+      id: '/_protected/admin-policy'
+      path: '/admin-policy'
+      fullPath: '/admin-policy'
+      preLoaderRoute: typeof ProtectedAdminPolicyRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/employee-profile/$id': {
       id: '/_protected/employee-profile/$id'
       path: '/employee-profile/$id'
@@ -720,6 +778,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface ProtectedRouteChildren {
+  ProtectedAdminPolicyRoute: typeof ProtectedAdminPolicyRoute
   ProtectedControlRoute: typeof ProtectedControlRoute
   ProtectedDashboardRoute: typeof ProtectedDashboardRoute
   ProtectedExpensesDashboardRoute: typeof ProtectedExpensesDashboardRoute
@@ -730,6 +789,7 @@ interface ProtectedRouteChildren {
   ProtectedMaintenanceAdminRoute: typeof ProtectedMaintenanceAdminRoute
   ProtectedMaintenanceMasterRoute: typeof ProtectedMaintenanceMasterRoute
   ProtectedManageRoute: typeof ProtectedManageRoute
+  ProtectedManagePoliciesRoute: typeof ProtectedManagePoliciesRoute
   ProtectedPackingReportsRoute: typeof ProtectedPackingReportsRoute
   ProtectedPackingSummaryRoute: typeof ProtectedPackingSummaryRoute
   ProtectedProductionDashboardRoute: typeof ProtectedProductionDashboardRoute
@@ -745,6 +805,7 @@ interface ProtectedRouteChildren {
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
+  ProtectedAdminPolicyRoute: ProtectedAdminPolicyRoute,
   ProtectedControlRoute: ProtectedControlRoute,
   ProtectedDashboardRoute: ProtectedDashboardRoute,
   ProtectedExpensesDashboardRoute: ProtectedExpensesDashboardRoute,
@@ -755,6 +816,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedMaintenanceAdminRoute: ProtectedMaintenanceAdminRoute,
   ProtectedMaintenanceMasterRoute: ProtectedMaintenanceMasterRoute,
   ProtectedManageRoute: ProtectedManageRoute,
+  ProtectedManagePoliciesRoute: ProtectedManagePoliciesRoute,
   ProtectedPackingReportsRoute: ProtectedPackingReportsRoute,
   ProtectedPackingSummaryRoute: ProtectedPackingSummaryRoute,
   ProtectedProductionDashboardRoute: ProtectedProductionDashboardRoute,
@@ -786,6 +848,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SuppliesRoute: SuppliesRoute,
   SuppliesRequestRoute: SuppliesRequestRoute,
+  TermsRoute: TermsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
 }
 export const routeTree = rootRouteImport

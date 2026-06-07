@@ -1088,6 +1088,39 @@ export type Database = {
           },
         ]
       }
+      policies: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          key: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          key: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          key?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
       production_logs: {
         Row: {
           action: string
