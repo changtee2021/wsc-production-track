@@ -1,7 +1,7 @@
 // Production monitoring server functions:
 // - Employee daily timeline & stats (pairs start/finish logs vs. standards)
 // - Active production line dashboard data
-// - Standards CRUD matrix + red-alert threshold (app_settings)
+// - Standards CRUD matrix WITH per-row red-alert threshold
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -25,24 +25,34 @@ type LogRow = {
   created_at: string;
 };
 
-async function fetchStandardsMap() {
+type StdEntry = { target_seconds: number; red_threshold: number };
+
+const DEFAULT_RED_THRESHOLD = 3;
+
+async function fetchStandardsMap(): Promise<Map<string, StdEntry>> {
   const { data, error } = await supabaseAdmin
     .from("production_standards")
-    .select("step_id, category_id, target_seconds")
+    .select("step_id, category_id, target_seconds, red_threshold")
     .eq("active", true);
   if (error) throw new Error(error.message);
-  const map = new Map<string, number>(); // key: `${step}|${category ?? ""}`
+  const map = new Map<string, StdEntry>();
   for (const r of data ?? []) {
-    map.set(`${r.step_id}|${r.category_id ?? ""}`, r.target_seconds);
+    map.set(`${r.step_id}|${r.category_id ?? ""}`, {
+      target_seconds: r.target_seconds,
+      red_threshold:
+        typeof r.red_threshold === "number" && r.red_threshold > 0
+          ? r.red_threshold
+          : DEFAULT_RED_THRESHOLD,
+    });
   }
   return map;
 }
 
-function targetFor(
-  map: Map<string, number>,
+function lookupStd(
+  map: Map<string, StdEntry>,
   stepId: string,
   categoryId: string | null,
-): number | null {
+): StdEntry | null {
   return (
     map.get(`${stepId}|${categoryId ?? ""}`) ??
     map.get(`${stepId}|`) ??
@@ -51,7 +61,6 @@ function targetFor(
 }
 
 function pairLogs(logs: LogRow[]) {
-  // pair start+finish for same job+step+employee, ordered by time
   const byKey = new Map<string, LogRow[]>();
   for (const l of logs) {
     const k = `${l.job_id}|${l.step_id}|${l.employee_id ?? ""}`;
@@ -99,17 +108,7 @@ function pairLogs(logs: LogRow[]) {
   return pairs;
 }
 
-async function getRedThresholdValue(): Promise<number> {
-  const { data } = await supabaseAdmin
-    .from("app_settings")
-    .select("value")
-    .eq("key", "production_red_threshold")
-    .maybeSingle();
-  const v = (data?.value as { count?: number } | null)?.count;
-  return typeof v === "number" && v > 0 ? v : 3;
-}
-
-// ---------- Employee Profile ----------
+// ---------- Employee Profile (single-day) ----------
 
 const dateStr = z
   .string()
@@ -141,7 +140,7 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
 
-    const [stdMap, stepsRes, catsRes, empRes, threshold] = await Promise.all([
+    const [stdMap, stepsRes, catsRes, empRes] = await Promise.all([
       fetchStandardsMap(),
       supabaseAdmin.from("steps").select("id, step_name"),
       supabaseAdmin.from("categories").select("id, name"),
@@ -150,7 +149,6 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
         .select("id, name, emp_code, avatar_url, nationality, active")
         .eq("id", data.employee_id)
         .maybeSingle(),
-      getRedThresholdValue(),
     ]);
     const stepName = new Map(
       (stepsRes.data ?? []).map((s) => [s.id, s.step_name]),
@@ -162,7 +160,7 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
     const pairs = pairLogs((logs ?? []) as LogRow[]);
     const rows = pairs
       .map((p) => {
-        const target = targetFor(stdMap, p.step_id, p.category_id);
+        const std = lookupStd(stdMap, p.step_id, p.category_id);
         return {
           job_id: p.job_id,
           step_id: p.step_id,
@@ -172,8 +170,9 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
           started_at: p.started_at,
           finished_at: p.finished_at,
           actual_seconds: p.actual_seconds,
-          target_seconds: target,
-          exceeded: target != null && p.actual_seconds > target,
+          target_seconds: std?.target_seconds ?? null,
+          red_threshold: std?.red_threshold ?? null,
+          exceeded: std != null && p.actual_seconds > std.target_seconds,
         };
       })
       .sort(
@@ -182,7 +181,19 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
           new Date(a.finished_at).getTime(),
       );
 
+    // per-(step,category) exceeded counts vs. each row's own red_threshold
+    const excByKey = new Map<string, { count: number; threshold: number }>();
+    for (const r of rows) {
+      if (!r.exceeded || r.red_threshold == null) continue;
+      const k = `${r.step_id}|${r.category_id ?? ""}`;
+      const cur = excByKey.get(k) ?? { count: 0, threshold: r.red_threshold };
+      cur.count += 1;
+      excByKey.set(k, cur);
+    }
     const exceeded_count = rows.filter((r) => r.exceeded).length;
+    const is_red = Array.from(excByKey.values()).some(
+      (v) => v.count >= v.threshold,
+    );
     const total_seconds = rows.reduce((s, r) => s + r.actual_seconds, 0);
 
     return {
@@ -192,8 +203,7 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
         finished_count: rows.length,
         total_seconds,
         exceeded_count,
-        is_red: exceeded_count >= threshold,
-        threshold,
+        is_red,
       },
     };
   });
@@ -209,19 +219,17 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
     const lookbackStart = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
     const since = dayStart < lookbackStart ? lookbackStart : dayStart;
 
-    const [logsRes, catsRes, stepsRes, empsRes, stdMap, threshold] =
-      await Promise.all([
-        supabaseAdmin
-          .from("production_logs")
-          .select("id, job_id, employee_id, step_id, category_id, action, created_at")
-          .gte("created_at", since)
-          .order("created_at", { ascending: true }),
-        supabaseAdmin.from("categories").select("id, name").eq("active", true).order("name"),
-        supabaseAdmin.from("steps").select("id, step_name").eq("active", true).order("step_name"),
-        supabaseAdmin.from("employees").select("id, name, emp_code, avatar_url"),
-        fetchStandardsMap(),
-        getRedThresholdValue(),
-      ]);
+    const [logsRes, catsRes, stepsRes, empsRes, stdMap] = await Promise.all([
+      supabaseAdmin
+        .from("production_logs")
+        .select("id, job_id, employee_id, step_id, category_id, action, created_at")
+        .gte("created_at", since)
+        .order("created_at", { ascending: true }),
+      supabaseAdmin.from("categories").select("id, name").eq("active", true).order("name"),
+      supabaseAdmin.from("steps").select("id, step_name").eq("active", true).order("step_name"),
+      supabaseAdmin.from("employees").select("id, name, emp_code, avatar_url"),
+      fetchStandardsMap(),
+    ]);
     if (logsRes.error) throw new Error(logsRes.error.message);
 
     const empMap = new Map(
@@ -231,18 +239,16 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
     const logs = (logsRes.data ?? []) as LogRow[];
     const pairs = pairLogs(logs);
 
-    // exceeded counts per employee today
-    const exceededByEmp = new Map<string, number>();
+    // exceeded counts per (employee, step, category) today
+    const excByKey = new Map<string, number>();
     const dayStartMs = new Date(dayStart).getTime();
     for (const p of pairs) {
       if (!p.employee_id) continue;
       if (new Date(p.finished_at).getTime() < dayStartMs) continue;
-      const target = targetFor(stdMap, p.step_id, p.category_id);
-      if (target != null && p.actual_seconds > target) {
-        exceededByEmp.set(
-          p.employee_id,
-          (exceededByEmp.get(p.employee_id) ?? 0) + 1,
-        );
+      const std = lookupStd(stdMap, p.step_id, p.category_id);
+      if (std && p.actual_seconds > std.target_seconds) {
+        const k = `${p.employee_id}|${p.step_id}|${p.category_id ?? ""}`;
+        excByKey.set(k, (excByKey.get(k) ?? 0) + 1);
       }
     }
 
@@ -263,6 +269,7 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
       started_at: string;
       elapsed_seconds: number;
       target_seconds: number | null;
+      red_threshold: number | null;
       exceeded_today: number;
       is_red: boolean;
     }[] = [];
@@ -276,7 +283,10 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
         1,
         Math.round((now - new Date(l.created_at).getTime()) / 1000),
       );
-      const exc = l.employee_id ? exceededByEmp.get(l.employee_id) ?? 0 : 0;
+      const std = lookupStd(stdMap, l.step_id, l.category_id);
+      const excKey = `${l.employee_id ?? ""}|${l.step_id}|${l.category_id ?? ""}`;
+      const exc = excByKey.get(excKey) ?? 0;
+      const threshold = std?.red_threshold ?? null;
       active.push({
         category_id: l.category_id,
         step_id: l.step_id,
@@ -287,9 +297,10 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
         job_id: l.job_id,
         started_at: l.created_at,
         elapsed_seconds: elapsed,
-        target_seconds: targetFor(stdMap, l.step_id, l.category_id),
+        target_seconds: std?.target_seconds ?? null,
+        red_threshold: threshold,
         exceeded_today: exc,
-        is_red: exc >= threshold,
+        is_red: threshold != null && exc >= threshold,
       });
     }
 
@@ -297,7 +308,6 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
       categories: catsRes.data ?? [],
       steps: stepsRes.data ?? [],
       active,
-      threshold,
     };
   });
 
@@ -310,7 +320,7 @@ export const adminListProductionStandards = createServerFn({ method: "POST" })
     const [stdRes, catsRes, stepsRes] = await Promise.all([
       supabaseAdmin
         .from("production_standards")
-        .select("id, step_id, category_id, target_seconds, active"),
+        .select("id, step_id, category_id, target_seconds, red_threshold, active"),
       supabaseAdmin.from("categories").select("id, name").eq("active", true).order("name"),
       supabaseAdmin.from("steps").select("id, step_name").eq("active", true).order("step_name"),
     ]);
@@ -319,6 +329,7 @@ export const adminListProductionStandards = createServerFn({ method: "POST" })
       standards: stdRes.data ?? [],
       categories: catsRes.data ?? [],
       steps: stepsRes.data ?? [],
+      default_red_threshold: DEFAULT_RED_THRESHOLD,
     };
   });
 
@@ -330,18 +341,12 @@ export const adminUpsertProductionStandard = createServerFn({ method: "POST" })
         step_id: z.string().uuid(),
         category_id: z.string().uuid().nullable(),
         target_seconds: z.number().int().min(1).max(86400),
+        red_threshold: z.number().int().min(1).max(50),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    // unique key: (step_id, COALESCE(category_id, '00000000-...'))
-    const existing = await supabaseAdmin
-      .from("production_standards")
-      .select("id")
-      .eq("step_id", data.step_id)
-      .is("category_id", data.category_id === null ? null : (undefined as never));
-    // Fallback: do manual match because supabase JS .is() with non-null is awkward
     let existingId: string | null = null;
     if (data.category_id === null) {
       const { data: rows } = await supabaseAdmin
@@ -357,11 +362,14 @@ export const adminUpsertProductionStandard = createServerFn({ method: "POST" })
         .eq("category_id", data.category_id);
       existingId = rows?.[0]?.id ?? null;
     }
-    void existing;
     if (existingId) {
       const { error } = await supabaseAdmin
         .from("production_standards")
-        .update({ target_seconds: data.target_seconds, active: true })
+        .update({
+          target_seconds: data.target_seconds,
+          red_threshold: data.red_threshold,
+          active: true,
+        })
         .eq("id", existingId);
       if (error) throw new Error(error.message);
     } else {
@@ -371,6 +379,7 @@ export const adminUpsertProductionStandard = createServerFn({ method: "POST" })
           step_id: data.step_id,
           category_id: data.category_id,
           target_seconds: data.target_seconds,
+          red_threshold: data.red_threshold,
         });
       if (error) throw new Error(error.message);
     }
@@ -387,35 +396,6 @@ export const adminDeleteProductionStandard = createServerFn({ method: "POST" })
       .from("production_standards")
       .delete()
       .eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
-// ---------- Red Threshold ----------
-
-export const adminGetRedThreshold = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
-  .handler(async ({ data }) => {
-    assertAdmin(data.token);
-    return { count: await getRedThresholdValue() };
-  });
-
-export const adminSetRedThreshold = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, count: z.number().int().min(1).max(50) }).parse(d),
-  )
-  .handler(async ({ data }) => {
-    assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("app_settings")
-      .upsert(
-        {
-          key: "production_red_threshold",
-          value: { count: data.count },
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "key" },
-      );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
