@@ -113,10 +113,6 @@ function Manage() {
     { id: "pack", title: "พนักงานแพ็คของ", node: <PackingEmployeesPanel /> },
     { id: "maint", title: "ช่างซ่อม / พนักงานแผนกซ่อม", node: <MaintenanceEmployeesPanel /> },
     { id: "office", title: "พนักงานออฟฟิศ", node: <OfficeEmployeesPanel /> },
-    { id: "cat", title: "หมวดหมู่งานม่าน", node: <CategoriesPanel /> },
-    { id: "step", title: "ขั้นตอนการผลิต", node: <StepsPanel /> },
-    { id: "qc-check", title: "เช็คลิสต์ QC", node: <QcChecklistsPanel /> },
-    { id: "pack-check", title: "เช็คลิสต์แพ็คของ", node: <PackingChecklistsPanel /> },
   ];
   const openId = tab && sections.some((s) => s.id === tab) ? tab : "all";
 
