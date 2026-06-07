@@ -57,6 +57,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { encodeStaffKey } from "@/lib/utils/staff-key";
 import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/utils/i18n";
 import { AllStaffPanel } from "@/components/AllStaffPanel";
@@ -436,9 +437,9 @@ function EmployeesPanel() {
                       <span>{flagFor(e.nationality)}</span>
                       <button
                         type="button"
-                        onClick={() => navigate({ to: "/employee-profile/$id", params: { id: e.id } })}
+                        onClick={() => navigate({ to: "/employee-profile/$id", params: { id: encodeStaffKey(e.name, e.emp_code) } })}
                         className="hover:text-primary hover:underline"
-                        title="ดูโปรไฟล์การผลิต"
+                        title="ดูโปรไฟล์พนักงาน"
                       >{e.name}</button>
                     </div>
                     <div className="text-xs text-muted-foreground">
