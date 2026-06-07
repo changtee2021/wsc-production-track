@@ -257,6 +257,7 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
       step_id: string;
       employee_id: string | null;
       employee_name: string;
+      employee_emp_code: string | null;
       employee_avatar: string | null;
       job_id: string;
       started_at: string;
@@ -281,6 +282,7 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
         step_id: l.step_id,
         employee_id: l.employee_id,
         employee_name: emp?.name ?? "—",
+        employee_emp_code: emp?.emp_code ?? null,
         employee_avatar: emp?.avatar_url ?? null,
         job_id: l.job_id,
         started_at: l.created_at,
