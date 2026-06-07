@@ -2,8 +2,8 @@
 // AI assistant updates `revision` (+1) and `date` (DD.MM.YY) on every code change.
 export const APP_VERSION = {
   code: "APP-QC-000",
-  revision: "R.03",
-  date: "06.07.26", // DD.MM.YY
+  revision: "R.04",
+  date: "07.07.26", // DD.MM.YY
 } as const;
 
 export const APP_VERSION_STRING =
