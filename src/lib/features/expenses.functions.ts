@@ -477,6 +477,7 @@ export const expenseResubmit = createServerFn({ method: "POST" })
       .from("expenses").select("*").eq("id", data.id).single();
     if (error || !row) throw new Error("ไม่พบรายการ");
     // Enforce ownership: admin OR mine-token bound to the original requester.
+    if (!row.requester_employee_id) throw new Error("Unauthorized");
     assertExpenseOwner(data.token, row.requester_employee_id);
     if (row.status !== "rejected") throw new Error("รายการนี้ยื่นใหม่ไม่ได้");
 
