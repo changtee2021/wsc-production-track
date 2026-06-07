@@ -3,7 +3,6 @@
 // department membership via checkboxes (auto insert/delete in dept table).
 
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   adminListAllStaff,
@@ -21,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Users, Pencil, Save, X, Upload, Loader2, Eye } from "lucide-react";
-import { encodeStaffKey } from "@/lib/utils/staff-key";
+import { useOpenEmployeeProfile } from "@/components/EmployeeProfileProvider";
 import { toast } from "sonner";
 import { initialsOf } from "@/lib/utils/i18n";
 
@@ -55,7 +54,7 @@ const DEPT_COLOR: Record<Department, string> = {
 const NATIONALITIES = ["Thai", "Burmese", "Lao", "Khmer", "Other"];
 
 export function AllStaffPanel() {
-  const navigate = useNavigate();
+  const openProfile = useOpenEmployeeProfile();
   const listFn = useServerFn(adminListAllStaff);
   const toggleFn = useServerFn(adminToggleStaffDepartment);
   const updateFn = useServerFn(adminUpdateStaffMeta);
@@ -287,7 +286,7 @@ export function AllStaffPanel() {
                           ) : (
                             <button
                               type="button"
-                              onClick={() => navigate({ to: "/employee-profile/$id", params: { id: encodeStaffKey(r.name, r.emp_code) } })}
+                              onClick={() => openProfile({ name: r.name, emp_code: r.emp_code })}
                               className="text-left font-semibold hover:text-primary hover:underline"
                               title="ดูโปรไฟล์พนักงาน"
                             >{r.name}</button>
@@ -361,7 +360,7 @@ export function AllStaffPanel() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => navigate({ to: "/employee-profile/$id", params: { id: encodeStaffKey(r.name, r.emp_code) } })}
+                            onClick={() => openProfile({ name: r.name, emp_code: r.emp_code })}
                             className="h-8 px-2"
                             title="ดูโปรไฟล์"
                           >
