@@ -1,6 +1,7 @@
 // Live production-line dashboard: tabs per product category,
 // columns per production step, cards per active worker with red-alert ring.
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { encodeStaffKey } from "@/lib/utils/staff-key";
 import { useEffect, useState, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminGetProductionDashboard } from "@/lib/features/production-monitor.functions";
@@ -23,6 +24,7 @@ type Active = {
   step_id: string;
   employee_id: string | null;
   employee_name: string;
+  employee_emp_code: string | null;
   employee_avatar: string | null;
   job_id: string;
   started_at: string;
