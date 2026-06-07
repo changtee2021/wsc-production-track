@@ -59,8 +59,6 @@ import {
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/utils/i18n";
-import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
-import { PackingChecklistsPanel } from "@/components/PackingChecklistsPanel";
 import { AllStaffPanel } from "@/components/AllStaffPanel";
 import { OfficeEmployeesPanel } from "@/components/OfficeEmployeesPanel";
 
@@ -115,10 +113,6 @@ function Manage() {
     { id: "pack", title: "พนักงานแพ็คของ", node: <PackingEmployeesPanel /> },
     { id: "maint", title: "ช่างซ่อม / พนักงานแผนกซ่อม", node: <MaintenanceEmployeesPanel /> },
     { id: "office", title: "พนักงานออฟฟิศ", node: <OfficeEmployeesPanel /> },
-    { id: "cat", title: "หมวดหมู่งานม่าน", node: <CategoriesPanel /> },
-    { id: "step", title: "ขั้นตอนการผลิต", node: <StepsPanel /> },
-    { id: "qc-check", title: "เช็คลิสต์ QC", node: <QcChecklistsPanel /> },
-    { id: "pack-check", title: "เช็คลิสต์แพ็คของ", node: <PackingChecklistsPanel /> },
   ];
   const openId = tab && sections.some((s) => s.id === tab) ? tab : "all";
 
@@ -127,7 +121,7 @@ function Manage() {
       <Toaster richColors position="top-center" />
       <h1 className="mb-1 text-2xl font-bold tracking-tight">พนักงาน</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        จัดการพนักงานทุกแผนก หมวดหมู่ ขั้นตอนการผลิต และเช็คลิสต์ (คลิกหัวข้อเพื่อเปิด/ปิด)
+        จัดการพนักงานทุกแผนก (คลิกหัวข้อเพื่อเปิด/ปิด)
       </p>
       <div className="space-y-4">
         {sections.map((s, i) => (
@@ -150,7 +144,7 @@ interface Category {
   active: boolean;
 }
 
-function CategoriesPanel() {
+export function CategoriesPanel() {
   const upsert = useServerFn(adminUpsertCategory);
   const del = useServerFn(adminDeleteCategory);
   const [items, setItems] = useState<Category[]>([]);
@@ -562,7 +556,7 @@ function EmployeeEditor({
   );
 }
 
-function StepsPanel() {
+export function StepsPanel() {
   const upsert = useServerFn(adminUpsertStep);
   const del = useServerFn(adminDeleteStep);
   const createUrl = useServerFn(adminCreateUploadUrl);
