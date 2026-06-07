@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,7 +57,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import { encodeStaffKey } from "@/lib/utils/staff-key";
+import { useOpenEmployeeProfile } from "@/components/EmployeeProfileProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/utils/i18n";
 import { AllStaffPanel } from "@/components/AllStaffPanel";
@@ -256,7 +256,7 @@ export function CategoriesPanel() {
 
 
 function EmployeesPanel() {
-  const navigate = useNavigate();
+  const openProfile = useOpenEmployeeProfile();
   const upsert = useServerFn(adminUpsertEmployee);
   const del = useServerFn(adminDeleteEmployee);
   const list = useServerFn(adminListEmployees);
@@ -437,7 +437,7 @@ function EmployeesPanel() {
                       <span>{flagFor(e.nationality)}</span>
                       <button
                         type="button"
-                        onClick={() => navigate({ to: "/employee-profile/$id", params: { id: encodeStaffKey(e.name, e.emp_code) } })}
+                        onClick={() => openProfile({ name: e.name, emp_code: e.emp_code })}
                         className="hover:text-primary hover:underline"
                         title="ดูโปรไฟล์พนักงาน"
                       >{e.name}</button>
