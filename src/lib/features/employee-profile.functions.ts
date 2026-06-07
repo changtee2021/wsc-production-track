@@ -85,12 +85,7 @@ function rangeBounds(range: "day" | "week" | "month", anchor: string) {
   return { startISO: start.toISOString(), endISO: end.toISOString() };
 }
 
-async function getRedThreshold(): Promise<number> {
-  const { data } = await supabaseAdmin
-    .from("app_settings").select("value").eq("key", "production_red_threshold").maybeSingle();
-  const v = (data?.value as { count?: number } | null)?.count;
-  return typeof v === "number" && v > 0 ? v : 3;
-}
+const DEFAULT_RED_THRESHOLD = 3;
 
 const DEPT_TABLES = [
   { dept: "production", table: "employees", extra: "nationality" },
