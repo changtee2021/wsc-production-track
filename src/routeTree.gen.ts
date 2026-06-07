@@ -28,6 +28,7 @@ import { Route as ProtectedStorageRouteImport } from './routes/_protected.storag
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedProductionStandardsRouteImport } from './routes/_protected.production-standards'
+import { Route as ProtectedProductionSetupRouteImport } from './routes/_protected.production-setup'
 import { Route as ProtectedProductionDashboardRouteImport } from './routes/_protected.production-dashboard'
 import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
 import { Route as ProtectedPackingReportsRouteImport } from './routes/_protected.packing-reports'
@@ -141,6 +142,12 @@ const ProtectedProductionStandardsRoute =
     path: '/production-standards',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ProtectedProductionSetupRoute =
+  ProtectedProductionSetupRouteImport.update({
+    id: '/production-setup',
+    path: '/production-setup',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedProductionDashboardRoute =
   ProtectedProductionDashboardRouteImport.update({
     id: '/production-dashboard',
@@ -249,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/production-dashboard': typeof ProtectedProductionDashboardRoute
+  '/production-setup': typeof ProtectedProductionSetupRoute
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
@@ -284,6 +292,7 @@ export interface FileRoutesByTo {
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/production-dashboard': typeof ProtectedProductionDashboardRoute
+  '/production-setup': typeof ProtectedProductionSetupRoute
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
@@ -321,6 +330,7 @@ export interface FileRoutesById {
   '/_protected/packing-reports': typeof ProtectedPackingReportsRoute
   '/_protected/packing-summary': typeof ProtectedPackingSummaryRoute
   '/_protected/production-dashboard': typeof ProtectedProductionDashboardRoute
+  '/_protected/production-setup': typeof ProtectedProductionSetupRoute
   '/_protected/production-standards': typeof ProtectedProductionStandardsRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/packing-reports'
     | '/packing-summary'
     | '/production-dashboard'
+    | '/production-setup'
     | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
@@ -393,6 +404,7 @@ export interface FileRouteTypes {
     | '/packing-reports'
     | '/packing-summary'
     | '/production-dashboard'
+    | '/production-setup'
     | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
@@ -429,6 +441,7 @@ export interface FileRouteTypes {
     | '/_protected/packing-reports'
     | '/_protected/packing-summary'
     | '/_protected/production-dashboard'
+    | '/_protected/production-setup'
     | '/_protected/production-standards'
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedProductionStandardsRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/production-setup': {
+      id: '/_protected/production-setup'
+      path: '/production-setup'
+      fullPath: '/production-setup'
+      preLoaderRoute: typeof ProtectedProductionSetupRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/production-dashboard': {
       id: '/_protected/production-dashboard'
       path: '/production-dashboard'
@@ -713,6 +733,7 @@ interface ProtectedRouteChildren {
   ProtectedPackingReportsRoute: typeof ProtectedPackingReportsRoute
   ProtectedPackingSummaryRoute: typeof ProtectedPackingSummaryRoute
   ProtectedProductionDashboardRoute: typeof ProtectedProductionDashboardRoute
+  ProtectedProductionSetupRoute: typeof ProtectedProductionSetupRoute
   ProtectedProductionStandardsRoute: typeof ProtectedProductionStandardsRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
@@ -737,6 +758,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedPackingReportsRoute: ProtectedPackingReportsRoute,
   ProtectedPackingSummaryRoute: ProtectedPackingSummaryRoute,
   ProtectedProductionDashboardRoute: ProtectedProductionDashboardRoute,
+  ProtectedProductionSetupRoute: ProtectedProductionSetupRoute,
   ProtectedProductionStandardsRoute: ProtectedProductionStandardsRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
