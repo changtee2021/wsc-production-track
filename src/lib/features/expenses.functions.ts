@@ -42,6 +42,7 @@ function assertExpenseOwner(
   const empId = verifyExpenseMineToken(token);
   if (empId && empId === employee_id) return empId;
   throw new Error("Unauthorized");
+}
 function clientIp(): string {
   return (
     getRequestHeader("cf-connecting-ip") ||
