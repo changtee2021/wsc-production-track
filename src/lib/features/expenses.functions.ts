@@ -29,6 +29,19 @@ function assertExpenseOrAdmin(token: string | undefined) {
   if (verifyAdminToken(token)) return;
   throw new Error("Unauthorized");
 }
+/**
+ * For per-employee resource endpoints (list mine / resubmit / sign receipt URLs),
+ * accept either an admin token or a mine-token bound to the requested employee_id.
+ * Returns the authorized employee_id (or null for admin = wildcard).
+ */
+function assertExpenseOwner(
+  token: string | undefined,
+  employee_id: string,
+): string | null {
+  if (verifyAdminToken(token)) return null; // admin can view any
+  const empId = verifyExpenseMineToken(token);
+  if (empId && empId === employee_id) return empId;
+  throw new Error("Unauthorized");
 function clientIp(): string {
   return (
     getRequestHeader("cf-connecting-ip") ||
