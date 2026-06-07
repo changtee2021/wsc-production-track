@@ -1,6 +1,7 @@
 // Live production-line dashboard: tabs per product category,
 // columns per production step, cards per active worker with red-alert ring.
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { encodeStaffKey } from "@/lib/utils/staff-key";
 import { useEffect, useState, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminGetProductionDashboard } from "@/lib/features/production-monitor.functions";
@@ -23,6 +24,7 @@ type Active = {
   step_id: string;
   employee_id: string | null;
   employee_name: string;
+  employee_emp_code: string | null;
   employee_avatar: string | null;
   job_id: string;
   started_at: string;
@@ -168,7 +170,12 @@ function WorkerCard({ a }: { a: Active }) {
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1 truncate font-semibold">
-            {a.employee_name}
+            <Link
+              to="/employee-profile/$id"
+              params={{ id: encodeStaffKey(a.employee_name, a.employee_emp_code) }}
+              className="hover:text-primary hover:underline"
+              title="ดูโปรไฟล์พนักงาน"
+            >{a.employee_name}</Link>
             {a.is_red && <Flame className="h-3.5 w-3.5 text-rose-600" />}
           </div>
           <div className="truncate text-xs text-muted-foreground">Job: <span className="font-mono">{a.job_id}</span></div>

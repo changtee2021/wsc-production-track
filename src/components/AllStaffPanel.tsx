@@ -20,7 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Users, Pencil, Save, X, Upload, Loader2 } from "lucide-react";
+import { Users, Pencil, Save, X, Upload, Loader2, Eye } from "lucide-react";
+import { encodeStaffKey } from "@/lib/utils/staff-key";
 import { toast } from "sonner";
 import { initialsOf } from "@/lib/utils/i18n";
 
@@ -283,15 +284,13 @@ export function AllStaffPanel() {
                                 </Button>
                               </div>
                             </div>
-                          ) : r.ids.production ? (
+                          ) : (
                             <button
                               type="button"
-                              onClick={() => navigate({ to: "/employee-profile/$id", params: { id: r.ids.production! } })}
+                              onClick={() => navigate({ to: "/employee-profile/$id", params: { id: encodeStaffKey(r.name, r.emp_code) } })}
                               className="text-left font-semibold hover:text-primary hover:underline"
-                              title="ดูโปรไฟล์การผลิต"
+                              title="ดูโปรไฟล์พนักงาน"
                             >{r.name}</button>
-                          ) : (
-                            <div className="font-semibold" title="ต้องมีในแผนกผลิตเพื่อดูโปรไฟล์">{r.name}</div>
                           )}
                           {!editing && (
                             <div className="mt-0.5 flex flex-wrap gap-1">
@@ -358,9 +357,20 @@ export function AllStaffPanel() {
                           </Button>
                         </div>
                       ) : (
-                        <Button size="sm" variant="ghost" onClick={() => startEdit(r)} className="h-8 gap-1">
-                          <Pencil className="h-3 w-3" /> แก้ไข
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => navigate({ to: "/employee-profile/$id", params: { id: encodeStaffKey(r.name, r.emp_code) } })}
+                            className="h-8 px-2"
+                            title="ดูโปรไฟล์"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => startEdit(r)} className="h-8 gap-1">
+                            <Pencil className="h-3 w-3" /> แก้ไข
+                          </Button>
+                        </div>
                       )}
                     </td>
                   </tr>
