@@ -59,8 +59,6 @@ import {
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/utils/i18n";
-import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
-import { PackingChecklistsPanel } from "@/components/PackingChecklistsPanel";
 import { AllStaffPanel } from "@/components/AllStaffPanel";
 import { OfficeEmployeesPanel } from "@/components/OfficeEmployeesPanel";
 
