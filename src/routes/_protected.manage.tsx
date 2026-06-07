@@ -150,7 +150,7 @@ interface Category {
   active: boolean;
 }
 
-function CategoriesPanel() {
+export function CategoriesPanel() {
   const upsert = useServerFn(adminUpsertCategory);
   const del = useServerFn(adminDeleteCategory);
   const [items, setItems] = useState<Category[]>([]);
@@ -562,7 +562,7 @@ function EmployeeEditor({
   );
 }
 
-function StepsPanel() {
+export function StepsPanel() {
   const upsert = useServerFn(adminUpsertStep);
   const del = useServerFn(adminDeleteStep);
   const createUrl = useServerFn(adminCreateUploadUrl);
