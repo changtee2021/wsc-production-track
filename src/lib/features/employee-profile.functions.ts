@@ -250,14 +250,18 @@ export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" 
     let maintenance: { count: number; rows: Array<{ id: string; ticket_no: string; status: string; reported_at: string; problem_text: string }> } =
       { count: 0, rows: [] };
     {
-      const { data } = await supabaseAdmin.from("maintenance_tickets")
+      const mtRes = await supabaseAdmin.from("maintenance_tickets")
         .select("id, ticket_no, status, reported_at, problem_text, assignee_name, reporter_name")
         .or(`assignee_name.eq.${data.name},reporter_name.eq.${data.name}`)
         .gte("reported_at", startISO).lte("reported_at", endISO)
         .order("reported_at", { ascending: false }).limit(50);
-      maintenance = { count: (data ?? []).length, rows: (data ?? []).map((r) => ({
-        id: r.id, ticket_no: r.ticket_no, status: r.status, reported_at: r.reported_at, problem_text: r.problem_text,
-      })) };
+      const list = mtRes.data ?? [];
+      maintenance = {
+        count: list.length,
+        rows: list.map((r) => ({
+          id: r.id, ticket_no: r.ticket_no, status: r.status, reported_at: r.reported_at, problem_text: r.problem_text,
+        })),
+      };
     }
 
     // ---- Office requests ----
