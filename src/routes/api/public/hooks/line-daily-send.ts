@@ -1,14 +1,34 @@
 // Public cron endpoint — pg_cron hits this every minute.
 // Reads the configured Bangkok HH:MM, and if it matches (within a small
 // window) and we haven't already sent today, sends the daily summary.
+//
+// Auth: caller MUST present the Supabase anon/publishable key in the
+// `apikey` header (the standard pg_cron+pg_net pattern). Without this,
+// any external party could trigger or suppress the daily LINE summary.
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendDailySummary, bangkokNowParts } from "@/lib/integrations/line.server";
 
+function isAuthorized(req: Request): boolean {
+  const expected =
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    "";
+  if (!expected) return false;
+  const apikey = req.headers.get("apikey") ?? "";
+  const auth = req.headers.get("authorization") ?? "";
+  const bearer = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
+  return apikey === expected || bearer === expected;
+}
+
 export const Route = createFileRoute("/api/public/hooks/line-daily-send")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        if (!isAuthorized(request)) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
         const { hhmm, ymd } = bangkokNowParts();
 
         const { data: rows, error } = await supabaseAdmin
@@ -16,7 +36,7 @@ export const Route = createFileRoute("/api/public/hooks/line-daily-send")({
           .select("key, value")
           .in("key", ["line_daily_send_time", "line_daily_last_sent_date"]);
         if (error) {
-          return Response.json({ ok: false, error: error.message }, { status: 500 });
+          return Response.json({ ok: false }, { status: 500 });
         }
         const map = new Map(
           (rows ?? []).map((r) => [r.key as string, r.value as Record<string, unknown>]),
@@ -27,16 +47,10 @@ export const Route = createFileRoute("/api/public/hooks/line-daily-send")({
         const enabled = conf.enabled !== false;
         const lastSent = typeof lastVal.date === "string" ? lastVal.date : null;
 
-        if (!enabled) {
-          return Response.json({ ok: true, skipped: "disabled", now: hhmm });
-        }
-        if (lastSent === ymd) {
-          return Response.json({ ok: true, skipped: "already-sent-today", now: hhmm });
-        }
-        // Tolerate a small drift (cron may fire a few seconds late).
-        if (hhmm !== targetTime) {
-          return Response.json({ ok: true, skipped: "not-time", now: hhmm, target: targetTime });
-        }
+        // Minimal responses — do not leak scheduling config to callers.
+        if (!enabled) return Response.json({ ok: true, skipped: "disabled" });
+        if (lastSent === ymd) return Response.json({ ok: true, skipped: "already-sent-today" });
+        if (hhmm !== targetTime) return Response.json({ ok: true, skipped: "not-time" });
 
         try {
           // Mark as sent FIRST to avoid double-send if minute spans two ticks.
@@ -49,9 +63,8 @@ export const Route = createFileRoute("/api/public/hooks/line-daily-send")({
 
           const result = await sendDailySummary();
           return Response.json({ sent: true, ...result });
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          return Response.json({ ok: false, error: msg }, { status: 500 });
+        } catch {
+          return Response.json({ ok: false }, { status: 500 });
         }
       },
     },
