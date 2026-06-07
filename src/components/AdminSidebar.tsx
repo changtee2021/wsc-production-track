@@ -50,15 +50,15 @@ const NAV_GROUPS: Array<{
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
       { title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search },
-      { title: "ประวัติงานผลิต", url: "/logs", icon: FileText },
     ],
   },
   {
     label: "การผลิต",
     items: [
       { title: "แดชบอร์ดไลน์ผลิต", url: "/production-dashboard", icon: Activity },
-      { title: "ตั้งค่าการผลิต", url: "/production-setup", icon: Layers },
+      { title: "ประวัติงานผลิต", url: "/logs", icon: FileText },
       { title: "เวลามาตรฐาน & ไฟแดง", url: "/production-standards", icon: Timer },
+      { title: "ตั้งค่าการผลิต", url: "/production-setup", icon: Layers },
     ],
   },
   {
