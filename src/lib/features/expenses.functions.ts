@@ -473,10 +473,11 @@ export const expenseResubmit = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertExpenseOrAdmin(data.token);
     const { data: row, error } = await supabaseAdmin
       .from("expenses").select("*").eq("id", data.id).single();
     if (error || !row) throw new Error("ไม่พบรายการ");
+    // Enforce ownership: admin OR mine-token bound to the original requester.
+    assertExpenseOwner(data.token, row.requester_employee_id);
     if (row.status !== "rejected") throw new Error("รายการนี้ยื่นใหม่ไม่ได้");
 
     const patch: Record<string, unknown> = { status: "pending", reject_reason: null };
