@@ -311,6 +311,189 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
     };
   });
 
+// ---------- Historical Production Dashboard (range) ----------
+
+const rangeEnum = z.enum(["day", "week", "month", "year", "custom"]);
+
+export const adminGetProductionHistory = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        range: rangeEnum,
+        anchor: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        category_id: z.string().uuid().nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const anchor = new Date(`${data.anchor}T00:00:00.000Z`);
+    let start: Date, end: Date;
+    if (data.range === "day") {
+      start = anchor;
+      end = new Date(anchor.getTime() + 86_400_000 - 1);
+    } else if (data.range === "week") {
+      const day = anchor.getUTCDay();
+      const diff = (day + 6) % 7; // Monday start
+      start = new Date(anchor.getTime() - diff * 86_400_000);
+      end = new Date(start.getTime() + 7 * 86_400_000 - 1);
+    } else if (data.range === "month") {
+      start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 1));
+      end = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1) - 1);
+    } else if (data.range === "year") {
+      start = new Date(Date.UTC(anchor.getUTCFullYear(), 0, 1));
+      end = new Date(Date.UTC(anchor.getUTCFullYear() + 1, 0, 1) - 1);
+    } else {
+      start = anchor;
+      end = new Date(`${data.end ?? data.anchor}T23:59:59.999Z`);
+    }
+    const startISO = start.toISOString();
+    const endISO = end.toISOString();
+
+    const [logsRes, stdMap, stepsRes, catsRes, empsRes] = await Promise.all([
+      supabaseAdmin
+        .from("production_logs")
+        .select("id, job_id, employee_id, step_id, category_id, action, created_at")
+        .gte("created_at", startISO)
+        .lte("created_at", endISO)
+        .order("created_at", { ascending: true }),
+      fetchStandardsMap(),
+      supabaseAdmin.from("steps").select("id, step_name"),
+      supabaseAdmin.from("categories").select("id, name").eq("active", true).order("name"),
+      supabaseAdmin.from("employees").select("id, name, emp_code, avatar_url"),
+    ]);
+    if (logsRes.error) throw new Error(logsRes.error.message);
+
+    const stepName = new Map((stepsRes.data ?? []).map((s) => [s.id, s.step_name]));
+    const catName = new Map((catsRes.data ?? []).map((c) => [c.id, c.name]));
+    const empMap = new Map((empsRes.data ?? []).map((e) => [e.id, e]));
+
+    const pairs = pairLogs((logsRes.data ?? []) as LogRow[]).filter(
+      (p) => !data.category_id || p.category_id === data.category_id,
+    );
+
+    type TL = {
+      employee_id: string | null;
+      employee_name: string;
+      emp_code: string | null;
+      job_id: string;
+      step_id: string;
+      step_name: string;
+      category_id: string | null;
+      category_name: string | null;
+      started_at: string;
+      finished_at: string;
+      actual_seconds: number;
+      target_seconds: number | null;
+      exceeded: boolean;
+    };
+    const timeline: TL[] = pairs
+      .map((p) => {
+        const std = lookupStd(stdMap, p.step_id, p.category_id);
+        const emp = p.employee_id ? empMap.get(p.employee_id) : null;
+        return {
+          employee_id: p.employee_id,
+          employee_name: emp?.name ?? "—",
+          emp_code: emp?.emp_code ?? null,
+          job_id: p.job_id,
+          step_id: p.step_id,
+          step_name: stepName.get(p.step_id) ?? "—",
+          category_id: p.category_id,
+          category_name: p.category_id ? catName.get(p.category_id) ?? null : null,
+          started_at: p.started_at,
+          finished_at: p.finished_at,
+          actual_seconds: p.actual_seconds,
+          target_seconds: std?.target_seconds ?? null,
+          exceeded: std != null && p.actual_seconds > std.target_seconds,
+        };
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime(),
+      );
+
+    // per-employee aggregates
+    const byEmp = new Map<
+      string,
+      {
+        employee_id: string | null;
+        employee_name: string;
+        emp_code: string | null;
+        avatar_url: string | null;
+        finished_count: number;
+        total_seconds: number;
+        exceeded_count: number;
+        exceeded_by_day: Record<string, number>;
+        // (step|cat|day) → count, threshold
+        excPerDay: Map<string, { count: number; threshold: number }>;
+      }
+    >();
+    for (const t of timeline) {
+      const key = `${t.employee_id ?? "__"}|${t.employee_name}`;
+      const emp = t.employee_id ? empMap.get(t.employee_id) : null;
+      let agg = byEmp.get(key);
+      if (!agg) {
+        agg = {
+          employee_id: t.employee_id,
+          employee_name: t.employee_name,
+          emp_code: t.emp_code,
+          avatar_url: emp?.avatar_url ?? null,
+          finished_count: 0,
+          total_seconds: 0,
+          exceeded_count: 0,
+          exceeded_by_day: {},
+          excPerDay: new Map(),
+        };
+        byEmp.set(key, agg);
+      }
+      agg.finished_count += 1;
+      agg.total_seconds += t.actual_seconds;
+      if (t.exceeded) {
+        agg.exceeded_count += 1;
+        const day = t.finished_at.slice(0, 10);
+        agg.exceeded_by_day[day] = (agg.exceeded_by_day[day] ?? 0) + 1;
+        const std = lookupStd(stdMap, t.step_id, t.category_id);
+        const threshold = std?.red_threshold ?? DEFAULT_RED_THRESHOLD;
+        const k = `${t.step_id}|${t.category_id ?? ""}|${day}`;
+        const cur = agg.excPerDay.get(k) ?? { count: 0, threshold };
+        cur.count += 1;
+        agg.excPerDay.set(k, cur);
+      }
+    }
+    const by_employee = Array.from(byEmp.values())
+      .map((a) => ({
+        employee_id: a.employee_id,
+        employee_name: a.employee_name,
+        emp_code: a.emp_code,
+        avatar_url: a.avatar_url,
+        finished_count: a.finished_count,
+        total_seconds: a.total_seconds,
+        exceeded_count: a.exceeded_count,
+        exceeded_by_day: a.exceeded_by_day,
+        is_red: Array.from(a.excPerDay.values()).some((v) => v.count >= v.threshold),
+      }))
+      .sort(
+        (a, b) =>
+          b.exceeded_count - a.exceeded_count ||
+          b.finished_count - a.finished_count,
+      );
+
+    return {
+      range: { type: data.range, anchor: data.anchor, start: startISO, end: endISO },
+      categories: catsRes.data ?? [],
+      by_employee,
+      timeline,
+      totals: {
+        finished_count: timeline.length,
+        exceeded_count: timeline.filter((t) => t.exceeded).length,
+        employees_red: by_employee.filter((e) => e.is_red).length,
+        total_seconds: timeline.reduce((s, t) => s + t.actual_seconds, 0),
+      },
+    };
+  });
+
 // ---------- Standards (matrix) ----------
 
 export const adminListProductionStandards = createServerFn({ method: "POST" })
