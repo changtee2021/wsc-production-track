@@ -63,6 +63,7 @@ function Inner() {
   const listEmps = useServerFn(expenseListEmployees);
   const listMine = useServerFn(expenseListMine);
   const signUrls = useServerFn(expenseSignReceiptUrls);
+  const issueMine = useServerFn(issueExpenseMineSession);
 
   const [emps, setEmps] = useState<Emp[]>([]);
   const [empId, setEmpId] = useState(search.emp ?? "");
@@ -80,7 +81,11 @@ function Inner() {
     (async () => {
       setLoading(true);
       try {
-        const t = getExpenseToken()!;
+        const sessionToken = getExpenseToken()!;
+        // Exchange for an employee-bound mine-token so listMine/signUrls can't
+        // be used to read other employees' expense history (IDOR mitigation).
+        const mine = await issueMine({ data: { token: sessionToken, employee_id: empId } });
+        const t = mine.token;
         const r = await listMine({ data: { token: t, requester_employee_id: empId, limit: 50 } });
         setRows(r.rows as Row[]);
         const allPaths = Array.from(new Set((r.rows as Row[]).flatMap((x) => x.image_paths ?? [])));
@@ -92,7 +97,7 @@ function Inner() {
         toast.error(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
       } finally { setLoading(false); }
     })();
-  }, [empId, listMine, signUrls]);
+  }, [empId, listMine, signUrls, issueMine]);
 
   return (
     <main className="min-h-screen bg-muted/30 pb-10">
