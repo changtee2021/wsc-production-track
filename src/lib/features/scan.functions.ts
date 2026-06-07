@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -9,14 +10,36 @@ const payload = z.object({
   category_id: z.string().uuid(),
   action: z.enum(["start", "finish"]),
   note: z.string().trim().max(2000).nullable().optional(),
-  // Bucket is private and we store the object path (e.g. "abc.jpg"),
-  // not a full URL. Just enforce a sane length.
   note_image_url: z.string().trim().max(2000).nullable().optional(),
 });
+
+// In-memory IP rate limit: 60 submissions / minute / IP.
+// Mitigates anonymous mass-injection of production logs by external callers.
+const submitBuckets = new Map<string, number[]>();
+function clientIp(): string {
+  return (
+    getRequestHeader("cf-connecting-ip") ||
+    getRequestHeader("x-real-ip") ||
+    (getRequestHeader("x-forwarded-for") || "").split(",")[0].trim() ||
+    "unknown"
+  );
+}
+function checkSubmitLimit(ip: string): boolean {
+  const now = Date.now();
+  const cutoff = now - 60_000;
+  const arr = (submitBuckets.get(ip) ?? []).filter((t) => t > cutoff);
+  if (arr.length >= 60) { submitBuckets.set(ip, arr); return false; }
+  arr.push(now);
+  submitBuckets.set(ip, arr);
+  return true;
+}
 
 export const submitProductionLog = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => payload.parse(d))
   .handler(async ({ data }) => {
+    if (!checkSubmitLimit(clientIp())) {
+      throw new Error("ส่งข้อมูลถี่เกินไป โปรดลองใหม่อีกครั้ง");
+    }
     const [emp, step, cat] = await Promise.all([
       supabaseAdmin
         .from("employees")
