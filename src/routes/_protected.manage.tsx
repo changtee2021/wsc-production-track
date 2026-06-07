@@ -121,7 +121,7 @@ function Manage() {
       <Toaster richColors position="top-center" />
       <h1 className="mb-1 text-2xl font-bold tracking-tight">พนักงาน</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        จัดการพนักงานทุกแผนก หมวดหมู่ ขั้นตอนการผลิต และเช็คลิสต์ (คลิกหัวข้อเพื่อเปิด/ปิด)
+        จัดการพนักงานทุกแผนก (คลิกหัวข้อเพื่อเปิด/ปิด)
       </p>
       <div className="space-y-4">
         {sections.map((s, i) => (
