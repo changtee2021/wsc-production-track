@@ -107,14 +107,14 @@ const NAV_GROUPS: Array<{
     label: "ระบบ",
     items: [
       { title: "พนักงาน", url: "/manage", icon: Users },
-      { title: "พื้นที่จัดเก็บ", url: "/storage", icon: HardDrive },
-      { title: "ข้อกำหนดแอดมิน", url: "/admin-policy", icon: ShieldCheck },
-      { title: "แก้ไขข้อกำหนด", url: "/manage-policies", icon: FileText },
     ],
   },
   {
     label: "อัพเดต",
     items: [
+      { title: "พื้นที่จัดเก็บ", url: "/storage", icon: HardDrive },
+      { title: "ข้อกำหนดแอดมิน", url: "/admin-policy", icon: ShieldCheck },
+      { title: "แก้ไขข้อกำหนด", url: "/manage-policies", icon: FileText },
       { title: "LogUpdate", url: "/logs-update", icon: Sparkles },
     ],
   },
