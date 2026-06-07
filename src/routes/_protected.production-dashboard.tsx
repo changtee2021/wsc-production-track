@@ -85,7 +85,7 @@ function DashboardPage() {
             <Factory className="h-6 w-6 text-primary" /> แดชบอร์ดไลน์การผลิต
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            ติดตามช่างที่กำลังทำงานอยู่ • ไฟแดงเมื่อเกินมาตรฐาน ≥ {data.threshold} ครั้ง/วัน
+            ติดตามช่างที่กำลังทำงานอยู่ • ไฟแดงเมื่อเกินมาตรฐานครบจำนวนครั้งที่กำหนดในแต่ละขั้นตอน
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={load} className="gap-1">
