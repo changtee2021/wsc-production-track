@@ -9,7 +9,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { issueExpenseToken, verifyExpenseToken } from "@/lib/auth/expense-token.server";
+import {
+  issueExpenseToken,
+  verifyExpenseToken,
+  issueExpenseMineToken,
+  verifyExpenseMineToken,
+} from "@/lib/auth/expense-token.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 import { notifyExpenseSubmitted } from "@/lib/integrations/line-notify.server";
 
@@ -22,6 +27,20 @@ const tokenStr = z.string().min(1);
 function assertExpenseOrAdmin(token: string | undefined) {
   if (verifyExpenseToken(token)) return;
   if (verifyAdminToken(token)) return;
+  throw new Error("Unauthorized");
+}
+/**
+ * For per-employee resource endpoints (list mine / resubmit / sign receipt URLs),
+ * accept either an admin token or a mine-token bound to the requested employee_id.
+ * Returns the authorized employee_id (or null for admin = wildcard).
+ */
+function assertExpenseOwner(
+  token: string | undefined,
+  employee_id: string,
+): string | null {
+  if (verifyAdminToken(token)) return null; // admin can view any
+  const empId = verifyExpenseMineToken(token);
+  if (empId && empId === employee_id) return empId;
   throw new Error("Unauthorized");
 }
 function clientIp(): string {
@@ -54,6 +73,30 @@ export const issueExpenseSession = createServerFn({ method: "POST" })
   .handler(async () => {
     return { token: issueExpenseToken() };
   });
+
+// Employee-bound session for /expense-mine. Binds employee_id into the signed token
+// so a session token cannot be replayed to read another employee's expense history.
+export const issueExpenseMineSession = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({
+      token: tokenStr,
+      employee_id: z.string().uuid(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertExpenseOrAdmin(data.token);
+    // Validate the employee actually exists (any group) before binding.
+    const tables = ["office_employees", "employees", "qc_employees", "packing_employees", "maintenance_employees"] as const;
+    let exists = false;
+    for (const t of tables) {
+      const { data: emp } = await supabaseAdmin
+        .from(t).select("id, active").eq("id", data.employee_id).maybeSingle();
+      if (emp?.active) { exists = true; break; }
+    }
+    if (!exists) throw new Error("ไม่พบพนักงาน");
+    return { token: issueExpenseMineToken(data.employee_id) };
+  });
+
 
 // ============ LIST CATEGORIES ============
 export const expenseListCategories = createServerFn({ method: "POST" })
@@ -402,7 +445,8 @@ export const expenseListMine = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertExpenseOrAdmin(data.token);
+    // Mine-token must be bound to the requested employee_id; admin token bypasses.
+    assertExpenseOwner(data.token, data.requester_employee_id);
     const { data: rows, error } = await supabaseAdmin
       .from("expenses")
       .select("*")
@@ -429,10 +473,12 @@ export const expenseResubmit = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertExpenseOrAdmin(data.token);
     const { data: row, error } = await supabaseAdmin
       .from("expenses").select("*").eq("id", data.id).single();
     if (error || !row) throw new Error("ไม่พบรายการ");
+    // Enforce ownership: admin OR mine-token bound to the original requester.
+    if (!row.requester_employee_id) throw new Error("Unauthorized");
+    assertExpenseOwner(data.token, row.requester_employee_id);
     if (row.status !== "rejected") throw new Error("รายการนี้ยื่นใหม่ไม่ได้");
 
     const patch: Record<string, unknown> = { status: "pending", reject_reason: null };
@@ -466,12 +512,26 @@ export const expenseSignReceiptUrls = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
-    assertExpenseOrAdmin(data.token);
+    // Admin token signs any path; otherwise the caller must hold a mine-token, and
+    // we restrict signing to paths that belong to expenses owned by that employee.
+    let allowedPaths = data.paths;
+    if (!verifyAdminToken(data.token)) {
+      const empId = verifyExpenseMineToken(data.token);
+      if (!empId) throw new Error("Unauthorized");
+      const { data: rows } = await supabaseAdmin
+        .from("expenses")
+        .select("image_paths")
+        .eq("requester_employee_id", empId);
+      const owned = new Set<string>();
+      for (const r of rows ?? []) for (const p of r.image_paths ?? []) owned.add(p);
+      allowedPaths = data.paths.filter((p) => owned.has(p));
+      if (allowedPaths.length === 0) return { urlMap: {} };
+    }
     const { data: signed } = await supabaseAdmin.storage
-      .from(BUCKET).createSignedUrls(data.paths, SIGN_TTL);
+      .from(BUCKET).createSignedUrls(allowedPaths, SIGN_TTL);
     const urlMap: Record<string, string> = {};
     (signed ?? []).forEach((row, i) => {
-      if (row.signedUrl) urlMap[data.paths[i]] = row.signedUrl;
+      if (row.signedUrl) urlMap[allowedPaths[i]] = row.signedUrl;
     });
     return { urlMap };
   });
