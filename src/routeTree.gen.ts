@@ -34,6 +34,7 @@ import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-s
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedProductionStandardsRouteImport } from './routes/_protected.production-standards'
 import { Route as ProtectedProductionSetupRouteImport } from './routes/_protected.production-setup'
+import { Route as ProtectedProductionQueueRouteImport } from './routes/_protected.production-queue'
 import { Route as ProtectedProductionExcelRouteImport } from './routes/_protected.production-excel'
 import { Route as ProtectedProductionDashboardRouteImport } from './routes/_protected.production-dashboard'
 import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
@@ -51,6 +52,7 @@ import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protec
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
 import { Route as ProtectedAdminPolicyRouteImport } from './routes/_protected.admin-policy'
+import { Route as ProtectedPrintLabelJobNoRouteImport } from './routes/_protected.print-label.$jobNo'
 import { Route as ProtectedEmployeeProfileIdRouteImport } from './routes/_protected.employee-profile.$id'
 import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/public/stock-count.reports'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
@@ -186,6 +188,12 @@ const ProtectedProductionSetupRoute =
     path: '/production-setup',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ProtectedProductionQueueRoute =
+  ProtectedProductionQueueRouteImport.update({
+    id: '/production-queue',
+    path: '/production-queue',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedProductionExcelRoute =
   ProtectedProductionExcelRouteImport.update({
     id: '/production-excel',
@@ -277,6 +285,12 @@ const ProtectedAdminPolicyRoute = ProtectedAdminPolicyRouteImport.update({
   path: '/admin-policy',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedPrintLabelJobNoRoute =
+  ProtectedPrintLabelJobNoRouteImport.update({
+    id: '/print-label/$jobNo',
+    path: '/print-label/$jobNo',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedEmployeeProfileIdRoute =
   ProtectedEmployeeProfileIdRouteImport.update({
     id: '/employee-profile/$id',
@@ -334,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/production-dashboard': typeof ProtectedProductionDashboardRoute
   '/production-excel': typeof ProtectedProductionExcelRoute
+  '/production-queue': typeof ProtectedProductionQueueRoute
   '/production-setup': typeof ProtectedProductionSetupRoute
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
@@ -345,6 +360,7 @@ export interface FileRoutesByFullPath {
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
+  '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
@@ -381,6 +397,7 @@ export interface FileRoutesByTo {
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/production-dashboard': typeof ProtectedProductionDashboardRoute
   '/production-excel': typeof ProtectedProductionExcelRoute
+  '/production-queue': typeof ProtectedProductionQueueRoute
   '/production-setup': typeof ProtectedProductionSetupRoute
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
@@ -392,6 +409,7 @@ export interface FileRoutesByTo {
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
+  '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
@@ -430,6 +448,7 @@ export interface FileRoutesById {
   '/_protected/packing-summary': typeof ProtectedPackingSummaryRoute
   '/_protected/production-dashboard': typeof ProtectedProductionDashboardRoute
   '/_protected/production-excel': typeof ProtectedProductionExcelRoute
+  '/_protected/production-queue': typeof ProtectedProductionQueueRoute
   '/_protected/production-setup': typeof ProtectedProductionSetupRoute
   '/_protected/production-standards': typeof ProtectedProductionStandardsRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
@@ -441,6 +460,7 @@ export interface FileRoutesById {
   '/_protected/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
+  '/_protected/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
@@ -479,6 +499,7 @@ export interface FileRouteTypes {
     | '/packing-summary'
     | '/production-dashboard'
     | '/production-excel'
+    | '/production-queue'
     | '/production-setup'
     | '/production-standards'
     | '/qc-reports'
@@ -490,6 +511,7 @@ export interface FileRouteTypes {
     | '/supplies-dashboard'
     | '/supplies-reports'
     | '/employee-profile/$id'
+    | '/print-label/$jobNo'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
@@ -526,6 +548,7 @@ export interface FileRouteTypes {
     | '/packing-summary'
     | '/production-dashboard'
     | '/production-excel'
+    | '/production-queue'
     | '/production-setup'
     | '/production-standards'
     | '/qc-reports'
@@ -537,6 +560,7 @@ export interface FileRouteTypes {
     | '/supplies-dashboard'
     | '/supplies-reports'
     | '/employee-profile/$id'
+    | '/print-label/$jobNo'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
@@ -574,6 +598,7 @@ export interface FileRouteTypes {
     | '/_protected/packing-summary'
     | '/_protected/production-dashboard'
     | '/_protected/production-excel'
+    | '/_protected/production-queue'
     | '/_protected/production-setup'
     | '/_protected/production-standards'
     | '/_protected/qc-reports'
@@ -585,6 +610,7 @@ export interface FileRouteTypes {
     | '/_protected/supplies-dashboard'
     | '/_protected/supplies-reports'
     | '/_protected/employee-profile/$id'
+    | '/_protected/print-label/$jobNo'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
@@ -788,6 +814,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedProductionSetupRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/production-queue': {
+      id: '/_protected/production-queue'
+      path: '/production-queue'
+      fullPath: '/production-queue'
+      preLoaderRoute: typeof ProtectedProductionQueueRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/production-excel': {
       id: '/_protected/production-excel'
       path: '/production-excel'
@@ -907,6 +940,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedAdminPolicyRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/print-label/$jobNo': {
+      id: '/_protected/print-label/$jobNo'
+      path: '/print-label/$jobNo'
+      fullPath: '/print-label/$jobNo'
+      preLoaderRoute: typeof ProtectedPrintLabelJobNoRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/employee-profile/$id': {
       id: '/_protected/employee-profile/$id'
       path: '/employee-profile/$id'
@@ -956,6 +996,7 @@ interface ProtectedRouteChildren {
   ProtectedPackingSummaryRoute: typeof ProtectedPackingSummaryRoute
   ProtectedProductionDashboardRoute: typeof ProtectedProductionDashboardRoute
   ProtectedProductionExcelRoute: typeof ProtectedProductionExcelRoute
+  ProtectedProductionQueueRoute: typeof ProtectedProductionQueueRoute
   ProtectedProductionSetupRoute: typeof ProtectedProductionSetupRoute
   ProtectedProductionStandardsRoute: typeof ProtectedProductionStandardsRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
@@ -967,6 +1008,7 @@ interface ProtectedRouteChildren {
   ProtectedSuppliesDashboardRoute: typeof ProtectedSuppliesDashboardRoute
   ProtectedSuppliesReportsRoute: typeof ProtectedSuppliesReportsRoute
   ProtectedEmployeeProfileIdRoute: typeof ProtectedEmployeeProfileIdRoute
+  ProtectedPrintLabelJobNoRoute: typeof ProtectedPrintLabelJobNoRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
@@ -987,6 +1029,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedPackingSummaryRoute: ProtectedPackingSummaryRoute,
   ProtectedProductionDashboardRoute: ProtectedProductionDashboardRoute,
   ProtectedProductionExcelRoute: ProtectedProductionExcelRoute,
+  ProtectedProductionQueueRoute: ProtectedProductionQueueRoute,
   ProtectedProductionSetupRoute: ProtectedProductionSetupRoute,
   ProtectedProductionStandardsRoute: ProtectedProductionStandardsRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
@@ -998,6 +1041,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedSuppliesDashboardRoute: ProtectedSuppliesDashboardRoute,
   ProtectedSuppliesReportsRoute: ProtectedSuppliesReportsRoute,
   ProtectedEmployeeProfileIdRoute: ProtectedEmployeeProfileIdRoute,
+  ProtectedPrintLabelJobNoRoute: ProtectedPrintLabelJobNoRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
