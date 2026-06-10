@@ -2,7 +2,7 @@
 import * as XLSX from "xlsx";
 import type { ExcelJob } from "@/lib/features/production-excel.functions";
 
-const FIXED = ["Job", "หมวดหมู่", "เวลาเริ่ม", "เวลาจบ", "จำนวนขั้นตอน"];
+const FIXED = ["วันเริ่ม", "วันจบ", "Job", "หมวดหมู่", "เวลาเริ่ม", "เวลาจบ", "จำนวนขั้นตอน"];
 
 export function buildHeaders(maxSteps: number): string[] {
   const out = [...FIXED];
@@ -12,18 +12,29 @@ export function buildHeaders(maxSteps: number): string[] {
   return out;
 }
 
-function fmt(iso: string): string {
+function fmtDate(iso: string): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleString("th-TH", { hour12: false });
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function fmtTime(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 export function buildRows(jobs: ExcelJob[], maxSteps: number): string[][] {
   return jobs.map((j) => {
     const row: string[] = [
+      fmtDate(j.started_at),
+      fmtDate(j.finished_at),
       j.job_id,
       j.category_name ?? "",
-      fmt(j.started_at),
-      fmt(j.finished_at),
+      fmtTime(j.started_at),
+      fmtTime(j.finished_at),
       String(j.step_count),
     ];
     for (let i = 0; i < maxSteps; i++) {
@@ -32,8 +43,8 @@ export function buildRows(jobs: ExcelJob[], maxSteps: number): string[][] {
         row.push(
           s.step_name,
           s.emp_code ? `${s.employee_name} (${s.emp_code})` : s.employee_name,
-          fmt(s.started_at),
-          fmt(s.finished_at),
+          fmtTime(s.started_at),
+          fmtTime(s.finished_at),
         );
       } else {
         row.push("", "", "", "");

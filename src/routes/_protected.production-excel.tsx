@@ -340,6 +340,12 @@ function ProductionExcelPage() {
                   onCheckedChange={(v) => toggleAll(!!v)}
                 />
               </th>
+              <th className="border-b border-r bg-muted px-2 py-2 text-left font-semibold whitespace-nowrap">
+                วันเริ่ม
+              </th>
+              <th className="border-b border-r bg-muted px-2 py-2 text-left font-semibold whitespace-nowrap">
+                วันจบ
+              </th>
               <th className="sticky left-[40px] z-20 border-b border-r bg-muted px-2 py-2 text-left font-semibold">
                 Job
               </th>
@@ -365,8 +371,11 @@ function ProductionExcelPage() {
                 </th>
               ))}
             </tr>
+
             <tr>
               <th className="sticky left-0 z-20 border-b bg-muted" />
+              <th className="border-b bg-muted" />
+              <th className="border-b bg-muted" />
               <th className="sticky left-[40px] z-20 border-b bg-muted" />
               <th className="border-b bg-muted" />
               <th className="border-b bg-muted" />
@@ -376,6 +385,7 @@ function ProductionExcelPage() {
                 <SubHead key={i} />
               ))}
             </tr>
+
           </thead>
           <tbody>
             {filteredJobs.map((j) => {
@@ -388,15 +398,21 @@ function ProductionExcelPage() {
                       onCheckedChange={(v) => toggleOne(j.job_id, !!v)}
                     />
                   </td>
+                  <td className="border-r px-2 py-1 whitespace-nowrap">
+                    {fmtDate(j.started_at)}
+                  </td>
+                  <td className="border-r px-2 py-1 whitespace-nowrap">
+                    {fmtDate(j.finished_at)}
+                  </td>
                   <td className="sticky left-[40px] z-10 border-r bg-inherit px-2 py-1 font-mono">
                     {j.job_id.slice(0, 8)}
                   </td>
                   <td className="border-r px-2 py-1">{j.category_name ?? "—"}</td>
                   <td className="border-r px-2 py-1 whitespace-nowrap">
-                    {fmt(j.started_at)}
+                    {fmtTime(j.started_at)}
                   </td>
                   <td className="border-r px-2 py-1 whitespace-nowrap">
-                    {fmt(j.finished_at)}
+                    {fmtTime(j.finished_at)}
                   </td>
                   <td className="border-r px-2 py-1 text-right">{j.step_count}</td>
                   {Array.from({ length: maxSteps }).map((_, i) => {
@@ -408,10 +424,11 @@ function ProductionExcelPage() {
                 </tr>
               );
             })}
+
             {filteredJobs.length === 0 && !loading && (
               <tr>
                 <td
-                  colSpan={6 + maxSteps * 4}
+                  colSpan={8 + maxSteps * 4}
                   className="px-4 py-8 text-center text-sm text-muted-foreground"
                 >
                   ยังไม่มีข้อมูล — เลือกช่วงวันที่แล้วกด "โหลดข้อมูล"
@@ -478,19 +495,23 @@ function StepCells({
           </span>
         )}
       </td>
-      <td className="px-2 py-1 whitespace-nowrap">{fmt(step.started_at)}</td>
-      <td className="border-r px-2 py-1 whitespace-nowrap">{fmt(step.finished_at)}</td>
+      <td className="px-2 py-1 whitespace-nowrap">{fmtTime(step.started_at)}</td>
+      <td className="border-r px-2 py-1 whitespace-nowrap">{fmtTime(step.finished_at)}</td>
     </>
   );
 }
 
-function fmt(iso: string): string {
+function fmtDate(iso: string): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleString("th-TH", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+
+function fmtTime(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
