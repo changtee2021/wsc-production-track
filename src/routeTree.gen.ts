@@ -30,6 +30,7 @@ import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
 import { Route as ProtectedStockCountReportsRouteImport } from './routes/_protected.stock-count-reports'
 import { Route as ProtectedStockCountInventoryRouteImport } from './routes/_protected.stock-count-inventory'
+import { Route as ProtectedServerLogsRouteImport } from './routes/_protected.server-logs'
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedProductionStandardsRouteImport } from './routes/_protected.production-standards'
@@ -166,6 +167,11 @@ const ProtectedStockCountInventoryRoute =
     path: '/stock-count-inventory',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ProtectedServerLogsRoute = ProtectedServerLogsRouteImport.update({
+  id: '/server-logs',
+  path: '/server-logs',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedQcSummaryRoute = ProtectedQcSummaryRouteImport.update({
   id: '/qc-summary',
   path: '/qc-summary',
@@ -353,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/server-logs': typeof ProtectedServerLogsRoute
   '/stock-count-inventory': typeof ProtectedStockCountInventoryRoute
   '/stock-count-reports': typeof ProtectedStockCountReportsRoute
   '/storage': typeof ProtectedStorageRoute
@@ -402,6 +409,7 @@ export interface FileRoutesByTo {
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/server-logs': typeof ProtectedServerLogsRoute
   '/stock-count-inventory': typeof ProtectedStockCountInventoryRoute
   '/stock-count-reports': typeof ProtectedStockCountReportsRoute
   '/storage': typeof ProtectedStorageRoute
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/_protected/production-standards': typeof ProtectedProductionStandardsRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
+  '/_protected/server-logs': typeof ProtectedServerLogsRoute
   '/_protected/stock-count-inventory': typeof ProtectedStockCountInventoryRoute
   '/_protected/stock-count-reports': typeof ProtectedStockCountReportsRoute
   '/_protected/storage': typeof ProtectedStorageRoute
@@ -504,6 +513,7 @@ export interface FileRouteTypes {
     | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
+    | '/server-logs'
     | '/stock-count-inventory'
     | '/stock-count-reports'
     | '/storage'
@@ -553,6 +563,7 @@ export interface FileRouteTypes {
     | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
+    | '/server-logs'
     | '/stock-count-inventory'
     | '/stock-count-reports'
     | '/storage'
@@ -603,6 +614,7 @@ export interface FileRouteTypes {
     | '/_protected/production-standards'
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
+    | '/_protected/server-logs'
     | '/_protected/stock-count-inventory'
     | '/_protected/stock-count-reports'
     | '/_protected/storage'
@@ -784,6 +796,13 @@ declare module '@tanstack/react-router' {
       path: '/stock-count-inventory'
       fullPath: '/stock-count-inventory'
       preLoaderRoute: typeof ProtectedStockCountInventoryRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/server-logs': {
+      id: '/_protected/server-logs'
+      path: '/server-logs'
+      fullPath: '/server-logs'
+      preLoaderRoute: typeof ProtectedServerLogsRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/qc-summary': {
@@ -1001,6 +1020,7 @@ interface ProtectedRouteChildren {
   ProtectedProductionStandardsRoute: typeof ProtectedProductionStandardsRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
+  ProtectedServerLogsRoute: typeof ProtectedServerLogsRoute
   ProtectedStockCountInventoryRoute: typeof ProtectedStockCountInventoryRoute
   ProtectedStockCountReportsRoute: typeof ProtectedStockCountReportsRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
@@ -1034,6 +1054,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedProductionStandardsRoute: ProtectedProductionStandardsRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
+  ProtectedServerLogsRoute: ProtectedServerLogsRoute,
   ProtectedStockCountInventoryRoute: ProtectedStockCountInventoryRoute,
   ProtectedStockCountReportsRoute: ProtectedStockCountReportsRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,
