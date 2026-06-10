@@ -1,6 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { AppVersion } from "@/components/AppVersion";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { FeedbackFab } from "@/components/FeedbackFab";
 
 import appCss from "../styles.css?url";
 
@@ -92,6 +93,7 @@ function RootComponent() {
   return (
     <ThemeProvider>
       <Outlet />
+      <FeedbackFab />
       {!isAdmin && (
         <footer className="flex items-center justify-center py-2">
           <AppVersion />

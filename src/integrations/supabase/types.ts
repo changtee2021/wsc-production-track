@@ -465,41 +465,59 @@ export type Database = {
       feedbacks: {
         Row: {
           admin_note: string | null
+          assignee_name: string | null
           category: string
+          closed_at: string | null
           created_at: string
           from_emp_code: string | null
           from_name: string | null
           from_phone: string | null
           id: string
+          image_paths: string[]
           message: string
+          page_path: string | null
+          priority: string
           status: string
           subject: string
+          ticket_no: number
           updated_at: string
         }
         Insert: {
           admin_note?: string | null
+          assignee_name?: string | null
           category?: string
+          closed_at?: string | null
           created_at?: string
           from_emp_code?: string | null
           from_name?: string | null
           from_phone?: string | null
           id?: string
+          image_paths?: string[]
           message: string
+          page_path?: string | null
+          priority?: string
           status?: string
           subject: string
+          ticket_no?: number
           updated_at?: string
         }
         Update: {
           admin_note?: string | null
+          assignee_name?: string | null
           category?: string
+          closed_at?: string | null
           created_at?: string
           from_emp_code?: string | null
           from_name?: string | null
           from_phone?: string | null
           id?: string
+          image_paths?: string[]
           message?: string
+          page_path?: string | null
+          priority?: string
           status?: string
           subject?: string
+          ticket_no?: number
           updated_at?: string
         }
         Relationships: []
@@ -1803,6 +1821,44 @@ export type Database = {
           version?: string | null
         }
         Relationships: []
+      }
+      ticket_comments: {
+        Row: {
+          author_name: string
+          author_role: string
+          body: string
+          created_at: string
+          id: string
+          image_paths: string[]
+          ticket_id: string
+        }
+        Insert: {
+          author_name?: string
+          author_role?: string
+          body?: string
+          created_at?: string
+          id?: string
+          image_paths?: string[]
+          ticket_id: string
+        }
+        Update: {
+          author_name?: string
+          author_role?: string
+          body?: string
+          created_at?: string
+          id?: string
+          image_paths?: string[]
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_comments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "feedbacks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
