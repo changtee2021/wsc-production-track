@@ -83,7 +83,7 @@ export const adminUpdateFeedback = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!verifyAdminToken(data.adminToken)) throw new Error("Unauthorized");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: Record<string, unknown> = {};
+    const patch: { status?: FeedbackStatus; admin_note?: string | null } = {};
     if (data.status) patch.status = data.status;
     if (data.admin_note !== undefined) patch.admin_note = data.admin_note;
     const { error } = await supabaseAdmin.from("feedbacks").update(patch).eq("id", data.id);
