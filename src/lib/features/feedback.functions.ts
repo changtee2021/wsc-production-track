@@ -100,8 +100,8 @@ const submitSchema = z.object({
   from_name: z.string().trim().max(120).optional().nullable(),
   from_emp_code: z.string().trim().max(40).optional().nullable(),
   from_phone: z.string().trim().max(40).optional().nullable(),
-  category: z.enum(TICKET_CATEGORIES).default("other"),
-  priority: z.enum(TICKET_PRIORITIES).default("normal"),
+  category: z.enum(["bug", "suggest", "complain", "praise", "other"]).default("other"),
+  priority: z.enum(["low", "normal", "high", "critical"]).default("normal"),
   subject: z.string().trim().min(2).max(200),
   message: z.string().trim().min(2).max(5000),
   page_path: z.string().trim().max(300).default(""),
@@ -191,7 +191,7 @@ export const adminUpdateFeedback = createServerFn({ method: "POST" })
     if (data.admin_note !== undefined) patch.admin_note = data.admin_note;
     if (data.assignee_name !== undefined) patch.assignee_name = data.assignee_name;
     if (Object.keys(patch).length === 0) return { ok: true };
-    const { error } = await supabaseAdmin.from("feedbacks").update(patch).eq("id", data.id);
+    const { error } = await supabaseAdmin.from("feedbacks").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
