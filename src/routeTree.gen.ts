@@ -30,6 +30,7 @@ import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-s
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedProductionStandardsRouteImport } from './routes/_protected.production-standards'
 import { Route as ProtectedProductionSetupRouteImport } from './routes/_protected.production-setup'
+import { Route as ProtectedProductionExcelRouteImport } from './routes/_protected.production-excel'
 import { Route as ProtectedProductionDashboardRouteImport } from './routes/_protected.production-dashboard'
 import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
 import { Route as ProtectedPackingReportsRouteImport } from './routes/_protected.packing-reports'
@@ -156,6 +157,12 @@ const ProtectedProductionSetupRoute =
     path: '/production-setup',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ProtectedProductionExcelRoute =
+  ProtectedProductionExcelRouteImport.update({
+    id: '/production-excel',
+    path: '/production-excel',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedProductionDashboardRoute =
   ProtectedProductionDashboardRouteImport.update({
     id: '/production-dashboard',
@@ -277,6 +284,7 @@ export interface FileRoutesByFullPath {
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/production-dashboard': typeof ProtectedProductionDashboardRoute
+  '/production-excel': typeof ProtectedProductionExcelRoute
   '/production-setup': typeof ProtectedProductionSetupRoute
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
@@ -316,6 +324,7 @@ export interface FileRoutesByTo {
   '/packing-reports': typeof ProtectedPackingReportsRoute
   '/packing-summary': typeof ProtectedPackingSummaryRoute
   '/production-dashboard': typeof ProtectedProductionDashboardRoute
+  '/production-excel': typeof ProtectedProductionExcelRoute
   '/production-setup': typeof ProtectedProductionSetupRoute
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
@@ -357,6 +366,7 @@ export interface FileRoutesById {
   '/_protected/packing-reports': typeof ProtectedPackingReportsRoute
   '/_protected/packing-summary': typeof ProtectedPackingSummaryRoute
   '/_protected/production-dashboard': typeof ProtectedProductionDashboardRoute
+  '/_protected/production-excel': typeof ProtectedProductionExcelRoute
   '/_protected/production-setup': typeof ProtectedProductionSetupRoute
   '/_protected/production-standards': typeof ProtectedProductionStandardsRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
@@ -398,6 +408,7 @@ export interface FileRouteTypes {
     | '/packing-reports'
     | '/packing-summary'
     | '/production-dashboard'
+    | '/production-excel'
     | '/production-setup'
     | '/production-standards'
     | '/qc-reports'
@@ -437,6 +448,7 @@ export interface FileRouteTypes {
     | '/packing-reports'
     | '/packing-summary'
     | '/production-dashboard'
+    | '/production-excel'
     | '/production-setup'
     | '/production-standards'
     | '/qc-reports'
@@ -477,6 +489,7 @@ export interface FileRouteTypes {
     | '/_protected/packing-reports'
     | '/_protected/packing-summary'
     | '/_protected/production-dashboard'
+    | '/_protected/production-excel'
     | '/_protected/production-setup'
     | '/_protected/production-standards'
     | '/_protected/qc-reports'
@@ -655,6 +668,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedProductionSetupRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/production-excel': {
+      id: '/_protected/production-excel'
+      path: '/production-excel'
+      fullPath: '/production-excel'
+      preLoaderRoute: typeof ProtectedProductionExcelRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/production-dashboard': {
       id: '/_protected/production-dashboard'
       path: '/production-dashboard'
@@ -793,6 +813,7 @@ interface ProtectedRouteChildren {
   ProtectedPackingReportsRoute: typeof ProtectedPackingReportsRoute
   ProtectedPackingSummaryRoute: typeof ProtectedPackingSummaryRoute
   ProtectedProductionDashboardRoute: typeof ProtectedProductionDashboardRoute
+  ProtectedProductionExcelRoute: typeof ProtectedProductionExcelRoute
   ProtectedProductionSetupRoute: typeof ProtectedProductionSetupRoute
   ProtectedProductionStandardsRoute: typeof ProtectedProductionStandardsRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
@@ -820,6 +841,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedPackingReportsRoute: ProtectedPackingReportsRoute,
   ProtectedPackingSummaryRoute: ProtectedPackingSummaryRoute,
   ProtectedProductionDashboardRoute: ProtectedProductionDashboardRoute,
+  ProtectedProductionExcelRoute: ProtectedProductionExcelRoute,
   ProtectedProductionSetupRoute: ProtectedProductionSetupRoute,
   ProtectedProductionStandardsRoute: ProtectedProductionStandardsRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
@@ -854,12 +876,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
