@@ -22,6 +22,7 @@ import {
   Timer,
   ShieldCheck,
   ScrollText,
+  BookOpenCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -62,6 +63,7 @@ const NAV_GROUPS: Array<{
       { title: "พรีวิว Excel ผลิต", url: "/production-excel", icon: ListChecks },
       { title: "เวลามาตรฐาน & ไฟแดง", url: "/production-standards", icon: Timer },
       { title: "ตั้งค่าการผลิต", url: "/production-setup", icon: Layers },
+      { title: "WI คู่มือปฏิบัติงาน", url: "/wi", icon: BookOpenCheck },
     ],
   },
   {

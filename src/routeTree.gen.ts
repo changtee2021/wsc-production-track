@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WiRouteImport } from './routes/wi'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SuppliesRequestRouteImport } from './routes/supplies-request'
 import { Route as SuppliesRouteImport } from './routes/supplies'
@@ -59,6 +60,11 @@ import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 import { Route as ApiPublicCurtainFlowJobsRouteImport } from './routes/api/public/curtain-flow/jobs'
 
+const WiRoute = WiRouteImport.update({
+  id: '/wi',
+  path: '/wi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -337,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
+  '/wi': typeof WiRoute
   '/admin-policy': typeof ProtectedAdminPolicyRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
@@ -387,6 +394,7 @@ export interface FileRoutesByTo {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
+  '/wi': typeof WiRoute
   '/admin-policy': typeof ProtectedAdminPolicyRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
@@ -439,6 +447,7 @@ export interface FileRoutesById {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
+  '/wi': typeof WiRoute
   '/_protected/admin-policy': typeof ProtectedAdminPolicyRoute
   '/_protected/control': typeof ProtectedControlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
@@ -491,6 +500,7 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
+    | '/wi'
     | '/admin-policy'
     | '/control'
     | '/dashboard'
@@ -541,6 +551,7 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
+    | '/wi'
     | '/admin-policy'
     | '/control'
     | '/dashboard'
@@ -592,6 +603,7 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
+    | '/wi'
     | '/_protected/admin-policy'
     | '/_protected/control'
     | '/_protected/dashboard'
@@ -644,6 +656,7 @@ export interface RootRouteChildren {
   SuppliesRoute: typeof SuppliesRoute
   SuppliesRequestRoute: typeof SuppliesRequestRoute
   TermsRoute: typeof TermsRoute
+  WiRoute: typeof WiRoute
   ApiPublicCurtainFlowJobsRoute: typeof ApiPublicCurtainFlowJobsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
   ApiPublicStockCountReportsRoute: typeof ApiPublicStockCountReportsRoute
@@ -651,6 +664,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wi': {
+      id: '/wi'
+      path: '/wi'
+      fullPath: '/wi'
+      preLoaderRoute: typeof WiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -1085,6 +1105,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuppliesRoute: SuppliesRoute,
   SuppliesRequestRoute: SuppliesRequestRoute,
   TermsRoute: TermsRoute,
+  WiRoute: WiRoute,
   ApiPublicCurtainFlowJobsRoute: ApiPublicCurtainFlowJobsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
   ApiPublicStockCountReportsRoute: ApiPublicStockCountReportsRoute,
