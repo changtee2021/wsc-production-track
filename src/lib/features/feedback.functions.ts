@@ -137,8 +137,8 @@ export const submitFeedback = createServerFn({ method: "POST" })
 
 const adminListSchema = z.object({
   adminToken: z.string(),
-  status: z.enum(["all", ...TICKET_STATUSES] as [string, ...string[]]).default("all"),
-  priority: z.enum(["all", ...TICKET_PRIORITIES] as [string, ...string[]]).default("all"),
+  status: z.string().default("all"),
+  priority: z.string().default("all"),
   limit: z.number().min(1).max(500).default(200),
 });
 
@@ -171,8 +171,8 @@ export const adminListFeedback = createServerFn({ method: "POST" })
 const adminUpdateSchema = z.object({
   adminToken: z.string(),
   id: z.string().uuid(),
-  status: z.enum(TICKET_STATUSES).optional(),
-  priority: z.enum(TICKET_PRIORITIES).optional(),
+  status: z.enum(["open", "in_progress", "qa", "resolved", "closed"]).optional(),
+  priority: z.enum(["low", "normal", "high", "critical"]).optional(),
   admin_note: z.string().trim().max(2000).optional().nullable(),
   assignee_name: z.string().trim().max(120).optional().nullable(),
 });
