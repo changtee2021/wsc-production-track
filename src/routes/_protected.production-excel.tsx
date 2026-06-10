@@ -374,6 +374,8 @@ function ProductionExcelPage() {
 
             <tr>
               <th className="sticky left-0 z-20 border-b bg-muted" />
+              <th className="border-b bg-muted" />
+              <th className="border-b bg-muted" />
               <th className="sticky left-[40px] z-20 border-b bg-muted" />
               <th className="border-b bg-muted" />
               <th className="border-b bg-muted" />
@@ -383,6 +385,7 @@ function ProductionExcelPage() {
                 <SubHead key={i} />
               ))}
             </tr>
+
           </thead>
           <tbody>
             {filteredJobs.map((j) => {
