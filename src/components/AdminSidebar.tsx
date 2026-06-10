@@ -92,6 +92,13 @@ const NAV_GROUPS: Array<{
     ],
   },
   {
+    label: "นับสต๊อก (WSC)",
+    items: [
+      { title: "คลังสินค้า", url: "/stock-count-inventory", icon: Boxes },
+      { title: "รายงานนับสต๊อก", url: "/stock-count-reports", icon: ClipboardCheck },
+    ],
+  },
+  {
     label: "ค่าใช้จ่าย",
     items: [
       { title: "เบิกค่าใช้จ่าย", url: "/expenses-dashboard", icon: Receipt },
