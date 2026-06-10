@@ -492,10 +492,13 @@ export type Database = {
           category: string | null
           created_at: string
           id: string
+          image_url: string | null
           item_code: string
           item_name: string
-          min_qty: number
-          notes: string
+          location: string | null
+          max_stock_level: number
+          min_safety_stock: number
+          note: string | null
           total_qty: number
           unit: string
           updated_at: string
@@ -505,10 +508,13 @@ export type Database = {
           category?: string | null
           created_at?: string
           id?: string
+          image_url?: string | null
           item_code: string
           item_name: string
-          min_qty?: number
-          notes?: string
+          location?: string | null
+          max_stock_level?: number
+          min_safety_stock?: number
+          note?: string | null
           total_qty?: number
           unit?: string
           updated_at?: string
@@ -518,10 +524,13 @@ export type Database = {
           category?: string | null
           created_at?: string
           id?: string
+          image_url?: string | null
           item_code?: string
           item_name?: string
-          min_qty?: number
-          notes?: string
+          location?: string | null
+          max_stock_level?: number
+          min_safety_stock?: number
+          note?: string | null
           total_qty?: number
           unit?: string
           updated_at?: string
