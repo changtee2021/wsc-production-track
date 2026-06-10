@@ -238,8 +238,12 @@ function WelcomePage() {
                 </Button>
               </Link>
             </div>
-            <div className="flex justify-center pt-1">
-              <Link to="/terms" className="text-xs text-white/70 underline-offset-2 hover:text-white hover:underline">
+            <div className="flex justify-center gap-3 pt-1 text-xs text-white/70">
+              <Link to="/feedback" className="underline-offset-2 hover:text-white hover:underline">
+                ส่งความคิดเห็น
+              </Link>
+              <span>·</span>
+              <Link to="/terms" className="underline-offset-2 hover:text-white hover:underline">
                 ข้อกำหนดการใช้งาน
               </Link>
             </div>
