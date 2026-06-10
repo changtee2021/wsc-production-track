@@ -1,47 +1,28 @@
-## เพิ่มระบบ Server Logs (จับ Internal Server Error ย้อนหลัง)
+## เป้าหมาย
+- เพิ่มปุ่ม "นับสต๊อก" ในหน้าแรก (`/`) ต่อจากปุ่ม "แพ็คของ"
+- ตั้งรหัสผ่าน `wscstock123` ก่อนเข้าหน้า `/stock-count` ครั้งแรก (จำสถานะ unlock ใน localStorage)
 
-ลอกแพทเทิร์นจากโปรเจกต์ Curtain Flow มาปรับใช้กับ stack ของแอปนี้ (admin token แทน Supabase auth)
+## ขั้นตอน
 
-### Database
-- migration ใหม่: `public.error_logs`
-  - คอลัมน์: `id uuid pk`, `created_at`, `level` (error/warn), `source` (ssr/route/client/health), `route_path`, `message`, `stack`, `status_code`, `request_url`, `user_agent`, `notified_at`
-  - index: `(created_at desc)`, `(level, created_at desc)`
-  - RLS เปิด, นโยบาย service_role only (ทำผ่าน supabaseAdmin จาก server fn)
-  - GRANT ให้ service_role
-- บันทึก system_logs หลังย้าย migration
+### 1. ปุ่มในหน้าแรก
+- แก้ไข `src/routes/index.tsx`
+- เพิ่ม `<Link to="/stock-count">` พร้อม `<Button>` ในช่องปุ่มล่าง ต่อจาก "แพ็คของ"
+- ใช้สไตล์ ghost + backdrop-blur คล้ายปุ่ม QC หรือแพ็คของ เพื่อความสอดคล้อง
 
-### Server-side error capture (ลอกจาก Curtain Flow)
-สร้าง:
-- `src/server.ts` — wrapper ครอบ `@tanstack/react-start/server-entry` + `normalizeCatastrophicSsrResponse` ตรวจจับ h3 swallowed 500 → log + render error page + `recordError`
-- `src/lib/error-capture.ts` — globalThis listeners (`error`, `unhandledrejection`) เก็บ Error ล่าสุดให้ wrapper ดึงไปใช้
-- `src/lib/error-page.ts` — HTML fallback dependency-free
-- `src/lib/error-logs.server.ts` — `recordError()` insert ลง `error_logs` (clamp ความยาว, kill-safe)
+### 2. รหัสผ่านก่อนเข้าหน้าสต๊อก
+- แก้ไข `src/routes/stock-count.tsx`
+- ก่อนแสดง `StockCountWorkbench` ให้ตรวจสอบว่าผู้ใช้ปลดล็อกแล้วหรือยัง
+- ถ้ายังไม่ปลดล็อก แสดงหน้ากรอกรหัสผ่าน:
+  - ช่องกรอกรหัส (type=password หรือ plain text ตาม UX ที่เหมาะสม)
+  - ปุ่ม "เข้าใช้งาน"
+  - ถ้ากรอกถูก (`wscstock123`) → บันทึก flag ลง `localStorage` และแสดง `StockCountWorkbench`
+  - ถ้ากรอกผิด → แสดงข้อความเตือน "รหัสผ่านไม่ถูกต้อง"
+- ใช้ key `wsc_stock_unlocked` ใน localStorage
 
-แก้:
-- `vite.config.ts` — เพิ่ม `tanstackStart: { server: { entry: "server" } }`
-- `wrangler.jsonc` — `"main": "src/server.ts"`
+### 3. ไม่ต้องเปลี่ยน backend
+- ไม่ต้องแก้ server function, migration, หรือ RLS
+- รหัสผ่านเป็น client-side gate เท่านั้น
 
-### Server functions (admin-only ผ่าน admin token)
-สร้าง `src/lib/features/error-logs.functions.ts`:
-- `adminListErrorLogs({ token, days, level, source, search })` — query + filter + cleanup เก่ากว่า 30 วัน
-- `adminRunSsrHealthCheck({ token })` — fetch หน้า `/`, `/scan`, `/feedback`, `/qc`, `/packing`, `/maintenance` ภายในเอง บันทึก fail
-- `adminGetErrorLogStats({ token })` — นับ 24h สำหรับ badge
-
-### หน้า UI
-สร้าง `src/routes/_protected.server-logs.tsx`:
-- Header + ปุ่ม "รันสุขภาพรูทหลัก"
-- ฟิลเตอร์: ช่วงวัน (7/14/30) · ระดับ · แหล่ง · ค้นหา
-- ตารางแสดงผล คลิกแถวเพื่อกางดู stack/url เต็ม
-- ใช้ shadcn Card/Table/Badge/Select/Input + lucide icons
-
-แก้:
-- `src/components/AdminSidebar.tsx` — เพิ่มเมนู "Server Logs" (ScrollText icon)
-
-### ทดสอบ
-- เปิด `/server-logs` (หลัง login admin) → ตารางว่างได้
-- กดปุ่ม "รันสุขภาพรูทหลัก" ดูสถานะแต่ละ route 200/500/ms
-- (optional) สร้าง route ทดสอบโยน error เพื่อยืนยันว่าบันทึกลง `error_logs`
-
-### ไฟล์ที่เพิ่ม/แก้
-- เพิ่ม: migration, `src/server.ts`, `src/lib/error-capture.ts`, `src/lib/error-page.ts`, `src/lib/error-logs.server.ts`, `src/lib/features/error-logs.functions.ts`, `src/routes/_protected.server-logs.tsx`
-- แก้: `vite.config.ts`, `wrangler.jsonc`, `src/components/AdminSidebar.tsx`
+## ไฟล์ที่แก้
+- `src/routes/index.tsx` — เพิ่มปุ่ม
+- `src/routes/stock-count.tsx` — เพิ่ม passcode gate component

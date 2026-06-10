@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
-import { Factory, ShieldCheck, ScanLine, ClipboardCheck, MessageCircle, Package, Wrench, ShoppingCart } from "lucide-react";
+import { Factory, ShieldCheck, ScanLine, ClipboardCheck, MessageCircle, Package, Wrench, ShoppingCart, Boxes } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -235,6 +235,16 @@ function WelcomePage() {
                 >
                   <Package className="h-4 w-4 mr-1" />
                   แพ็คของ
+                </Button>
+              </Link>
+              <Link to="/stock-count" className="flex-1">
+                <Button
+                  variant="ghost"
+                  aria-label="นับสต๊อก"
+                  className="h-12 w-full rounded-2xl bg-amber-600 text-white ring-1 ring-white/30 hover:bg-amber-700 hover:text-white"
+                >
+                  <Boxes className="h-4 w-4 mr-1" />
+                  นับสต๊อก
                 </Button>
               </Link>
             </div>

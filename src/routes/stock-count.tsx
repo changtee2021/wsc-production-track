@@ -31,6 +31,8 @@ import {
 } from "@/lib/auth/stock-session";
 
 const LAST_EMP_KEY = "wsc_stock_last_emp";
+const UNLOCK_KEY = "wsc_stock_unlocked";
+const PASSCODE = "wscstock123";
 
 export const Route = createFileRoute("/stock-count")({
   head: () => ({
@@ -40,8 +42,71 @@ export const Route = createFileRoute("/stock-count")({
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
-  component: StockCountGate,
+  component: StockCountPasscodeGate,
 });
+
+function StockCountPasscodeGate() {
+  const [unlocked, setUnlocked] = useState(false);
+  const [code, setCode] = useState("");
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem(UNLOCK_KEY) === "1" || localStorage.getItem(UNLOCK_KEY) === "1") {
+      setUnlocked(true);
+    }
+  }, []);
+
+  if (unlocked) return <StockCountGate />;
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.trim() === PASSCODE) {
+      try { localStorage.setItem(UNLOCK_KEY, "1"); } catch { /* ignore */ }
+      setUnlocked(true);
+    } else {
+      setErr("รหัสผ่านไม่ถูกต้อง");
+    }
+  };
+
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background p-4">
+      <Toaster richColors position="top-center" />
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Lock className="h-5 w-5 text-primary" /> กรอกรหัสเพื่อเข้าใช้งาน
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>รหัสผ่าน</Label>
+              <Input
+                type="password"
+                inputMode="text"
+                autoFocus
+                value={code}
+                onChange={(e) => { setCode(e.target.value); setErr(""); }}
+                placeholder="••••••••"
+                className="h-12 text-base"
+              />
+              {err && <p className="text-sm text-destructive">{err}</p>}
+            </div>
+            <Button type="submit" size="lg" className="h-12 w-full text-base">
+              เข้าใช้งาน
+            </Button>
+            <Link to="/" className="block">
+              <Button type="button" variant="ghost" className="h-10 w-full">
+                <ArrowLeft className="h-4 w-4" /> <span className="ml-1">กลับหน้าหลัก</span>
+              </Button>
+            </Link>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function fmtNum(n: number) {
   return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 4 }).format(n);
