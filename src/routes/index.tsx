@@ -237,6 +237,16 @@ function WelcomePage() {
                   แพ็คของ
                 </Button>
               </Link>
+              <Link to="/stock-count" className="flex-1">
+                <Button
+                  variant="ghost"
+                  aria-label="นับสต๊อก"
+                  className="h-12 w-full rounded-2xl bg-amber-600 text-white ring-1 ring-white/30 hover:bg-amber-700 hover:text-white"
+                >
+                  <Boxes className="h-4 w-4 mr-1" />
+                  นับสต๊อก
+                </Button>
+              </Link>
             </div>
             <div className="flex justify-center gap-3 pt-1 text-xs text-white/70">
               <Link to="/feedback" className="underline-offset-2 hover:text-white hover:underline">
