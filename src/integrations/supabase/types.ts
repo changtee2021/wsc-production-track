@@ -283,6 +283,48 @@ export type Database = {
         }
         Relationships: []
       }
+      error_logs: {
+        Row: {
+          created_at: string
+          id: string
+          level: string
+          message: string
+          notified_at: string | null
+          request_url: string | null
+          route_path: string | null
+          source: string
+          stack: string | null
+          status_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          notified_at?: string | null
+          request_url?: string | null
+          route_path?: string | null
+          source?: string
+          stack?: string | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          notified_at?: string | null
+          request_url?: string | null
+          route_path?: string | null
+          source?: string
+          stack?: string | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           active: boolean
