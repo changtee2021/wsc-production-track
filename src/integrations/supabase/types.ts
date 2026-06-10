@@ -462,6 +462,48 @@ export type Database = {
           },
         ]
       }
+      feedbacks: {
+        Row: {
+          admin_note: string | null
+          category: string
+          created_at: string
+          from_emp_code: string | null
+          from_name: string | null
+          from_phone: string | null
+          id: string
+          message: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          category?: string
+          created_at?: string
+          from_emp_code?: string | null
+          from_name?: string | null
+          from_phone?: string | null
+          id?: string
+          message: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          category?: string
+          created_at?: string
+          from_emp_code?: string | null
+          from_name?: string | null
+          from_phone?: string | null
+          id?: string
+          message?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       home_banners: {
         Row: {
           active: boolean

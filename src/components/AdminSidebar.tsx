@@ -109,6 +109,7 @@ const NAV_GROUPS: Array<{
     label: "Control",
     items: [
       { title: "แบนเนอร์ & ประกาศ", url: "/control", icon: SlidersHorizontal },
+      { title: "ความคิดเห็น", url: "/feedback-admin", icon: ListChecks },
     ],
   },
   {

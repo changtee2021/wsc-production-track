@@ -1,5 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { AppVersion } from "@/components/AppVersion";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 import appCss from "../styles.css?url";
 
@@ -89,13 +90,13 @@ function RootComponent() {
     select: (s) => s.matches.some((m) => m.routeId.includes("_protected")),
   });
   return (
-    <>
+    <ThemeProvider>
       <Outlet />
       {!isAdmin && (
         <footer className="flex items-center justify-center py-2">
           <AppVersion />
         </footer>
       )}
-    </>
+    </ThemeProvider>
   );
 }

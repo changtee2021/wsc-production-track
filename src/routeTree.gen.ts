@@ -18,6 +18,7 @@ import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QcRouteImport } from './routes/qc'
 import { Route as PackingRouteImport } from './routes/packing'
 import { Route as MaintenanceRouteImport } from './routes/maintenance'
+import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as ExpenseScanRouteImport } from './routes/expense-scan'
 import { Route as ExpenseMineRouteImport } from './routes/expense-mine'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -44,6 +45,7 @@ import { Route as ProtectedMaintenanceAdminRouteImport } from './routes/_protect
 import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
 import { Route as ProtectedJobLookupRouteImport } from './routes/_protected.job-lookup'
+import { Route as ProtectedFeedbackAdminRouteImport } from './routes/_protected.feedback-admin'
 import { Route as ProtectedExpensesReportsRouteImport } from './routes/_protected.expenses-reports'
 import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protected.expenses-dashboard'
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
@@ -96,6 +98,11 @@ const PackingRoute = PackingRouteImport.update({
 const MaintenanceRoute = MaintenanceRouteImport.update({
   id: '/maintenance',
   path: '/maintenance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpenseScanRoute = ExpenseScanRouteImport.update({
@@ -237,6 +244,11 @@ const ProtectedJobLookupRoute = ProtectedJobLookupRouteImport.update({
   path: '/job-lookup',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedFeedbackAdminRoute = ProtectedFeedbackAdminRouteImport.update({
+  id: '/feedback-admin',
+  path: '/feedback-admin',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedExpensesReportsRoute =
   ProtectedExpensesReportsRouteImport.update({
     id: '/expenses-reports',
@@ -288,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/expense-mine': typeof ExpenseMineRoute
   '/expense-scan': typeof ExpenseScanRoute
+  '/feedback': typeof FeedbackRoute
   '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
@@ -302,6 +315,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof ProtectedDashboardRoute
   '/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
   '/expenses-reports': typeof ProtectedExpensesReportsRoute
+  '/feedback-admin': typeof ProtectedFeedbackAdminRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
@@ -332,6 +346,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/expense-mine': typeof ExpenseMineRoute
   '/expense-scan': typeof ExpenseScanRoute
+  '/feedback': typeof FeedbackRoute
   '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
@@ -346,6 +361,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof ProtectedDashboardRoute
   '/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
   '/expenses-reports': typeof ProtectedExpensesReportsRoute
+  '/feedback-admin': typeof ProtectedFeedbackAdminRoute
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
@@ -378,6 +394,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/expense-mine': typeof ExpenseMineRoute
   '/expense-scan': typeof ExpenseScanRoute
+  '/feedback': typeof FeedbackRoute
   '/maintenance': typeof MaintenanceRoute
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
@@ -392,6 +409,7 @@ export interface FileRoutesById {
   '/_protected/dashboard': typeof ProtectedDashboardRoute
   '/_protected/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
   '/_protected/expenses-reports': typeof ProtectedExpensesReportsRoute
+  '/_protected/feedback-admin': typeof ProtectedFeedbackAdminRoute
   '/_protected/job-lookup': typeof ProtectedJobLookupRoute
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/logs-update': typeof ProtectedLogsUpdateRoute
@@ -424,6 +442,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/expense-mine'
     | '/expense-scan'
+    | '/feedback'
     | '/maintenance'
     | '/packing'
     | '/qc'
@@ -438,6 +457,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/expenses-dashboard'
     | '/expenses-reports'
+    | '/feedback-admin'
     | '/job-lookup'
     | '/logs'
     | '/logs-update'
@@ -468,6 +488,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/expense-mine'
     | '/expense-scan'
+    | '/feedback'
     | '/maintenance'
     | '/packing'
     | '/qc'
@@ -482,6 +503,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/expenses-dashboard'
     | '/expenses-reports'
+    | '/feedback-admin'
     | '/job-lookup'
     | '/logs'
     | '/logs-update'
@@ -513,6 +535,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/expense-mine'
     | '/expense-scan'
+    | '/feedback'
     | '/maintenance'
     | '/packing'
     | '/qc'
@@ -527,6 +550,7 @@ export interface FileRouteTypes {
     | '/_protected/dashboard'
     | '/_protected/expenses-dashboard'
     | '/_protected/expenses-reports'
+    | '/_protected/feedback-admin'
     | '/_protected/job-lookup'
     | '/_protected/logs'
     | '/_protected/logs-update'
@@ -559,6 +583,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   ExpenseMineRoute: typeof ExpenseMineRoute
   ExpenseScanRoute: typeof ExpenseScanRoute
+  FeedbackRoute: typeof FeedbackRoute
   MaintenanceRoute: typeof MaintenanceRoute
   PackingRoute: typeof PackingRoute
   QcRoute: typeof QcRoute
@@ -635,6 +660,13 @@ declare module '@tanstack/react-router' {
       path: '/maintenance'
       fullPath: '/maintenance'
       preLoaderRoute: typeof MaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/expense-scan': {
@@ -819,6 +851,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedJobLookupRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/feedback-admin': {
+      id: '/_protected/feedback-admin'
+      path: '/feedback-admin'
+      fullPath: '/feedback-admin'
+      preLoaderRoute: typeof ProtectedFeedbackAdminRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/expenses-reports': {
       id: '/_protected/expenses-reports'
       path: '/expenses-reports'
@@ -884,6 +923,7 @@ interface ProtectedRouteChildren {
   ProtectedDashboardRoute: typeof ProtectedDashboardRoute
   ProtectedExpensesDashboardRoute: typeof ProtectedExpensesDashboardRoute
   ProtectedExpensesReportsRoute: typeof ProtectedExpensesReportsRoute
+  ProtectedFeedbackAdminRoute: typeof ProtectedFeedbackAdminRoute
   ProtectedJobLookupRoute: typeof ProtectedJobLookupRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedLogsUpdateRoute: typeof ProtectedLogsUpdateRoute
@@ -914,6 +954,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedDashboardRoute: ProtectedDashboardRoute,
   ProtectedExpensesDashboardRoute: ProtectedExpensesDashboardRoute,
   ProtectedExpensesReportsRoute: ProtectedExpensesReportsRoute,
+  ProtectedFeedbackAdminRoute: ProtectedFeedbackAdminRoute,
   ProtectedJobLookupRoute: ProtectedJobLookupRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedLogsUpdateRoute: ProtectedLogsUpdateRoute,
@@ -948,6 +989,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   ExpenseMineRoute: ExpenseMineRoute,
   ExpenseScanRoute: ExpenseScanRoute,
+  FeedbackRoute: FeedbackRoute,
   MaintenanceRoute: MaintenanceRoute,
   PackingRoute: PackingRoute,
   QcRoute: QcRoute,
@@ -963,12 +1005,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
