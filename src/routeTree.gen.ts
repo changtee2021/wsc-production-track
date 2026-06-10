@@ -54,6 +54,7 @@ import { Route as ProtectedAdminPolicyRouteImport } from './routes/_protected.ad
 import { Route as ProtectedEmployeeProfileIdRouteImport } from './routes/_protected.employee-profile.$id'
 import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/public/stock-count.reports'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
+import { Route as ApiPublicCurtainFlowJobsRouteImport } from './routes/api/public/curtain-flow/jobs'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -294,6 +295,12 @@ const ApiPublicHooksLineDailySendRoute =
     path: '/api/public/hooks/line-daily-send',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCurtainFlowJobsRoute =
+  ApiPublicCurtainFlowJobsRouteImport.update({
+    id: '/api/public/curtain-flow/jobs',
+    path: '/api/public/curtain-flow/jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
+  '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
 }
@@ -384,6 +392,7 @@ export interface FileRoutesByTo {
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
+  '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
 }
@@ -432,6 +441,7 @@ export interface FileRoutesById {
   '/_protected/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
+  '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
 }
@@ -480,6 +490,7 @@ export interface FileRouteTypes {
     | '/supplies-dashboard'
     | '/supplies-reports'
     | '/employee-profile/$id'
+    | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
   fileRoutesByTo: FileRoutesByTo
@@ -526,6 +537,7 @@ export interface FileRouteTypes {
     | '/supplies-dashboard'
     | '/supplies-reports'
     | '/employee-profile/$id'
+    | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
   id:
@@ -573,6 +585,7 @@ export interface FileRouteTypes {
     | '/_protected/supplies-dashboard'
     | '/_protected/supplies-reports'
     | '/_protected/employee-profile/$id'
+    | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
   fileRoutesById: FileRoutesById
@@ -593,6 +606,7 @@ export interface RootRouteChildren {
   SuppliesRoute: typeof SuppliesRoute
   SuppliesRequestRoute: typeof SuppliesRequestRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicCurtainFlowJobsRoute: typeof ApiPublicCurtainFlowJobsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
   ApiPublicStockCountReportsRoute: typeof ApiPublicStockCountReportsRoute
 }
@@ -914,6 +928,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksLineDailySendRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/curtain-flow/jobs': {
+      id: '/api/public/curtain-flow/jobs'
+      path: '/api/public/curtain-flow/jobs'
+      fullPath: '/api/public/curtain-flow/jobs'
+      preLoaderRoute: typeof ApiPublicCurtainFlowJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -999,6 +1020,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuppliesRoute: SuppliesRoute,
   SuppliesRequestRoute: SuppliesRequestRoute,
   TermsRoute: TermsRoute,
+  ApiPublicCurtainFlowJobsRoute: ApiPublicCurtainFlowJobsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
   ApiPublicStockCountReportsRoute: ApiPublicStockCountReportsRoute,
 }

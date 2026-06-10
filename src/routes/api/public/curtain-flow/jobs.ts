@@ -80,7 +80,7 @@ export const Route = createFileRoute("/api/public/curtain-flow/jobs")({
           ship_date: j.ship_date ?? null,
           status: j.cancelled ? "cancelled" : "pending",
           source: "curtain_flow",
-          source_payload: j as unknown as Record<string, unknown>,
+          source_payload: j as never,
         }));
 
         const { data, error } = await supabaseAdmin
