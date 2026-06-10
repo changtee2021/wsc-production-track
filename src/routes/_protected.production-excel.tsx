@@ -428,7 +428,7 @@ function ProductionExcelPage() {
             {filteredJobs.length === 0 && !loading && (
               <tr>
                 <td
-                  colSpan={6 + maxSteps * 4}
+                  colSpan={8 + maxSteps * 4}
                   className="px-4 py-8 text-center text-sm text-muted-foreground"
                 >
                   ยังไม่มีข้อมูล — เลือกช่วงวันที่แล้วกด "โหลดข้อมูล"
