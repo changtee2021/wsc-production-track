@@ -47,6 +47,7 @@ import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dash
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
 import { Route as ProtectedAdminPolicyRouteImport } from './routes/_protected.admin-policy'
 import { Route as ProtectedEmployeeProfileIdRouteImport } from './routes/_protected.employee-profile.$id'
+import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/public/stock-count.reports'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 
 const TermsRoute = TermsRouteImport.update({
@@ -249,6 +250,12 @@ const ProtectedEmployeeProfileIdRoute =
     path: '/employee-profile/$id',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ApiPublicStockCountReportsRoute =
+  ApiPublicStockCountReportsRouteImport.update({
+    id: '/api/public/stock-count/reports',
+    path: '/api/public/stock-count/reports',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLineDailySendRoute =
   ApiPublicHooksLineDailySendRouteImport.update({
     id: '/api/public/hooks/line-daily-send',
@@ -295,6 +302,7 @@ export interface FileRoutesByFullPath {
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
+  '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -335,6 +343,7 @@ export interface FileRoutesByTo {
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
+  '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -377,6 +386,7 @@ export interface FileRoutesById {
   '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
+  '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/supplies-reports'
     | '/employee-profile/$id'
     | '/api/public/hooks/line-daily-send'
+    | '/api/public/stock-count/reports'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -459,6 +470,7 @@ export interface FileRouteTypes {
     | '/supplies-reports'
     | '/employee-profile/$id'
     | '/api/public/hooks/line-daily-send'
+    | '/api/public/stock-count/reports'
   id:
     | '__root__'
     | '/'
@@ -500,6 +512,7 @@ export interface FileRouteTypes {
     | '/_protected/supplies-reports'
     | '/_protected/employee-profile/$id'
     | '/api/public/hooks/line-daily-send'
+    | '/api/public/stock-count/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -517,6 +530,7 @@ export interface RootRouteChildren {
   SuppliesRequestRoute: typeof SuppliesRequestRoute
   TermsRoute: typeof TermsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
+  ApiPublicStockCountReportsRoute: typeof ApiPublicStockCountReportsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -787,6 +801,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedEmployeeProfileIdRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/api/public/stock-count/reports': {
+      id: '/api/public/stock-count/reports'
+      path: '/api/public/stock-count/reports'
+      fullPath: '/api/public/stock-count/reports'
+      preLoaderRoute: typeof ApiPublicStockCountReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/line-daily-send': {
       id: '/api/public/hooks/line-daily-send'
       path: '/api/public/hooks/line-daily-send'
@@ -872,6 +893,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuppliesRequestRoute: SuppliesRequestRoute,
   TermsRoute: TermsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
+  ApiPublicStockCountReportsRoute: ApiPublicStockCountReportsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
