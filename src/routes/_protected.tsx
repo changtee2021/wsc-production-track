@@ -4,6 +4,7 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { EmployeeProfileProvider } from "@/components/EmployeeProfileProvider";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_protected")({
@@ -54,18 +55,21 @@ function AdminLayout() {
                   {title}
                 </h1>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1"
-                onClick={() => {
-                  clearAdminSession();
-                  navigate({ to: "/admin" });
-                }}
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </Button>
+              <div className="flex items-center gap-1">
+                <ThemeToggle />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => {
+                    clearAdminSession();
+                    navigate({ to: "/admin" });
+                  }}
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </div>
             </header>
             <main className="flex-1">
               <Outlet />
