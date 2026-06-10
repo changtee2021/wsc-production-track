@@ -398,15 +398,21 @@ function ProductionExcelPage() {
                       onCheckedChange={(v) => toggleOne(j.job_id, !!v)}
                     />
                   </td>
+                  <td className="border-r px-2 py-1 whitespace-nowrap">
+                    {fmtDate(j.started_at)}
+                  </td>
+                  <td className="border-r px-2 py-1 whitespace-nowrap">
+                    {fmtDate(j.finished_at)}
+                  </td>
                   <td className="sticky left-[40px] z-10 border-r bg-inherit px-2 py-1 font-mono">
                     {j.job_id.slice(0, 8)}
                   </td>
                   <td className="border-r px-2 py-1">{j.category_name ?? "—"}</td>
                   <td className="border-r px-2 py-1 whitespace-nowrap">
-                    {fmt(j.started_at)}
+                    {fmtTime(j.started_at)}
                   </td>
                   <td className="border-r px-2 py-1 whitespace-nowrap">
-                    {fmt(j.finished_at)}
+                    {fmtTime(j.finished_at)}
                   </td>
                   <td className="border-r px-2 py-1 text-right">{j.step_count}</td>
                   {Array.from({ length: maxSteps }).map((_, i) => {
@@ -418,6 +424,7 @@ function ProductionExcelPage() {
                 </tr>
               );
             })}
+
             {filteredJobs.length === 0 && !loading && (
               <tr>
                 <td
