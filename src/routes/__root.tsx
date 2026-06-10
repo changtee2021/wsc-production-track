@@ -95,7 +95,7 @@ function RootComponent() {
   const [queryClient] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
+      <ThemeProvider isAdmin={isAdmin}>
         <Outlet />
         <FeedbackFab />
         {!isAdmin && (

@@ -13,10 +13,15 @@ function applyClass(t: Theme) {
   root.style.colorScheme = t;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({ children, isAdmin }: { children: React.ReactNode; isAdmin?: boolean }) {
   const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
+    if (!isAdmin) {
+      setThemeState("light");
+      applyClass("light");
+      return;
+    }
     let initial: Theme = "light";
     try {
       const stored = localStorage.getItem(KEY) as Theme | null;
@@ -27,9 +32,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     setThemeState(initial);
     applyClass(initial);
-  }, []);
+  }, [isAdmin]);
 
   const setTheme = (t: Theme) => {
+    if (!isAdmin) {
+      setThemeState("light");
+      applyClass("light");
+      return;
+    }
     setThemeState(t);
     applyClass(t);
     try {
