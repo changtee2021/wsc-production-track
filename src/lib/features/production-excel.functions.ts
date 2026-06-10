@@ -200,9 +200,36 @@ async function sheetsFetch(
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Google Sheets API ${res.status}: ${text.slice(0, 400)}`);
+    const err = new Error(`Google Sheets API ${res.status}: ${text.slice(0, 400)}`);
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
   }
   return res.json();
+}
+
+// Ensure a sheet tab exists; create it if missing.
+async function ensureSheetExists(spreadsheetId: string, sheetName: string) {
+  try {
+    const meta = (await sheetsFetch(
+      `/spreadsheets/${spreadsheetId}?fields=sheets(properties(title))`,
+    )) as { sheets?: { properties?: { title?: string } }[] };
+    const exists = meta.sheets?.some((s) => s.properties?.title === sheetName);
+    if (exists) return;
+    await sheetsFetch(`/spreadsheets/${spreadsheetId}:batchUpdate`, {
+      method: "POST",
+      body: JSON.stringify({
+        requests: [{ addSheet: { properties: { title: sheetName } } }],
+      }),
+    });
+  } catch (e) {
+    const status = (e as { status?: number }).status;
+    if (status === 404) {
+      throw new Error(
+        "ไม่พบ Spreadsheet — ตรวจสอบ Spreadsheet ID และตรวจว่าบัญชี Google ที่เชื่อมต่อมีสิทธิ์เข้าถึงไฟล์นี้",
+      );
+    }
+    throw e;
+  }
 }
 
 export const adminSyncProductionExcelToSheets = createServerFn({ method: "POST" })
@@ -223,15 +250,15 @@ export const adminSyncProductionExcelToSheets = createServerFn({ method: "POST" 
     const sheet = data.sheet_name;
     const range = `${sheet}!A1`;
 
+    await ensureSheetExists(data.spreadsheet_id, sheet);
+
     if (data.mode === "replace") {
-      // Clear entire sheet first
       await sheetsFetch(
-        `/spreadsheets/${data.spreadsheet_id}/values/${encodeURIComponent(sheet)}:clear`,
+        `/spreadsheets/${data.spreadsheet_id}/values/${sheet}:clear`,
         { method: "POST", body: JSON.stringify({}) },
       );
-      // Write headers + rows starting at A1
       await sheetsFetch(
-        `/spreadsheets/${data.spreadsheet_id}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+        `/spreadsheets/${data.spreadsheet_id}/values/${range}?valueInputOption=USER_ENTERED`,
         {
           method: "PUT",
           body: JSON.stringify({
@@ -242,14 +269,13 @@ export const adminSyncProductionExcelToSheets = createServerFn({ method: "POST" 
         },
       );
     } else {
-      // Append: include header row only if sheet is empty
-      const probe = await sheetsFetch(
-        `/spreadsheets/${data.spreadsheet_id}/values/${encodeURIComponent(sheet + "!A1:A1")}`,
-      ).catch(() => null as { values?: unknown[][] } | null);
+      const probe = (await sheetsFetch(
+        `/spreadsheets/${data.spreadsheet_id}/values/${sheet}!A1:A1`,
+      ).catch(() => null)) as { values?: unknown[][] } | null;
       const isEmpty = !probe || !probe.values || probe.values.length === 0;
       const values = isEmpty ? [data.headers, ...data.rows] : data.rows;
       await sheetsFetch(
-        `/spreadsheets/${data.spreadsheet_id}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+        `/spreadsheets/${data.spreadsheet_id}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
         {
           method: "POST",
           body: JSON.stringify({
@@ -263,3 +289,4 @@ export const adminSyncProductionExcelToSheets = createServerFn({ method: "POST" 
 
     return { ok: true, written: data.rows.length };
   });
+
