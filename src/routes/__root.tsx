@@ -92,15 +92,18 @@ function RootComponent() {
   const isAdmin = useRouterState({
     select: (s) => s.matches.some((m) => m.routeId.includes("_protected")),
   });
+  const [queryClient] = useState(() => new QueryClient());
   return (
-    <ThemeProvider>
-      <Outlet />
-      <FeedbackFab />
-      {!isAdmin && (
-        <footer className="flex items-center justify-center py-2">
-          <AppVersion />
-        </footer>
-      )}
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <Outlet />
+        <FeedbackFab />
+        {!isAdmin && (
+          <footer className="flex items-center justify-center py-2">
+            <AppVersion />
+          </footer>
+        )}
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
