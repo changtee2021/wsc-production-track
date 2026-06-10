@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Factory } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function AppHeader({ children }: { children?: React.ReactNode }) {
   return (
@@ -11,7 +12,10 @@ export function AppHeader({ children }: { children?: React.ReactNode }) {
           </div>
           <span>WSC ProductionTrack</span>
         </Link>
-        <div className="flex items-center gap-2 text-sm">{children}</div>
+        <div className="flex items-center gap-2 text-sm">
+          {children}
+          <ThemeToggle className="text-primary-foreground hover:bg-white/15 hover:text-primary-foreground" />
+        </div>
       </div>
     </header>
   );
