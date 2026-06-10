@@ -1,71 +1,84 @@
-## เป้าหมาย
-สร้างหน้า "พรีวิวตาราง Excel ประวัติผลิต" สำหรับแอดมิน ที่ pivot ข้อมูล production logs ของแต่ละ Job เป็นแถวเดียว แล้วกระจาย ขั้นตอน/พนักงาน/เวลาเริ่ม/เวลาจบ เป็นคอลัมน์ตามลำดับ (ขั้นตอน 1, 2, 3, …) จำนวนคอลัมน์ปรับตามจำนวนขั้นตอนสูงสุดของข้อมูลที่กรองได้ พร้อมส่งออก CSV/XLSX และ Sync เข้า Google Sheets
+# แผนการโคลนฟีเจอร์ — ทำทีละกลุ่ม (เริ่ม Group A)
 
-## หน้าใหม่
-- Route: `src/routes/_protected.production-excel.tsx`
-- เมนูใน `AdminSidebar.tsx` หมวด "การผลิต" ใต้ "ประวัติงานผลิต" ชื่อ "พรีวิว Excel ผลิต"
+ต้นทาง: `WP/WSC-Production` (multi-company wsc/wp + worker-token)
+ปลายทาง: โปรเจคนี้ (single-tenant WSC, ใช้ admin/worker token เดิม)
+หลักการพอร์ต: ตัด `company_id`/multi-tenant ทิ้ง, จัดไฟล์ตาม layout เดิมของโปรเจคนี้ (`src/lib/{features,auth,utils}`), ใช้ `requireToken` / admin-token เดิม, คง shape API ที่ Curtain Flow ใช้อยู่
 
-## Server functions ใหม่ (`src/lib/features/production-excel.functions.ts`)
-1. `adminGetProductionExcel({ token, start, end, category_id?, job_search? })`
-   - ดึง production_logs ในช่วงเวลา + join steps/categories/employees
-   - จับคู่ start/finish ด้วยตรรกะเดียวกับ `production-monitor.functions.ts` (`pairLogs`)
-   - คืน array ของ Job rows: `{ job_id, category_name, started_at, finished_at, steps: [{step_name, employee_name, started_at, finished_at, actual_seconds, target_seconds, exceeded}, ...] }`
-   - คืน `max_steps` เพื่อให้ฝั่ง client gen header dynamic
-2. `adminSyncProductionExcelToSheets({ token, spreadsheet_id, sheet_name, rows, headers, mode: 'append'|'replace' })`
-   - เรียก Google Sheets API ผ่าน gateway `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/{id}/values/{range}:append?valueInputOption=USER_ENTERED`
-   - ใช้ `process.env.LOVABLE_API_KEY` + `process.env.GOOGLE_SHEETS_API_KEY` (ชื่อจะถูกตั้งหลังเชื่อม connector)
-   - ถ้า mode = 'replace' เรียก `values:clear` ก่อน append
+---
 
-## UI หน้า /production-excel
-ใช้ shadcn primitives เดิม (Card, Table, Select, Input, Button, Checkbox, Calendar/Popover, Badge, toast)
+## Group A — Stock Count (เชื่อม Curtain Flow) [ทำก่อน]
 
-โครงสร้าง:
-- แถบฟิลเตอร์ด้านบน:
-  - ช่วงวันที่ (date range): วันนี้ / 7 วัน / เดือนนี้ / custom
-  - หมวดหมู่ (Select)
-  - ค้นหา Job (Input — filter client-side ภายในผลลัพธ์ที่ load มา)
-  - ปุ่ม "โหลดข้อมูล"
-- ตารางพรีวิว:
-  - คอลัมน์คงที่: ☑ checkbox / Job / หมวดหมู่ / เวลาเริ่ม / เวลาจบ / จำนวนขั้นตอน
-  - คอลัมน์ dynamic ตาม `max_steps`: `ขั้นตอน(n)`, `พนักงาน(n)`, `เริ่ม(n)`, `จบ(n)` — sticky header, scroll แนวนอน
-  - คลิกหัวคอลัมน์เพื่อ sort, มี global search input
-  - "เลือกทั้งหมด" + checkbox ต่อแถว
-- แถบ action ล่าง:
-  - "ดาวน์โหลด CSV" / "ดาวน์โหลด XLSX" — ใช้ `xlsx` library (มีอยู่แล้วในโปรเจกต์จาก qc-export/packing-export) แปลงเฉพาะแถวที่เลือก (ถ้าไม่เลือก = ทั้งหมดที่ filter)
-  - "ส่งเข้า Google Sheets":
-    - Dialog ให้กรอก Spreadsheet ID + Sheet name + เลือก append/replace
-    - แสดง loading toast ระหว่างส่ง, success/error toast ตอนจบ
+### A.1 Migration — สร้าง 3 ตารางใหม่ (ผ่าน `supabase--migration`)
 
-## Google Sheets Connector
-- ใช้ Google Sheets connector (gateway-enabled) ที่มีอยู่
-- เรียก `standard_connectors--connect` ด้วย `connector_id: "google_sheets"` (รอผู้ใช้กดยืนยันเชื่อม account ของบริษัท)
-- หลังเชื่อมเสร็จ secret `GOOGLE_SHEETS_API_KEY` จะ inject เข้า server runtime อัตโนมัติ
-- ถ้า server fn พบว่า secret ขาด → ตอบ error ชัดเจน "ยังไม่ได้เชื่อม Google Sheets"
+```text
+public.inventory_items
+  id uuid pk, item_code text unique, item_name text, unit text,
+  total_qty numeric default 0, active bool default true,
+  notes text, created_at, updated_at
+GRANT: authenticated R/W, service_role ALL, anon —
+RLS: authenticated select/insert/update/delete (admin gate ที่ฝั่ง server)
 
-## Export Helper ใหม่
-`src/lib/utils/production-excel-export.ts`
-- `buildHeaders(maxSteps): string[]`
-- `buildRows(jobs, maxSteps): string[][]`
-- `downloadCsv(filename, headers, rows)` (Blob + URL.createObjectURL)
-- `downloadXlsx(filename, headers, rows)` (ใช้ `xlsx`)
+public.stock_count_batches
+  id uuid pk, batch_no bigserial-like (sequence),
+  status text check in ('draft','submitted') default 'draft',
+  note text default '',
+  counted_by_emp_id uuid null, counted_by_emp_code text, counted_by_name text,
+  submitted_at timestamptz, created_at, updated_at
+GRANT + RLS เหมือนข้างบน
 
-## Migration / DB
-ไม่ต้องแก้ schema — อ่านจาก `production_logs`, `steps`, `categories`, `employees` ที่มีอยู่
+public.stock_counts
+  id uuid pk, batch_id uuid fk→stock_count_batches on delete cascade,
+  item_id uuid null fk→inventory_items, item_code text, item_name text, unit text,
+  counted_qty numeric, system_qty numeric, variance numeric,
+  status text check in ('match','short','over'),
+  note text default '', counted_by_emp_id uuid null, counted_by_name text,
+  created_at
+INDEX: (batch_id), (item_code)
+```
 
-## System log
-INSERT แถวลง `system_logs` หลัง implement: title "เพิ่มหน้าพรีวิว Excel ประวัติผลิต + Sync Google Sheets", paths ครอบไฟล์ที่สร้าง/แก้
+ไม่มี `company_id` (WSC-only). batch_no ใช้ sequence + trigger เติมตอน insert
 
-## ไฟล์ที่จะสร้าง/แก้
-สร้าง:
-- `src/routes/_protected.production-excel.tsx`
-- `src/lib/features/production-excel.functions.ts`
-- `src/lib/utils/production-excel-export.ts`
+### A.2 Auth: `src/lib/auth/stock-session.ts` + `stock-token.server.ts`
+ก๊อปแพทเทิร์นเดียวกับ `packing-token.server.ts` (HMAC-signed token, 30 วัน, ไม่ต้องใส่รหัส — issue อัตโนมัติเหมือนแพ็คกิ้ง)
 
-แก้:
-- `src/components/AdminSidebar.tsx` (เพิ่มเมนู)
+### A.3 Server functions: `src/lib/features/stock-count.functions.ts`
+พอร์ตจาก `WP/WSC-Production/src/lib/stock-count.functions.ts` — ตัด `company_id`/`company`, ใช้ `verifyAdminToken` เดิม. มี:
+- `issueStockSession`, `checkStockToken`
+- worker: `getOrCreateDraftBatch`, `addCountLine`, `updateCountLine`, `deleteCountLine`, `listBatchLines`, `submitBatch`, `listMyBatches`
+- admin: `adminListBatches`, `adminListBatchLines`, `adminListInventory`, `adminUpsertInventoryItem`, `adminDeleteInventoryItem`, `adminAdjustStock`
 
-## ลำดับงาน
-1. เรียก `standard_connectors--connect` (google_sheets) — รอผู้ใช้ยืนยัน
-2. สร้าง server functions + helper export
-3. สร้างหน้า UI + ใส่เมนู
-4. INSERT system_logs
+### A.4 Components & Pages
+- `src/components/stock/BarcodeScannerDialog.tsx` — ใช้ `@zxing/browser` (เพิ่ม dep)
+- `src/routes/stock-count.tsx` — worker UI (สแกน + นับ + ส่ง)
+- `src/routes/_protected.stock-count-inventory.tsx` — admin จัดการ inventory_items + ปรับสต๊อกระบบ
+- `src/routes/_protected.stock-count-reports.tsx` — admin ดูชุดนับ + ส่งออก CSV
+- เพิ่มเมนูใน `AdminSidebar.tsx`
+
+### A.5 Public API: `src/routes/api/public/stock-count.reports.ts`
+พอร์ตตรง ตัด `company` filter (default ส่ง batch ของ WSC). ป้องกันด้วย header `x-wsc-secret` = secret `WSC_REPORTS_SECRET` (เพิ่มผ่าน `add_secret` หลังยืนยัน)
+
+### A.6 บันทึก `system_logs` (ตามกฎโปรเจค) — แนบใน migration
+
+---
+
+## Groups ถัดไป (ทำหลังจาก A เสร็จ + เทสต์)
+
+- **Group B** — My Profile (`/my-profile` + emp_code lookup) + `EmployeeHrTabs` 5 แท็บ (ติดต่อ/ส่วนตัว/การจ้าง/การเงิน/เอกสาร) + `EmployeeNameButton` / `EmployeeProfileBody` / `employee-hr.functions.ts` + `my-profile.functions.ts` — อาจต้องเพิ่มคอลัมน์ HR ใน `employees`
+- **Group C** — Feedback (table + dialog + admin `/feedback`), `/home` landing + `CompanyLogo`, `DarkModeToggle`, `SlideToConfirm`, Spotlight ⌘K (`spotlight.functions.ts`)
+- **Group D + E** — `standards-time.functions.ts`, `scoring.functions.ts`, แตก sitemap เป็น 11 ไฟล์ + `sitemap-helpers.ts`
+
+---
+
+## รายละเอียดเทคนิค (Group A)
+
+- ใช้ `supabaseAdmin` ใน server functions (ผ่าน admin-token หรือ worker stock-token)
+- ไม่แตะ `company_id` ทุกที่ — จะลบ filter `eq('company_id', company)` ออกหมด
+- `BarcodeScannerDialog` ใช้ `@zxing/browser` (ตรวจ user-uploads ไม่จำเป็น) — fallback เป็น input manual ถ้ากล้องไม่ทำงาน
+- secret `WSC_REPORTS_SECRET` — จะขอตั้งหลัง user ยืนยัน Group A
+- batch_no auto increment — ใช้ `CREATE SEQUENCE` แล้ว default ในตาราง
+- ส่งออก CSV ในหน้า reports — ใช้แพทเทิร์นเดียวกับ `production-excel-export.ts`
+
+## ขอ confirm ก่อนเริ่มลงมือ Group A
+1. ตกลงตามแผนนี้?
+2. ฟิลด์ใน `inventory_items` อยากเพิ่มอะไรพิเศษไหม (เช่น `category`, `min_qty`, `cost`)?
+3. `WSC_REPORTS_SECRET` ให้สร้างใหม่อัตโนมัติแล้วโชว์ค่าให้คัดลอกไปใส่ฝั่ง Curtain Flow ใช่ไหม?
