@@ -106,13 +106,6 @@ const NAV_GROUPS: Array<{
     ],
   },
   {
-    label: "Control",
-    items: [
-      { title: "แบนเนอร์ & ประกาศ", url: "/control", icon: SlidersHorizontal },
-      { title: "ความคิดเห็น", url: "/feedback-admin", icon: ListChecks },
-    ],
-  },
-  {
     label: "ระบบ",
     items: [
       { title: "พนักงาน", url: "/manage", icon: Users },
@@ -121,6 +114,8 @@ const NAV_GROUPS: Array<{
   {
     label: "อัพเดต",
     items: [
+      { title: "แบนเนอร์ & ประกาศ", url: "/control", icon: SlidersHorizontal },
+      { title: "ความคิดเห็น", url: "/feedback-admin", icon: ListChecks },
       { title: "พื้นที่จัดเก็บ", url: "/storage", icon: HardDrive },
       { title: "ข้อกำหนดแอดมิน", url: "/admin-policy", icon: ShieldCheck },
       { title: "แก้ไขข้อกำหนด", url: "/manage-policies", icon: FileText },
