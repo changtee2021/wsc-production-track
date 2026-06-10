@@ -1232,6 +1232,101 @@ export type Database = {
         }
         Relationships: []
       }
+      production_jobs: {
+        Row: {
+          accessories: Json
+          category_id: string | null
+          color_code: string | null
+          created_at: string
+          customer_name: string | null
+          due_date: string | null
+          fabric_code: string | null
+          finished_at: string | null
+          height_cm: number | null
+          id: string
+          job_no: string
+          label_rev: string | null
+          motor: string | null
+          order_no: string | null
+          printed_at: string | null
+          product_type: string | null
+          qty: number
+          rail_code: string | null
+          ship_date: string | null
+          side: string | null
+          source: string
+          source_payload: Json
+          started_at: string | null
+          status: string
+          updated_at: string
+          width_cm: number | null
+        }
+        Insert: {
+          accessories?: Json
+          category_id?: string | null
+          color_code?: string | null
+          created_at?: string
+          customer_name?: string | null
+          due_date?: string | null
+          fabric_code?: string | null
+          finished_at?: string | null
+          height_cm?: number | null
+          id?: string
+          job_no: string
+          label_rev?: string | null
+          motor?: string | null
+          order_no?: string | null
+          printed_at?: string | null
+          product_type?: string | null
+          qty?: number
+          rail_code?: string | null
+          ship_date?: string | null
+          side?: string | null
+          source?: string
+          source_payload?: Json
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          width_cm?: number | null
+        }
+        Update: {
+          accessories?: Json
+          category_id?: string | null
+          color_code?: string | null
+          created_at?: string
+          customer_name?: string | null
+          due_date?: string | null
+          fabric_code?: string | null
+          finished_at?: string | null
+          height_cm?: number | null
+          id?: string
+          job_no?: string
+          label_rev?: string | null
+          motor?: string | null
+          order_no?: string | null
+          printed_at?: string | null
+          product_type?: string | null
+          qty?: number
+          rail_code?: string | null
+          ship_date?: string | null
+          side?: string | null
+          source?: string
+          source_payload?: Json
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          width_cm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_jobs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_logs: {
         Row: {
           action: string

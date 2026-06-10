@@ -55,6 +55,7 @@ const NAV_GROUPS: Array<{
   {
     label: "การผลิต",
     items: [
+      { title: "คิวผลิต (Curtain Flow)", url: "/production-queue", icon: Factory },
       { title: "แดชบอร์ดไลน์ผลิต", url: "/production-dashboard", icon: Activity },
       { title: "ประวัติงานผลิต", url: "/logs", icon: FileText },
       { title: "พรีวิว Excel ผลิต", url: "/production-excel", icon: ListChecks },
