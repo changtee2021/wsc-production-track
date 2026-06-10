@@ -1,4 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { AppVersion } from "@/components/AppVersion";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FeedbackFab } from "@/components/FeedbackFab";
@@ -90,15 +92,18 @@ function RootComponent() {
   const isAdmin = useRouterState({
     select: (s) => s.matches.some((m) => m.routeId.includes("_protected")),
   });
+  const [queryClient] = useState(() => new QueryClient());
   return (
-    <ThemeProvider>
-      <Outlet />
-      <FeedbackFab />
-      {!isAdmin && (
-        <footer className="flex items-center justify-center py-2">
-          <AppVersion />
-        </footer>
-      )}
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <Outlet />
+        <FeedbackFab />
+        {!isAdmin && (
+          <footer className="flex items-center justify-center py-2">
+            <AppVersion />
+          </footer>
+        )}
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
