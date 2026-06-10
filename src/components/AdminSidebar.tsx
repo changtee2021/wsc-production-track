@@ -21,6 +21,7 @@ import {
   Activity,
   Timer,
   ShieldCheck,
+  ScrollText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -121,6 +122,7 @@ const NAV_GROUPS: Array<{
       { title: "ข้อกำหนดแอดมิน", url: "/admin-policy", icon: ShieldCheck },
       { title: "แก้ไขข้อกำหนด", url: "/manage-policies", icon: FileText },
       { title: "LogUpdate", url: "/logs-update", icon: Sparkles },
+      { title: "Server Logs", url: "/server-logs", icon: ScrollText },
     ],
   },
 ];
