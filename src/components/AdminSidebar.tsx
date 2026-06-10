@@ -57,6 +57,7 @@ const NAV_GROUPS: Array<{
     items: [
       { title: "แดชบอร์ดไลน์ผลิต", url: "/production-dashboard", icon: Activity },
       { title: "ประวัติงานผลิต", url: "/logs", icon: FileText },
+      { title: "พรีวิว Excel ผลิต", url: "/production-excel", icon: ListChecks },
       { title: "เวลามาตรฐาน & ไฟแดง", url: "/production-standards", icon: Timer },
       { title: "ตั้งค่าการผลิต", url: "/production-setup", icon: Layers },
     ],
