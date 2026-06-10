@@ -486,6 +486,57 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_items: {
+        Row: {
+          active: boolean
+          category: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          item_code: string
+          item_name: string
+          location: string | null
+          max_stock_level: number
+          min_safety_stock: number
+          note: string | null
+          total_qty: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          item_code: string
+          item_name: string
+          location?: string | null
+          max_stock_level?: number
+          min_safety_stock?: number
+          note?: string | null
+          total_qty?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          item_code?: string
+          item_name?: string
+          location?: string | null
+          max_stock_level?: number
+          min_safety_stock?: number
+          note?: string | null
+          total_qty?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       maintenance_employees: {
         Row: {
           active: boolean
@@ -1560,6 +1611,126 @@ export type Database = {
           step_name?: string
         }
         Relationships: []
+      }
+      stock_count_batches: {
+        Row: {
+          batch_no: number
+          counted_by_emp_code: string
+          counted_by_emp_id: string | null
+          counted_by_name: string
+          created_at: string
+          id: string
+          note: string
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_no?: number
+          counted_by_emp_code?: string
+          counted_by_emp_id?: string | null
+          counted_by_name?: string
+          created_at?: string
+          id?: string
+          note?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_no?: number
+          counted_by_emp_code?: string
+          counted_by_emp_id?: string | null
+          counted_by_name?: string
+          created_at?: string
+          id?: string
+          note?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_count_batches_counted_by_emp_id_fkey"
+            columns: ["counted_by_emp_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_counts: {
+        Row: {
+          batch_id: string
+          counted_by_emp_id: string | null
+          counted_by_name: string
+          counted_qty: number
+          created_at: string
+          id: string
+          item_code: string
+          item_id: string | null
+          item_name: string
+          note: string
+          status: string
+          system_qty: number
+          unit: string
+          variance: number
+        }
+        Insert: {
+          batch_id: string
+          counted_by_emp_id?: string | null
+          counted_by_name?: string
+          counted_qty?: number
+          created_at?: string
+          id?: string
+          item_code: string
+          item_id?: string | null
+          item_name: string
+          note?: string
+          status: string
+          system_qty?: number
+          unit?: string
+          variance?: number
+        }
+        Update: {
+          batch_id?: string
+          counted_by_emp_id?: string | null
+          counted_by_name?: string
+          counted_qty?: number
+          created_at?: string
+          id?: string
+          item_code?: string
+          item_id?: string | null
+          item_name?: string
+          note?: string
+          status?: string
+          system_qty?: number
+          unit?: string
+          variance?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_counts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "stock_count_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_counts_counted_by_emp_id_fkey"
+            columns: ["counted_by_emp_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_counts_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_logs: {
         Row: {

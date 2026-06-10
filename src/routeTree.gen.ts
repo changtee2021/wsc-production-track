@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SuppliesRequestRouteImport } from './routes/supplies-request'
 import { Route as SuppliesRouteImport } from './routes/supplies'
+import { Route as StockCountRouteImport } from './routes/stock-count'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as QcRouteImport } from './routes/qc'
@@ -26,6 +27,8 @@ import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protecte
 import { Route as ProtectedSuppliesDashboardRouteImport } from './routes/_protected.supplies-dashboard'
 import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
 import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
+import { Route as ProtectedStockCountReportsRouteImport } from './routes/_protected.stock-count-reports'
+import { Route as ProtectedStockCountInventoryRouteImport } from './routes/_protected.stock-count-inventory'
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedProductionStandardsRouteImport } from './routes/_protected.production-standards'
@@ -47,6 +50,7 @@ import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dash
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
 import { Route as ProtectedAdminPolicyRouteImport } from './routes/_protected.admin-policy'
 import { Route as ProtectedEmployeeProfileIdRouteImport } from './routes/_protected.employee-profile.$id'
+import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/public/stock-count.reports'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 
 const TermsRoute = TermsRouteImport.update({
@@ -62,6 +66,11 @@ const SuppliesRequestRoute = SuppliesRequestRouteImport.update({
 const SuppliesRoute = SuppliesRouteImport.update({
   id: '/supplies',
   path: '/supplies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockCountRoute = StockCountRouteImport.update({
+  id: '/stock-count',
+  path: '/stock-count',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -135,6 +144,18 @@ const ProtectedStorageRoute = ProtectedStorageRouteImport.update({
   path: '/storage',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedStockCountReportsRoute =
+  ProtectedStockCountReportsRouteImport.update({
+    id: '/stock-count-reports',
+    path: '/stock-count-reports',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedStockCountInventoryRoute =
+  ProtectedStockCountInventoryRouteImport.update({
+    id: '/stock-count-inventory',
+    path: '/stock-count-inventory',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedQcSummaryRoute = ProtectedQcSummaryRouteImport.update({
   id: '/qc-summary',
   path: '/qc-summary',
@@ -249,6 +270,12 @@ const ProtectedEmployeeProfileIdRoute =
     path: '/employee-profile/$id',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ApiPublicStockCountReportsRoute =
+  ApiPublicStockCountReportsRouteImport.update({
+    id: '/api/public/stock-count/reports',
+    path: '/api/public/stock-count/reports',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLineDailySendRoute =
   ApiPublicHooksLineDailySendRouteImport.update({
     id: '/api/public/hooks/line-daily-send',
@@ -266,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stock-count': typeof StockCountRoute
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
@@ -289,12 +317,15 @@ export interface FileRoutesByFullPath {
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/stock-count-inventory': typeof ProtectedStockCountInventoryRoute
+  '/stock-count-reports': typeof ProtectedStockCountReportsRoute
   '/storage': typeof ProtectedStorageRoute
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
+  '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -306,6 +337,7 @@ export interface FileRoutesByTo {
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stock-count': typeof StockCountRoute
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
@@ -329,12 +361,15 @@ export interface FileRoutesByTo {
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/stock-count-inventory': typeof ProtectedStockCountInventoryRoute
+  '/stock-count-reports': typeof ProtectedStockCountReportsRoute
   '/storage': typeof ProtectedStorageRoute
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
+  '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -348,6 +383,7 @@ export interface FileRoutesById {
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stock-count': typeof StockCountRoute
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
@@ -371,12 +407,15 @@ export interface FileRoutesById {
   '/_protected/production-standards': typeof ProtectedProductionStandardsRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
+  '/_protected/stock-count-inventory': typeof ProtectedStockCountInventoryRoute
+  '/_protected/stock-count-reports': typeof ProtectedStockCountReportsRoute
   '/_protected/storage': typeof ProtectedStorageRoute
   '/_protected/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/_protected/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
+  '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -390,6 +429,7 @@ export interface FileRouteTypes {
     | '/qc'
     | '/scan'
     | '/sitemap.xml'
+    | '/stock-count'
     | '/supplies'
     | '/supplies-request'
     | '/terms'
@@ -413,12 +453,15 @@ export interface FileRouteTypes {
     | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
+    | '/stock-count-inventory'
+    | '/stock-count-reports'
     | '/storage'
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
     | '/employee-profile/$id'
     | '/api/public/hooks/line-daily-send'
+    | '/api/public/stock-count/reports'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -430,6 +473,7 @@ export interface FileRouteTypes {
     | '/qc'
     | '/scan'
     | '/sitemap.xml'
+    | '/stock-count'
     | '/supplies'
     | '/supplies-request'
     | '/terms'
@@ -453,12 +497,15 @@ export interface FileRouteTypes {
     | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
+    | '/stock-count-inventory'
+    | '/stock-count-reports'
     | '/storage'
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
     | '/employee-profile/$id'
     | '/api/public/hooks/line-daily-send'
+    | '/api/public/stock-count/reports'
   id:
     | '__root__'
     | '/'
@@ -471,6 +518,7 @@ export interface FileRouteTypes {
     | '/qc'
     | '/scan'
     | '/sitemap.xml'
+    | '/stock-count'
     | '/supplies'
     | '/supplies-request'
     | '/terms'
@@ -494,12 +542,15 @@ export interface FileRouteTypes {
     | '/_protected/production-standards'
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
+    | '/_protected/stock-count-inventory'
+    | '/_protected/stock-count-reports'
     | '/_protected/storage'
     | '/_protected/supplies-admin'
     | '/_protected/supplies-dashboard'
     | '/_protected/supplies-reports'
     | '/_protected/employee-profile/$id'
     | '/api/public/hooks/line-daily-send'
+    | '/api/public/stock-count/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -513,10 +564,12 @@ export interface RootRouteChildren {
   QcRoute: typeof QcRoute
   ScanRoute: typeof ScanRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StockCountRoute: typeof StockCountRoute
   SuppliesRoute: typeof SuppliesRoute
   SuppliesRequestRoute: typeof SuppliesRequestRoute
   TermsRoute: typeof TermsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
+  ApiPublicStockCountReportsRoute: typeof ApiPublicStockCountReportsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -540,6 +593,13 @@ declare module '@tanstack/react-router' {
       path: '/supplies'
       fullPath: '/supplies'
       preLoaderRoute: typeof SuppliesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stock-count': {
+      id: '/stock-count'
+      path: '/stock-count'
+      fullPath: '/stock-count'
+      preLoaderRoute: typeof StockCountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -638,6 +698,20 @@ declare module '@tanstack/react-router' {
       path: '/storage'
       fullPath: '/storage'
       preLoaderRoute: typeof ProtectedStorageRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/stock-count-reports': {
+      id: '/_protected/stock-count-reports'
+      path: '/stock-count-reports'
+      fullPath: '/stock-count-reports'
+      preLoaderRoute: typeof ProtectedStockCountReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/stock-count-inventory': {
+      id: '/_protected/stock-count-inventory'
+      path: '/stock-count-inventory'
+      fullPath: '/stock-count-inventory'
+      preLoaderRoute: typeof ProtectedStockCountInventoryRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/qc-summary': {
@@ -787,6 +861,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedEmployeeProfileIdRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/api/public/stock-count/reports': {
+      id: '/api/public/stock-count/reports'
+      path: '/api/public/stock-count/reports'
+      fullPath: '/api/public/stock-count/reports'
+      preLoaderRoute: typeof ApiPublicStockCountReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/line-daily-send': {
       id: '/api/public/hooks/line-daily-send'
       path: '/api/public/hooks/line-daily-send'
@@ -818,6 +899,8 @@ interface ProtectedRouteChildren {
   ProtectedProductionStandardsRoute: typeof ProtectedProductionStandardsRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
+  ProtectedStockCountInventoryRoute: typeof ProtectedStockCountInventoryRoute
+  ProtectedStockCountReportsRoute: typeof ProtectedStockCountReportsRoute
   ProtectedStorageRoute: typeof ProtectedStorageRoute
   ProtectedSuppliesAdminRoute: typeof ProtectedSuppliesAdminRoute
   ProtectedSuppliesDashboardRoute: typeof ProtectedSuppliesDashboardRoute
@@ -846,6 +929,8 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedProductionStandardsRoute: ProtectedProductionStandardsRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
+  ProtectedStockCountInventoryRoute: ProtectedStockCountInventoryRoute,
+  ProtectedStockCountReportsRoute: ProtectedStockCountReportsRoute,
   ProtectedStorageRoute: ProtectedStorageRoute,
   ProtectedSuppliesAdminRoute: ProtectedSuppliesAdminRoute,
   ProtectedSuppliesDashboardRoute: ProtectedSuppliesDashboardRoute,
@@ -868,10 +953,12 @@ const rootRouteChildren: RootRouteChildren = {
   QcRoute: QcRoute,
   ScanRoute: ScanRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StockCountRoute: StockCountRoute,
   SuppliesRoute: SuppliesRoute,
   SuppliesRequestRoute: SuppliesRequestRoute,
   TermsRoute: TermsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
+  ApiPublicStockCountReportsRoute: ApiPublicStockCountReportsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
