@@ -340,6 +340,12 @@ function ProductionExcelPage() {
                   onCheckedChange={(v) => toggleAll(!!v)}
                 />
               </th>
+              <th className="border-b border-r bg-muted px-2 py-2 text-left font-semibold whitespace-nowrap">
+                วันเริ่ม
+              </th>
+              <th className="border-b border-r bg-muted px-2 py-2 text-left font-semibold whitespace-nowrap">
+                วันจบ
+              </th>
               <th className="sticky left-[40px] z-20 border-b border-r bg-muted px-2 py-2 text-left font-semibold">
                 Job
               </th>
@@ -365,6 +371,7 @@ function ProductionExcelPage() {
                 </th>
               ))}
             </tr>
+
             <tr>
               <th className="sticky left-0 z-20 border-b bg-muted" />
               <th className="sticky left-[40px] z-20 border-b bg-muted" />
