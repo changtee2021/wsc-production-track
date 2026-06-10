@@ -1,4 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { AppVersion } from "@/components/AppVersion";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FeedbackFab } from "@/components/FeedbackFab";
