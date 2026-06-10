@@ -495,19 +495,23 @@ function StepCells({
           </span>
         )}
       </td>
-      <td className="px-2 py-1 whitespace-nowrap">{fmt(step.started_at)}</td>
-      <td className="border-r px-2 py-1 whitespace-nowrap">{fmt(step.finished_at)}</td>
+      <td className="px-2 py-1 whitespace-nowrap">{fmtTime(step.started_at)}</td>
+      <td className="border-r px-2 py-1 whitespace-nowrap">{fmtTime(step.finished_at)}</td>
     </>
   );
 }
 
-function fmt(iso: string): string {
+function fmtDate(iso: string): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleString("th-TH", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+
+function fmtTime(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
