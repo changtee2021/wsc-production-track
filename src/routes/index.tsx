@@ -248,16 +248,6 @@ function WelcomePage() {
                 </Button>
               </Link>
             </div>
-            <Link to="/wi" className="block">
-              <Button
-                variant="ghost"
-                aria-label="คู่มือปฏิบัติงาน WI"
-                className="h-11 w-full rounded-2xl bg-violet-600 text-white ring-1 ring-white/30 hover:bg-violet-700 hover:text-white"
-              >
-                <BookOpenCheck className="h-4 w-4 mr-1" />
-                WI คู่มือปฏิบัติงาน
-              </Button>
-            </Link>
             <div className="flex justify-center gap-3 pt-1 text-xs text-white/70">
               <Link to="/feedback" className="underline-offset-2 hover:text-white hover:underline">
                 ส่งความคิดเห็น
