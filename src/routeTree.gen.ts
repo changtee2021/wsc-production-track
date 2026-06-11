@@ -54,6 +54,7 @@ import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protec
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
 import { Route as ProtectedAdminPolicyRouteImport } from './routes/_protected.admin-policy'
+import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ProtectedPrintLabelJobNoRouteImport } from './routes/_protected.print-label.$jobNo'
 import { Route as ProtectedEmployeeProfileIdRouteImport } from './routes/_protected.employee-profile.$id'
 import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/public/stock-count.reports'
@@ -297,6 +298,11 @@ const ProtectedAdminPolicyRoute = ProtectedAdminPolicyRouteImport.update({
   path: '/admin-policy',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
+  id: '/api/public/health',
+  path: '/api/public/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProtectedPrintLabelJobNoRoute =
   ProtectedPrintLabelJobNoRouteImport.update({
     id: '/print-label/$jobNo',
@@ -375,6 +381,7 @@ export interface FileRoutesByFullPath {
   '/wi': typeof ProtectedWiRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
@@ -426,6 +433,7 @@ export interface FileRoutesByTo {
   '/wi': typeof ProtectedWiRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
@@ -479,6 +487,7 @@ export interface FileRoutesById {
   '/_protected/wi': typeof ProtectedWiRoute
   '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/_protected/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
@@ -532,6 +541,7 @@ export interface FileRouteTypes {
     | '/wi'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
+    | '/api/public/health'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
@@ -583,6 +593,7 @@ export interface FileRouteTypes {
     | '/wi'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
+    | '/api/public/health'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
@@ -635,6 +646,7 @@ export interface FileRouteTypes {
     | '/_protected/wi'
     | '/_protected/employee-profile/$id'
     | '/_protected/print-label/$jobNo'
+    | '/api/public/health'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
@@ -656,6 +668,7 @@ export interface RootRouteChildren {
   SuppliesRoute: typeof SuppliesRoute
   SuppliesRequestRoute: typeof SuppliesRequestRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicCurtainFlowJobsRoute: typeof ApiPublicCurtainFlowJobsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
   ApiPublicStockCountReportsRoute: typeof ApiPublicStockCountReportsRoute
@@ -978,6 +991,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedAdminPolicyRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/api/public/health': {
+      id: '/api/public/health'
+      path: '/api/public/health'
+      fullPath: '/api/public/health'
+      preLoaderRoute: typeof ApiPublicHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_protected/print-label/$jobNo': {
       id: '/_protected/print-label/$jobNo'
       path: '/print-label/$jobNo'
@@ -1106,6 +1126,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuppliesRoute: SuppliesRoute,
   SuppliesRequestRoute: SuppliesRequestRoute,
   TermsRoute: TermsRoute,
+  ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicCurtainFlowJobsRoute: ApiPublicCurtainFlowJobsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
   ApiPublicStockCountReportsRoute: ApiPublicStockCountReportsRoute,
