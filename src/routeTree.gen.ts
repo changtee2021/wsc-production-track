@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WiRouteImport } from './routes/wi'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SuppliesRequestRouteImport } from './routes/supplies-request'
 import { Route as SuppliesRouteImport } from './routes/supplies'
@@ -25,6 +24,7 @@ import { Route as ExpenseMineRouteImport } from './routes/expense-mine'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProtectedWiRouteImport } from './routes/_protected.wi'
 import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protected.supplies-reports'
 import { Route as ProtectedSuppliesDashboardRouteImport } from './routes/_protected.supplies-dashboard'
 import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
@@ -60,11 +60,6 @@ import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 import { Route as ApiPublicCurtainFlowJobsRouteImport } from './routes/api/public/curtain-flow/jobs'
 
-const WiRoute = WiRouteImport.update({
-  id: '/wi',
-  path: '/wi',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -138,6 +133,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProtectedWiRoute = ProtectedWiRouteImport.update({
+  id: '/wi',
+  path: '/wi',
+  getParentRoute: () => ProtectedRoute,
 } as any)
 const ProtectedSuppliesReportsRoute =
   ProtectedSuppliesReportsRouteImport.update({
@@ -343,7 +343,6 @@ export interface FileRoutesByFullPath {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
-  '/wi': typeof WiRoute
   '/admin-policy': typeof ProtectedAdminPolicyRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
@@ -373,6 +372,7 @@ export interface FileRoutesByFullPath {
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/wi': typeof ProtectedWiRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
@@ -394,7 +394,6 @@ export interface FileRoutesByTo {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
-  '/wi': typeof WiRoute
   '/admin-policy': typeof ProtectedAdminPolicyRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
@@ -424,6 +423,7 @@ export interface FileRoutesByTo {
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/wi': typeof ProtectedWiRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
@@ -447,7 +447,6 @@ export interface FileRoutesById {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
-  '/wi': typeof WiRoute
   '/_protected/admin-policy': typeof ProtectedAdminPolicyRoute
   '/_protected/control': typeof ProtectedControlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
@@ -477,6 +476,7 @@ export interface FileRoutesById {
   '/_protected/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/_protected/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/_protected/wi': typeof ProtectedWiRoute
   '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/_protected/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
@@ -500,7 +500,6 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
-    | '/wi'
     | '/admin-policy'
     | '/control'
     | '/dashboard'
@@ -530,6 +529,7 @@ export interface FileRouteTypes {
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
+    | '/wi'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
     | '/api/public/curtain-flow/jobs'
@@ -551,7 +551,6 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
-    | '/wi'
     | '/admin-policy'
     | '/control'
     | '/dashboard'
@@ -581,6 +580,7 @@ export interface FileRouteTypes {
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
+    | '/wi'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
     | '/api/public/curtain-flow/jobs'
@@ -603,7 +603,6 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
-    | '/wi'
     | '/_protected/admin-policy'
     | '/_protected/control'
     | '/_protected/dashboard'
@@ -633,6 +632,7 @@ export interface FileRouteTypes {
     | '/_protected/supplies-admin'
     | '/_protected/supplies-dashboard'
     | '/_protected/supplies-reports'
+    | '/_protected/wi'
     | '/_protected/employee-profile/$id'
     | '/_protected/print-label/$jobNo'
     | '/api/public/curtain-flow/jobs'
@@ -656,7 +656,6 @@ export interface RootRouteChildren {
   SuppliesRoute: typeof SuppliesRoute
   SuppliesRequestRoute: typeof SuppliesRequestRoute
   TermsRoute: typeof TermsRoute
-  WiRoute: typeof WiRoute
   ApiPublicCurtainFlowJobsRoute: typeof ApiPublicCurtainFlowJobsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
   ApiPublicStockCountReportsRoute: typeof ApiPublicStockCountReportsRoute
@@ -664,13 +663,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/wi': {
-      id: '/wi'
-      path: '/wi'
-      fullPath: '/wi'
-      preLoaderRoute: typeof WiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -775,6 +767,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_protected/wi': {
+      id: '/_protected/wi'
+      path: '/wi'
+      fullPath: '/wi'
+      preLoaderRoute: typeof ProtectedWiRouteImport
+      parentRoute: typeof ProtectedRoute
     }
     '/_protected/supplies-reports': {
       id: '/_protected/supplies-reports'
@@ -1047,6 +1046,7 @@ interface ProtectedRouteChildren {
   ProtectedSuppliesAdminRoute: typeof ProtectedSuppliesAdminRoute
   ProtectedSuppliesDashboardRoute: typeof ProtectedSuppliesDashboardRoute
   ProtectedSuppliesReportsRoute: typeof ProtectedSuppliesReportsRoute
+  ProtectedWiRoute: typeof ProtectedWiRoute
   ProtectedEmployeeProfileIdRoute: typeof ProtectedEmployeeProfileIdRoute
   ProtectedPrintLabelJobNoRoute: typeof ProtectedPrintLabelJobNoRoute
 }
@@ -1081,6 +1081,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedSuppliesAdminRoute: ProtectedSuppliesAdminRoute,
   ProtectedSuppliesDashboardRoute: ProtectedSuppliesDashboardRoute,
   ProtectedSuppliesReportsRoute: ProtectedSuppliesReportsRoute,
+  ProtectedWiRoute: ProtectedWiRoute,
   ProtectedEmployeeProfileIdRoute: ProtectedEmployeeProfileIdRoute,
   ProtectedPrintLabelJobNoRoute: ProtectedPrintLabelJobNoRoute,
 }
@@ -1105,7 +1106,6 @@ const rootRouteChildren: RootRouteChildren = {
   SuppliesRoute: SuppliesRoute,
   SuppliesRequestRoute: SuppliesRequestRoute,
   TermsRoute: TermsRoute,
-  WiRoute: WiRoute,
   ApiPublicCurtainFlowJobsRoute: ApiPublicCurtainFlowJobsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
   ApiPublicStockCountReportsRoute: ApiPublicStockCountReportsRoute,
