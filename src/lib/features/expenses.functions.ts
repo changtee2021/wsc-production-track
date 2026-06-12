@@ -34,10 +34,7 @@ function assertExpenseOrAdmin(token: string | undefined) {
  * accept either an admin token or a mine-token bound to the requested employee_id.
  * Returns the authorized employee_id (or null for admin = wildcard).
  */
-function assertExpenseOwner(
-  token: string | undefined,
-  employee_id: string,
-): string | null {
+function assertExpenseOwner(token: string | undefined, employee_id: string): string | null {
   if (verifyAdminToken(token)) return null; // admin can view any
   const empId = verifyExpenseMineToken(token);
   if (empId && empId === employee_id) return empId;
@@ -78,25 +75,38 @@ export const issueExpenseSession = createServerFn({ method: "POST" })
 // so a session token cannot be replayed to read another employee's expense history.
 export const issueExpenseMineSession = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      employee_id: z.string().uuid(),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        employee_id: z.string().uuid(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertExpenseOrAdmin(data.token);
     // Validate the employee actually exists (any group) before binding.
-    const tables = ["office_employees", "employees", "qc_employees", "packing_employees", "maintenance_employees"] as const;
+    const tables = [
+      "office_employees",
+      "employees",
+      "qc_employees",
+      "packing_employees",
+      "maintenance_employees",
+    ] as const;
     let exists = false;
     for (const t of tables) {
       const { data: emp } = await supabaseAdmin
-        .from(t).select("id, active").eq("id", data.employee_id).maybeSingle();
-      if (emp?.active) { exists = true; break; }
+        .from(t)
+        .select("id, active")
+        .eq("id", data.employee_id)
+        .maybeSingle();
+      if (emp?.active) {
+        exists = true;
+        break;
+      }
     }
     if (!exists) throw new Error("ไม่พบพนักงาน");
     return { token: issueExpenseMineToken(data.employee_id) };
   });
-
 
 // ============ LIST CATEGORIES ============
 export const expenseListCategories = createServerFn({ method: "POST" })
@@ -119,8 +129,16 @@ function detectImage(bytes: Uint8Array): { mime: string; ext: string } | null {
     return { mime: "image/jpeg", ext: "jpg" };
   if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47)
     return { mime: "image/png", ext: "png" };
-  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
-      && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50)
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  )
     return { mime: "image/webp", ext: "webp" };
   // PDF (%PDF-)
   if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)
@@ -130,10 +148,15 @@ function detectImage(bytes: Uint8Array): { mime: string; ext: string } | null {
 
 export const expenseUploadReceipt = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      dataBase64: z.string().min(1).max(Math.ceil((MAX_BYTES * 4) / 3) + 16),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        dataBase64: z
+          .string()
+          .min(1)
+          .max(Math.ceil((MAX_BYTES * 4) / 3) + 16),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertExpenseOrAdmin(data.token);
@@ -148,11 +171,13 @@ export const expenseUploadReceipt = createServerFn({ method: "POST" })
 
     const path = `${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${detected.ext}`;
     const { error } = await supabaseAdmin.storage
-      .from(BUCKET).upload(path, bytes, { contentType: detected.mime, upsert: false });
+      .from(BUCKET)
+      .upload(path, bytes, { contentType: detected.mime, upsert: false });
     if (error) throw new Error(error.message);
 
     const { data: signed } = await supabaseAdmin.storage
-      .from(BUCKET).createSignedUrl(path, SIGN_TTL);
+      .from(BUCKET)
+      .createSignedUrl(path, SIGN_TTL);
     return { path, previewUrl: signed?.signedUrl ?? "", mime: detected.mime };
   });
 
@@ -190,9 +215,12 @@ export const expenseScanReceipt = createServerFn({ method: "POST" })
     // Load categories for AI mapping
     const { data: cats } = await supabaseAdmin
       .from("expense_categories")
-      .select("id, name, keywords").eq("active", true);
+      .select("id, name, keywords")
+      .eq("active", true);
     const catHint = (cats ?? []).map((c) => ({
-      id: c.id, name: c.name, keywords: c.keywords ?? [],
+      id: c.id,
+      name: c.name,
+      keywords: c.keywords ?? [],
     }));
 
     // Fetch image bytes from private bucket → base64 data URLs for vision
@@ -214,11 +242,18 @@ export const expenseScanReceipt = createServerFn({ method: "POST" })
       return {
         ok: true as const,
         scan: {
-          bill_type: "cash", merchant_name: null, tax_id: null,
-          receipt_no: null, receipt_date: null,
-          subtotal: 0, vat_amount: 0, total_amount: 0,
-          buyer_match_wsc: false, suggested_category_id: null,
-          confidence: 0, notes: "ไฟล์ PDF — กรุณากรอกข้อมูลด้วยตนเอง",
+          bill_type: "cash",
+          merchant_name: null,
+          tax_id: null,
+          receipt_no: null,
+          receipt_date: null,
+          subtotal: 0,
+          vat_amount: 0,
+          total_amount: 0,
+          buyer_match_wsc: false,
+          suggested_category_id: null,
+          confidence: 0,
+          notes: "ไฟล์ PDF — กรุณากรอกข้อมูลด้วยตนเอง",
         } as ScannedReceipt,
         raw: null,
       };
@@ -248,14 +283,12 @@ export const expenseScanReceipt = createServerFn({ method: "POST" })
       "- บิลย่อ: ถ้าไม่มี VAT แยกบรรทัด คำนวณ vat_amount = total_amount * 7/107, subtotal = total - vat\n" +
       "- บิลเต็ม: ใช้ตัวเลข VAT ที่ปรากฏจริง\n" +
       "- เดา suggested_category_id จากชื่อร้าน/รายการ เทียบกับ keywords ของหมวด (id เป็น UUID)\n" +
-      "หมวดที่มี: " + JSON.stringify(catHint);
+      "หมวดที่มี: " +
+      JSON.stringify(catHint);
 
     const userContent: Array<
       { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
-    > = [
-      { type: "text", text: "อ่านใบเสร็จต่อไปนี้แล้วตอบเป็น JSON ตามสคีมา:" },
-      ...imageMessages,
-    ];
+    > = [{ type: "text", text: "อ่านใบเสร็จต่อไปนี้แล้วตอบเป็น JSON ตามสคีมา:" }, ...imageMessages];
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -293,7 +326,8 @@ export const expenseScanReceipt = createServerFn({ method: "POST" })
 
     const scan: ScannedReceipt = {
       bill_type: (["cash", "short_tax", "full_tax"].includes(String(parsed.bill_type))
-        ? parsed.bill_type : "cash") as ScannedReceipt["bill_type"],
+        ? parsed.bill_type
+        : "cash") as ScannedReceipt["bill_type"],
       merchant_name: parsed.merchant_name ?? null,
       tax_id: parsed.tax_id ?? null,
       receipt_no: parsed.receipt_no ?? null,
@@ -313,13 +347,15 @@ export const expenseScanReceipt = createServerFn({ method: "POST" })
 // ============ DUPLICATE CHECK ============
 export const expenseCheckDuplicate = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      merchant_name: z.string().trim().min(1),
-      receipt_no: z.string().trim().min(1),
-      receipt_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      exclude_id: z.string().uuid().optional(),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        merchant_name: z.string().trim().min(1),
+        receipt_no: z.string().trim().min(1),
+        receipt_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        exclude_id: z.string().uuid().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertExpenseOrAdmin(data.token);
@@ -345,7 +381,10 @@ const submitInput = z.object({
   merchant_name: z.string().trim().max(200).optional(),
   tax_id: z.string().trim().max(20).optional(),
   receipt_no: z.string().trim().max(60).optional(),
-  receipt_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  receipt_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   subtotal: z.number().min(0).max(10_000_000).default(0),
   vat_amount: z.number().min(0).max(10_000_000).default(0),
   total_amount: z.number().min(0).max(10_000_000),
@@ -364,12 +403,24 @@ export const expenseSubmit = createServerFn({ method: "POST" })
     assertExpenseOrAdmin(data.token);
 
     // Look up requester (any employee group — try office, qc, packing, maintenance, employees)
-    const tables = ["office_employees", "employees", "qc_employees", "packing_employees", "maintenance_employees"] as const;
+    const tables = [
+      "office_employees",
+      "employees",
+      "qc_employees",
+      "packing_employees",
+      "maintenance_employees",
+    ] as const;
     let requesterName: string | null = null;
     for (const t of tables) {
       const { data: emp } = await supabaseAdmin
-        .from(t).select("name, active").eq("id", data.requester_employee_id).maybeSingle();
-      if (emp) { requesterName = emp.active ? emp.name : null; break; }
+        .from(t)
+        .select("name, active")
+        .eq("id", data.requester_employee_id)
+        .maybeSingle();
+      if (emp) {
+        requesterName = emp.active ? emp.name : null;
+        break;
+      }
     }
     if (!requesterName) throw new Error("ไม่พบพนักงาน หรือพนักงานถูกปิดใช้งาน");
 
@@ -383,7 +434,8 @@ export const expenseSubmit = createServerFn({ method: "POST" })
         .eq("receipt_no", data.receipt_no)
         .eq("receipt_date", data.receipt_date)
         .neq("status", "rejected")
-        .limit(1).maybeSingle();
+        .limit(1)
+        .maybeSingle();
       if (dup) duplicateOf = dup.id;
     }
 
@@ -410,7 +462,10 @@ export const expenseSubmit = createServerFn({ method: "POST" })
     };
 
     const { data: created, error } = await supabaseAdmin
-      .from("expenses").insert(insertRow as never).select("id, exp_no").single();
+      .from("expenses")
+      .insert(insertRow as never)
+      .select("id, exp_no")
+      .single();
     if (error) {
       if (error.message.toLowerCase().includes("uniq_expenses_dedupe")) {
         throw new Error("ใบเสร็จนี้ถูกบันทึกซ้ำในระบบ (ร้าน + เลขที่ + วันที่)");
@@ -419,8 +474,11 @@ export const expenseSubmit = createServerFn({ method: "POST" })
     }
 
     await supabaseAdmin.from("expense_status_history").insert({
-      expense_id: created.id, from_status: null, to_status: "pending",
-      changed_by: requesterName, note: null,
+      expense_id: created.id,
+      from_status: null,
+      to_status: "pending",
+      changed_by: requesterName,
+      note: null,
     });
 
     // Fire-and-forget LINE notify
@@ -438,11 +496,13 @@ export const expenseSubmit = createServerFn({ method: "POST" })
 // ============ LIST MINE ============
 export const expenseListMine = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      requester_employee_id: z.string().uuid(),
-      limit: z.number().int().min(1).max(200).default(50),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        requester_employee_id: z.string().uuid(),
+        limit: z.number().int().min(1).max(200).default(50),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     // Mine-token must be bound to the requested employee_id; admin token bypasses.
@@ -460,21 +520,29 @@ export const expenseListMine = createServerFn({ method: "POST" })
 // ============ RESUBMIT (re-open a rejected expense) ============
 export const expenseResubmit = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      id: z.string().uuid(),
-      // optional patches
-      merchant_name: z.string().trim().max(200).optional(),
-      receipt_no: z.string().trim().max(60).optional(),
-      receipt_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      total_amount: z.number().min(0).max(10_000_000).optional(),
-      note: z.string().trim().max(500).optional(),
-      add_image_paths: z.array(z.string()).max(3).optional(),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        id: z.string().uuid(),
+        // optional patches
+        merchant_name: z.string().trim().max(200).optional(),
+        receipt_no: z.string().trim().max(60).optional(),
+        receipt_date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+        total_amount: z.number().min(0).max(10_000_000).optional(),
+        note: z.string().trim().max(500).optional(),
+        add_image_paths: z.array(z.string()).max(3).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { data: row, error } = await supabaseAdmin
-      .from("expenses").select("*").eq("id", data.id).single();
+      .from("expenses")
+      .select("*")
+      .eq("id", data.id)
+      .single();
     if (error || !row) throw new Error("ไม่พบรายการ");
     // Enforce ownership: admin OR mine-token bound to the original requester.
     if (!row.requester_employee_id) throw new Error("Unauthorized");
@@ -492,12 +560,17 @@ export const expenseResubmit = createServerFn({ method: "POST" })
     }
 
     const { error: upErr } = await supabaseAdmin
-      .from("expenses").update(patch as never).eq("id", data.id);
+      .from("expenses")
+      .update(patch as never)
+      .eq("id", data.id);
     if (upErr) throw new Error(upErr.message);
 
     await supabaseAdmin.from("expense_status_history").insert({
-      expense_id: data.id, from_status: "rejected", to_status: "pending",
-      changed_by: row.requester_name, note: "ยื่นใหม่",
+      expense_id: data.id,
+      from_status: "rejected",
+      to_status: "pending",
+      changed_by: row.requester_name,
+      note: "ยื่นใหม่",
     });
 
     return { ok: true };
@@ -506,10 +579,12 @@ export const expenseResubmit = createServerFn({ method: "POST" })
 // ============ SIGN RECEIPT URLS ============
 export const expenseSignReceiptUrls = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      paths: z.array(z.string().min(1)).min(1).max(50),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        paths: z.array(z.string().min(1)).min(1).max(50),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     // Admin token signs any path; otherwise the caller must hold a mine-token, and
@@ -528,7 +603,8 @@ export const expenseSignReceiptUrls = createServerFn({ method: "POST" })
       if (allowedPaths.length === 0) return { urlMap: {} };
     }
     const { data: signed } = await supabaseAdmin.storage
-      .from(BUCKET).createSignedUrls(allowedPaths, SIGN_TTL);
+      .from(BUCKET)
+      .createSignedUrls(allowedPaths, SIGN_TTL);
     const urlMap: Record<string, string> = {};
     (signed ?? []).forEach((row, i) => {
       if (row.signedUrl) urlMap[allowedPaths[i]] = row.signedUrl;
@@ -554,7 +630,8 @@ export const expenseListEmployees = createServerFn({ method: "POST" })
       ...(prod.data ?? []).map((e) => ({ ...e, group: "production" as const })),
     ].filter((e) => {
       if (seen.has(e.id)) return false;
-      seen.add(e.id); return true;
+      seen.add(e.id);
+      return true;
     });
     merged.sort((a, b) => a.name.localeCompare(b.name, "th"));
     return { rows: merged };

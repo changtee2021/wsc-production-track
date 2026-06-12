@@ -129,9 +129,7 @@ export async function sendDailySummary() {
   const appUrl = serverAppPublicUrl();
   const dateStr = formatBangkokDate();
   const alertSection =
-    qcFailed > 0
-      ? `⚠️ แจ้งเตือนพิเศษ:\n${failedDetails.join("\n")}`
-      : `⚠️ แจ้งเตือนพิเศษ: ไม่มี`;
+    qcFailed > 0 ? `⚠️ แจ้งเตือนพิเศษ:\n${failedDetails.join("\n")}` : `⚠️ แจ้งเตือนพิเศษ: ไม่มี`;
 
   let aiAnalysis = "";
   const lovableKey = process.env.LOVABLE_API_KEY;

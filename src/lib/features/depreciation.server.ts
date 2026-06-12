@@ -26,9 +26,7 @@ export function monthsInService(a: DepreciableAsset, asOf: Date = new Date()): n
   if (!a.purchase_date) return 0;
   const p = new Date(a.purchase_date);
   if (isNaN(p.getTime())) return 0;
-  const months =
-    (asOf.getFullYear() - p.getFullYear()) * 12 +
-    (asOf.getMonth() - p.getMonth());
+  const months = (asOf.getFullYear() - p.getFullYear()) * 12 + (asOf.getMonth() - p.getMonth());
   if (months <= 0) return 0;
   const life = Number(a.useful_life_months ?? 0);
   return life > 0 ? Math.min(months, life) : months;

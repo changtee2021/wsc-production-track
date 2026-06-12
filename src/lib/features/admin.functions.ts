@@ -19,9 +19,7 @@ function assertAdmin(token: string | undefined) {
 // ---- Auth ----------------------------------------------------------------
 
 export const verifyAdminPassword = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
-    z.object({ password: z.string().min(1).max(200) }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ password: z.string().min(1).max(200) }).parse(data))
   .handler(async ({ data }) => {
     const expected = process.env.ADMIN_PASSWORD;
     if (!expected) {
@@ -60,24 +58,17 @@ export const adminUpsertCategory = createServerFn({ method: "POST" })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await supabaseAdmin
-        .from("categories")
-        .insert({ name: data.name });
+      const { error } = await supabaseAdmin.from("categories").insert({ name: data.name });
       if (error) throw new Error(error.message);
     }
     return { ok: true };
   });
 
 export const adminDeleteCategory = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("categories")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("categories").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -106,10 +97,7 @@ export const adminUpsertEmployee = createServerFn({ method: "POST" })
       ...(data.active !== undefined ? { active: data.active } : {}),
     };
     if (data.id) {
-      const { error } = await supabaseAdmin
-        .from("employees")
-        .update(row)
-        .eq("id", data.id);
+      const { error } = await supabaseAdmin.from("employees").update(row).eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await supabaseAdmin.from("employees").insert(row);
@@ -119,15 +107,10 @@ export const adminUpsertEmployee = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteEmployee = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("employees")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("employees").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -156,10 +139,7 @@ export const adminUpsertStep = createServerFn({ method: "POST" })
       ...(data.active !== undefined ? { active: data.active } : {}),
     };
     if (data.id) {
-      const { error } = await supabaseAdmin
-        .from("steps")
-        .update(row)
-        .eq("id", data.id);
+      const { error } = await supabaseAdmin.from("steps").update(row).eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await supabaseAdmin.from("steps").insert(row);
@@ -169,15 +149,10 @@ export const adminUpsertStep = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteStep = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("steps")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("steps").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -245,25 +220,21 @@ export const adminUpdateBanner = createServerFn({ method: "POST" })
     if (data.active !== undefined) row.active = data.active;
     if (data.sort_order !== undefined) row.sort_order = data.sort_order;
     if (Object.keys(row).length === 0) return { ok: true };
-    const { error } = await supabaseAdmin
-      .from("home_banners")
-      .update(row)
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("home_banners").update(row).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const adminDeleteBanner = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid(), image_path: z.string().min(1).max(500) }).parse(d),
+    z
+      .object({ token: tokenStr, id: z.string().uuid(), image_path: z.string().min(1).max(500) })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     await supabaseAdmin.storage.from("banners").remove([data.image_path]);
-    const { error } = await supabaseAdmin
-      .from("home_banners")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("home_banners").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -307,7 +278,7 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(data.limit ?? 1000);
     if (error) throw new Error(error.message);
-    return { rows: ((rows ?? []) as unknown as Array<Record<string, any>>) };
+    return { rows: (rows ?? []) as unknown as Array<Record<string, any>> };
   });
 
 // ---- Announcements --------------------------------------------------------
@@ -346,30 +317,23 @@ export const adminUpdateAnnouncement = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const row: { message?: string; active?: boolean; sort_order?: number; updated_at?: string } = {};
+    const row: { message?: string; active?: boolean; sort_order?: number; updated_at?: string } =
+      {};
     if (data.message !== undefined) row.message = data.message;
     if (data.active !== undefined) row.active = data.active;
     if (data.sort_order !== undefined) row.sort_order = data.sort_order;
     if (Object.keys(row).length === 0) return { ok: true };
     row.updated_at = new Date().toISOString();
-    const { error } = await supabaseAdmin
-      .from("announcements")
-      .update(row)
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("announcements").update(row).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const adminDeleteAnnouncement = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("announcements")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("announcements").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -396,10 +360,7 @@ export const adminUpsertQcEmployee = createServerFn({ method: "POST" })
       ...(data.active !== undefined ? { active: data.active } : {}),
     };
     if (data.id) {
-      const { error } = await supabaseAdmin
-        .from("qc_employees")
-        .update(row)
-        .eq("id", data.id);
+      const { error } = await supabaseAdmin.from("qc_employees").update(row).eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await supabaseAdmin.from("qc_employees").insert(row);
@@ -432,17 +393,11 @@ export const adminListQcEmployees = createServerFn({ method: "POST" })
     return { rows: rows ?? [] };
   });
 
-
 export const adminDeleteQcEmployee = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("qc_employees")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("qc_employees").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -503,15 +458,10 @@ export const adminUpdateQcReportStatus = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteQcReport = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("qc_reports")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("qc_reports").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -588,10 +538,7 @@ export const adminUpsertChecklistItem = createServerFn({ method: "POST" })
       };
       if (data.item_order !== undefined) row.item_order = data.item_order;
       if (data.is_active !== undefined) row.is_active = data.is_active;
-      const { error } = await supabaseAdmin
-        .from("qc_checklists")
-        .update(row)
-        .eq("id", data.id);
+      const { error } = await supabaseAdmin.from("qc_checklists").update(row).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { ok: true };
     }
@@ -618,15 +565,10 @@ export const adminUpsertChecklistItem = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteChecklistItem = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("qc_checklists")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("qc_checklists").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -656,7 +598,6 @@ export const adminReorderChecklist = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
-
 
 // QC summary aggregations grouped by day or month.
 export const adminFetchQcSummary = createServerFn({ method: "POST" })
@@ -695,16 +636,23 @@ export const adminFetchQcSummary = createServerFn({ method: "POST" })
       const key = data.granularity === "month" ? `${yyyy}-${mm}` : `${yyyy}-${mm}-${dd}`;
       const b = bucketMap.get(key) ?? { key, total: 0, pass: 0, fail: 0, unknown: 0 };
       b.total++;
-      const catName = (r as { categories: { name: string } | null }).categories?.name ?? "ไม่ระบุหมวด";
+      const catName =
+        (r as { categories: { name: string } | null }).categories?.name ?? "ไม่ระบุหมวด";
       const cb = catMap.get(catName) ?? { key: catName, total: 0, pass: 0, fail: 0, unknown: 0 };
       cb.total++;
       totals.total++;
       if (r.overall_result === "pass") {
-        b.pass++; cb.pass++; totals.pass++;
+        b.pass++;
+        cb.pass++;
+        totals.pass++;
       } else if (r.overall_result === "fail") {
-        b.fail++; cb.fail++; totals.fail++;
+        b.fail++;
+        cb.fail++;
+        totals.fail++;
       } else {
-        b.unknown++; cb.unknown++; totals.unknown++;
+        b.unknown++;
+        cb.unknown++;
+        totals.unknown++;
       }
       bucketMap.set(key, b);
       catMap.set(catName, cb);
@@ -845,10 +793,7 @@ export const adminUpsertPackingEmployee = createServerFn({ method: "POST" })
       ...(data.active !== undefined ? { active: data.active } : {}),
     };
     if (data.id) {
-      const { error } = await supabaseAdmin
-        .from("packing_employees")
-        .update(row)
-        .eq("id", data.id);
+      const { error } = await supabaseAdmin.from("packing_employees").update(row).eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await supabaseAdmin.from("packing_employees").insert(row);
@@ -870,15 +815,10 @@ export const adminListPackingEmployees = createServerFn({ method: "POST" })
   });
 
 export const adminDeletePackingEmployee = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("packing_employees")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("packing_employees").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -905,9 +845,15 @@ type MaintEmpRow = {
 };
 
 type MaintEmpTable = {
-  select: (s: string) => { order: (c: string) => Promise<{ data: MaintEmpRow[] | null; error: { message: string } | null }> };
+  select: (s: string) => {
+    order: (
+      c: string,
+    ) => Promise<{ data: MaintEmpRow[] | null; error: { message: string } | null }>;
+  };
   insert: (row: Partial<MaintEmpRow>) => Promise<{ error: { message: string } | null }>;
-  update: (row: Partial<MaintEmpRow>) => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
+  update: (row: Partial<MaintEmpRow>) => {
+    eq: (a: string, b: string) => Promise<{ error: { message: string } | null }>;
+  };
   delete: () => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
 };
 
@@ -947,9 +893,7 @@ export const adminUpsertMaintenanceEmployee = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteMaintenanceEmployee = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     const { error } = await maintEmpTbl().delete().eq("id", data.id);
@@ -961,9 +905,15 @@ export const adminDeleteMaintenanceEmployee = createServerFn({ method: "POST" })
 // `office_employees` table; admin CRUD mirrors maintenance employees.
 
 type OfficeEmpTable = {
-  select: (s: string) => { order: (c: string) => Promise<{ data: MaintEmpRow[] | null; error: { message: string } | null }> };
+  select: (s: string) => {
+    order: (
+      c: string,
+    ) => Promise<{ data: MaintEmpRow[] | null; error: { message: string } | null }>;
+  };
   insert: (row: Partial<MaintEmpRow>) => Promise<{ error: { message: string } | null }>;
-  update: (row: Partial<MaintEmpRow>) => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
+  update: (row: Partial<MaintEmpRow>) => {
+    eq: (a: string, b: string) => Promise<{ error: { message: string } | null }>;
+  };
   delete: () => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
 };
 
@@ -1003,18 +953,13 @@ export const adminUpsertOfficeEmployee = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteOfficeEmployee = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     const { error } = await officeEmpTbl().delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
-
-
 
 export const adminFetchPackingChecklists = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -1096,15 +1041,10 @@ export const adminUpsertPackingChecklistItem = createServerFn({ method: "POST" }
   });
 
 export const adminDeletePackingChecklistItem = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("packing_checklists")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("packing_checklists").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1189,15 +1129,10 @@ export const adminUpdatePackingReportStatus = createServerFn({ method: "POST" })
   });
 
 export const adminDeletePackingReport = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("packing_reports")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("packing_reports").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1240,16 +1175,23 @@ export const adminFetchPackingSummary = createServerFn({ method: "POST" })
       const key = data.granularity === "month" ? `${yyyy}-${mm}` : `${yyyy}-${mm}-${dd}`;
       const b = bucketMap.get(key) ?? { key, total: 0, pass: 0, fail: 0, unknown: 0 };
       b.total++;
-      const catName = (r as { categories: { name: string } | null }).categories?.name ?? "ไม่ระบุหมวด";
+      const catName =
+        (r as { categories: { name: string } | null }).categories?.name ?? "ไม่ระบุหมวด";
       const cb = catMap.get(catName) ?? { key: catName, total: 0, pass: 0, fail: 0, unknown: 0 };
       cb.total++;
       totals.total++;
       if (r.overall_result === "pass") {
-        b.pass++; cb.pass++; totals.pass++;
+        b.pass++;
+        cb.pass++;
+        totals.pass++;
       } else if (r.overall_result === "fail") {
-        b.fail++; cb.fail++; totals.fail++;
+        b.fail++;
+        cb.fail++;
+        totals.fail++;
       } else {
-        b.unknown++; cb.unknown++; totals.unknown++;
+        b.unknown++;
+        cb.unknown++;
+        totals.unknown++;
       }
       bucketMap.set(key, b);
       catMap.set(catName, cb);

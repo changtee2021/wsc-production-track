@@ -11,8 +11,15 @@ import {
 import { adminUpload, requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import {
-  Plus, Trash2, Upload, Loader2, Image as ImageIcon,
-  ArrowUp, ArrowDown, Eye, EyeOff,
+  Plus,
+  Trash2,
+  Upload,
+  Loader2,
+  Image as ImageIcon,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,7 +50,9 @@ export function BannersPanel() {
     if (error) toast.error(error.message);
     setItems((data as Banner[]) ?? []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const publicUrlOf = (path: string) =>
     supabase.storage.from("banners").getPublicUrl(path).data.publicUrl;
@@ -60,8 +69,9 @@ export function BannersPanel() {
       await insertFn({ data: { token: requireToken(), image_path: path, sort_order: nextOrder } });
       toast.success("เพิ่มแบนเนอร์สำเร็จ");
       await load();
-    } catch (err) { showError(err); }
-    finally {
+    } catch (err) {
+      showError(err);
+    } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
@@ -71,7 +81,9 @@ export function BannersPanel() {
     try {
       await updateFn({ data: { token: requireToken(), id: b.id, active: !b.active } });
       await load();
-    } catch (err) { showError(err); }
+    } catch (err) {
+      showError(err);
+    }
   };
 
   const move = async (b: Banner, dir: -1 | 1) => {
@@ -84,7 +96,9 @@ export function BannersPanel() {
         updateFn({ data: { token: requireToken(), id: swap.id, sort_order: b.sort_order } }),
       ]);
       await load();
-    } catch (err) { showError(err); }
+    } catch (err) {
+      showError(err);
+    }
   };
 
   const remove = async (b: Banner) => {
@@ -93,7 +107,9 @@ export function BannersPanel() {
       await deleteFn({ data: { token: requireToken(), id: b.id, image_path: b.image_path } });
       toast.success("ลบสำเร็จ");
       await load();
-    } catch (err) { showError(err); }
+    } catch (err) {
+      showError(err);
+    }
   };
 
   return (
@@ -109,14 +125,21 @@ export function BannersPanel() {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onPick(f);
+            }}
           />
           <Button
             size="sm"
             disabled={uploading || items.length >= MAX_BANNERS}
             onClick={() => fileRef.current?.click()}
           >
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             เพิ่มแบนเนอร์ ({items.length}/{MAX_BANNERS})
           </Button>
         </div>
@@ -143,16 +166,39 @@ export function BannersPanel() {
                 </span>
               </div>
               <div className="grid grid-cols-4 gap-0.5 p-1">
-                <Button size="icon" variant="ghost" className="h-6 w-full" disabled={i === 0} onClick={() => move(b, -1)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-full"
+                  disabled={i === 0}
+                  onClick={() => move(b, -1)}
+                >
                   <ArrowUp className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-6 w-full" disabled={i === items.length - 1} onClick={() => move(b, 1)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-full"
+                  disabled={i === items.length - 1}
+                  onClick={() => move(b, 1)}
+                >
                   <ArrowDown className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-6 w-full" onClick={() => toggleActive(b)} title={b.active ? "ซ่อน" : "แสดง"}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-full"
+                  onClick={() => toggleActive(b)}
+                  title={b.active ? "ซ่อน" : "แสดง"}
+                >
                   {b.active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                 </Button>
-                <Button size="icon" variant="ghost" className="h-6 w-full text-destructive hover:text-destructive" onClick={() => remove(b)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-full text-destructive hover:text-destructive"
+                  onClick={() => remove(b)}
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>

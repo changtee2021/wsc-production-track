@@ -9,7 +9,12 @@ import { timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const jobSchema = z.object({
-  job_no: z.string().trim().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/),
+  job_no: z
+    .string()
+    .trim()
+    .min(1)
+    .max(64)
+    .regex(/^[a-zA-Z0-9_-]+$/),
   order_no: z.string().trim().max(64).optional().nullable(),
   customer_name: z.string().trim().max(255).optional().nullable(),
   product_type: z.string().trim().max(64).optional().nullable(),
@@ -23,8 +28,16 @@ const jobSchema = z.object({
   accessories: z.record(z.string(), z.any()).optional(),
   qty: z.number().int().min(1).max(9999).optional(),
   label_rev: z.string().trim().max(32).optional().nullable(),
-  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
-  ship_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  due_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .nullable(),
+  ship_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .nullable(),
   cancelled: z.boolean().optional(),
 });
 
@@ -89,10 +102,7 @@ export const Route = createFileRoute("/api/public/curtain-flow/jobs")({
           .select("id, job_no");
 
         if (error) {
-          return Response.json(
-            { ok: false, error: error.message },
-            { status: 500 },
-          );
+          return Response.json({ ok: false, error: error.message }, { status: 500 });
         }
 
         return Response.json({

@@ -9,7 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/feedback")({
@@ -22,7 +28,10 @@ export const Route = createFileRoute("/feedback")({
   component: FeedbackPage,
 });
 
-const CATEGORIES: Array<{ value: "bug" | "suggest" | "complain" | "praise" | "other"; label: string }> = [
+const CATEGORIES: Array<{
+  value: "bug" | "suggest" | "complain" | "praise" | "other";
+  label: string;
+}> = [
   { value: "bug", label: "แจ้งบั๊ก/ข้อผิดพลาด" },
   { value: "suggest", label: "ข้อเสนอแนะ" },
   { value: "complain", label: "ร้องเรียน" },
@@ -52,7 +61,14 @@ function FeedbackPage() {
     try {
       await submit({ data: { ...form } });
       toast.success("ส่งเรียบร้อย ขอบคุณสำหรับความคิดเห็น");
-      setForm({ from_name: "", from_emp_code: "", from_phone: "", category: "suggest", subject: "", message: "" });
+      setForm({
+        from_name: "",
+        from_emp_code: "",
+        from_phone: "",
+        category: "suggest",
+        subject: "",
+        message: "",
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "ส่งไม่สำเร็จ");
     } finally {
@@ -86,40 +102,72 @@ function FeedbackPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label htmlFor="name">ชื่อ (ไม่บังคับ)</Label>
-                  <Input id="name" value={form.from_name} maxLength={120}
-                    onChange={(e) => setForm({ ...form, from_name: e.target.value })} />
+                  <Input
+                    id="name"
+                    value={form.from_name}
+                    maxLength={120}
+                    onChange={(e) => setForm({ ...form, from_name: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="code">รหัสพนักงาน</Label>
-                  <Input id="code" value={form.from_emp_code} maxLength={40}
-                    onChange={(e) => setForm({ ...form, from_emp_code: e.target.value })} />
+                  <Input
+                    id="code"
+                    value={form.from_emp_code}
+                    maxLength={40}
+                    onChange={(e) => setForm({ ...form, from_emp_code: e.target.value })}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label htmlFor="phone">โทรศัพท์ (ถ้าต้องการให้ติดต่อกลับ)</Label>
-                  <Input id="phone" value={form.from_phone} maxLength={40}
-                    onChange={(e) => setForm({ ...form, from_phone: e.target.value })} />
+                  <Input
+                    id="phone"
+                    value={form.from_phone}
+                    maxLength={40}
+                    onChange={(e) => setForm({ ...form, from_phone: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>หมวด</Label>
-                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v as typeof form.category })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={form.category}
+                    onValueChange={(v) => setForm({ ...form, category: v as typeof form.category })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                      {CATEGORIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="subject">หัวข้อ *</Label>
-                <Input id="subject" value={form.subject} maxLength={200} required
-                  onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+                <Input
+                  id="subject"
+                  value={form.subject}
+                  maxLength={200}
+                  required
+                  onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="msg">รายละเอียด *</Label>
-                <Textarea id="msg" value={form.message} maxLength={5000} required rows={6}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })} />
+                <Textarea
+                  id="msg"
+                  value={form.message}
+                  maxLength={5000}
+                  required
+                  rows={6}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
                 <Send className="mr-2 h-4 w-4" /> {loading ? "กำลังส่ง..." : "ส่งความคิดเห็น"}

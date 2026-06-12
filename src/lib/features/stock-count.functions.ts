@@ -3,10 +3,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  issueStockToken,
-  verifyStockToken,
-} from "@/lib/auth/stock-token.server";
+import { issueStockToken, verifyStockToken } from "@/lib/auth/stock-token.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 
 export type CountStatus = "match" | "short" | "over";
@@ -162,8 +159,7 @@ export const addCountLine = createServerFn({ method: "POST" })
 
     const systemQty = num(item.total_qty);
     const variance = +(data.countedQty - systemQty).toFixed(4);
-    const status: CountStatus =
-      variance === 0 ? "match" : variance < 0 ? "short" : "over";
+    const status: CountStatus = variance === 0 ? "match" : variance < 0 ? "short" : "over";
 
     const { data: row, error } = await supabaseAdmin
       .from("stock_counts")
@@ -228,8 +224,7 @@ export const updateCountLine = createServerFn({ method: "POST" })
 
     const systemQty = num(cur.system_qty);
     const variance = +(data.countedQty - systemQty).toFixed(4);
-    const status: CountStatus =
-      variance === 0 ? "match" : variance < 0 ? "short" : "over";
+    const status: CountStatus = variance === 0 ? "match" : variance < 0 ? "short" : "over";
 
     const { error } = await supabaseAdmin
       .from("stock_counts")
@@ -240,9 +235,7 @@ export const updateCountLine = createServerFn({ method: "POST" })
   });
 
 export const deleteCountLine = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     requireWorker(data.token);
 

@@ -8,13 +8,19 @@ export type TicketPriority = "low" | "normal" | "high" | "critical";
 export type TicketCategory = "bug" | "suggest" | "complain" | "praise" | "other";
 
 export const TICKET_STATUSES: readonly TicketStatus[] = [
-  "open", "in_progress", "qa", "resolved", "closed",
+  "open",
+  "in_progress",
+  "qa",
+  "resolved",
+  "closed",
 ];
-export const TICKET_PRIORITIES: readonly TicketPriority[] = [
-  "low", "normal", "high", "critical",
-];
+export const TICKET_PRIORITIES: readonly TicketPriority[] = ["low", "normal", "high", "critical"];
 export const TICKET_CATEGORIES: readonly TicketCategory[] = [
-  "bug", "suggest", "complain", "praise", "other",
+  "bug",
+  "suggest",
+  "complain",
+  "praise",
+  "other",
 ];
 
 export type TicketRow = {
@@ -78,10 +84,12 @@ export const createFeedbackUploadUrl = createServerFn({ method: "POST" })
 /** ออก signed upload URL ให้แอดมิน (เพิ่มในคอมเมนต์) */
 export const createAdminCommentUploadUrl = createServerFn({ method: "POST" })
   .inputValidator((d: { adminToken: string; ext: string }) =>
-    z.object({
-      adminToken: z.string(),
-      ext: z.string().regex(/^[a-z0-9]{1,5}$/),
-    }).parse(d),
+    z
+      .object({
+        adminToken: z.string(),
+        ext: z.string().regex(/^[a-z0-9]{1,5}$/),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     if (!verifyAdminToken(data.adminToken)) throw new Error("Unauthorized");
@@ -191,7 +199,10 @@ export const adminUpdateFeedback = createServerFn({ method: "POST" })
     if (data.admin_note !== undefined) patch.admin_note = data.admin_note;
     if (data.assignee_name !== undefined) patch.assignee_name = data.assignee_name;
     if (Object.keys(patch).length === 0) return { ok: true };
-    const { error } = await supabaseAdmin.from("feedbacks").update(patch as never).eq("id", data.id);
+    const { error } = await supabaseAdmin
+      .from("feedbacks")
+      .update(patch as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -248,15 +259,17 @@ export const adminListComments = createServerFn({ method: "POST" })
     return out;
   });
 
-const addCommentSchema = z.object({
-  adminToken: z.string(),
-  ticket_id: z.string().uuid(),
-  author_name: z.string().trim().max(120).default("แอดมิน"),
-  body: z.string().trim().max(2000).default(""),
-  image_paths: z.array(z.string().max(400)).max(6).default([]),
-}).refine((d) => d.body.length > 0 || d.image_paths.length > 0, {
-  message: "กรุณาใส่ข้อความหรือรูปภาพ",
-});
+const addCommentSchema = z
+  .object({
+    adminToken: z.string(),
+    ticket_id: z.string().uuid(),
+    author_name: z.string().trim().max(120).default("แอดมิน"),
+    body: z.string().trim().max(2000).default(""),
+    image_paths: z.array(z.string().max(400)).max(6).default([]),
+  })
+  .refine((d) => d.body.length > 0 || d.image_paths.length > 0, {
+    message: "กรุณาใส่ข้อความหรือรูปภาพ",
+  });
 
 export const adminAddComment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => addCommentSchema.parse(d))
@@ -304,7 +317,10 @@ export const STATUS_BADGE: Record<TicketStatus, string> = {
   closed: "bg-secondary text-secondary-foreground",
 };
 export const PRIORITY_LABEL: Record<TicketPriority, string> = {
-  low: "ต่ำ", normal: "ปกติ", high: "สูง", critical: "วิกฤต",
+  low: "ต่ำ",
+  normal: "ปกติ",
+  high: "สูง",
+  critical: "วิกฤต",
 };
 export const PRIORITY_BADGE: Record<TicketPriority, string> = {
   low: "bg-muted text-muted-foreground",
@@ -313,7 +329,11 @@ export const PRIORITY_BADGE: Record<TicketPriority, string> = {
   critical: "bg-destructive/15 text-destructive",
 };
 export const CATEGORY_LABEL: Record<TicketCategory, string> = {
-  bug: "บั๊ก", suggest: "เสนอแนะ", complain: "ร้องเรียน", praise: "ชมเชย", other: "อื่นๆ",
+  bug: "บั๊ก",
+  suggest: "เสนอแนะ",
+  complain: "ร้องเรียน",
+  praise: "ชมเชย",
+  other: "อื่นๆ",
 };
 export const NEXT_STATUS: Partial<Record<TicketStatus, TicketStatus>> = {
   open: "in_progress",

@@ -7,7 +7,10 @@ import {
   adminDeleteSystemLog,
 } from "@/lib/features/system-logs.functions";
 import { adminSendLineTest } from "@/lib/integrations/line.functions";
-import { adminGetLineSchedule, adminSetLineSchedule } from "@/lib/integrations/line-schedule.functions";
+import {
+  adminGetLineSchedule,
+  adminSetLineSchedule,
+} from "@/lib/integrations/line-schedule.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,11 +56,23 @@ interface LogRow {
 }
 
 const CATEGORY_META: Record<Category, { label: string; cls: string }> = {
-  feature: { label: "ฟีเจอร์ใหม่", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" },
-  bugfix: { label: "แก้บั๊ก", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" },
-  security: { label: "ความปลอดภัย", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30" },
+  feature: {
+    label: "ฟีเจอร์ใหม่",
+    cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+  },
+  bugfix: {
+    label: "แก้บั๊ก",
+    cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+  },
+  security: {
+    label: "ความปลอดภัย",
+    cls: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30",
+  },
   ui: { label: "ปรับ UI", cls: "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30" },
-  refactor: { label: "ปรับโครงสร้าง", cls: "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30" },
+  refactor: {
+    label: "ปรับโครงสร้าง",
+    cls: "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30",
+  },
 };
 
 function LogsUpdatePage() {
@@ -229,9 +244,7 @@ function LogsUpdatePage() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-bold">บันทึกการอัปเดตแอป</h2>
-          <p className="text-sm text-muted-foreground">
-            ประวัติการเพิ่ม/แก้ไข/ปรับปรุงระบบ
-          </p>
+          <p className="text-sm text-muted-foreground">ประวัติการเพิ่ม/แก้ไข/ปรับปรุงระบบ</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -254,7 +267,9 @@ function LogsUpdatePage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground">สรุปการเปลี่ยนแปลง</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  สรุปการเปลี่ยนแปลง
+                </label>
                 <Textarea
                   rows={4}
                   value={form.summary}
@@ -282,7 +297,9 @@ function LogsUpdatePage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground">เวอร์ชัน (ไม่บังคับ)</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    เวอร์ชัน (ไม่บังคับ)
+                  </label>
                   <Input
                     value={form.version}
                     onChange={(e) => setForm({ ...form, version: e.target.value })}
@@ -378,13 +395,15 @@ function LogsUpdatePage() {
             size="sm"
             className="sm:ml-auto gap-2"
           >
-            {schedSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+            {schedSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Clock className="h-4 w-4" />
+            )}
             {schedSaving ? "กำลังบันทึก..." : "บันทึกเวลา"}
           </Button>
         </div>
       </div>
-
-
 
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
@@ -458,9 +477,7 @@ function LogCard({ row, onDelete }: { row: LogRow; onDelete: (id: string) => voi
             </span>
           </div>
           <h3 className="font-semibold text-base">{row.title}</h3>
-          <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-            {row.summary}
-          </p>
+          <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{row.summary}</p>
           {row.paths.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {row.paths.map((p) => (

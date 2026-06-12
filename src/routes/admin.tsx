@@ -20,7 +20,10 @@ export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
       { title: "Admin Login — WSC ProductionTrack" },
-      { name: "description", content: "Sign in to manage employees, steps, and view production reports." },
+      {
+        name: "description",
+        content: "Sign in to manage employees, steps, and view production reports.",
+      },
     ],
   }),
   component: AdminLogin,
@@ -77,9 +80,7 @@ function AdminLogin() {
           <ShieldCheck className="h-7 w-7" />
         </div>
         <h1 className="mt-4 text-2xl font-bold text-foreground">Admin Login</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Enter the admin password to continue
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Enter the admin password to continue</p>
 
         <form
           onSubmit={onSubmit}
@@ -102,11 +103,7 @@ function AdminLogin() {
             disabled={loading}
             className="mt-4 h-12 w-full text-base font-semibold"
           >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              "Sign in"
-            )}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign in"}
           </Button>
         </form>
       </main>

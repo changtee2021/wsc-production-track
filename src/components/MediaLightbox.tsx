@@ -26,8 +26,8 @@ export function MediaLightbox({ item, signedSrc, onClose }: Props) {
           <DialogTitle>แสดงสื่อ</DialogTitle>
           <DialogDescription>รูปภาพหรือวิดีโอประกอบรายงาน</DialogDescription>
         </VisuallyHidden>
-        {item && (
-          item.type === "image" ? (
+        {item &&
+          (item.type === "image" ? (
             <img
               src={signedSrc(item.url)}
               alt=""
@@ -35,8 +35,7 @@ export function MediaLightbox({ item, signedSrc, onClose }: Props) {
             />
           ) : (
             <VideoView src={signedSrc(item.url)} originalRef={item.url} />
-          )
-        )}
+          ))}
       </DialogContent>
     </Dialog>
   );
@@ -70,7 +69,8 @@ function VideoView({ src, originalRef }: { src: string; originalRef: string }) {
               ? "ไฟล์ .mov/.m4v จาก iPhone (มักเข้ารหัส HEVC/H.265) Chrome/Edge บน Windows ส่วนใหญ่เล่นไม่ได้ในหน้าเว็บ"
               : "เบราว์เซอร์ไม่รองรับ codec ของวิดีโอนี้"}
             <br />
-            ลองกด "เปิดในแท็บใหม่" หรือ "ดาวน์โหลด" เพื่อเล่นด้วยโปรแกรมในเครื่อง (เช่น VLC, QuickTime)
+            ลองกด "เปิดในแท็บใหม่" หรือ "ดาวน์โหลด" เพื่อเล่นด้วยโปรแกรมในเครื่อง (เช่น VLC,
+            QuickTime)
             {(isMov || isM4v) && (
               <>
                 <br />
@@ -101,9 +101,7 @@ function VideoView({ src, originalRef }: { src: string; originalRef: string }) {
 
 export function warnIfMovFiles(files: FileList | File[]): void {
   const arr = Array.from(files as ArrayLike<File>);
-  const hasMov = arr.some(
-    (f) => f.type === "video/quicktime" || /\.mov$/i.test(f.name),
-  );
+  const hasMov = arr.some((f) => f.type === "video/quicktime" || /\.mov$/i.test(f.name));
   if (hasMov) {
     import("sonner").then(({ toast }) =>
       toast.warning("ไฟล์ .mov อาจเปิดดูในเว็บไม่ได้", {

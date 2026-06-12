@@ -60,12 +60,17 @@ export function AdminAiAssistant() {
     setInput("");
     setLoading(true);
     try {
-      const res = await ask({ data: { token, mode, messages: next.map(({ role, content }) => ({ role, content })) } });
+      const res = await ask({
+        data: { token, mode, messages: next.map(({ role, content }) => ({ role, content })) },
+      });
       if (!res.ok) {
         toast.error(res.error);
         setMessages((m) => [...m, { role: "assistant", content: `❌ ${res.error}` }]);
       } else {
-        setMessages((m) => [...m, { role: "assistant", content: res.reply, toolsUsed: res.toolsUsed }]);
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: res.reply, toolsUsed: res.toolsUsed },
+        ]);
         setRemaining(res.remaining);
       }
     } catch (e) {
@@ -95,7 +100,9 @@ export function AdminAiAssistant() {
               <div>
                 <div className="text-sm font-semibold">ผู้ช่วย AI แอดมิน</div>
                 <div className="text-[11px] text-muted-foreground">
-                  {remaining !== null ? `เหลือ ${remaining} ข้อความวันนี้` : "ถามเรื่องในระบบได้เลย"}
+                  {remaining !== null
+                    ? `เหลือ ${remaining} ข้อความวันนี้`
+                    : "ถามเรื่องในระบบได้เลย"}
                 </div>
               </div>
             </div>
@@ -140,7 +147,13 @@ export function AdminAiAssistant() {
               </div>
             )}
             {messages.map((m, i) => (
-              <div key={i} className={cn("flex flex-col gap-1", m.role === "user" ? "items-end" : "items-start")}>
+              <div
+                key={i}
+                className={cn(
+                  "flex flex-col gap-1",
+                  m.role === "user" ? "items-end" : "items-start",
+                )}
+              >
                 <div
                   className={cn(
                     "max-w-[90%] rounded-2xl px-3 py-2 text-sm break-words",
@@ -161,7 +174,9 @@ export function AdminAiAssistant() {
                   <div className="flex flex-wrap items-center gap-1 px-1 text-[10px] text-muted-foreground">
                     <Wrench className="h-3 w-3" />
                     {m.toolsUsed.map((t) => (
-                      <span key={t} className="rounded bg-muted px-1.5 py-0.5">{t}</span>
+                      <span key={t} className="rounded bg-muted px-1.5 py-0.5">
+                        {t}
+                      </span>
                     ))}
                   </div>
                 )}

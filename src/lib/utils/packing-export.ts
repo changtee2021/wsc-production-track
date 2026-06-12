@@ -1,4 +1,7 @@
-interface MediaItem { url: string; type: "image" | "video" }
+interface MediaItem {
+  url: string;
+  type: "image" | "video";
+}
 interface PackingReportItem {
   item_order: number;
   item_text_snapshot: string;
@@ -28,9 +31,22 @@ const escapeCell = (v: unknown): string => {
 };
 
 const HEADERS = [
-  "report_id","created_at","job_id","category","step","packing_employee","worker",
-  "overall_result","overall_summary","overall_note",
-  "item_order","item_text","item_result","item_remark","item_media_count","item_media_urls",
+  "report_id",
+  "created_at",
+  "job_id",
+  "category",
+  "step",
+  "packing_employee",
+  "worker",
+  "overall_result",
+  "overall_summary",
+  "overall_note",
+  "item_order",
+  "item_text",
+  "item_result",
+  "item_remark",
+  "item_media_count",
+  "item_media_urls",
 ];
 
 export function buildPackingReportsCsv(reports: PackingReportRow[]): string {
@@ -63,7 +79,9 @@ export function buildPackingReportsCsv(reports: PackingReportRow[]): string {
           it.remark ?? "",
           it.media?.length ?? 0,
           (it.media ?? []).map((m) => m.url).join(";"),
-        ].map(escapeCell).join(","),
+        ]
+          .map(escapeCell)
+          .join(","),
       );
     }
   }

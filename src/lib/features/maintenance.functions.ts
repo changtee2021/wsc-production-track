@@ -26,9 +26,7 @@ const tokenStr = z.string().min(1);
 
 // ============ AUTH ============
 export const verifyMaintenancePassword = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ password: z.string().min(1).max(200) }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ password: z.string().min(1).max(200) }).parse(d))
   .handler(async ({ data }) => {
     if (!checkMaintenancePassword(data.password)) {
       return { ok: false as const };
@@ -73,9 +71,7 @@ export const listAssets = createServerFn({ method: "POST" })
   });
 
 export const upsertAsset = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, asset: assetInput }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, asset: assetInput }).parse(d))
   .handler(async ({ data }) => {
     assertMaintOrAdmin(data.token);
     const a = data.asset;
@@ -101,16 +97,17 @@ export const upsertAsset = createServerFn({ method: "POST" })
       return { ok: true, id: a.id };
     } else {
       const { data: ins, error } = await supabaseAdmin
-        .from("assets").insert(payload).select("id").single();
+        .from("assets")
+        .insert(payload)
+        .select("id")
+        .single();
       if (error || !ins) throw new Error(error?.message || "บันทึกไม่สำเร็จ");
       return { ok: true, id: ins.id };
     }
   });
 
 export const deleteAsset = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertMaintOrAdmin(data.token);
     const { error } = await supabaseAdmin.from("assets").delete().eq("id", data.id);
@@ -138,7 +135,8 @@ export const listSpareParts = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     assertMaintOrAdmin(data.token);
     const { data: rows, error } = await supabaseAdmin
-      .from("spare_parts").select("*")
+      .from("spare_parts")
+      .select("*")
       .order("active", { ascending: false })
       .order("name", { ascending: true });
     if (error) throw new Error(error.message);
@@ -146,9 +144,7 @@ export const listSpareParts = createServerFn({ method: "POST" })
   });
 
 export const upsertSparePart = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, part: partInput }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, part: partInput }).parse(d))
   .handler(async ({ data }) => {
     assertMaintOrAdmin(data.token);
     const p = data.part;
@@ -170,16 +166,17 @@ export const upsertSparePart = createServerFn({ method: "POST" })
       return { ok: true, id: p.id };
     } else {
       const { data: ins, error } = await supabaseAdmin
-        .from("spare_parts").insert(payload).select("id").single();
+        .from("spare_parts")
+        .insert(payload)
+        .select("id")
+        .single();
       if (error || !ins) throw new Error(error?.message || "บันทึกไม่สำเร็จ");
       return { ok: true, id: ins.id };
     }
   });
 
 export const deleteSparePart = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertMaintOrAdmin(data.token);
     const { error } = await supabaseAdmin.from("spare_parts").delete().eq("id", data.id);
@@ -202,12 +199,17 @@ export const restockPart = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     assertMaintOrAdmin(data.token);
     const { data: part, error: e0 } = await supabaseAdmin
-      .from("spare_parts").select("stock_qty").eq("id", data.spare_part_id).single();
+      .from("spare_parts")
+      .select("stock_qty")
+      .eq("id", data.spare_part_id)
+      .single();
     if (e0 || !part) throw new Error(e0?.message || "ไม่พบอะไหล่");
     const newQty = part.stock_qty + data.delta;
     if (newQty < 0) throw new Error("สต๊อกติดลบไม่ได้");
     const { error: e1 } = await supabaseAdmin
-      .from("spare_parts").update({ stock_qty: newQty }).eq("id", data.spare_part_id);
+      .from("spare_parts")
+      .update({ stock_qty: newQty })
+      .eq("id", data.spare_part_id);
     if (e1) throw new Error(e1.message);
     await supabaseAdmin.from("spare_part_movements").insert({
       spare_part_id: data.spare_part_id,
@@ -248,9 +250,7 @@ export const listTickets = createServerFn({ method: "POST" })
   });
 
 export const getTicket = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertMaint(data.token);
     const { data: row, error } = await supabaseAdmin
@@ -320,7 +320,9 @@ export const updateTicketStatus = createServerFn({ method: "POST" })
     if (data.status === "in_progress") patch.started_at = new Date().toISOString();
     if (data.status === "done") patch.done_at = new Date().toISOString();
     const { error } = await supabaseAdmin
-      .from("maintenance_tickets").update(patch).eq("id", data.id);
+      .from("maintenance_tickets")
+      .update(patch)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -368,7 +370,10 @@ export const addPartsUsed = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     assertMaint(data.token);
     const { data: part, error: e0 } = await supabaseAdmin
-      .from("spare_parts").select("stock_qty, name").eq("id", data.spare_part_id).single();
+      .from("spare_parts")
+      .select("stock_qty, name")
+      .eq("id", data.spare_part_id)
+      .single();
     if (e0 || !part) throw new Error(e0?.message || "ไม่พบอะไหล่");
     if (part.stock_qty < data.qty)
       throw new Error(`สต๊อก "${part.name}" ไม่พอ (เหลือ ${part.stock_qty})`);
@@ -383,13 +388,10 @@ export const addPartsUsed = createServerFn({ method: "POST" })
   });
 
 export const removePartsUsed = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertMaint(data.token);
-    const { error } = await supabaseAdmin
-      .from("maintenance_parts_used").delete().eq("id", data.id);
+    const { error } = await supabaseAdmin.from("maintenance_parts_used").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -403,10 +405,19 @@ type Detected = { mime: string; ext: string };
 function detectImage(b: Uint8Array): Detected | null {
   if (b.length < 12) return null;
   if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { mime: "image/jpeg", ext: "jpg" };
-  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return { mime: "image/png", ext: "png" };
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47)
+    return { mime: "image/png", ext: "png" };
   if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return { mime: "image/gif", ext: "gif" };
-  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
-      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50)
+  if (
+    b[0] === 0x52 &&
+    b[1] === 0x49 &&
+    b[2] === 0x46 &&
+    b[3] === 0x46 &&
+    b[8] === 0x57 &&
+    b[9] === 0x45 &&
+    b[10] === 0x42 &&
+    b[11] === 0x50
+  )
     return { mime: "image/webp", ext: "webp" };
   return null;
 }
@@ -430,7 +441,10 @@ export const maintenanceUploadMedia = createServerFn({ method: "POST" })
       .object({
         token: tokenStr,
         kind: z.enum(["image", "video"]),
-        dataBase64: z.string().min(1).max(Math.ceil((MAX_VIDEO_BYTES * 4) / 3) + 16),
+        dataBase64: z
+          .string()
+          .min(1)
+          .max(Math.ceil((MAX_VIDEO_BYTES * 4) / 3) + 16),
       })
       .parse(d),
   )
@@ -476,7 +490,10 @@ export const adminMaintenanceSummary = createServerFn({ method: "POST" })
     ]);
     const low = (lowStock.data ?? []).filter((p) => p.stock_qty <= p.min_qty);
     const counts = {
-      open: 0, in_progress: 0, done: 0, cancelled: 0,
+      open: 0,
+      in_progress: 0,
+      done: 0,
+      cancelled: 0,
     } as Record<string, number>;
     for (const t of tickets.data ?? []) counts[t.status] = (counts[t.status] ?? 0) + 1;
     return {
@@ -491,14 +508,30 @@ export const listMaintenanceEmployees = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
   .handler(async ({ data }) => {
     assertMaintOrAdmin(data.token);
-    const { data: rows, error } = await (supabaseAdmin
-      .from("maintenance_employees" as never) as unknown as {
-        select: (s: string) => { eq: (a: string, b: boolean) => { order: (c: string) => Promise<{ data: Array<{ id: string; name: string; emp_code: string | null; avatar_url: string | null; active: boolean }> | null; error: { message: string } | null }> } };
-      })
+    const { data: rows, error } = await (
+      supabaseAdmin.from("maintenance_employees" as never) as unknown as {
+        select: (s: string) => {
+          eq: (
+            a: string,
+            b: boolean,
+          ) => {
+            order: (c: string) => Promise<{
+              data: Array<{
+                id: string;
+                name: string;
+                emp_code: string | null;
+                avatar_url: string | null;
+                active: boolean;
+              }> | null;
+              error: { message: string } | null;
+            }>;
+          };
+        };
+      }
+    )
       .select("id, name, emp_code, avatar_url, active")
       .eq("active", true)
       .order("name");
     if (error) throw new Error(error.message);
     return { rows: rows ?? [] };
   });
-

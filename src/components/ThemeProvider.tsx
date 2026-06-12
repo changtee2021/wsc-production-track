@@ -13,7 +13,13 @@ function applyClass(t: Theme) {
   root.style.colorScheme = t;
 }
 
-export function ThemeProvider({ children, isAdmin }: { children: React.ReactNode; isAdmin?: boolean }) {
+export function ThemeProvider({
+  children,
+  isAdmin,
+}: {
+  children: React.ReactNode;
+  isAdmin?: boolean;
+}) {
   const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
@@ -50,7 +56,9 @@ export function ThemeProvider({ children, isAdmin }: { children: React.ReactNode
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggle: () => setTheme(theme === "dark" ? "light" : "dark") }}>
+    <ThemeContext.Provider
+      value={{ theme, setTheme, toggle: () => setTheme(theme === "dark" ? "light" : "dark") }}
+    >
       {children}
     </ThemeContext.Provider>
   );

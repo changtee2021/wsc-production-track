@@ -4,11 +4,7 @@
 
 const MAX_DIMENSION = 1920;
 const JPEG_QUALITY = 0.82;
-const COMPRESSIBLE_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
+const COMPRESSIBLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 async function loadImage(file: File): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(file);

@@ -29,14 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  FileSpreadsheet,
-  Download,
-  Send,
-  Loader2,
-  RefreshCw,
-  Search,
-} from "lucide-react";
+import { FileSpreadsheet, Download, Send, Loader2, RefreshCw, Search } from "lucide-react";
 import {
   buildHeaders,
   buildRows,
@@ -108,8 +101,7 @@ function ProductionExcelPage() {
     if (!q) return jobs;
     return jobs.filter(
       (j) =>
-        j.job_id.toLowerCase().includes(q) ||
-        (j.category_name ?? "").toLowerCase().includes(q),
+        j.job_id.toLowerCase().includes(q) || (j.category_name ?? "").toLowerCase().includes(q),
     );
   }, [jobs, jobSearch]);
 
@@ -133,8 +125,7 @@ function ProductionExcelPage() {
       return next;
     });
   };
-  const allChecked =
-    filteredJobs.length > 0 && selected.size >= filteredJobs.length;
+  const allChecked = filteredJobs.length > 0 && selected.size >= filteredJobs.length;
 
   const onDownloadCsv = () => {
     if (rows.length === 0) return toast.info("ไม่มีข้อมูลให้ดาวน์โหลด");
@@ -175,12 +166,11 @@ function ProductionExcelPage() {
     <main className="mx-auto max-w-[1600px] px-4 py-6">
       <div className="mb-5">
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <FileSpreadsheet className="h-6 w-6 text-primary" /> พรีวิว Excel
-          ประวัติผลิต
+          <FileSpreadsheet className="h-6 w-6 text-primary" /> พรีวิว Excel ประวัติผลิต
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          ตารางแบบ Excel: 1 แถว = 1 Job, คอลัมน์ขั้นตอนกระจายตามลำดับเวลา
-          พร้อมส่งออก CSV/XLSX และ Sync เข้า Google Sheets
+          ตารางแบบ Excel: 1 แถว = 1 Job, คอลัมน์ขั้นตอนกระจายตามลำดับเวลา พร้อมส่งออก CSV/XLSX และ
+          Sync เข้า Google Sheets
         </p>
       </div>
 
@@ -247,8 +237,7 @@ function ProductionExcelPage() {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="text-sm text-muted-foreground">
           ทั้งหมด {filteredJobs.length} Job
-          {selected.size > 0 && ` · เลือก ${selected.size}`} · คอลัมน์ขั้นตอน
-          สูงสุด {maxSteps}
+          {selected.size > 0 && ` · เลือก ${selected.size}`} · คอลัมน์ขั้นตอน สูงสุด {maxSteps}
         </div>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={onDownloadCsv}>
@@ -312,11 +301,7 @@ function ProductionExcelPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setSyncOpen(false)}
-                  disabled={syncing}
-                >
+                <Button variant="outline" onClick={() => setSyncOpen(false)} disabled={syncing}>
                   ยกเลิก
                 </Button>
                 <Button onClick={onSync} disabled={syncing}>
@@ -335,10 +320,7 @@ function ProductionExcelPage() {
           <thead className="sticky top-0 z-10 bg-muted">
             <tr>
               <th className="sticky left-0 z-20 border-b border-r bg-muted px-2 py-2">
-                <Checkbox
-                  checked={allChecked}
-                  onCheckedChange={(v) => toggleAll(!!v)}
-                />
+                <Checkbox checked={allChecked} onCheckedChange={(v) => toggleAll(!!v)} />
               </th>
               <th className="border-b border-r bg-muted px-2 py-2 text-left font-semibold whitespace-nowrap">
                 วันเริ่ม
@@ -385,7 +367,6 @@ function ProductionExcelPage() {
                 <SubHead key={i} />
               ))}
             </tr>
-
           </thead>
           <tbody>
             {filteredJobs.map((j) => {
@@ -393,33 +374,20 @@ function ProductionExcelPage() {
               return (
                 <tr key={j.job_id} className="even:bg-muted/30 hover:bg-accent/40">
                   <td className="sticky left-0 z-10 border-r bg-inherit px-2 py-1">
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={(v) => toggleOne(j.job_id, !!v)}
-                    />
+                    <Checkbox checked={checked} onCheckedChange={(v) => toggleOne(j.job_id, !!v)} />
                   </td>
-                  <td className="border-r px-2 py-1 whitespace-nowrap">
-                    {fmtDate(j.started_at)}
-                  </td>
-                  <td className="border-r px-2 py-1 whitespace-nowrap">
-                    {fmtDate(j.finished_at)}
-                  </td>
+                  <td className="border-r px-2 py-1 whitespace-nowrap">{fmtDate(j.started_at)}</td>
+                  <td className="border-r px-2 py-1 whitespace-nowrap">{fmtDate(j.finished_at)}</td>
                   <td className="sticky left-[40px] z-10 border-r bg-inherit px-2 py-1 font-mono">
                     {j.job_id.slice(0, 8)}
                   </td>
                   <td className="border-r px-2 py-1">{j.category_name ?? "—"}</td>
-                  <td className="border-r px-2 py-1 whitespace-nowrap">
-                    {fmtTime(j.started_at)}
-                  </td>
-                  <td className="border-r px-2 py-1 whitespace-nowrap">
-                    {fmtTime(j.finished_at)}
-                  </td>
+                  <td className="border-r px-2 py-1 whitespace-nowrap">{fmtTime(j.started_at)}</td>
+                  <td className="border-r px-2 py-1 whitespace-nowrap">{fmtTime(j.finished_at)}</td>
                   <td className="border-r px-2 py-1 text-right">{j.step_count}</td>
                   {Array.from({ length: maxSteps }).map((_, i) => {
                     const s = j.steps[i];
-                    return (
-                      <StepCells key={i} step={s} />
-                    );
+                    return <StepCells key={i} step={s} />;
                   })}
                 </tr>
               );
@@ -490,9 +458,7 @@ function StepCells({
       <td className="px-2 py-1 whitespace-nowrap">
         {step.employee_name}
         {step.emp_code && (
-          <span className="ml-1 text-[10px] text-muted-foreground">
-            ({step.emp_code})
-          </span>
+          <span className="ml-1 text-[10px] text-muted-foreground">({step.emp_code})</span>
         )}
       </td>
       <td className="px-2 py-1 whitespace-nowrap">{fmtTime(step.started_at)}</td>
@@ -514,4 +480,3 @@ function fmtTime(iso: string): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
-

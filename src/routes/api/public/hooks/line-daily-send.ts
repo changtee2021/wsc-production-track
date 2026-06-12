@@ -10,10 +10,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendDailySummary, bangkokNowParts } from "@/lib/integrations/line.server";
 
 function isAuthorized(req: Request): boolean {
-  const expected =
-    process.env.SUPABASE_PUBLISHABLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    "";
+  const expected = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "";
   if (!expected) return false;
   const apikey = req.headers.get("apikey") ?? "";
   const auth = req.headers.get("authorization") ?? "";

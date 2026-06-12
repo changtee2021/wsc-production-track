@@ -11,10 +11,7 @@ export function EmployeeProfileProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={(t) => setTarget(t)}>
       {children}
-      <EmployeeProfileDialog
-        target={target}
-        onClose={() => setTarget(null)}
-      />
+      <EmployeeProfileDialog target={target} onClose={() => setTarget(null)} />
     </Ctx.Provider>
   );
 }

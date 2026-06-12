@@ -16,7 +16,11 @@ export const Route = createFileRoute("/_protected/print-label/$jobNo")({
 
 function fmt(d: string | null): string {
   if (!d) return "—";
-  try { return new Date(d).toLocaleDateString("th-TH"); } catch { return d; }
+  try {
+    return new Date(d).toLocaleDateString("th-TH");
+  } catch {
+    return d;
+  }
 }
 
 function PrintLabelPage() {
@@ -31,10 +35,14 @@ function PrintLabelPage() {
         const res = await getFn({ data: { token: requireToken(), job_no: jobNo } });
         setJob(res.job);
         const dataUrl = await QRCode.toDataURL(res.job.job_no, {
-          margin: 1, width: 200, errorCorrectionLevel: "M",
+          margin: 1,
+          width: 200,
+          errorCorrectionLevel: "M",
         });
         setQrDataUrl(dataUrl);
-      } catch (e) { showError(e, "โหลดใบงานไม่สำเร็จ"); }
+      } catch (e) {
+        showError(e, "โหลดใบงานไม่สำเร็จ");
+      }
     })();
   }, [getFn, jobNo]);
 
@@ -93,27 +101,51 @@ function PrintLabelPage() {
                 <div className="order">{job.order_no ?? ""}</div>
               </div>
               {job.customer_name && (
-                <div className="truncate"><span className="lbl">ลูกค้า:</span> {job.customer_name}</div>
+                <div className="truncate">
+                  <span className="lbl">ลูกค้า:</span> {job.customer_name}
+                </div>
               )}
               <div className="row">
                 <span className="lbl">{job.product_type ?? "—"}</span>
-                <strong>{job.width_cm ?? "?"} × {job.height_cm ?? "?"} cm</strong>
+                <strong>
+                  {job.width_cm ?? "?"} × {job.height_cm ?? "?"} cm
+                </strong>
                 {job.side && <span>({job.side})</span>}
               </div>
               <div className="row" style={{ flexWrap: "wrap" }}>
-                {job.fabric_code && <span><span className="lbl">ผ้า:</span> {job.fabric_code}</span>}
-                {job.rail_code && <span><span className="lbl">ราง:</span> {job.rail_code}</span>}
-                {job.color_code && <span><span className="lbl">สี:</span> {job.color_code}</span>}
+                {job.fabric_code && (
+                  <span>
+                    <span className="lbl">ผ้า:</span> {job.fabric_code}
+                  </span>
+                )}
+                {job.rail_code && (
+                  <span>
+                    <span className="lbl">ราง:</span> {job.rail_code}
+                  </span>
+                )}
+                {job.color_code && (
+                  <span>
+                    <span className="lbl">สี:</span> {job.color_code}
+                  </span>
+                )}
               </div>
-              {job.motor && <div><span className="lbl">มอเตอร์:</span> {job.motor}</div>}
+              {job.motor && (
+                <div>
+                  <span className="lbl">มอเตอร์:</span> {job.motor}
+                </div>
+              )}
               <div className="row" style={{ justifyContent: "space-between" }}>
-                <span><span className="lbl">ส่ง:</span> {fmt(job.due_date)}</span>
+                <span>
+                  <span className="lbl">ส่ง:</span> {fmt(job.due_date)}
+                </span>
                 {job.label_rev && <span className="lbl">{job.label_rev}</span>}
               </div>
             </div>
             <div className="flex flex-col items-center justify-between">
               {qrDataUrl && <img src={qrDataUrl} alt={job.job_no} className="qr" />}
-              <div className="text-[7pt]">{i + 1}/{stickers.length}</div>
+              <div className="text-[7pt]">
+                {i + 1}/{stickers.length}
+              </div>
             </div>
           </div>
         ))}

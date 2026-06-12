@@ -36,7 +36,9 @@ function SuppliesReportsPage() {
     if (!data) return;
     const lines: string[] = [];
     lines.push("ประเภท,ชื่อ,จำนวน,ราคาทุน,ค่าเสื่อมสะสม,มูลค่าคงเหลือ");
-    lines.push(`รวมทั้งหมด,—,${data.total.count},${data.total.cost},${data.total.accumulated},${data.total.book}`);
+    lines.push(
+      `รวมทั้งหมด,—,${data.total.count},${data.total.cost},${data.total.accumulated},${data.total.book}`,
+    );
     lines.push("");
     lines.push("=== สรุปตามหมวด ===");
     for (const c of data.byCategory) {
@@ -52,7 +54,9 @@ function SuppliesReportsPage() {
       lines.push("=== หมดอายุค่าเสื่อม ===");
       lines.push("รหัส,ชื่อ,หมวด,วันที่ซื้อ,ราคาทุน,มูลค่าคงเหลือ");
       for (const a of data.fullyDepreciatedList) {
-        lines.push(`${a.code},"${a.name}","${a.category_name ?? ""}",${a.purchase_date ?? ""},${a.purchase_price},${a.book_value}`);
+        lines.push(
+          `${a.code},"${a.name}","${a.category_name ?? ""}",${a.purchase_date ?? ""},${a.purchase_price},${a.book_value}`,
+        );
       }
     }
     const csv = "\uFEFF" + lines.join("\n");
@@ -61,7 +65,9 @@ function SuppliesReportsPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `office-assets-depreciation-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a); a.click(); a.remove();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     URL.revokeObjectURL(url);
     toast.success("ดาวน์โหลดแล้ว");
   };
@@ -88,7 +94,10 @@ function SuppliesReportsPage() {
             คำนวณแบบเส้นตรง (Straight-line) จากข้อมูลปัจจุบัน
           </p>
         </div>
-        <Button onClick={exportCsv}><Download className="mr-1 h-4 w-4" />CSV</Button>
+        <Button onClick={exportCsv}>
+          <Download className="mr-1 h-4 w-4" />
+          CSV
+        </Button>
       </div>
 
       {/* Totals */}
@@ -101,7 +110,9 @@ function SuppliesReportsPage() {
 
       {/* By category */}
       <Card className="mb-4">
-        <CardHeader><CardTitle className="text-base">สรุปตามหมวด</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">สรุปตามหมวด</CardTitle>
+        </CardHeader>
         <CardContent>
           {data.byCategory.length === 0 ? (
             <p className="text-sm text-muted-foreground">— ยังไม่มีข้อมูล —</p>
@@ -110,13 +121,19 @@ function SuppliesReportsPage() {
               {data.byCategory.map((c) => (
                 <div key={c.category_name}>
                   <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="font-medium">{c.category_name} <span className="text-xs text-muted-foreground">({c.count})</span></span>
+                    <span className="font-medium">
+                      {c.category_name}{" "}
+                      <span className="text-xs text-muted-foreground">({c.count})</span>
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       ทุน {fmt(c.cost)} · คงเหลือ <b className="text-foreground">{fmt(c.book)}</b>
                     </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded bg-muted">
-                    <div className="h-full bg-primary" style={{ width: `${(c.cost / maxCost) * 100}%` }} />
+                    <div
+                      className="h-full bg-primary"
+                      style={{ width: `${(c.cost / maxCost) * 100}%` }}
+                    />
                   </div>
                 </div>
               ))}
@@ -127,7 +144,9 @@ function SuppliesReportsPage() {
 
       {/* By year */}
       <Card className="mb-4">
-        <CardHeader><CardTitle className="text-base">สรุปตามปีที่ซื้อ</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">สรุปตามปีที่ซื้อ</CardTitle>
+        </CardHeader>
         <CardContent>
           {data.byYear.length === 0 ? (
             <p className="text-sm text-muted-foreground">— ยังไม่มีข้อมูล —</p>
@@ -149,7 +168,9 @@ function SuppliesReportsPage() {
                       <td className="py-1.5 pr-2 font-mono">{y.year}</td>
                       <td className="py-1.5 pr-2 text-right">{y.count}</td>
                       <td className="py-1.5 pr-2 text-right">{fmt(y.cost)}</td>
-                      <td className="py-1.5 pr-2 text-right text-amber-600">{fmt(y.accumulated)}</td>
+                      <td className="py-1.5 pr-2 text-right text-amber-600">
+                        {fmt(y.accumulated)}
+                      </td>
                       <td className="py-1.5 text-right font-semibold">{fmt(y.book)}</td>
                     </tr>
                   ))}
@@ -164,7 +185,8 @@ function SuppliesReportsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingDown className="h-4 w-4" />หมดอายุค่าเสื่อมแล้ว ({data.fullyDepreciatedList.length})
+            <TrendingDown className="h-4 w-4" />
+            หมดอายุค่าเสื่อมแล้ว ({data.fullyDepreciatedList.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -176,9 +198,13 @@ function SuppliesReportsPage() {
                 <div key={a.id} className="flex items-center gap-2 rounded border p-2 text-sm">
                   <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate"><span className="font-mono text-xs text-muted-foreground">{a.code}</span> {a.name}</div>
+                    <div className="truncate">
+                      <span className="font-mono text-xs text-muted-foreground">{a.code}</span>{" "}
+                      {a.name}
+                    </div>
                     <div className="text-xs text-muted-foreground">
-                      {a.category_name ?? "—"} · ซื้อ {a.purchase_date ?? "—"} · ทุน {fmt(a.purchase_price)}
+                      {a.category_name ?? "—"} · ซื้อ {a.purchase_date ?? "—"} · ทุน{" "}
+                      {fmt(a.purchase_price)}
                     </div>
                   </div>
                   <Badge variant="secondary">คงเหลือ {fmt(a.book_value)}</Badge>
@@ -192,10 +218,17 @@ function SuppliesReportsPage() {
   );
 }
 
-function StatCard({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" }) {
+function StatCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "good" | "warn";
+}) {
   const color =
-    tone === "good" ? "text-emerald-600" :
-    tone === "warn" ? "text-amber-600" : "text-foreground";
+    tone === "good" ? "text-emerald-600" : tone === "warn" ? "text-amber-600" : "text-foreground";
   return (
     <Card>
       <CardContent className="p-3">

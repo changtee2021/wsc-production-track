@@ -58,7 +58,6 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-
 function clientIp(): string {
   return (
     getRequestHeader("cf-connecting-ip") ||
@@ -117,14 +116,16 @@ export const uploadWorkerNoteImage = createServerFn({ method: "POST" })
     z
       .object({
         // base64-encoded file body (no data: URL prefix)
-        dataBase64: z.string().min(1).max(Math.ceil((MAX_BYTES * 4) / 3) + 16),
+        dataBase64: z
+          .string()
+          .min(1)
+          .max(Math.ceil((MAX_BYTES * 4) / 3) + 16),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     const ip = clientIp();
-    if (!checkRateLimit(ip))
-      throw new Error("อัปโหลดบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่");
+    if (!checkRateLimit(ip)) throw new Error("อัปโหลดบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่");
 
     const bytes = Uint8Array.from(Buffer.from(data.dataBase64, "base64"));
     if (bytes.length === 0) throw new Error("ไฟล์ว่างเปล่า");
@@ -134,12 +135,10 @@ export const uploadWorkerNoteImage = createServerFn({ method: "POST" })
     if (!detected) throw new Error("รองรับเฉพาะรูปภาพ JPG, PNG, WEBP, GIF");
 
     const path = `${crypto.randomUUID()}.${detected.ext}`;
-    const { error } = await supabaseAdmin.storage
-      .from("log-notes")
-      .upload(path, bytes, {
-        contentType: detected.mime,
-        upsert: false,
-      });
+    const { error } = await supabaseAdmin.storage.from("log-notes").upload(path, bytes, {
+      contentType: detected.mime,
+      upsert: false,
+    });
     if (error) throw new Error(error.message);
 
     // Bucket is private — return the storage path (for DB persistence) and
@@ -149,4 +148,3 @@ export const uploadWorkerNoteImage = createServerFn({ method: "POST" })
       .createSignedUrl(path, 60 * 60);
     return { path, previewUrl: signed?.signedUrl ?? "" };
   });
-

@@ -19,7 +19,9 @@ export const adminGetLineSchedule = createServerFn({ method: "POST" })
       .select("key, value")
       .in("key", ["line_daily_send_time", "line_daily_last_sent_date"]);
     if (error) throw new Error(error.message);
-    const map = new Map((rows ?? []).map((r) => [r.key as string, r.value as Record<string, unknown>]));
+    const map = new Map(
+      (rows ?? []).map((r) => [r.key as string, r.value as Record<string, unknown>]),
+    );
     const conf = map.get("line_daily_send_time") ?? {};
     const last = map.get("line_daily_last_sent_date") ?? {};
     return {
@@ -41,13 +43,11 @@ export const adminSetLineSchedule = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("app_settings")
-      .upsert({
-        key: "line_daily_send_time",
-        value: { time: data.time, enabled: data.enabled },
-        updated_at: new Date().toISOString(),
-      });
+    const { error } = await supabaseAdmin.from("app_settings").upsert({
+      key: "line_daily_send_time",
+      value: { time: data.time, enabled: data.enabled },
+      updated_at: new Date().toISOString(),
+    });
     if (error) throw new Error(error.message);
     return { ok: true as const, time: data.time, enabled: data.enabled };
   });

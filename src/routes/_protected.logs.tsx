@@ -15,12 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +24,6 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
 
 export const Route = createFileRoute("/_protected/logs")({
   head: () => ({ meta: [{ title: "Production Logs — WSC ProductionTrack" }] }),
@@ -69,10 +63,8 @@ function LogsPage() {
   const [selected, setSelected] = useState<LogRow | null>(null);
   const [signedMap, setSignedMap] = useState<Record<string, string>>({});
 
-
   const fetchLogs = useServerFn(adminFetchLogs);
   const signUrls = useServerFn(adminSignMediaUrls);
-
 
   useEffect(() => {
     (async () => {
@@ -118,15 +110,10 @@ function LogsPage() {
 
   const signedSrc = (ref: string) => signedMap[ref] ?? ref;
 
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const fromTs = appliedFrom
-      ? new Date(appliedFrom).setHours(0, 0, 0, 0)
-      : null;
-    const toTs = appliedTo
-      ? new Date(appliedTo).setHours(23, 59, 59, 999)
-      : null;
+    const fromTs = appliedFrom ? new Date(appliedFrom).setHours(0, 0, 0, 0) : null;
+    const toTs = appliedTo ? new Date(appliedTo).setHours(23, 59, 59, 999) : null;
     return logs.filter((l) => {
       if (categoryFilter !== "all" && l.category_id !== categoryFilter) return false;
       if (actionFilter !== "all" && l.action !== actionFilter) return false;
@@ -137,18 +124,15 @@ function LogsPage() {
         if (toTs && ts > toTs) return false;
       }
       if (q) {
-        const hay = `${l.job_id} ${l.employees?.name ?? ""} ${l.steps?.step_name ?? ""} ${l.note ?? ""}`.toLowerCase();
+        const hay =
+          `${l.job_id} ${l.employees?.name ?? ""} ${l.steps?.step_name ?? ""} ${l.note ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
   }, [logs, search, categoryFilter, actionFilter, onlyNotes, appliedFrom, appliedTo]);
 
-
-  const notesCount = useMemo(
-    () => logs.filter((l) => l.note || l.note_image_url).length,
-    [logs],
-  );
+  const notesCount = useMemo(() => logs.filter((l) => l.note || l.note_image_url).length, [logs]);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
@@ -326,7 +310,6 @@ function LogsPage() {
         </div>
       </div>
 
-
       <div className="rounded-2xl border border-border bg-card shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-muted-foreground">กำลังโหลด…</p>
@@ -358,9 +341,7 @@ function LogsPage() {
                       <td className="px-4 py-2 text-muted-foreground">
                         {new Date(l.created_at).toLocaleString("th-TH")}
                       </td>
-                      <td className="px-4 py-2 font-mono font-semibold text-primary">
-                        {l.job_id}
-                      </td>
+                      <td className="px-4 py-2 font-mono font-semibold text-primary">{l.job_id}</td>
                       <td className="px-4 py-2">
                         {l.categories?.name ? (
                           <Badge variant="outline">{l.categories.name}</Badge>
@@ -370,9 +351,7 @@ function LogsPage() {
                       </td>
                       <td className="px-4 py-2">
                         {l.employees?.name ?? (
-                          <span className="text-xs italic text-muted-foreground">
-                            พนักงานถูกลบ
-                          </span>
+                          <span className="text-xs italic text-muted-foreground">พนักงานถูกลบ</span>
                         )}
                       </td>
 
@@ -392,9 +371,7 @@ function LogsPage() {
                         {hasNote ? (
                           <div className="flex items-center gap-2 text-xs">
                             {l.note && <FileText className="h-4 w-4 text-secondary" />}
-                            {l.note_image_url && (
-                              <ImageIcon className="h-4 w-4 text-secondary" />
-                            )}
+                            {l.note_image_url && <ImageIcon className="h-4 w-4 text-secondary" />}
                             <span className="max-w-[200px] truncate text-muted-foreground">
                               {l.note ?? "(มีรูปภาพ)"}
                             </span>
@@ -421,23 +398,15 @@ function LogsPage() {
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <Info label="Job" value={selected.job_id} mono />
-                <Info
-                  label="เวลา"
-                  value={new Date(selected.created_at).toLocaleString("th-TH")}
-                />
+                <Info label="เวลา" value={new Date(selected.created_at).toLocaleString("th-TH")} />
                 <Info label="พนักงาน" value={selected.employees?.name ?? "พนักงานถูกลบ"} />
                 <Info label="ขั้นตอน" value={selected.steps?.step_name ?? "—"} />
                 <Info label="หมวดหมู่" value={selected.categories?.name ?? "—"} />
-                <Info
-                  label="การกระทำ"
-                  value={selected.action === "finish" ? "เสร็จ" : "เริ่ม"}
-                />
+                <Info label="การกระทำ" value={selected.action === "finish" ? "เสร็จ" : "เริ่ม"} />
               </div>
               {selected.note && (
                 <div>
-                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
-                    หมายเหตุ
-                  </div>
+                  <div className="mb-1 text-xs font-semibold text-muted-foreground">หมายเหตุ</div>
                   <p className="whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-3">
                     {selected.note}
                   </p>
@@ -445,9 +414,7 @@ function LogsPage() {
               )}
               {selected.note_image_url && (
                 <div>
-                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
-                    รูปภาพแนบ
-                  </div>
+                  <div className="mb-1 text-xs font-semibold text-muted-foreground">รูปภาพแนบ</div>
                   <a
                     href={signedSrc(selected.note_image_url)}
                     target="_blank"
@@ -458,7 +425,6 @@ function LogsPage() {
                       src={signedSrc(selected.note_image_url)}
                       alt="note"
                       className="max-h-96 w-full object-contain bg-muted"
-
                     />
                   </a>
                 </div>
@@ -475,9 +441,7 @@ function Info({ label, value, mono }: { label: string; value: string; mono?: boo
   return (
     <div>
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={mono ? "font-mono font-semibold text-primary" : "font-medium"}>
-        {value}
-      </div>
+      <div className={mono ? "font-mono font-semibold text-primary" : "font-medium"}>{value}</div>
     </div>
   );
 }

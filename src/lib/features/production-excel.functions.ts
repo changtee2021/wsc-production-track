@@ -35,10 +35,7 @@ function pairLogs(logs: LogRow[]) {
     actual_seconds: number;
   }[] = [];
   for (const arr of byKey.values()) {
-    arr.sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
+    arr.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     let pendingStart: LogRow | null = null;
     for (const l of arr) {
       if (l.action === "start") pendingStart = l;
@@ -53,8 +50,7 @@ function pairLogs(logs: LogRow[]) {
           actual_seconds: Math.max(
             1,
             Math.round(
-              (new Date(l.created_at).getTime() -
-                new Date(pendingStart.created_at).getTime()) /
+              (new Date(l.created_at).getTime() - new Date(pendingStart.created_at).getTime()) /
                 1000,
             ),
           ),
@@ -140,16 +136,13 @@ export const adminGetProductionExcel = createServerFn({ method: "POST" })
       if (!byJob.has(p.job_id)) byJob.set(p.job_id, []);
       byJob.get(p.job_id)!.push(step);
       if (!jobCat.has(p.job_id)) {
-        jobCat.set(p.job_id, p.category_id ? catName.get(p.category_id) ?? null : null);
+        jobCat.set(p.job_id, p.category_id ? (catName.get(p.category_id) ?? null) : null);
       }
     }
 
     const jobs: ExcelJob[] = [];
     for (const [job_id, steps] of byJob) {
-      steps.sort(
-        (a, b) =>
-          new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
-      );
+      steps.sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime());
       jobs.push({
         job_id,
         category_name: jobCat.get(job_id) ?? null,
@@ -159,10 +152,7 @@ export const adminGetProductionExcel = createServerFn({ method: "POST" })
         steps,
       });
     }
-    jobs.sort(
-      (a, b) =>
-        new Date(b.started_at).getTime() - new Date(a.started_at).getTime(),
-    );
+    jobs.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
 
     const max_steps = jobs.reduce((m, j) => Math.max(m, j.steps.length), 0);
 
@@ -178,10 +168,7 @@ export const adminGetProductionExcel = createServerFn({ method: "POST" })
 
 const GATEWAY_BASE = "https://connector-gateway.lovable.dev/google_sheets/v4";
 
-async function sheetsFetch(
-  path: string,
-  init: RequestInit & { body?: string } = {},
-) {
+async function sheetsFetch(path: string, init: RequestInit & { body?: string } = {}) {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const connKey = process.env.GOOGLE_SHEETS_API_KEY;
   if (!lovableKey || !connKey) {
@@ -253,10 +240,10 @@ export const adminSyncProductionExcelToSheets = createServerFn({ method: "POST" 
     await ensureSheetExists(data.spreadsheet_id, sheet);
 
     if (data.mode === "replace") {
-      await sheetsFetch(
-        `/spreadsheets/${data.spreadsheet_id}/values/${sheet}:clear`,
-        { method: "POST", body: JSON.stringify({}) },
-      );
+      await sheetsFetch(`/spreadsheets/${data.spreadsheet_id}/values/${sheet}:clear`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
       await sheetsFetch(
         `/spreadsheets/${data.spreadsheet_id}/values/${range}?valueInputOption=USER_ENTERED`,
         {
@@ -289,4 +276,3 @@ export const adminSyncProductionExcelToSheets = createServerFn({ method: "POST" 
 
     return { ok: true, written: data.rows.length };
   });
-

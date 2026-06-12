@@ -2,6 +2,8 @@
 
 **Do not change production env during business hours.**
 
+Prep (safe, no live DB switch): [WSC-CUTOVER-PREP.md](./WSC-CUTOVER-PREP.md) · `wp-group-erp/scripts/wsc-prep-status.ps1`
+
 ## When ready
 
 0. **Redeploy** current branch to Lovable (or Vercel) so `/api/public/health` exists — older deploys return 404 SPA.

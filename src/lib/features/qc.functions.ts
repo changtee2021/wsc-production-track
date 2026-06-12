@@ -55,7 +55,9 @@ const mediaItem = z.object({
 
 // Checklist for a category (active items, ordered).
 export const qcFetchChecklist = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ token: tokenStr, category_id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ token: tokenStr, category_id: z.string().uuid() }).parse(d),
+  )
   .handler(async ({ data }) => {
     assertQc(data.token);
     const { data: rows, error } = await supabaseAdmin
@@ -101,7 +103,8 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
     assertQc(data.token);
     const passCount = data.items.filter((i) => i.is_passed).length;
     const total = data.items.length;
-    const computedOverall = data.overall_result ?? (total > 0 ? (passCount === total ? "pass" : "fail") : null);
+    const computedOverall =
+      data.overall_result ?? (total > 0 ? (passCount === total ? "pass" : "fail") : null);
     const summary = total > 0 ? `ผ่าน ${passCount}/${total} ข้อ` : null;
 
     const { data: inserted, error } = await supabaseAdmin
@@ -206,7 +209,8 @@ function detectImage(b: Uint8Array): Detected | null {
 function detectVideo(b: Uint8Array): Detected | null {
   if (b.length < 12) return null;
   // WEBM/Matroska EBML: 1A 45 DF A3
-  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return { mime: "video/webm", ext: "webm" };
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3)
+    return { mime: "video/webm", ext: "webm" };
   // ISO base media (MP4/MOV/M4V): bytes 4-7 == "ftyp"
   if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
     const brand = String.fromCharCode(b[8], b[9], b[10], b[11]);
@@ -241,7 +245,9 @@ export const qcUploadMedia = createServerFn({ method: "POST" })
     const detected = data.kind === "image" ? detectImage(bytes) : detectVideo(bytes);
     if (!detected)
       throw new Error(
-        data.kind === "image" ? "รองรับเฉพาะรูปภาพ JPG, PNG, WEBP, GIF" : "รองรับเฉพาะวิดีโอ MP4, WEBM, MOV, M4V",
+        data.kind === "image"
+          ? "รองรับเฉพาะรูปภาพ JPG, PNG, WEBP, GIF"
+          : "รองรับเฉพาะวิดีโอ MP4, WEBM, MOV, M4V",
       );
 
     const path = `${data.kind}/${crypto.randomUUID()}.${detected.ext}`;
@@ -251,6 +257,8 @@ export const qcUploadMedia = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     // Bucket is private — return the path (persisted) and a signed URL for
     // immediate preview in the QC UI.
-    const { data: signed } = await supabaseAdmin.storage.from("qc-media").createSignedUrl(path, 60 * 60);
+    const { data: signed } = await supabaseAdmin.storage
+      .from("qc-media")
+      .createSignedUrl(path, 60 * 60);
     return { path, previewUrl: signed?.signedUrl ?? "", type: data.kind };
   });

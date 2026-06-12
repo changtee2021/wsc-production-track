@@ -84,7 +84,9 @@ export function buildQcReportsCsv(reports: QcReportRow[]): string {
           it.remark ?? "",
           it.media?.length ?? 0,
           (it.media ?? []).map((m) => m.url).join(";"),
-        ].map(escapeCell).join(","),
+        ]
+          .map(escapeCell)
+          .join(","),
       );
     }
   }

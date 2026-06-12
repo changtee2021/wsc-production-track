@@ -22,10 +22,15 @@ function assertOfficeOrAdmin(token: string | undefined) {
 const submitInput = z.object({
   token: tokenStr,
   requester_employee_id: z.string().uuid(),
-  items: z.array(z.object({
-    asset_id: z.string().uuid(),
-    qty: z.number().int().min(1).max(9999),
-  })).min(1).max(50),
+  items: z
+    .array(
+      z.object({
+        asset_id: z.string().uuid(),
+        qty: z.number().int().min(1).max(9999),
+      }),
+    )
+    .min(1)
+    .max(50),
   note: z.string().trim().max(500).optional(),
 });
 
@@ -81,8 +86,7 @@ export const officeSubmitRequest = createServerFn({ method: "POST" })
         qty: it.qty,
       };
     });
-    const { error: iErr } = await supabaseAdmin
-      .from("office_request_items").insert(itemsRows);
+    const { error: iErr } = await supabaseAdmin.from("office_request_items").insert(itemsRows);
     if (iErr) {
       // rollback header
       await supabaseAdmin.from("office_requests").delete().eq("id", req.id);
@@ -95,11 +99,13 @@ export const officeSubmitRequest = createServerFn({ method: "POST" })
 // ============ ADMIN: LIST ============
 export const adminListOfficeRequests = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      status: z.enum(["pending", "approved", "rejected", "cancelled", "all"]).default("pending"),
-      limit: z.number().int().min(1).max(500).default(100),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        status: z.enum(["pending", "approved", "rejected", "cancelled", "all"]).default("pending"),
+        limit: z.number().int().min(1).max(500).default(100),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
@@ -113,8 +119,12 @@ export const adminListOfficeRequests = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const ids = (reqs ?? []).map((r) => r.id);
     let items: Array<{
-      id: string; request_id: string; asset_id: string;
-      asset_name_snapshot: string; unit_price_snapshot: number; qty: number;
+      id: string;
+      request_id: string;
+      asset_id: string;
+      asset_name_snapshot: string;
+      unit_price_snapshot: number;
+      qty: number;
     }> = [];
     if (ids.length) {
       const { data: its } = await supabaseAdmin
@@ -132,9 +142,7 @@ export const adminListOfficeRequests = createServerFn({ method: "POST" })
     return {
       rows: (reqs ?? []).map((r) => {
         const its = byReq.get(r.id) ?? [];
-        const total = its.reduce(
-          (s, x) => s + Number(x.unit_price_snapshot) * x.qty, 0,
-        );
+        const total = its.reduce((s, x) => s + Number(x.unit_price_snapshot) * x.qty, 0);
         return { ...r, items: its, total_value: Math.round(total * 100) / 100 };
       }),
     };
@@ -143,33 +151,45 @@ export const adminListOfficeRequests = createServerFn({ method: "POST" })
 // ============ ADMIN: APPROVE ============
 export const adminApproveOfficeRequest = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      id: z.string().uuid(),
-      approver_employee_id: z.string().uuid(),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        id: z.string().uuid(),
+        approver_employee_id: z.string().uuid(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
 
     const { data: req, error: rErr } = await supabaseAdmin
-      .from("office_requests").select("*").eq("id", data.id).single();
+      .from("office_requests")
+      .select("*")
+      .eq("id", data.id)
+      .single();
     if (rErr || !req) throw new Error("ไม่พบคำขอ");
     if (req.status !== "pending") throw new Error("คำขอถูกดำเนินการแล้ว");
 
     const { data: approver, error: apErr } = await supabaseAdmin
-      .from("office_employees").select("id, name, active").eq("id", data.approver_employee_id).single();
+      .from("office_employees")
+      .select("id, name, active")
+      .eq("id", data.approver_employee_id)
+      .single();
     if (apErr || !approver) throw new Error("ไม่พบพนักงานผู้อนุมัติ");
 
     const { data: items, error: iErr } = await supabaseAdmin
-      .from("office_request_items").select("*").eq("request_id", data.id);
+      .from("office_request_items")
+      .select("*")
+      .eq("request_id", data.id);
     if (iErr) throw new Error(iErr.message);
     if (!items || items.length === 0) throw new Error("คำขอนี้ไม่มีรายการ");
 
     // re-check stock
     const ids = Array.from(new Set(items.map((i) => i.asset_id)));
     const { data: assets, error: aErr } = await supabaseAdmin
-      .from("office_assets").select("id, name, stock_qty").in("id", ids);
+      .from("office_assets")
+      .select("id, name, stock_qty")
+      .in("id", ids);
     if (aErr) throw new Error(aErr.message);
     const stockMap = new Map((assets ?? []).map((a) => [a.id, a]));
     // aggregate needed
@@ -178,7 +198,8 @@ export const adminApproveOfficeRequest = createServerFn({ method: "POST" })
     for (const [aid, q] of need.entries()) {
       const a = stockMap.get(aid);
       if (!a) throw new Error("ไม่พบสินค้า");
-      if ((a.stock_qty ?? 0) < q) throw new Error(`สต๊อกไม่พอ: ${a.name} (เหลือ ${a.stock_qty}, ต้องการ ${q})`);
+      if ((a.stock_qty ?? 0) < q)
+        throw new Error(`สต๊อกไม่พอ: ${a.name} (เหลือ ${a.stock_qty}, ต้องการ ${q})`);
     }
 
     // deduct stock + log movements
@@ -186,7 +207,9 @@ export const adminApproveOfficeRequest = createServerFn({ method: "POST" })
       const a = stockMap.get(aid)!;
       const newQty = (a.stock_qty ?? 0) - q;
       const { error: uErr } = await supabaseAdmin
-        .from("office_assets").update({ stock_qty: newQty }).eq("id", aid);
+        .from("office_assets")
+        .update({ stock_qty: newQty })
+        .eq("id", aid);
       if (uErr) throw new Error(uErr.message);
     }
 
@@ -198,8 +221,7 @@ export const adminApproveOfficeRequest = createServerFn({ method: "POST" })
       unit_price_snapshot: Number(it.unit_price_snapshot ?? 0),
       note: `เบิกตามคำขอ ${req.req_no}`,
     }));
-    const { error: mErr } = await supabaseAdmin
-      .from("office_stock_movements").insert(movements);
+    const { error: mErr } = await supabaseAdmin.from("office_stock_movements").insert(movements);
     if (mErr) throw new Error(mErr.message);
 
     const { error: upErr } = await supabaseAdmin
@@ -219,24 +241,32 @@ export const adminApproveOfficeRequest = createServerFn({ method: "POST" })
 // ============ ADMIN: REJECT ============
 export const adminRejectOfficeRequest = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      id: z.string().uuid(),
-      approver_employee_id: z.string().uuid().optional(),
-      reason: z.string().trim().max(300).optional(),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        id: z.string().uuid(),
+        approver_employee_id: z.string().uuid().optional(),
+        reason: z.string().trim().max(300).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     const { data: req } = await supabaseAdmin
-      .from("office_requests").select("status").eq("id", data.id).single();
+      .from("office_requests")
+      .select("status")
+      .eq("id", data.id)
+      .single();
     if (!req) throw new Error("ไม่พบคำขอ");
     if (req.status !== "pending") throw new Error("คำขอถูกดำเนินการแล้ว");
 
     let approverName: string | null = null;
     if (data.approver_employee_id) {
       const { data: ap } = await supabaseAdmin
-        .from("office_employees").select("name").eq("id", data.approver_employee_id).single();
+        .from("office_employees")
+        .select("name")
+        .eq("id", data.approver_employee_id)
+        .single();
       approverName = ap?.name ?? null;
     }
 
@@ -257,30 +287,36 @@ export const adminRejectOfficeRequest = createServerFn({ method: "POST" })
 // ============ ADMIN: RESTOCK ============
 export const adminOfficeRestock = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      asset_id: z.string().uuid(),
-      qty: z.number().int().min(1).max(99999),
-      note: z.string().trim().max(300).optional(),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        asset_id: z.string().uuid(),
+        qty: z.number().int().min(1).max(99999),
+        note: z.string().trim().max(300).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     const { data: a } = await supabaseAdmin
-      .from("office_assets").select("id, name, stock_qty, purchase_price").eq("id", data.asset_id).single();
+      .from("office_assets")
+      .select("id, name, stock_qty, purchase_price")
+      .eq("id", data.asset_id)
+      .single();
     if (!a) throw new Error("ไม่พบสินค้า");
     const newQty = (a.stock_qty ?? 0) + data.qty;
     const { error: uErr } = await supabaseAdmin
-      .from("office_assets").update({ stock_qty: newQty }).eq("id", data.asset_id);
+      .from("office_assets")
+      .update({ stock_qty: newQty })
+      .eq("id", data.asset_id);
     if (uErr) throw new Error(uErr.message);
-    const { error: mErr } = await supabaseAdmin
-      .from("office_stock_movements").insert({
-        asset_id: data.asset_id,
-        delta: data.qty,
-        reason: "restock",
-        unit_price_snapshot: Number(a.purchase_price ?? 0),
-        note: data.note ?? null,
-      });
+    const { error: mErr } = await supabaseAdmin.from("office_stock_movements").insert({
+      asset_id: data.asset_id,
+      delta: data.qty,
+      reason: "restock",
+      unit_price_snapshot: Number(a.purchase_price ?? 0),
+      note: data.note ?? null,
+    });
     if (mErr) throw new Error(mErr.message);
     return { ok: true, new_stock: newQty };
   });
@@ -295,15 +331,21 @@ export const adminOfficeStockDashboard = createServerFn({ method: "POST" })
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     const [pendings, lowStock, monthMoves, allIssueMoves] = await Promise.all([
-      supabaseAdmin.from("office_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      supabaseAdmin.from("office_assets")
+      supabaseAdmin
+        .from("office_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
+      supabaseAdmin
+        .from("office_assets")
         .select("id, code, name, stock_qty, min_qty, unit, image_url, category_id")
         .eq("active", true)
         .order("stock_qty"),
-      supabaseAdmin.from("office_stock_movements")
+      supabaseAdmin
+        .from("office_stock_movements")
         .select("delta, unit_price_snapshot, reason, asset_id, created_at")
         .gte("created_at", monthStart),
-      supabaseAdmin.from("office_stock_movements")
+      supabaseAdmin
+        .from("office_stock_movements")
         .select("delta, unit_price_snapshot, reason, asset_id")
         .eq("reason", "issue"),
     ]);
@@ -313,9 +355,7 @@ export const adminOfficeStockDashboard = createServerFn({ method: "POST" })
     if (monthMoves.error) throw new Error(monthMoves.error.message);
     if (allIssueMoves.error) throw new Error(allIssueMoves.error.message);
 
-    const lowList = (lowStock.data ?? []).filter(
-      (a) => (a.stock_qty ?? 0) <= (a.min_qty ?? 0),
-    );
+    const lowList = (lowStock.data ?? []).filter((a) => (a.stock_qty ?? 0) <= (a.min_qty ?? 0));
 
     // monthly spend = sum(|delta| * unit_price) for issues this month
     let monthSpend = 0;
@@ -334,11 +374,17 @@ export const adminOfficeStockDashboard = createServerFn({ method: "POST" })
       consumeByAsset.set(m.asset_id, (consumeByAsset.get(m.asset_id) ?? 0) + qty);
     }
     const topIds = Array.from(consumeByAsset.entries())
-      .sort((a, b) => b[1] - a[1]).slice(0, 10);
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
     let topConsumed: Array<{ id: string; name: string; code: string; qty: number }> = [];
     if (topIds.length) {
       const { data: ta } = await supabaseAdmin
-        .from("office_assets").select("id, name, code").in("id", topIds.map(([id]) => id));
+        .from("office_assets")
+        .select("id, name, code")
+        .in(
+          "id",
+          topIds.map(([id]) => id),
+        );
       const nameMap = new Map((ta ?? []).map((a) => [a.id, a]));
       topConsumed = topIds.map(([id, qty]) => {
         const a = nameMap.get(id);
@@ -359,10 +405,12 @@ export const adminOfficeStockDashboard = createServerFn({ method: "POST" })
 // ============ ADMIN: RECENT MOVEMENTS ============
 export const adminOfficeMovements = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      limit: z.number().int().min(1).max(500).default(50),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        limit: z.number().int().min(1).max(500).default(50),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
@@ -376,7 +424,9 @@ export const adminOfficeMovements = createServerFn({ method: "POST" })
     let names = new Map<string, { name: string; code: string }>();
     if (ids.length) {
       const { data: a } = await supabaseAdmin
-        .from("office_assets").select("id, name, code").in("id", ids);
+        .from("office_assets")
+        .select("id, name, code")
+        .in("id", ids);
       names = new Map((a ?? []).map((x) => [x.id, { name: x.name, code: x.code }]));
     }
     return {
@@ -412,10 +462,7 @@ export const adminOfficeBadgeCounts = createServerFn({ method: "POST" })
         .from("office_requests")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending"),
-      supabaseAdmin
-        .from("office_assets")
-        .select("id, stock_qty, min_qty")
-        .eq("active", true),
+      supabaseAdmin.from("office_assets").select("id, stock_qty, min_qty").eq("active", true),
     ]);
     if (pendingRes.error) throw new Error(pendingRes.error.message);
     if (lowRes.error) throw new Error(lowRes.error.message);

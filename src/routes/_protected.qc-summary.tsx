@@ -132,8 +132,13 @@ function QcSummaryPage() {
         <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
           <div>
             <Label>ช่วงการสรุป</Label>
-            <Select value={granularity} onValueChange={(v) => onChangeGranularity(v as "day" | "month")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={granularity}
+              onValueChange={(v) => onChangeGranularity(v as "day" | "month")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="day">รายวัน</SelectItem>
                 <SelectItem value="month">รายเดือน</SelectItem>
@@ -142,15 +147,27 @@ function QcSummaryPage() {
           </div>
           <div>
             <Label>จากวันที่</Label>
-            <Input type="date" value={from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+            <Input
+              type="date"
+              value={from}
+              onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+            />
           </div>
           <div>
             <Label>ถึงวันที่</Label>
-            <Input type="date" value={to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
+            <Input
+              type="date"
+              value={to}
+              onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+            />
           </div>
           <div className="md:col-span-2">
             <Button onClick={load} disabled={loading} className="w-full md:w-auto">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
               โหลดข้อมูล
             </Button>
           </div>
@@ -160,41 +177,70 @@ function QcSummaryPage() {
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">งาน QC ทั้งหมด</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">งาน QC ทั้งหมด</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totals.total.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground mt-1">อัตราผ่าน {passRate.toFixed(1)}%</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              อัตราผ่าน {passRate.toFixed(1)}%
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1 text-muted-foreground"><CheckCircle2 className="h-4 w-4 text-green-600" />ผ่าน</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-1 text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              ผ่าน
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">{totals.pass.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground mt-1">{pct(totals.pass, totals.total)}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {pct(totals.pass, totals.total)}
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1 text-muted-foreground"><XCircle className="h-4 w-4 text-red-600" />ไม่ผ่าน</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-1 text-muted-foreground">
+              <XCircle className="h-4 w-4 text-red-600" />
+              ไม่ผ่าน
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-red-600">{totals.fail.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground mt-1">{pct(totals.fail, totals.total)}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {pct(totals.fail, totals.total)}
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1 text-muted-foreground"><HelpCircle className="h-4 w-4" />ยังไม่ระบุผล</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-1 text-muted-foreground">
+              <HelpCircle className="h-4 w-4" />
+              ยังไม่ระบุผล
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totals.unknown.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground mt-1">{pct(totals.unknown, totals.total)}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {pct(totals.unknown, totals.total)}
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Trend bar chart */}
       <Card>
-        <CardHeader><CardTitle>แนวโน้ม{granularity === "day" ? "รายวัน" : "รายเดือน"}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>แนวโน้ม{granularity === "day" ? "รายวัน" : "รายเดือน"}</CardTitle>
+        </CardHeader>
         <CardContent className="h-[320px]">
           {buckets.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">ไม่มีข้อมูลในช่วงนี้</div>
+            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+              ไม่มีข้อมูลในช่วงนี้
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={buckets}>
@@ -215,15 +261,21 @@ function QcSummaryPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Pie */}
         <Card>
-          <CardHeader><CardTitle>สัดส่วนผลตรวจ</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>สัดส่วนผลตรวจ</CardTitle>
+          </CardHeader>
           <CardContent className="h-[320px]">
             {totals.total === 0 ? (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">ไม่มีข้อมูล</div>
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                ไม่มีข้อมูล
+              </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={110} label>
-                    {pieData.map((d) => (<Cell key={d.name} fill={d.color} />))}
+                    {pieData.map((d) => (
+                      <Cell key={d.name} fill={d.color} />
+                    ))}
                   </Pie>
                   <Tooltip />
                   <Legend />
@@ -235,10 +287,14 @@ function QcSummaryPage() {
 
         {/* By category */}
         <Card>
-          <CardHeader><CardTitle>แยกตามหมวด</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>แยกตามหมวด</CardTitle>
+          </CardHeader>
           <CardContent className="h-[320px]">
             {byCategory.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">ไม่มีข้อมูล</div>
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                ไม่มีข้อมูล
+              </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={byCategory} layout="vertical" margin={{ left: 20 }}>
@@ -259,7 +315,9 @@ function QcSummaryPage() {
 
       {/* Table */}
       <Card>
-        <CardHeader><CardTitle>ตารางสรุป</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>ตารางสรุป</CardTitle>
+        </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -274,7 +332,11 @@ function QcSummaryPage() {
             </TableHeader>
             <TableBody>
               {buckets.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">ไม่มีข้อมูล</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    ไม่มีข้อมูล
+                  </TableCell>
+                </TableRow>
               ) : (
                 buckets.map((b) => (
                   <TableRow key={b.key}>

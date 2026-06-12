@@ -1,7 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
-import { Factory, ShieldCheck, ScanLine, ClipboardCheck, MessageCircle, Package, Wrench, ShoppingCart, Boxes } from "lucide-react";
+import {
+  Factory,
+  ShieldCheck,
+  ScanLine,
+  ClipboardCheck,
+  MessageCircle,
+  Package,
+  Wrench,
+  ShoppingCart,
+  Boxes,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -21,8 +31,7 @@ export const Route = createFileRoute("/")({
       { title: "ยินดีต้อนรับ — WSC ProductionTrack" },
       {
         name: "description",
-        content:
-          "ระบบติดตามการผลิตในโรงงาน บันทึกเวลาเริ่ม–เสร็จงานด้วย QR code อย่างรวดเร็ว",
+        content: "ระบบติดตามการผลิตในโรงงาน บันทึกเวลาเริ่ม–เสร็จงานด้วย QR code อย่างรวดเร็ว",
       },
       { property: "og:title", content: "WSC ProductionTrack — ระบบติดตามการผลิต" },
       {
@@ -32,9 +41,7 @@ export const Route = createFileRoute("/")({
       },
       { property: "og:url", content: clientAppPublicPath("/") },
     ],
-    links: [
-      { rel: "canonical", href: clientAppPublicPath("/") },
-    ],
+    links: [{ rel: "canonical", href: clientAppPublicPath("/") }],
   }),
   component: WelcomePage,
 });
@@ -57,9 +64,7 @@ function WelcomePage() {
         .order("created_at", { ascending: true });
       const urls = (data ?? [])
         .map((r) => {
-          const { data: pub } = supabase.storage
-            .from("banners")
-            .getPublicUrl(r.image_path);
+          const { data: pub } = supabase.storage.from("banners").getPublicUrl(r.image_path);
           return pub.publicUrl;
         })
         .filter(Boolean);
@@ -85,15 +90,10 @@ function WelcomePage() {
       <AnnouncementBar />
       {/* ── Fullscreen banner carousel (tap to start) ── */}
       <section className="relative flex-1 w-full overflow-hidden bg-primary">
-
         <Carousel
           className="absolute inset-0 h-full w-full [&>div]:h-full"
           opts={{ loop: true, align: "start" }}
-          plugins={
-            slides.length > 1
-              ? [Autoplay({ delay: 5000, stopOnInteraction: false })]
-              : []
-          }
+          plugins={slides.length > 1 ? [Autoplay({ delay: 5000, stopOnInteraction: false })] : []}
           setApi={setApi}
         >
           <CarouselContent className="ml-0 h-full">
@@ -127,9 +127,7 @@ function WelcomePage() {
               <Factory className="h-5 w-5" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="font-bold tracking-tight drop-shadow">
-                WSC ProductionTrack
-              </span>
+              <span className="font-bold tracking-tight drop-shadow">WSC ProductionTrack</span>
               <AppVersion className="text-white/70 drop-shadow" />
             </div>
           </div>
@@ -202,9 +200,7 @@ function WelcomePage() {
                   onClick={() => api?.scrollTo(i)}
                   aria-label={`ไปที่แบนเนอร์ ${i + 1}`}
                   className={`h-1.5 rounded-full transition-all ${
-                    i === current
-                      ? "w-6 bg-white"
-                      : "w-1.5 bg-white/50 hover:bg-white/80"
+                    i === current ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"
                   }`}
                 />
               ))}

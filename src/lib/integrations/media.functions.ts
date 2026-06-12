@@ -9,10 +9,7 @@ import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 import { verifyQcToken } from "@/lib/auth/qc-token.server";
 import { verifyPackingToken } from "@/lib/auth/packing-token.server";
 import { verifyMaintenanceToken } from "@/lib/auth/maintenance-token.server";
-import {
-  parseStorageRef,
-  parseStorageRefWithDefault,
-} from "@/lib/features/storage-refs.server";
+import { parseStorageRef, parseStorageRefWithDefault } from "@/lib/features/storage-refs.server";
 
 const ALLOWED = ["qc-media", "log-notes", "packing-media", "maintenance-media"] as const;
 const SIGN_TTL = 60 * 60; // 1 hour
@@ -52,7 +49,6 @@ async function signRefs(
   }
   return out;
 }
-
 
 const refsSchema = z.array(z.string().min(1).max(2000)).max(2000);
 
@@ -103,9 +99,7 @@ export const packingSignMediaUrls = createServerFn({ method: "POST" })
   });
 
 export const maintenanceSignMediaUrls = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: z.string().min(1), refs: refsSchema }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: z.string().min(1), refs: refsSchema }).parse(d))
   .handler(async ({ data }) => {
     if (!verifyMaintenanceToken(data.token)) throw new Error("Unauthorized");
     const urlMap = await signRefs(data.refs, "maintenance-media", ["maintenance-media"]);

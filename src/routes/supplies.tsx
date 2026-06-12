@@ -8,16 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
-  issueOfficeSession, officeListAssets, officeListCategories,
+  issueOfficeSession,
+  officeListAssets,
+  officeListCategories,
 } from "@/lib/features/office-assets.functions";
-import {
-  getOfficeToken, setOfficeToken, isOfficeSession,
-} from "@/lib/auth/office-session";
+import { getOfficeToken, setOfficeToken, isOfficeSession } from "@/lib/auth/office-session";
 
 export const Route = createFileRoute("/supplies")({
   head: () => ({
@@ -30,12 +34,20 @@ export const Route = createFileRoute("/supplies")({
 });
 
 type Asset = {
-  id: string; code: string; name: string;
-  category_id: string | null; category_name: string | null;
-  brand: string | null; model: string | null; serial_no: string | null;
-  location: string | null; assignee: string | null;
-  image_url: string | null; note: string | null;
-  status: string; purchase_date: string | null;
+  id: string;
+  code: string;
+  name: string;
+  category_id: string | null;
+  category_name: string | null;
+  brand: string | null;
+  model: string | null;
+  serial_no: string | null;
+  location: string | null;
+  assignee: string | null;
+  image_url: string | null;
+  note: string | null;
+  status: string;
+  purchase_date: string | null;
   warranty_until: string | null;
 };
 
@@ -43,9 +55,15 @@ function SuppliesPage() {
   const issue = useServerFn(issueOfficeSession);
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    if (isOfficeSession()) { setReady(true); return; }
+    if (isOfficeSession()) {
+      setReady(true);
+      return;
+    }
     issue({ data: {} })
-      .then((r) => { setOfficeToken(r.token); setReady(true); })
+      .then((r) => {
+        setOfficeToken(r.token);
+        setReady(true);
+      })
       .catch((e) => toast.error(e instanceof Error ? e.message : "เข้าระบบไม่สำเร็จ"));
   }, [issue]);
   if (!ready) {
@@ -60,10 +78,16 @@ function SuppliesPage() {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  in_use: "ใช้งานอยู่", repair: "ซ่อม", retired: "ปลดระวาง", lost: "สูญหาย",
+  in_use: "ใช้งานอยู่",
+  repair: "ซ่อม",
+  retired: "ปลดระวาง",
+  lost: "สูญหาย",
 };
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  in_use: "default", repair: "secondary", retired: "outline", lost: "destructive",
+  in_use: "default",
+  repair: "secondary",
+  retired: "outline",
+  lost: "destructive",
 };
 
 function SuppliesBrowse() {
@@ -77,10 +101,7 @@ function SuppliesBrowse() {
 
   useEffect(() => {
     const token = getOfficeToken() ?? "";
-    Promise.all([
-      list({ data: { token } }),
-      listCats({ data: { token } }),
-    ])
+    Promise.all([list({ data: { token } }), listCats({ data: { token } })])
       .then(([a, c]) => {
         setRows(a.rows as unknown as Asset[]);
         setCats(c.rows.map((r) => ({ id: r.id, name: r.name })));
@@ -112,7 +133,9 @@ function SuppliesBrowse() {
       <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center gap-2 px-3 py-3">
           <Link to="/">
-            <Button size="icon" variant="ghost"><ArrowLeft className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
           </Link>
           <div className="flex-1">
             <h1 className="text-base font-bold sm:text-lg">สต๊อกอุปกรณ์ออฟฟิศ</h1>
@@ -130,11 +153,15 @@ function SuppliesBrowse() {
             />
           </div>
           <Select value={cat} onValueChange={setCat}>
-            <SelectTrigger className="sm:w-48"><SelectValue placeholder="ทุกหมวด" /></SelectTrigger>
+            <SelectTrigger className="sm:w-48">
+              <SelectValue placeholder="ทุกหมวด" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">ทุกหมวด</SelectItem>
               {cats.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -148,8 +175,7 @@ function SuppliesBrowse() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
-            <Boxes className="mx-auto mb-2 h-8 w-8 opacity-50" />
-            — ไม่พบรายการ —
+            <Boxes className="mx-auto mb-2 h-8 w-8 opacity-50" />— ไม่พบรายการ —
           </div>
         ) : (
           <div className="space-y-2">
@@ -173,13 +199,17 @@ function SuppliesBrowse() {
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="font-mono text-[11px] text-muted-foreground">{a.code}</span>
                       <span className="font-semibold leading-tight">{a.name}</span>
-                      <Badge variant={STATUS_VARIANT[a.status] ?? "outline"} className="text-[10px]">
+                      <Badge
+                        variant={STATUS_VARIANT[a.status] ?? "outline"}
+                        className="text-[10px]"
+                      >
                         {STATUS_LABEL[a.status] ?? a.status}
                       </Badge>
                     </div>
                     <div className="mt-0.5 text-xs text-muted-foreground">
                       {a.category_name ?? "— ไม่ระบุหมวด —"}
-                      {a.brand && ` · ${a.brand}`}{a.model && ` ${a.model}`}
+                      {a.brand && ` · ${a.brand}`}
+                      {a.model && ` ${a.model}`}
                     </div>
                     {(a.location || a.assignee) && (
                       <div className="mt-0.5 text-xs">
@@ -191,7 +221,9 @@ function SuppliesBrowse() {
                       <div className="text-xs text-muted-foreground">S/N: {a.serial_no}</div>
                     )}
                     {a.note && (
-                      <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{a.note}</div>
+                      <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        {a.note}
+                      </div>
                     )}
                   </div>
                 </CardContent>

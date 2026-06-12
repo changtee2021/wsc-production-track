@@ -109,16 +109,26 @@ async function resolveStaff(name: string, emp_code: string | null) {
 
   await Promise.all(
     DEPT_TABLES.map(async ({ dept, table, extra }) => {
-      const cols = extra ? `id, name, emp_code, avatar_url, ${extra}` : `id, name, emp_code, avatar_url`;
-      const q = (supabaseAdmin.from(table as never) as unknown as {
-        select: (s: string) => {
-          eq: (a: string, b: string) => {
-            is: (a: string, b: null) => Promise<{ data: Record<string, unknown>[] | null }>;
-            eq: (a: string, b: string) => Promise<{ data: Record<string, unknown>[] | null }>;
+      const cols = extra
+        ? `id, name, emp_code, avatar_url, ${extra}`
+        : `id, name, emp_code, avatar_url`;
+      const q = (
+        supabaseAdmin.from(table as never) as unknown as {
+          select: (s: string) => {
+            eq: (
+              a: string,
+              b: string,
+            ) => {
+              is: (a: string, b: null) => Promise<{ data: Record<string, unknown>[] | null }>;
+              eq: (a: string, b: string) => Promise<{ data: Record<string, unknown>[] | null }>;
+            };
           };
-        };
-      }).select(cols).eq("name", name);
-      const res = emp_code === null ? await q.is("emp_code", null) : await q.eq("emp_code", emp_code);
+        }
+      )
+        .select(cols)
+        .eq("name", name);
+      const res =
+        emp_code === null ? await q.is("emp_code", null) : await q.eq("emp_code", emp_code);
       const row = (res.data ?? [])[0];
       if (row) {
         found.departments.push(dept);
@@ -134,13 +144,15 @@ async function resolveStaff(name: string, emp_code: string | null) {
 
 export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      name: z.string().min(1).max(200),
-      emp_code: z.string().max(50).nullable(),
-      range: z.enum(["day", "week", "month"]).default("day"),
-      anchor: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        name: z.string().min(1).max(200),
+        emp_code: z.string().max(50).nullable(),
+        range: z.enum(["day", "week", "month"]).default("day"),
+        anchor: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
@@ -176,10 +188,13 @@ export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" 
           .from("production_logs")
           .select("id, job_id, employee_id, step_id, category_id, action, created_at")
           .eq("employee_id", staff.ids.production)
-          .gte("created_at", startISO).lte("created_at", endISO)
+          .gte("created_at", startISO)
+          .lte("created_at", endISO)
           .order("created_at", { ascending: true }),
-        supabaseAdmin.from("production_standards")
-          .select("step_id, category_id, target_seconds, red_threshold").eq("active", true),
+        supabaseAdmin
+          .from("production_standards")
+          .select("step_id, category_id, target_seconds, red_threshold")
+          .eq("active", true),
         supabaseAdmin.from("steps").select("id, step_name"),
         supabaseAdmin.from("categories").select("id, name"),
       ]);
@@ -199,22 +214,24 @@ export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" 
       const catName = new Map((catsRes.data ?? []).map((c) => [c.id, c.name]));
 
       const pairs = pairLogs((logsRes.data ?? []) as LogRow[]);
-      const rows: ProdRow[] = pairs.map((p) => {
-        const std = lookup(p.step_id, p.category_id);
-        return {
-          job_id: p.job_id,
-          step_id: p.step_id,
-          category_id: p.category_id,
-          step_name: stepName.get(p.step_id) ?? "—",
-          category_name: p.category_id ? catName.get(p.category_id) ?? null : null,
-          started_at: p.started_at,
-          finished_at: p.finished_at,
-          actual_seconds: p.actual_seconds,
-          target_seconds: std?.target_seconds ?? null,
-          red_threshold: std?.red_threshold ?? null,
-          exceeded: std != null && p.actual_seconds > std.target_seconds,
-        };
-      }).sort((a, b) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
+      const rows: ProdRow[] = pairs
+        .map((p) => {
+          const std = lookup(p.step_id, p.category_id);
+          return {
+            job_id: p.job_id,
+            step_id: p.step_id,
+            category_id: p.category_id,
+            step_name: stepName.get(p.step_id) ?? "—",
+            category_name: p.category_id ? (catName.get(p.category_id) ?? null) : null,
+            started_at: p.started_at,
+            finished_at: p.finished_at,
+            actual_seconds: p.actual_seconds,
+            target_seconds: std?.target_seconds ?? null,
+            red_threshold: std?.red_threshold ?? null,
+            exceeded: std != null && p.actual_seconds > std.target_seconds,
+          };
+        })
+        .sort((a, b) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
 
       // per-(step,category) exceed counts vs. each row's own threshold
       const excByKey = new Map<string, { count: number; threshold: number }>();
@@ -238,67 +255,113 @@ export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" 
     }
 
     // ---- QC reports ----
-    let qc: { count: number; rows: Array<{ id: string; job_id: string; created_at: string; overall_result: string | null }> } =
-      { count: 0, rows: [] };
+    let qc: {
+      count: number;
+      rows: Array<{
+        id: string;
+        job_id: string;
+        created_at: string;
+        overall_result: string | null;
+      }>;
+    } = { count: 0, rows: [] };
     if (staff.ids.qc) {
-      const { data } = await supabaseAdmin.from("qc_reports")
+      const { data } = await supabaseAdmin
+        .from("qc_reports")
         .select("id, job_id, created_at, overall_result")
         .eq("qc_employee_id", staff.ids.qc)
-        .gte("created_at", startISO).lte("created_at", endISO)
-        .order("created_at", { ascending: false }).limit(50);
+        .gte("created_at", startISO)
+        .lte("created_at", endISO)
+        .order("created_at", { ascending: false })
+        .limit(50);
       qc = { count: (data ?? []).length, rows: data ?? [] };
     }
 
     // ---- Packing reports ----
     let packing: typeof qc = { count: 0, rows: [] };
     if (staff.ids.packing) {
-      const { data } = await supabaseAdmin.from("packing_reports")
+      const { data } = await supabaseAdmin
+        .from("packing_reports")
         .select("id, job_id, created_at, overall_result")
         .eq("packing_employee_id", staff.ids.packing)
-        .gte("created_at", startISO).lte("created_at", endISO)
-        .order("created_at", { ascending: false }).limit(50);
+        .gte("created_at", startISO)
+        .lte("created_at", endISO)
+        .order("created_at", { ascending: false })
+        .limit(50);
       packing = { count: (data ?? []).length, rows: data ?? [] };
     }
 
     // ---- Maintenance (assignee_name / reporter_name match) ----
-    let maintenance: { count: number; rows: Array<{ id: string; ticket_no: string; status: string; reported_at: string; problem_text: string }> } =
-      { count: 0, rows: [] };
+    let maintenance: {
+      count: number;
+      rows: Array<{
+        id: string;
+        ticket_no: string;
+        status: string;
+        reported_at: string;
+        problem_text: string;
+      }>;
+    } = { count: 0, rows: [] };
     {
-      const mtRes = await supabaseAdmin.from("maintenance_tickets")
+      const mtRes = await supabaseAdmin
+        .from("maintenance_tickets")
         .select("id, ticket_no, status, reported_at, problem_text, assignee_name, reporter_name")
         .or(`assignee_name.eq.${data.name},reporter_name.eq.${data.name}`)
-        .gte("reported_at", startISO).lte("reported_at", endISO)
-        .order("reported_at", { ascending: false }).limit(50);
+        .gte("reported_at", startISO)
+        .lte("reported_at", endISO)
+        .order("reported_at", { ascending: false })
+        .limit(50);
       const list = mtRes.data ?? [];
       maintenance = {
         count: list.length,
         rows: list.map((r) => ({
-          id: r.id, ticket_no: r.ticket_no, status: r.status, reported_at: r.reported_at, problem_text: r.problem_text,
+          id: r.id,
+          ticket_no: r.ticket_no,
+          status: r.status,
+          reported_at: r.reported_at,
+          problem_text: r.problem_text,
         })),
       };
     }
 
     // ---- Office requests ----
-    let office: { count: number; rows: Array<{ id: string; req_no: string; status: string; created_at: string }> } =
-      { count: 0, rows: [] };
+    let office: {
+      count: number;
+      rows: Array<{ id: string; req_no: string; status: string; created_at: string }>;
+    } = { count: 0, rows: [] };
     if (staff.ids.office) {
-      const { data } = await supabaseAdmin.from("office_requests")
+      const { data } = await supabaseAdmin
+        .from("office_requests")
         .select("id, req_no, status, created_at")
         .eq("requester_employee_id", staff.ids.office)
-        .gte("created_at", startISO).lte("created_at", endISO)
-        .order("created_at", { ascending: false }).limit(50);
+        .gte("created_at", startISO)
+        .lte("created_at", endISO)
+        .order("created_at", { ascending: false })
+        .limit(50);
       office = { count: (data ?? []).length, rows: data ?? [] };
     }
 
     // ---- Expenses (by requester name OR linked office employee id) ----
-    let expenses: { count: number; total: number; rows: Array<{ id: string; exp_no: string; status: string; total_amount: number; created_at: string; merchant_name: string | null }> } =
-      { count: 0, total: 0, rows: [] };
+    let expenses: {
+      count: number;
+      total: number;
+      rows: Array<{
+        id: string;
+        exp_no: string;
+        status: string;
+        total_amount: number;
+        created_at: string;
+        merchant_name: string | null;
+      }>;
+    } = { count: 0, total: 0, rows: [] };
     {
-      const q = supabaseAdmin.from("expenses")
+      const q = supabaseAdmin
+        .from("expenses")
         .select("id, exp_no, status, total_amount, created_at, merchant_name")
         .eq("requester_name", data.name)
-        .gte("created_at", startISO).lte("created_at", endISO)
-        .order("created_at", { ascending: false }).limit(50);
+        .gte("created_at", startISO)
+        .lte("created_at", endISO)
+        .order("created_at", { ascending: false })
+        .limit(50);
       const { data: rows } = await q;
       const list = rows ?? [];
       expenses = {

@@ -78,15 +78,10 @@ export const adminInsertSystemLog = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteSystemLog = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("system_logs")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("system_logs").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

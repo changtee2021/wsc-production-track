@@ -69,10 +69,7 @@ export function buildHistoryCsv(timeline: Timeline[]): string {
   return "\uFEFF" + lines.join("\r\n");
 }
 
-export function downloadHistoryCsv(
-  timeline: Timeline[],
-  filenameBase: string,
-) {
+export function downloadHistoryCsv(timeline: Timeline[], filenameBase: string) {
   const csv = buildHistoryCsv(timeline);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

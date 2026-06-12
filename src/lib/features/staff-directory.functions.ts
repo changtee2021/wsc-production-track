@@ -53,7 +53,9 @@ async function fetchDept(dept: Department): Promise<Row[]> {
   // Cast for tables not yet present in generated types.
   const { data, error } = await (
     supabaseAdmin.from(table as never) as unknown as {
-      select: (s: string) => { order: (c: string) => Promise<{ data: Row[] | null; error: { message: string } | null }> };
+      select: (s: string) => {
+        order: (c: string) => Promise<{ data: Row[] | null; error: { message: string } | null }>;
+      };
     }
   )
     .select(select)
@@ -131,7 +133,9 @@ export const adminToggleStaffDepartment = createServerFn({ method: "POST" })
     const table = DEPT_TABLE[data.department];
     const tbl = supabaseAdmin.from(table as never) as unknown as {
       insert: (row: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
-      delete: () => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
+      delete: () => {
+        eq: (a: string, b: string) => Promise<{ error: { message: string } | null }>;
+      };
     };
 
     if (data.enabled) {
@@ -186,7 +190,9 @@ export const adminUpdateStaffMeta = createServerFn({ method: "POST" })
         patch.nationality = data.nationality;
       }
       const tbl = supabaseAdmin.from(table as never) as unknown as {
-        update: (row: Record<string, unknown>) => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
+        update: (row: Record<string, unknown>) => {
+          eq: (a: string, b: string) => Promise<{ error: { message: string } | null }>;
+        };
       };
       const { error } = await tbl.update(patch).eq("id", t.id);
       if (error) throw new Error(`${t.department}: ${error.message}`);

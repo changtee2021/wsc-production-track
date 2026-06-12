@@ -13,8 +13,17 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { initialsOf } from "@/lib/utils/i18n";
 import {
-  ArrowLeft, Clock, CheckCircle2, AlertTriangle, Flame, Activity,
-  Wrench, Package, ShieldCheck, Receipt, Boxes,
+  ArrowLeft,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Flame,
+  Activity,
+  Wrench,
+  Package,
+  ShieldCheck,
+  Receipt,
+  Boxes,
 } from "lucide-react";
 import { AppVersion } from "@/components/AppVersion";
 
@@ -24,7 +33,11 @@ export const Route = createFileRoute("/_protected/employee-profile/$id")({
 });
 
 const DEPT_LABEL: Record<string, string> = {
-  production: "ผลิต", qc: "QC", packing: "แพ็ค", maintenance: "ซ่อม", office: "ออฟฟิศ",
+  production: "ผลิต",
+  qc: "QC",
+  packing: "แพ็ค",
+  maintenance: "ซ่อม",
+  office: "ออฟฟิศ",
 };
 const DEPT_COLOR: Record<string, string> = {
   production: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
@@ -59,23 +72,34 @@ function EmployeeProfilePage() {
   const [range, setRange] = useState<Range>("day");
   const [anchor, setAnchor] = useState(today);
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<Awaited<ReturnType<typeof adminGetEmployeeAggregateProfile>> | null>(null);
+  const [data, setData] = useState<Awaited<
+    ReturnType<typeof adminGetEmployeeAggregateProfile>
+  > | null>(null);
 
   const decoded = useMemo(() => decodeStaffKey(id), [id]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await getProfile({ data: {
-        token: requireToken(),
-        name: decoded.name, emp_code: decoded.emp_code,
-        range, anchor,
-      } });
+      const res = await getProfile({
+        data: {
+          token: requireToken(),
+          name: decoded.name,
+          emp_code: decoded.emp_code,
+          range,
+          anchor,
+        },
+      });
       setData(res);
-    } catch (err) { showError(err); }
-    finally { setLoading(false); }
+    } catch (err) {
+      showError(err);
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [id, range, anchor]);
+  useEffect(() => {
+    load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [id, range, anchor]);
 
   const emp = data?.employee;
   const prod = data?.production;
@@ -83,7 +107,12 @@ function EmployeeProfilePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/manage", search: {} })} className="mb-3 gap-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate({ to: "/manage", search: {} })}
+        className="mb-3 gap-1"
+      >
         <ArrowLeft className="h-4 w-4" /> กลับไปหน้าพนักงาน
       </Button>
 
@@ -99,7 +128,9 @@ function EmployeeProfilePage() {
               {emp?.emp_code && <span className="font-mono">{emp.emp_code}</span>}
               {emp?.nationality && <Badge variant="secondary">{emp.nationality}</Badge>}
               {(emp?.departments ?? []).map((d) => (
-                <Badge key={d} className={DEPT_COLOR[d]}>{DEPT_LABEL[d]}</Badge>
+                <Badge key={d} className={DEPT_COLOR[d]}>
+                  {DEPT_LABEL[d]}
+                </Badge>
               ))}
               {prod?.is_red && (
                 <Badge variant="destructive" className="gap-1">
@@ -111,66 +142,146 @@ function EmployeeProfilePage() {
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-1 rounded-lg border border-border bg-background p-1">
               {(["day", "week", "month"] as Range[]).map((r) => (
-                <button key={r}
+                <button
+                  key={r}
                   onClick={() => setRange(r)}
                   className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
-                    range === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                    range === r
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted"
                   }`}
-                >{r === "day" ? "วัน" : r === "week" ? "สัปดาห์" : "เดือน"}</button>
+                >
+                  {r === "day" ? "วัน" : r === "week" ? "สัปดาห์" : "เดือน"}
+                </button>
               ))}
             </div>
-            <Input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="h-9 w-44" />
+            <Input
+              type="date"
+              value={anchor}
+              onChange={(e) => setAnchor(e.target.value)}
+              className="h-9 w-44"
+            />
           </div>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard icon={CheckCircle2} color="text-emerald-600" label={`ชิ้น/รอบที่เสร็จ (${rangeLabel})`} value={String(prod?.finished_count ?? 0)} />
-          <StatCard icon={Clock} color="text-blue-600" label="เวลาทำงานรวม" value={fmtDuration(prod?.total_seconds ?? 0)} />
-          <StatCard icon={AlertTriangle} color={(prod?.exceeded_count ?? 0) > 0 ? "text-rose-600" : "text-muted-foreground"} label="เกินเวลามาตรฐาน" value={`${prod?.exceeded_count ?? 0} ครั้ง`} />
-          <StatCard icon={Activity} color={prod?.is_red ? "text-rose-600" : "text-emerald-600"} label="สถานะ" value={prod?.is_red ? "🔴 ไฟแดง" : "🟢 ปกติ"} />
+          <StatCard
+            icon={CheckCircle2}
+            color="text-emerald-600"
+            label={`ชิ้น/รอบที่เสร็จ (${rangeLabel})`}
+            value={String(prod?.finished_count ?? 0)}
+          />
+          <StatCard
+            icon={Clock}
+            color="text-blue-600"
+            label="เวลาทำงานรวม"
+            value={fmtDuration(prod?.total_seconds ?? 0)}
+          />
+          <StatCard
+            icon={AlertTriangle}
+            color={(prod?.exceeded_count ?? 0) > 0 ? "text-rose-600" : "text-muted-foreground"}
+            label="เกินเวลามาตรฐาน"
+            value={`${prod?.exceeded_count ?? 0} ครั้ง`}
+          />
+          <StatCard
+            icon={Activity}
+            color={prod?.is_red ? "text-rose-600" : "text-emerald-600"}
+            label="สถานะ"
+            value={prod?.is_red ? "🔴 ไฟแดง" : "🟢 ปกติ"}
+          />
         </div>
       </section>
 
       <Tabs defaultValue="production" className="mt-5">
         <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5">
-          <TabsTrigger value="production" className="gap-1"><Activity className="h-3.5 w-3.5" />ผลิต ({prod?.finished_count ?? 0})</TabsTrigger>
-          <TabsTrigger value="qc" className="gap-1"><ShieldCheck className="h-3.5 w-3.5" />QC ({data?.qc.count ?? 0})</TabsTrigger>
-          <TabsTrigger value="packing" className="gap-1"><Package className="h-3.5 w-3.5" />แพ็ค ({data?.packing.count ?? 0})</TabsTrigger>
-          <TabsTrigger value="maintenance" className="gap-1"><Wrench className="h-3.5 w-3.5" />ซ่อม ({data?.maintenance.count ?? 0})</TabsTrigger>
-          <TabsTrigger value="office" className="gap-1"><Boxes className="h-3.5 w-3.5" />ออฟฟิศ ({(data?.office.count ?? 0) + (data?.expenses.count ?? 0)})</TabsTrigger>
+          <TabsTrigger value="production" className="gap-1">
+            <Activity className="h-3.5 w-3.5" />
+            ผลิต ({prod?.finished_count ?? 0})
+          </TabsTrigger>
+          <TabsTrigger value="qc" className="gap-1">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            QC ({data?.qc.count ?? 0})
+          </TabsTrigger>
+          <TabsTrigger value="packing" className="gap-1">
+            <Package className="h-3.5 w-3.5" />
+            แพ็ค ({data?.packing.count ?? 0})
+          </TabsTrigger>
+          <TabsTrigger value="maintenance" className="gap-1">
+            <Wrench className="h-3.5 w-3.5" />
+            ซ่อม ({data?.maintenance.count ?? 0})
+          </TabsTrigger>
+          <TabsTrigger value="office" className="gap-1">
+            <Boxes className="h-3.5 w-3.5" />
+            ออฟฟิศ ({(data?.office.count ?? 0) + (data?.expenses.count ?? 0)})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="production">
           <Section title="ไทม์ไลน์การปฏิบัติงาน">
-            {loading ? <Loader /> : !prod || prod.rows.length === 0 ? (
+            {loading ? (
+              <Loader />
+            ) : !prod || prod.rows.length === 0 ? (
               <Empty>ไม่มีบันทึกการทำงานในช่วงเวลานี้</Empty>
             ) : (
               <ol className="space-y-3">
                 {prod.rows.map((r, idx) => {
                   const target = r.target_seconds;
-                  const pct = target ? Math.min(200, Math.round((r.actual_seconds / target) * 100)) : 100;
+                  const pct = target
+                    ? Math.min(200, Math.round((r.actual_seconds / target) * 100))
+                    : 100;
                   return (
-                    <li key={`${r.job_id}-${idx}`} className={`relative rounded-xl border p-4 ${r.exceeded ? "border-rose-300 bg-rose-50/50 dark:bg-rose-950/20" : "border-border bg-background"}`}>
+                    <li
+                      key={`${r.job_id}-${idx}`}
+                      className={`relative rounded-xl border p-4 ${r.exceeded ? "border-rose-300 bg-rose-50/50 dark:bg-rose-950/20" : "border-border bg-background"}`}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
-                          <div className="text-xs text-muted-foreground">{fmtTime(r.started_at)} → {fmtTime(r.finished_at)} · {new Date(r.finished_at).toLocaleDateString("th-TH")}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {fmtTime(r.started_at)} → {fmtTime(r.finished_at)} ·{" "}
+                            {new Date(r.finished_at).toLocaleDateString("th-TH")}
+                          </div>
                           <div className="mt-0.5 font-semibold">{r.step_name}</div>
-                          <div className="text-xs text-muted-foreground">Job: <span className="font-mono">{r.job_id}</span>{r.category_name && <> • {r.category_name}</>}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Job: <span className="font-mono">{r.job_id}</span>
+                            {r.category_name && <> • {r.category_name}</>}
+                          </div>
                         </div>
                         <div className="text-right">
-                          <div className={`text-lg font-bold ${r.exceeded ? "text-rose-600" : "text-emerald-600"}`}>{fmtDuration(r.actual_seconds)}</div>
-                          <div className="text-xs text-muted-foreground">มาตรฐาน: {target ? fmtDuration(target) : "—"}</div>
+                          <div
+                            className={`text-lg font-bold ${r.exceeded ? "text-rose-600" : "text-emerald-600"}`}
+                          >
+                            {fmtDuration(r.actual_seconds)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            มาตรฐาน: {target ? fmtDuration(target) : "—"}
+                          </div>
                         </div>
                       </div>
                       {target && (
                         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div className={`h-full ${r.exceeded ? "bg-rose-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                          <div
+                            className={`h-full ${r.exceeded ? "bg-rose-500" : "bg-emerald-500"}`}
+                            style={{ width: `${Math.min(100, pct)}%` }}
+                          />
                         </div>
                       )}
                       <div className="mt-1">
-                        {r.exceeded ? <span className="text-xs font-semibold text-rose-600">🔴 เกินเวลามาตรฐาน</span>
-                          : target ? <span className="text-xs font-semibold text-emerald-600">🟢 ผ่านเกณฑ์</span>
-                          : <span className="text-xs text-muted-foreground">— ยังไม่ตั้งค่ามาตรฐาน — <Link to="/production-setup" search={{}} className="underline">ตั้งค่า</Link></span>}
+                        {r.exceeded ? (
+                          <span className="text-xs font-semibold text-rose-600">
+                            🔴 เกินเวลามาตรฐาน
+                          </span>
+                        ) : target ? (
+                          <span className="text-xs font-semibold text-emerald-600">
+                            🟢 ผ่านเกณฑ์
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            — ยังไม่ตั้งค่ามาตรฐาน —{" "}
+                            <Link to="/production-setup" search={{}} className="underline">
+                              ตั้งค่า
+                            </Link>
+                          </span>
+                        )}
                       </div>
                     </li>
                   );
@@ -182,13 +293,24 @@ function EmployeeProfilePage() {
 
         <TabsContent value="qc">
           <Section title="รายงาน QC">
-            {loading ? <Loader /> : (data?.qc.rows.length ?? 0) === 0 ? <Empty>ไม่มีรายงาน QC</Empty> : (
+            {loading ? (
+              <Loader />
+            ) : (data?.qc.rows.length ?? 0) === 0 ? (
+              <Empty>ไม่มีรายงาน QC</Empty>
+            ) : (
               <ul className="space-y-2">
                 {data!.qc.rows.map((r) => (
-                  <li key={r.id} className="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-sm">
+                  <li
+                    key={r.id}
+                    className="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-sm"
+                  >
                     <div>
-                      <div className="font-semibold">Job: <span className="font-mono">{r.job_id}</span></div>
-                      <div className="text-xs text-muted-foreground">{fmtDateTime(r.created_at)}</div>
+                      <div className="font-semibold">
+                        Job: <span className="font-mono">{r.job_id}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {fmtDateTime(r.created_at)}
+                      </div>
                     </div>
                     {r.overall_result && (
                       <Badge variant={r.overall_result === "pass" ? "default" : "destructive"}>
@@ -204,13 +326,24 @@ function EmployeeProfilePage() {
 
         <TabsContent value="packing">
           <Section title="รายงานแพ็ค">
-            {loading ? <Loader /> : (data?.packing.rows.length ?? 0) === 0 ? <Empty>ไม่มีรายงานแพ็ค</Empty> : (
+            {loading ? (
+              <Loader />
+            ) : (data?.packing.rows.length ?? 0) === 0 ? (
+              <Empty>ไม่มีรายงานแพ็ค</Empty>
+            ) : (
               <ul className="space-y-2">
                 {data!.packing.rows.map((r) => (
-                  <li key={r.id} className="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-sm">
+                  <li
+                    key={r.id}
+                    className="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-sm"
+                  >
                     <div>
-                      <div className="font-semibold">Job: <span className="font-mono">{r.job_id}</span></div>
-                      <div className="text-xs text-muted-foreground">{fmtDateTime(r.created_at)}</div>
+                      <div className="font-semibold">
+                        Job: <span className="font-mono">{r.job_id}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {fmtDateTime(r.created_at)}
+                      </div>
                     </div>
                     {r.overall_result && (
                       <Badge variant={r.overall_result === "pass" ? "default" : "destructive"}>
@@ -226,15 +359,24 @@ function EmployeeProfilePage() {
 
         <TabsContent value="maintenance">
           <Section title="งานซ่อมบำรุง (Ticket)">
-            {loading ? <Loader /> : (data?.maintenance.rows.length ?? 0) === 0 ? <Empty>ไม่มี ticket</Empty> : (
+            {loading ? (
+              <Loader />
+            ) : (data?.maintenance.rows.length ?? 0) === 0 ? (
+              <Empty>ไม่มี ticket</Empty>
+            ) : (
               <ul className="space-y-2">
                 {data!.maintenance.rows.map((r) => (
-                  <li key={r.id} className="rounded-lg border border-border bg-background p-3 text-sm">
+                  <li
+                    key={r.id}
+                    className="rounded-lg border border-border bg-background p-3 text-sm"
+                  >
                     <div className="flex items-center justify-between">
                       <span className="font-mono font-semibold">{r.ticket_no}</span>
                       <Badge variant="secondary">{r.status}</Badge>
                     </div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">{fmtDateTime(r.reported_at)}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {fmtDateTime(r.reported_at)}
+                    </div>
                     <div className="mt-1 line-clamp-2 text-sm">{r.problem_text}</div>
                   </li>
                 ))}
@@ -246,13 +388,22 @@ function EmployeeProfilePage() {
         <TabsContent value="office">
           <div className="grid gap-4 md:grid-cols-2">
             <Section title="คำขอเบิกออฟฟิศ">
-              {loading ? <Loader /> : (data?.office.rows.length ?? 0) === 0 ? <Empty>ไม่มีคำขอ</Empty> : (
+              {loading ? (
+                <Loader />
+              ) : (data?.office.rows.length ?? 0) === 0 ? (
+                <Empty>ไม่มีคำขอ</Empty>
+              ) : (
                 <ul className="space-y-2">
                   {data!.office.rows.map((r) => (
-                    <li key={r.id} className="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-sm">
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-sm"
+                    >
                       <div>
                         <div className="font-mono font-semibold">{r.req_no}</div>
-                        <div className="text-xs text-muted-foreground">{fmtDateTime(r.created_at)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {fmtDateTime(r.created_at)}
+                        </div>
                       </div>
                       <Badge variant="secondary">{r.status}</Badge>
                     </li>
@@ -260,18 +411,36 @@ function EmployeeProfilePage() {
                 </ul>
               )}
             </Section>
-            <Section title={`ค่าใช้จ่าย (${data?.expenses.count ?? 0} รายการ · ${(data?.expenses.total ?? 0).toLocaleString("th-TH", { style: "currency", currency: "THB" })})`}>
-              {loading ? <Loader /> : (data?.expenses.rows.length ?? 0) === 0 ? <Empty>ไม่มีค่าใช้จ่าย</Empty> : (
+            <Section
+              title={`ค่าใช้จ่าย (${data?.expenses.count ?? 0} รายการ · ${(data?.expenses.total ?? 0).toLocaleString("th-TH", { style: "currency", currency: "THB" })})`}
+            >
+              {loading ? (
+                <Loader />
+              ) : (data?.expenses.rows.length ?? 0) === 0 ? (
+                <Empty>ไม่มีค่าใช้จ่าย</Empty>
+              ) : (
                 <ul className="space-y-2">
                   {data!.expenses.rows.map((r) => (
-                    <li key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background p-3 text-sm">
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background p-3 text-sm"
+                    >
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2"><Receipt className="h-3.5 w-3.5" /><span className="font-mono font-semibold">{r.exp_no}</span></div>
-                        <div className="truncate text-xs text-muted-foreground">{r.merchant_name ?? "—"} · {fmtDateTime(r.created_at)}</div>
+                        <div className="flex items-center gap-2">
+                          <Receipt className="h-3.5 w-3.5" />
+                          <span className="font-mono font-semibold">{r.exp_no}</span>
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {r.merchant_name ?? "—"} · {fmtDateTime(r.created_at)}
+                        </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold">฿ {Number(r.total_amount).toLocaleString("th-TH")}</div>
-                        <Badge variant="secondary" className="text-[10px]">{r.status}</Badge>
+                        <div className="font-bold">
+                          ฿ {Number(r.total_amount).toLocaleString("th-TH")}
+                        </div>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {r.status}
+                        </Badge>
                       </div>
                     </li>
                   ))}
@@ -282,15 +451,30 @@ function EmployeeProfilePage() {
         </TabsContent>
       </Tabs>
 
-      <div className="mt-6 flex justify-center"><AppVersion /></div>
+      <div className="mt-6 flex justify-center">
+        <AppVersion />
+      </div>
     </main>
   );
 }
 
-function StatCard({ icon: Icon, color, label, value }: { icon: typeof Clock; color: string; label: string; value: string }) {
+function StatCard({
+  icon: Icon,
+  color,
+  label,
+  value,
+}: {
+  icon: typeof Clock;
+  color: string;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-background p-3">
-      <div className="flex items-center gap-2"><Icon className={`h-4 w-4 ${color}`} /><span className="text-xs text-muted-foreground">{label}</span></div>
+      <div className="flex items-center gap-2">
+        <Icon className={`h-4 w-4 ${color}`} />
+        <span className="text-xs text-muted-foreground">{label}</span>
+      </div>
       <div className="mt-1 text-lg font-bold">{value}</div>
     </div>
   );
@@ -303,7 +487,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </section>
   );
 }
-function Loader() { return <div className="py-8 text-center text-sm text-muted-foreground">กำลังโหลด...</div>; }
+function Loader() {
+  return <div className="py-8 text-center text-sm text-muted-foreground">กำลังโหลด...</div>;
+}
 function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{children}</div>;
+  return (
+    <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+      {children}
+    </div>
+  );
 }

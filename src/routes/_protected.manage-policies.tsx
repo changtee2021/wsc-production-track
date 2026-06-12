@@ -136,9 +136,7 @@ function PolicyEditor({ policyKey }: { policyKey: Key }) {
           </Button>
         </div>
 
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          ชื่อเรื่อง
-        </label>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">ชื่อเรื่อง</label>
         <Input
           value={title}
           onChange={(e) => {

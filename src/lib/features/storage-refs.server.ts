@@ -5,8 +5,7 @@
 
 export type StorageRef = { bucket: string; path: string };
 
-const URL_RE =
-  /\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/([^?#]+)/;
+const URL_RE = /\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/([^?#]+)/;
 
 export function parseStorageRef(
   value: string,

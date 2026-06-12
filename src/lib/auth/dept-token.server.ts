@@ -33,7 +33,9 @@ export function createDeptTokenVerifier(opts: DeptTokenOptions) {
   }
 
   function sign(payload: string): string {
-    return createHmac("sha256", secret()).update(opts.prefix + payload).digest("hex");
+    return createHmac("sha256", secret())
+      .update(opts.prefix + payload)
+      .digest("hex");
   }
 
   function issue(): string {

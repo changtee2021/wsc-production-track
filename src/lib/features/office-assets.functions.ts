@@ -48,9 +48,7 @@ const categoryInput = z.object({
 });
 
 export const adminUpsertOfficeCategory = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, category: categoryInput }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, category: categoryInput }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     const c = data.category;
@@ -62,25 +60,30 @@ export const adminUpsertOfficeCategory = createServerFn({ method: "POST" })
     };
     if (c.id) {
       const { error } = await supabaseAdmin
-        .from("office_asset_categories").update(payload).eq("id", c.id);
+        .from("office_asset_categories")
+        .update(payload)
+        .eq("id", c.id);
       if (error) throw new Error(error.message);
       return { ok: true, id: c.id };
     } else {
       const { data: ins, error } = await supabaseAdmin
-        .from("office_asset_categories").insert(payload).select("id").single();
+        .from("office_asset_categories")
+        .insert(payload)
+        .select("id")
+        .single();
       if (error || !ins) throw new Error(error?.message || "บันทึกไม่สำเร็จ");
       return { ok: true, id: ins.id };
     }
   });
 
 export const adminDeleteOfficeCategory = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     const { error } = await supabaseAdmin
-      .from("office_asset_categories").delete().eq("id", data.id);
+      .from("office_asset_categories")
+      .delete()
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -92,23 +95,38 @@ export const adminListOfficeCategoriesAll = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabaseAdmin
       .from("office_asset_categories")
       .select("id, name, default_useful_life_months, sort_order, active")
-      .order("sort_order").order("name");
+      .order("sort_order")
+      .order("name");
     if (error) throw new Error(error.message);
     return { rows: rows ?? [] };
   });
 
 // ============ DEPRECIATION ============
 type AssetRow = {
-  id: string; code: string; name: string;
+  id: string;
+  code: string;
+  name: string;
   category_id: string | null;
-  brand: string | null; model: string | null; serial_no: string | null;
-  purchase_date: string | null; purchase_price: number | null;
-  salvage_value: number | string | null; useful_life_months: number | null;
-  warranty_until: string | null; location: string | null; assignee: string | null;
-  image_url: string | null; note: string | null; vendor: string | null;
-  status: string; active: boolean;
-  stock_qty: number; min_qty: number; unit: string;
-  created_at: string; updated_at: string;
+  brand: string | null;
+  model: string | null;
+  serial_no: string | null;
+  purchase_date: string | null;
+  purchase_price: number | null;
+  salvage_value: number | string | null;
+  useful_life_months: number | null;
+  warranty_until: string | null;
+  location: string | null;
+  assignee: string | null;
+  image_url: string | null;
+  note: string | null;
+  vendor: string | null;
+  status: string;
+  active: boolean;
+  stock_qty: number;
+  min_qty: number;
+  unit: string;
+  created_at: string;
+  updated_at: string;
 };
 
 function monthsBetween(from: Date, to: Date): number {
@@ -166,10 +184,12 @@ function round2(n: number): number {
 // ============ ASSETS — VIEW ============
 export const officeListAssets = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      includeInactive: z.boolean().optional(),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        includeInactive: z.boolean().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertOfficeOrAdmin(data.token);
@@ -198,19 +218,22 @@ export const officeListAssets = createServerFn({ method: "POST" })
   });
 
 export const officeGetAsset = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertOfficeOrAdmin(data.token);
     const { data: a, error } = await supabaseAdmin
-      .from("office_assets").select("*").eq("id", data.id).single();
+      .from("office_assets")
+      .select("*")
+      .eq("id", data.id)
+      .single();
     if (error || !a) throw new Error(error?.message || "ไม่พบสินทรัพย์");
     let cat: { name: string; default_useful_life_months: number } | null = null;
     if (a.category_id) {
       const { data: c } = await supabaseAdmin
         .from("office_asset_categories")
-        .select("name, default_useful_life_months").eq("id", a.category_id).single();
+        .select("name, default_useful_life_months")
+        .eq("id", a.category_id)
+        .single();
       cat = c ?? null;
     }
     const dep = calcDepreciation(a as AssetRow, cat?.default_useful_life_months ?? null);
@@ -243,9 +266,7 @@ const assetInput = z.object({
 });
 
 export const adminUpsertOfficeAsset = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, asset: assetInput }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, asset: assetInput }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     const a = data.asset;
@@ -272,26 +293,25 @@ export const adminUpsertOfficeAsset = createServerFn({ method: "POST" })
       unit: a.unit,
     };
     if (a.id) {
-      const { error } = await supabaseAdmin
-        .from("office_assets").update(payload).eq("id", a.id);
+      const { error } = await supabaseAdmin.from("office_assets").update(payload).eq("id", a.id);
       if (error) throw new Error(error.message);
       return { ok: true, id: a.id };
     } else {
       const { data: ins, error } = await supabaseAdmin
-        .from("office_assets").insert(payload).select("id").single();
+        .from("office_assets")
+        .insert(payload)
+        .select("id")
+        .single();
       if (error || !ins) throw new Error(error?.message || "บันทึกไม่สำเร็จ");
       return { ok: true, id: ins.id };
     }
   });
 
 export const adminDeleteOfficeAsset = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("office_assets").delete().eq("id", data.id);
+    const { error } = await supabaseAdmin.from("office_assets").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -303,21 +323,41 @@ export const adminOfficeSummary = createServerFn({ method: "POST" })
     assertAdmin(data.token);
     const [{ data: assets, error: aerr }, { data: cats, error: cerr }] = await Promise.all([
       supabaseAdmin.from("office_assets").select("*").eq("active", true),
-      supabaseAdmin.from("office_asset_categories")
+      supabaseAdmin
+        .from("office_asset_categories")
         .select("id, name, default_useful_life_months, sort_order"),
     ]);
     if (aerr) throw new Error(aerr.message);
     if (cerr) throw new Error(cerr.message);
     const catMap = new Map((cats ?? []).map((c) => [c.id, c]));
 
-    const byCategory = new Map<string, {
-      category_id: string | null; category_name: string;
-      count: number; cost: number; accumulated: number; book: number; fully: number;
-    }>();
-    const byYear = new Map<number, {
-      year: number; count: number; cost: number; accumulated: number; book: number;
-    }>();
-    let totalCount = 0, totalCost = 0, totalAcc = 0, totalBook = 0, totalFully = 0;
+    const byCategory = new Map<
+      string,
+      {
+        category_id: string | null;
+        category_name: string;
+        count: number;
+        cost: number;
+        accumulated: number;
+        book: number;
+        fully: number;
+      }
+    >();
+    const byYear = new Map<
+      number,
+      {
+        year: number;
+        count: number;
+        cost: number;
+        accumulated: number;
+        book: number;
+      }
+    >();
+    let totalCount = 0,
+      totalCost = 0,
+      totalAcc = 0,
+      totalBook = 0,
+      totalFully = 0;
 
     for (const raw of (assets ?? []) as AssetRow[]) {
       const cat = raw.category_id ? catMap.get(raw.category_id) : null;
@@ -327,8 +367,13 @@ export const adminOfficeSummary = createServerFn({ method: "POST" })
       const cKey = cat?.id ?? "__none__";
       const cName = cat?.name ?? "ไม่ระบุหมวด";
       const c = byCategory.get(cKey) ?? {
-        category_id: cat?.id ?? null, category_name: cName,
-        count: 0, cost: 0, accumulated: 0, book: 0, fully: 0,
+        category_id: cat?.id ?? null,
+        category_name: cName,
+        count: 0,
+        cost: 0,
+        accumulated: 0,
+        book: 0,
+        fully: 0,
       };
       c.count += 1;
       c.cost += price;
@@ -340,11 +385,16 @@ export const adminOfficeSummary = createServerFn({ method: "POST" })
       if (raw.purchase_date) {
         const yr = new Date(raw.purchase_date).getFullYear();
         const y = byYear.get(yr) ?? { year: yr, count: 0, cost: 0, accumulated: 0, book: 0 };
-        y.count += 1; y.cost += price; y.accumulated += dep.accumulated_dep; y.book += dep.book_value;
+        y.count += 1;
+        y.cost += price;
+        y.accumulated += dep.accumulated_dep;
+        y.book += dep.book_value;
         byYear.set(yr, y);
       }
 
-      totalCount += 1; totalCost += price; totalAcc += dep.accumulated_dep;
+      totalCount += 1;
+      totalCost += price;
+      totalAcc += dep.accumulated_dep;
       totalBook += dep.book_value;
       if (dep.fully_depreciated) totalFully += 1;
     }
@@ -357,7 +407,9 @@ export const adminOfficeSummary = createServerFn({ method: "POST" })
       })
       .filter(({ dep }) => dep.fully_depreciated)
       .map(({ raw, dep, cat }) => ({
-        id: raw.id, code: raw.code, name: raw.name,
+        id: raw.id,
+        code: raw.code,
+        name: raw.name,
         category_name: cat?.name ?? null,
         purchase_date: raw.purchase_date,
         purchase_price: Number(raw.purchase_price ?? 0),
@@ -372,18 +424,22 @@ export const adminOfficeSummary = createServerFn({ method: "POST" })
         book: round2(totalBook),
         fully: totalFully,
       },
-      byCategory: Array.from(byCategory.values()).map((r) => ({
-        ...r,
-        cost: round2(r.cost),
-        accumulated: round2(r.accumulated),
-        book: round2(r.book),
-      })).sort((a, b) => b.cost - a.cost),
-      byYear: Array.from(byYear.values()).map((r) => ({
-        ...r,
-        cost: round2(r.cost),
-        accumulated: round2(r.accumulated),
-        book: round2(r.book),
-      })).sort((a, b) => a.year - b.year),
+      byCategory: Array.from(byCategory.values())
+        .map((r) => ({
+          ...r,
+          cost: round2(r.cost),
+          accumulated: round2(r.accumulated),
+          book: round2(r.book),
+        }))
+        .sort((a, b) => b.cost - a.cost),
+      byYear: Array.from(byYear.values())
+        .map((r) => ({
+          ...r,
+          cost: round2(r.cost),
+          accumulated: round2(r.accumulated),
+          book: round2(r.book),
+        }))
+        .sort((a, b) => a.year - b.year),
       fullyDepreciatedList,
     };
   });
@@ -391,16 +447,19 @@ export const adminOfficeSummary = createServerFn({ method: "POST" })
 // ============ Storage upload — office-assets bucket (public) ============
 export const adminOfficeCreateUploadUrl = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: tokenStr,
-      ext: z.string().regex(/^[a-zA-Z0-9]{1,8}$/),
-    }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        ext: z.string().regex(/^[a-zA-Z0-9]{1,8}$/),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     const path = `${crypto.randomUUID()}.${data.ext.toLowerCase()}`;
     const { data: signed, error } = await supabaseAdmin.storage
-      .from("office-assets").createSignedUploadUrl(path);
+      .from("office-assets")
+      .createSignedUploadUrl(path);
     if (error || !signed) throw new Error(error?.message || "Could not sign upload");
     const { data: pub } = supabaseAdmin.storage.from("office-assets").getPublicUrl(path);
     return { path, token: signed.token, publicUrl: pub.publicUrl };

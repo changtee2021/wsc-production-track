@@ -53,11 +53,7 @@ function lookupStd(
   stepId: string,
   categoryId: string | null,
 ): StdEntry | null {
-  return (
-    map.get(`${stepId}|${categoryId ?? ""}`) ??
-    map.get(`${stepId}|`) ??
-    null
-  );
+  return map.get(`${stepId}|${categoryId ?? ""}`) ?? map.get(`${stepId}|`) ?? null;
 }
 
 function pairLogs(logs: LogRow[]) {
@@ -77,10 +73,7 @@ function pairLogs(logs: LogRow[]) {
     actual_seconds: number;
   }[] = [];
   for (const arr of byKey.values()) {
-    arr.sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
+    arr.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     let pendingStart: LogRow | null = null;
     for (const l of arr) {
       if (l.action === "start") pendingStart = l;
@@ -95,8 +88,7 @@ function pairLogs(logs: LogRow[]) {
           actual_seconds: Math.max(
             1,
             Math.round(
-              (new Date(l.created_at).getTime() -
-                new Date(pendingStart.created_at).getTime()) /
+              (new Date(l.created_at).getTime() - new Date(pendingStart.created_at).getTime()) /
                 1000,
             ),
           ),
@@ -150,12 +142,8 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
         .eq("id", data.employee_id)
         .maybeSingle(),
     ]);
-    const stepName = new Map(
-      (stepsRes.data ?? []).map((s) => [s.id, s.step_name]),
-    );
-    const catName = new Map(
-      (catsRes.data ?? []).map((c) => [c.id, c.name]),
-    );
+    const stepName = new Map((stepsRes.data ?? []).map((s) => [s.id, s.step_name]));
+    const catName = new Map((catsRes.data ?? []).map((c) => [c.id, c.name]));
 
     const pairs = pairLogs((logs ?? []) as LogRow[]);
     const rows = pairs
@@ -166,7 +154,7 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
           step_id: p.step_id,
           step_name: stepName.get(p.step_id) ?? "—",
           category_id: p.category_id,
-          category_name: p.category_id ? catName.get(p.category_id) ?? null : null,
+          category_name: p.category_id ? (catName.get(p.category_id) ?? null) : null,
           started_at: p.started_at,
           finished_at: p.finished_at,
           actual_seconds: p.actual_seconds,
@@ -175,11 +163,7 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
           exceeded: std != null && p.actual_seconds > std.target_seconds,
         };
       })
-      .sort(
-        (a, b) =>
-          new Date(b.finished_at).getTime() -
-          new Date(a.finished_at).getTime(),
-      );
+      .sort((a, b) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
 
     // per-(step,category) exceeded counts vs. each row's own red_threshold
     const excByKey = new Map<string, { count: number; threshold: number }>();
@@ -191,9 +175,7 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
       excByKey.set(k, cur);
     }
     const exceeded_count = rows.filter((r) => r.exceeded).length;
-    const is_red = Array.from(excByKey.values()).some(
-      (v) => v.count >= v.threshold,
-    );
+    const is_red = Array.from(excByKey.values()).some((v) => v.count >= v.threshold);
     const total_seconds = rows.reduce((s, r) => s + r.actual_seconds, 0);
 
     return {
@@ -232,9 +214,7 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
     ]);
     if (logsRes.error) throw new Error(logsRes.error.message);
 
-    const empMap = new Map(
-      (empsRes.data ?? []).map((e) => [e.id, e]),
-    );
+    const empMap = new Map((empsRes.data ?? []).map((e) => [e.id, e]));
 
     const logs = (logsRes.data ?? []) as LogRow[];
     const pairs = pairLogs(logs);
@@ -279,10 +259,7 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
       const k = `${l.job_id}|${l.step_id}|${l.employee_id ?? ""}`;
       if (finishedKeys.has(k)) continue;
       const emp = l.employee_id ? empMap.get(l.employee_id) : null;
-      const elapsed = Math.max(
-        1,
-        Math.round((now - new Date(l.created_at).getTime()) / 1000),
-      );
+      const elapsed = Math.max(1, Math.round((now - new Date(l.created_at).getTime()) / 1000));
       const std = lookupStd(stdMap, l.step_id, l.category_id);
       const excKey = `${l.employee_id ?? ""}|${l.step_id}|${l.category_id ?? ""}`;
       const exc = excByKey.get(excKey) ?? 0;
@@ -322,7 +299,10 @@ export const adminGetProductionHistory = createServerFn({ method: "POST" })
         token: tokenStr,
         range: rangeEnum,
         anchor: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        end: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
         category_id: z.string().uuid().nullable().optional(),
       })
       .parse(d),
@@ -401,7 +381,7 @@ export const adminGetProductionHistory = createServerFn({ method: "POST" })
           step_id: p.step_id,
           step_name: stepName.get(p.step_id) ?? "—",
           category_id: p.category_id,
-          category_name: p.category_id ? catName.get(p.category_id) ?? null : null,
+          category_name: p.category_id ? (catName.get(p.category_id) ?? null) : null,
           started_at: p.started_at,
           finished_at: p.finished_at,
           actual_seconds: p.actual_seconds,
@@ -409,10 +389,7 @@ export const adminGetProductionHistory = createServerFn({ method: "POST" })
           exceeded: std != null && p.actual_seconds > std.target_seconds,
         };
       })
-      .sort(
-        (a, b) =>
-          new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime(),
-      );
+      .sort((a, b) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
 
     // per-employee aggregates
     const byEmp = new Map<
@@ -474,11 +451,7 @@ export const adminGetProductionHistory = createServerFn({ method: "POST" })
         exceeded_by_day: a.exceeded_by_day,
         is_red: Array.from(a.excPerDay.values()).some((v) => v.count >= v.threshold),
       }))
-      .sort(
-        (a, b) =>
-          b.exceeded_count - a.exceeded_count ||
-          b.finished_count - a.finished_count,
-      );
+      .sort((a, b) => b.exceeded_count - a.exceeded_count || b.finished_count - a.finished_count);
 
     return {
       range: { type: data.range, anchor: data.anchor, start: startISO, end: endISO },
@@ -556,29 +529,22 @@ export const adminUpsertProductionStandard = createServerFn({ method: "POST" })
         .eq("id", existingId);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await supabaseAdmin
-        .from("production_standards")
-        .insert({
-          step_id: data.step_id,
-          category_id: data.category_id,
-          target_seconds: data.target_seconds,
-          red_threshold: data.red_threshold,
-        });
+      const { error } = await supabaseAdmin.from("production_standards").insert({
+        step_id: data.step_id,
+        category_id: data.category_id,
+        target_seconds: data.target_seconds,
+        red_threshold: data.red_threshold,
+      });
       if (error) throw new Error(error.message);
     }
     return { ok: true };
   });
 
 export const adminDeleteProductionStandard = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin
-      .from("production_standards")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("production_standards").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

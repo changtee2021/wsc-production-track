@@ -3,8 +3,20 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  ClipboardCheck, Trash2, ListChecks, ScanLine, Plus, Send, Pencil, X, Check,
-  Lock, ChevronDown, ChevronRight, ArrowLeft, Loader2,
+  ClipboardCheck,
+  Trash2,
+  ListChecks,
+  ScanLine,
+  Plus,
+  Send,
+  Pencil,
+  X,
+  Check,
+  Lock,
+  ChevronDown,
+  ChevronRight,
+  ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,21 +26,37 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BarcodeScannerDialog } from "@/components/stock/BarcodeScannerDialog";
 import {
-  issueStockSession, getOrCreateDraftBatch, addCountLine, updateCountLine,
-  deleteCountLine, listBatchLines, submitBatch, listMyBatches, listActiveEmployees,
-  type StockCountRow, type StockCountBatch,
+  issueStockSession,
+  getOrCreateDraftBatch,
+  addCountLine,
+  updateCountLine,
+  deleteCountLine,
+  listBatchLines,
+  submitBatch,
+  listMyBatches,
+  listActiveEmployees,
+  type StockCountRow,
+  type StockCountBatch,
 } from "@/lib/features/stock-count.functions";
-import {
-  isStockSession, setStockToken, getStockToken,
-} from "@/lib/auth/stock-session";
+import { isStockSession, setStockToken, getStockToken } from "@/lib/auth/stock-session";
 
 const LAST_EMP_KEY = "wsc_stock_last_emp";
 const UNLOCK_KEY = "wsc_stock_unlocked";
@@ -62,7 +90,11 @@ function StockCountPasscodeGate() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (code.trim() === PASSCODE) {
-      try { localStorage.setItem(UNLOCK_KEY, "1"); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(UNLOCK_KEY, "1");
+      } catch {
+        /* ignore */
+      }
       setUnlocked(true);
     } else {
       setErr("รหัสผ่านไม่ถูกต้อง");
@@ -87,7 +119,10 @@ function StockCountPasscodeGate() {
                 inputMode="text"
                 autoFocus
                 value={code}
-                onChange={(e) => { setCode(e.target.value); setErr(""); }}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setErr("");
+                }}
                 placeholder="••••••••"
                 className="h-12 text-base"
               />
@@ -112,8 +147,13 @@ function fmtNum(n: number) {
   return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 4 }).format(n);
 }
 function fmtDateTime(s: string) {
-  try { return new Intl.DateTimeFormat("th-TH", { dateStyle: "short", timeStyle: "short" }).format(new Date(s)); }
-  catch { return s; }
+  try {
+    return new Intl.DateTimeFormat("th-TH", { dateStyle: "short", timeStyle: "short" }).format(
+      new Date(s),
+    );
+  } catch {
+    return s;
+  }
 }
 
 function StockCountGate() {
@@ -121,9 +161,15 @@ function StockCountGate() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (isStockSession()) { setReady(true); return; }
+    if (isStockSession()) {
+      setReady(true);
+      return;
+    }
     issueFn({ data: {} })
-      .then((res) => { setStockToken(res.token); setReady(true); })
+      .then((res) => {
+        setStockToken(res.token);
+        setReady(true);
+      })
       .catch((err) => toast.error(err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ"));
   }, [issueFn]);
 
@@ -155,8 +201,11 @@ function StockCountWorkbench() {
     if (last) {
       try {
         const { code, name } = JSON.parse(last);
-        setEmpCode(code); setEmpName(name);
-      } catch { /* ignore */ }
+        setEmpCode(code);
+        setEmpName(name);
+      } catch {
+        /* ignore */
+      }
     }
   }, []);
 
@@ -199,7 +248,9 @@ function StockCountWorkbench() {
       addFn({ data: { token, batchId, ...vars } }),
     onSuccess: (row) => {
       toast.success(`เพิ่มแล้ว: ${(row as StockCountRow).item_code}`);
-      setSku(""); setCountedQty(""); setNote("");
+      setSku("");
+      setCountedQty("");
+      setNote("");
       qc.invalidateQueries({ queryKey: ["stock-batch-lines", batchId] });
       skuRef.current?.focus();
     },
@@ -209,7 +260,10 @@ function StockCountWorkbench() {
   const addLine = () => {
     if (!batchId) return;
     const code = sku.trim();
-    if (!code) { skuRef.current?.focus(); return toast.error("กรุณาสแกนหรือพิมพ์ SKU"); }
+    if (!code) {
+      skuRef.current?.focus();
+      return toast.error("กรุณาสแกนหรือพิมพ์ SKU");
+    }
     const qty = Number(countedQty);
     if (countedQty === "" || Number.isNaN(qty) || qty < 0)
       return toast.error("กรุณากรอกจำนวนที่นับได้ให้ถูกต้อง");
@@ -226,7 +280,8 @@ function StockCountWorkbench() {
     mutationFn: (vars: { id: string; countedQty: number; note: string }) =>
       updateFn({ data: { token, ...vars } }),
     onSuccess: () => {
-      toast.success("แก้ไขแล้ว"); setEditId("");
+      toast.success("แก้ไขแล้ว");
+      setEditId("");
       qc.invalidateQueries({ queryKey: ["stock-batch-lines", batchId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -243,7 +298,9 @@ function StockCountWorkbench() {
   });
 
   const startEdit = (r: StockCountRow) => {
-    setEditId(r.id); setEditQty(String(r.counted_qty)); setEditNote(r.note);
+    setEditId(r.id);
+    setEditQty(String(r.counted_qty));
+    setEditNote(r.note);
   };
   const saveEdit = () => {
     const q = Number(editQty);
@@ -263,7 +320,10 @@ function StockCountWorkbench() {
       qc.invalidateQueries({ queryKey: ["stock-batch-lines"] });
       qc.invalidateQueries({ queryKey: ["stock-my-batches", empCode] });
     },
-    onError: (e: Error) => { toast.error(e.message); setConfirmSubmit(false); },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      setConfirmSubmit(false);
+    },
   });
 
   // ===== history =====
@@ -302,11 +362,13 @@ function StockCountWorkbench() {
                 <SelectValue placeholder="เลือกพนักงาน" />
               </SelectTrigger>
               <SelectContent>
-                {emps.filter((e) => e.emp_code).map((e) => (
-                  <SelectItem key={e.id} value={e.emp_code ?? ""}>
-                    {e.name} ({e.emp_code})
-                  </SelectItem>
-                ))}
+                {emps
+                  .filter((e) => e.emp_code)
+                  .map((e) => (
+                    <SelectItem key={e.id} value={e.emp_code ?? ""}>
+                      {e.name} ({e.emp_code})
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </CardContent>
@@ -320,47 +382,87 @@ function StockCountWorkbench() {
                 <ScanLine className="h-5 w-5 text-primary" /> SKU สินค้า
               </span>
               {batch?.batch_no != null && (
-                <span className="text-sm font-normal text-muted-foreground">ชุด #{batch.batch_no}</span>
+                <span className="text-sm font-normal text-muted-foreground">
+                  ชุด #{batch.batch_no}
+                </span>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button type="button" size="lg" className="h-14 w-full text-base"
-              onClick={() => setScannerOpen(true)} disabled={!batchId}>
+            <Button
+              type="button"
+              size="lg"
+              className="h-14 w-full text-base"
+              onClick={() => setScannerOpen(true)}
+              disabled={!batchId}
+            >
               <ScanLine className="h-5 w-5" />
               <span className="ml-2">สแกน QR / บาร์โค้ด</span>
             </Button>
 
             <div className="flex gap-2">
-              <Input ref={skuRef} value={sku} onChange={(e) => setSku(e.target.value)}
+              <Input
+                ref={skuRef}
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    if (countedQty === "") qtyRef.current?.focus(); else addLine();
+                    if (countedQty === "") qtyRef.current?.focus();
+                    else addLine();
                   }
                 }}
-                placeholder="หรือพิมพ์ SKU" className="h-12 flex-1 text-base" />
-              <Button type="button" variant="outline" size="lg" className="h-12 w-12 shrink-0"
-                onClick={() => { if (!sku.trim()) return toast.error("กรุณาพิมพ์ SKU"); qtyRef.current?.focus(); }}>
+                placeholder="หรือพิมพ์ SKU"
+                className="h-12 flex-1 text-base"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="h-12 w-12 shrink-0"
+                onClick={() => {
+                  if (!sku.trim()) return toast.error("กรุณาพิมพ์ SKU");
+                  qtyRef.current?.focus();
+                }}
+              >
                 <Check className="h-5 w-5" />
               </Button>
             </div>
 
             <div className="space-y-1.5">
               <Label>จำนวนที่นับได้</Label>
-              <Input ref={qtyRef} type="number" inputMode="decimal" value={countedQty}
+              <Input
+                ref={qtyRef}
+                type="number"
+                inputMode="decimal"
+                value={countedQty}
                 onChange={(e) => setCountedQty(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLine(); } }}
-                placeholder="0" className="h-12 text-base" />
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addLine();
+                  }
+                }}
+                placeholder="0"
+                className="h-12 text-base"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>หมายเหตุ</Label>
-              <Input value={note} onChange={(e) => setNote(e.target.value)}
-                placeholder="(ไม่บังคับ)" className="h-12 text-base" />
+              <Input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="(ไม่บังคับ)"
+                className="h-12 text-base"
+              />
             </div>
 
-            <Button onClick={addLine} disabled={addMut.isPending || !batchId}
-              size="lg" className="h-12 w-full text-base">
+            <Button
+              onClick={addLine}
+              disabled={addMut.isPending || !batchId}
+              size="lg"
+              className="h-12 w-full text-base"
+            >
               <Plus className="h-5 w-5" />
               <span className="ml-2">เพิ่มเข้ารายการ</span>
             </Button>
@@ -373,7 +475,9 @@ function StockCountWorkbench() {
             <CardTitle className="flex items-center gap-1.5 text-base">
               <ListChecks className="h-4 w-4 text-primary" />
               รายการในชุดนี้
-              <Badge variant="secondary" className="ml-1">{lines.length}</Badge>
+              <Badge variant="secondary" className="ml-1">
+                {lines.length}
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -389,7 +493,9 @@ function StockCountWorkbench() {
                     {!editing && (
                       <div className="shrink-0 text-right">
                         <p className="text-xs text-muted-foreground">นับได้</p>
-                        <p className="text-lg font-bold leading-none text-foreground">{fmtNum(r.counted_qty)}</p>
+                        <p className="text-lg font-bold leading-none text-foreground">
+                          {fmtNum(r.counted_qty)}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -398,32 +504,57 @@ function StockCountWorkbench() {
                     <div className="mt-3 space-y-2">
                       <div className="space-y-1">
                         <Label className="text-xs">จำนวนที่นับได้</Label>
-                        <Input type="number" inputMode="decimal" className="h-11 text-base"
-                          value={editQty} onChange={(e) => setEditQty(e.target.value)} />
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          className="h-11 text-base"
+                          value={editQty}
+                          onChange={(e) => setEditQty(e.target.value)}
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">หมายเหตุ</Label>
-                        <Input className="h-11 text-base" value={editNote}
-                          onChange={(e) => setEditNote(e.target.value)} placeholder="(ไม่บังคับ)" />
+                        <Input
+                          className="h-11 text-base"
+                          value={editNote}
+                          onChange={(e) => setEditNote(e.target.value)}
+                          placeholder="(ไม่บังคับ)"
+                        />
                       </div>
                       <div className="flex gap-2">
-                        <Button className="h-11 flex-1" onClick={saveEdit} disabled={updateMut.isPending}>
-                          <Check className="h-4 w-4" /><span className="ml-1">บันทึก</span>
+                        <Button
+                          className="h-11 flex-1"
+                          onClick={saveEdit}
+                          disabled={updateMut.isPending}
+                        >
+                          <Check className="h-4 w-4" />
+                          <span className="ml-1">บันทึก</span>
                         </Button>
-                        <Button variant="outline" className="h-11 flex-1" onClick={() => setEditId("")}>
-                          <X className="h-4 w-4" /><span className="ml-1">ยกเลิก</span>
+                        <Button
+                          variant="outline"
+                          className="h-11 flex-1"
+                          onClick={() => setEditId("")}
+                        >
+                          <X className="h-4 w-4" />
+                          <span className="ml-1">ยกเลิก</span>
                         </Button>
                       </div>
                     </div>
                   ) : (
                     <div className="mt-2 flex items-center justify-between gap-2">
-                      <p className="min-w-0 truncate text-sm text-muted-foreground">{r.note || "—"}</p>
+                      <p className="min-w-0 truncate text-sm text-muted-foreground">
+                        {r.note || "—"}
+                      </p>
                       <div className="flex shrink-0 gap-1">
                         <Button size="icon" variant="ghost" onClick={() => startEdit(r)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button size="icon" variant="ghost" onClick={() => deleteMut.mutate(r.id)}
-                          disabled={deleteMut.isPending}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => deleteMut.mutate(r.id)}
+                          disabled={deleteMut.isPending}
+                        >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -460,15 +591,25 @@ function StockCountWorkbench() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 backdrop-blur">
         <div className="mx-auto flex max-w-md items-center gap-3">
           <span className="text-sm text-muted-foreground">{lines.length} รายการ</span>
-          <Button className="h-12 flex-1 text-base" onClick={() => setConfirmSubmit(true)}
-            disabled={submitMut.isPending || lines.length === 0}>
-            <Send className="h-5 w-5" /><span className="ml-2">ส่งรายการ</span>
+          <Button
+            className="h-12 flex-1 text-base"
+            onClick={() => setConfirmSubmit(true)}
+            disabled={submitMut.isPending || lines.length === 0}
+          >
+            <Send className="h-5 w-5" />
+            <span className="ml-2">ส่งรายการ</span>
           </Button>
         </div>
       </div>
 
-      <BarcodeScannerDialog open={scannerOpen} onOpenChange={setScannerOpen}
-        onDetected={(code) => { setSku(code); setTimeout(() => qtyRef.current?.focus(), 50); }} />
+      <BarcodeScannerDialog
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onDetected={(code) => {
+          setSku(code);
+          setTimeout(() => qtyRef.current?.focus(), 50);
+        }}
+      />
 
       <AlertDialog open={confirmSubmit} onOpenChange={setConfirmSubmit}>
         <AlertDialogContent>
@@ -500,8 +641,11 @@ function SubmittedBatchRow({ batch }: { batch: StockCountBatch }) {
 
   return (
     <div className="rounded-lg border">
-      <button type="button" className="flex w-full items-center gap-2 p-3 text-left"
-        onClick={() => setOpen((o) => !o)}>
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 p-3 text-left"
+        onClick={() => setOpen((o) => !o)}
+      >
         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         <span className="font-medium">ชุด #{batch.batch_no}</span>
         <Badge variant="outline" className="ml-1 gap-1">

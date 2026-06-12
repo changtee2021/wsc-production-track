@@ -5,7 +5,9 @@ import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 
 const BUCKETS = ["avatars", "step-images", "banners", "log-notes", "qc-media"] as const;
 
-async function bucketSize(bucket: string): Promise<{ name: string; size_bytes: number; file_count: number }> {
+async function bucketSize(
+  bucket: string,
+): Promise<{ name: string; size_bytes: number; file_count: number }> {
   let total = 0;
   let count = 0;
   // recursive walk
@@ -45,15 +47,25 @@ export const getStorageUsage = createServerFn({ method: "POST" })
     const { data: dbStats, error: dbErr } = await supabaseAdmin.rpc("get_db_usage_stats");
     if (dbErr) throw new Error(dbErr.message);
 
-    const buckets = await Promise.all(BUCKETS.map((b) => bucketSize(b).catch((e) => ({
-      name: b, size_bytes: 0, file_count: 0, error: e instanceof Error ? e.message : String(e),
-    }))));
+    const buckets = await Promise.all(
+      BUCKETS.map((b) =>
+        bucketSize(b).catch((e) => ({
+          name: b,
+          size_bytes: 0,
+          file_count: 0,
+          error: e instanceof Error ? e.message : String(e),
+        })),
+      ),
+    );
 
     const storageTotal = buckets.reduce((a, b) => a + b.size_bytes, 0);
 
     return {
       generated_at: new Date().toISOString(),
-      database: dbStats as { total_bytes: number; tables: Array<{ name: string; size_bytes: number; row_count: number }> },
+      database: dbStats as {
+        total_bytes: number;
+        tables: Array<{ name: string; size_bytes: number; row_count: number }>;
+      },
       storage: {
         total_bytes: storageTotal,
         buckets: buckets.sort((a, b) => b.size_bytes - a.size_bytes),

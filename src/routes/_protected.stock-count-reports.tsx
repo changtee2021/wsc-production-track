@@ -3,18 +3,23 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  adminListBatches, adminListBatchLines, adminReopenBatch,
-  type StockCountBatch, type StockCountRow,
+  adminListBatches,
+  adminListBatchLines,
+  adminReopenBatch,
+  type StockCountBatch,
+  type StockCountRow,
 } from "@/lib/features/stock-count.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -26,8 +31,11 @@ export const Route = createFileRoute("/_protected/stock-count-reports")({
 });
 
 function fmtDate(s: string) {
-  try { return new Date(s).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" }); }
-  catch { return s; }
+  try {
+    return new Date(s).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return s;
+  }
 }
 
 function StockReportsPage() {
@@ -48,20 +56,30 @@ function StockReportsPage() {
       const token = requireToken();
       const rows = await listFn({ data: { adminToken: token, status } });
       setBatches(rows as StockCountBatch[]);
-    } catch (e) { showError(e, "โหลดรายงานไม่สำเร็จ"); }
-    finally { setLoading(false); }
+    } catch (e) {
+      showError(e, "โหลดรายงานไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
   }, [listFn, status]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const openDetail = async (b: StockCountBatch) => {
-    setOpenBatch(b); setLines([]); setLinesLoading(true);
+    setOpenBatch(b);
+    setLines([]);
+    setLinesLoading(true);
     try {
       const token = requireToken();
       const rows = await linesFn({ data: { adminToken: token, batchId: b.id } });
       setLines(rows as StockCountRow[]);
-    } catch (e) { showError(e, "โหลดรายละเอียดไม่สำเร็จ"); }
-    finally { setLinesLoading(false); }
+    } catch (e) {
+      showError(e, "โหลดรายละเอียดไม่สำเร็จ");
+    } finally {
+      setLinesLoading(false);
+    }
   };
 
   const reopen = async (b: StockCountBatch) => {
@@ -69,8 +87,11 @@ function StockReportsPage() {
     try {
       const token = requireToken();
       await reopenFn({ data: { adminToken: token, batchId: b.id } });
-      toast.success("เปิดกลับเป็น draft แล้ว"); await load();
-    } catch (e) { showError(e, "ดำเนินการไม่สำเร็จ"); }
+      toast.success("เปิดกลับเป็น draft แล้ว");
+      await load();
+    } catch (e) {
+      showError(e, "ดำเนินการไม่สำเร็จ");
+    }
   };
 
   return (
@@ -83,7 +104,9 @@ function StockReportsPage() {
 
       <div className="flex gap-2 items-center">
         <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="submitted">ส่งแล้ว</SelectItem>
             <SelectItem value="draft">Draft</SelectItem>
@@ -95,75 +118,97 @@ function StockReportsPage() {
         </Button>
       </div>
 
-      <Card><CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50"><tr>
-              <th className="text-left p-2">Batch</th>
-              <th className="text-left p-2">ผู้นับ</th>
-              <th className="text-left p-2">เวลา</th>
-              <th className="text-right p-2">รวม</th>
-              <th className="text-right p-2">ตรง</th>
-              <th className="text-right p-2">ขาด</th>
-              <th className="text-right p-2">เกิน</th>
-              <th className="text-left p-2">สถานะ</th>
-              <th className="text-right p-2">จัดการ</th>
-            </tr></thead>
-            <tbody>
-              {batches.length === 0 && !loading && (
-                <tr><td colSpan={9} className="text-center p-6 text-muted-foreground">ไม่มีข้อมูล</td></tr>
-              )}
-              {batches.map((b) => (
-                <tr key={b.id} className="border-t hover:bg-muted/30">
-                  <td className="p-2 font-mono">#{b.batch_no}</td>
-                  <td className="p-2">
-                    {b.counted_by_name || "-"}
-                    {b.counted_by_emp_code && (
-                      <span className="text-xs text-muted-foreground ml-1">({b.counted_by_emp_code})</span>
-                    )}
-                  </td>
-                  <td className="p-2">{fmtDate(b.submitted_at ?? b.created_at)}</td>
-                  <td className="p-2 text-right">{b.stats.total}</td>
-                  <td className="p-2 text-right text-green-600">{b.stats.match}</td>
-                  <td className="p-2 text-right text-red-600">{b.stats.short}</td>
-                  <td className="p-2 text-right text-amber-600">{b.stats.over}</td>
-                  <td className="p-2">
-                    {b.status === "submitted"
-                      ? <Badge variant="default">ส่งแล้ว</Badge>
-                      : <Badge variant="outline">Draft</Badge>}
-                  </td>
-                  <td className="p-2 text-right whitespace-nowrap">
-                    <Button size="sm" variant="ghost" onClick={() => openDetail(b)}><FileText className="size-4" /></Button>
-                    {b.status === "submitted" && (
-                      <Button size="sm" variant="ghost" onClick={() => reopen(b)}><RotateCcw className="size-4" /></Button>
-                    )}
-                  </td>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="text-left p-2">Batch</th>
+                  <th className="text-left p-2">ผู้นับ</th>
+                  <th className="text-left p-2">เวลา</th>
+                  <th className="text-right p-2">รวม</th>
+                  <th className="text-right p-2">ตรง</th>
+                  <th className="text-right p-2">ขาด</th>
+                  <th className="text-right p-2">เกิน</th>
+                  <th className="text-left p-2">สถานะ</th>
+                  <th className="text-right p-2">จัดการ</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent></Card>
+              </thead>
+              <tbody>
+                {batches.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={9} className="text-center p-6 text-muted-foreground">
+                      ไม่มีข้อมูล
+                    </td>
+                  </tr>
+                )}
+                {batches.map((b) => (
+                  <tr key={b.id} className="border-t hover:bg-muted/30">
+                    <td className="p-2 font-mono">#{b.batch_no}</td>
+                    <td className="p-2">
+                      {b.counted_by_name || "-"}
+                      {b.counted_by_emp_code && (
+                        <span className="text-xs text-muted-foreground ml-1">
+                          ({b.counted_by_emp_code})
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-2">{fmtDate(b.submitted_at ?? b.created_at)}</td>
+                    <td className="p-2 text-right">{b.stats.total}</td>
+                    <td className="p-2 text-right text-green-600">{b.stats.match}</td>
+                    <td className="p-2 text-right text-red-600">{b.stats.short}</td>
+                    <td className="p-2 text-right text-amber-600">{b.stats.over}</td>
+                    <td className="p-2">
+                      {b.status === "submitted" ? (
+                        <Badge variant="default">ส่งแล้ว</Badge>
+                      ) : (
+                        <Badge variant="outline">Draft</Badge>
+                      )}
+                    </td>
+                    <td className="p-2 text-right whitespace-nowrap">
+                      <Button size="sm" variant="ghost" onClick={() => openDetail(b)}>
+                        <FileText className="size-4" />
+                      </Button>
+                      {b.status === "submitted" && (
+                        <Button size="sm" variant="ghost" onClick={() => reopen(b)}>
+                          <RotateCcw className="size-4" />
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={!!openBatch} onOpenChange={(o) => !o && setOpenBatch(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Batch #{openBatch?.batch_no} — {openBatch?.counted_by_name}</DialogTitle>
+            <DialogTitle>
+              Batch #{openBatch?.batch_no} — {openBatch?.counted_by_name}
+            </DialogTitle>
           </DialogHeader>
           {linesLoading ? (
-            <div className="p-8 flex justify-center"><Loader2 className="size-6 animate-spin" /></div>
+            <div className="p-8 flex justify-center">
+              <Loader2 className="size-6 animate-spin" />
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50"><tr>
-                  <th className="text-left p-2">รหัส</th>
-                  <th className="text-left p-2">ชื่อ</th>
-                  <th className="text-right p-2">นับได้</th>
-                  <th className="text-right p-2">ในระบบ</th>
-                  <th className="text-right p-2">ส่วนต่าง</th>
-                  <th className="text-left p-2">สถานะ</th>
-                  <th className="text-left p-2">หมายเหตุ</th>
-                </tr></thead>
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-2">รหัส</th>
+                    <th className="text-left p-2">ชื่อ</th>
+                    <th className="text-right p-2">นับได้</th>
+                    <th className="text-right p-2">ในระบบ</th>
+                    <th className="text-right p-2">ส่วนต่าง</th>
+                    <th className="text-left p-2">สถานะ</th>
+                    <th className="text-left p-2">หมายเหตุ</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {lines.map((l) => (
                     <tr key={l.id} className="border-t">
@@ -171,10 +216,17 @@ function StockReportsPage() {
                       <td className="p-2">{l.item_name}</td>
                       <td className="p-2 text-right">{l.counted_qty}</td>
                       <td className="p-2 text-right">{l.system_qty}</td>
-                      <td className={`p-2 text-right font-semibold ${
-                        l.variance < 0 ? "text-red-600" : l.variance > 0 ? "text-amber-600" : "text-green-600"
-                      }`}>
-                        {l.variance > 0 ? "+" : ""}{l.variance}
+                      <td
+                        className={`p-2 text-right font-semibold ${
+                          l.variance < 0
+                            ? "text-red-600"
+                            : l.variance > 0
+                              ? "text-amber-600"
+                              : "text-green-600"
+                        }`}
+                      >
+                        {l.variance > 0 ? "+" : ""}
+                        {l.variance}
                       </td>
                       <td className="p-2">
                         {l.status === "match" && <Badge variant="secondary">ตรง</Badge>}
@@ -185,7 +237,11 @@ function StockReportsPage() {
                     </tr>
                   ))}
                   {lines.length === 0 && (
-                    <tr><td colSpan={7} className="text-center p-4 text-muted-foreground">ไม่มีรายการ</td></tr>
+                    <tr>
+                      <td colSpan={7} className="text-center p-4 text-muted-foreground">
+                        ไม่มีรายการ
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>

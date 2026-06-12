@@ -55,9 +55,7 @@ export async function adminUpload(
   createUrl: CreateSignedUrlFn,
 ): Promise<{ path: string; publicUrl: string }> {
   const ext =
-    (file.name.split(".").pop() || "jpg")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "") || "jpg";
+    (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const signed = await createUrl({ data: { token: requireToken(), bucket, ext } });
   const { error } = await supabase.storage
     .from(bucket)

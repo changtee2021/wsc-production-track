@@ -11,10 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WiFlowChart, WiOverviewStrip } from "@/components/wi/WiFlowChart";
-import {
-  WORK_INSTRUCTIONS,
-  getWorkInstruction,
-} from "@/lib/data/work-instructions";
+import { WORK_INSTRUCTIONS, getWorkInstruction } from "@/lib/data/work-instructions";
 
 export const Route = createFileRoute("/_protected/wi")({
   validateSearch: zodValidator(
@@ -50,16 +47,12 @@ function WiPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">{wi.title}</h1>
           <p className="text-sm text-muted-foreground">
-            สายผลิต: {wi.productLine} · {wi.steps.length} ขั้นตอน ·{" "}
-            {wi.categories.length} หมวดหมู่
+            สายผลิต: {wi.productLine} · {wi.steps.length} ขั้นตอน · {wi.categories.length} หมวดหมู่
           </p>
         </div>
 
         {WORK_INSTRUCTIONS.length > 1 && (
-          <Select
-            value={wi.id}
-            onValueChange={(v) => navigate({ search: { id: v } })}
-          >
+          <Select value={wi.id} onValueChange={(v) => navigate({ search: { id: v } })}>
             <SelectTrigger className="w-full sm:w-[260px]">
               <SelectValue placeholder="เลือก WI" />
             </SelectTrigger>

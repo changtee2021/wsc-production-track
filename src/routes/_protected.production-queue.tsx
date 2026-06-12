@@ -5,18 +5,36 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  Loader2, RefreshCw, Printer, Ban, Search, Factory, Ruler,
-  Calendar, User as UserIcon, CheckCircle2, Clock,
+  Loader2,
+  RefreshCw,
+  Printer,
+  Ban,
+  Search,
+  Factory,
+  Ruler,
+  Calendar,
+  User as UserIcon,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import {
-  adminListProductionJobs, adminMarkLabelPrinted, adminCancelProductionJob,
-  type ProductionJobRow, type ProductionJobStatus,
+  adminListProductionJobs,
+  adminMarkLabelPrinted,
+  adminCancelProductionJob,
+  type ProductionJobRow,
+  type ProductionJobStatus,
 } from "@/lib/features/production-jobs.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +59,11 @@ const STATUS_BADGE: Record<ProductionJobStatus, string> = {
 
 function fmtDate(d: string | null): string {
   if (!d) return "—";
-  try { return new Date(d).toLocaleDateString("th-TH"); } catch { return d; }
+  try {
+    return new Date(d).toLocaleDateString("th-TH");
+  } catch {
+    return d;
+  }
 }
 
 function ProductionQueuePage() {
@@ -65,18 +87,25 @@ function ProductionQueuePage() {
         },
       });
       setRows(res.jobs);
-    } catch (e) { showError(e, "โหลดไม่สำเร็จ"); }
-    finally { setLoading(false); }
+    } catch (e) {
+      showError(e, "โหลดไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
   }, [listFn, status, search]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const onPrint = async (job: ProductionJobRow) => {
     try {
       await printFn({ data: { token: requireToken(), id: job.id } });
       window.open(`/print-label/${encodeURIComponent(job.job_no)}`, "_blank", "noopener");
       load();
-    } catch (e) { showError(e, "พิมพ์ไม่สำเร็จ"); }
+    } catch (e) {
+      showError(e, "พิมพ์ไม่สำเร็จ");
+    }
   };
 
   const onCancel = async (job: ProductionJobRow) => {
@@ -85,7 +114,9 @@ function ProductionQueuePage() {
       await cancelFn({ data: { token: requireToken(), id: job.id } });
       toast.success("ยกเลิกแล้ว");
       load();
-    } catch (e) { showError(e, "ยกเลิกไม่สำเร็จ"); }
+    } catch (e) {
+      showError(e, "ยกเลิกไม่สำเร็จ");
+    }
   };
 
   return (
@@ -108,22 +139,34 @@ function ProductionQueuePage() {
             />
           </div>
           <Select value={status} onValueChange={(v) => setStatus(v as ProductionJobStatus | "all")}>
-            <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 w-40">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {(["pending","in_progress","done","cancelled","all"] as const).map((s) => (
-                <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+              {(["pending", "in_progress", "done", "cancelled", "all"] as const).map((s) => (
+                <SelectItem key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Button onClick={load} variant="outline" size="sm" className="gap-1">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
             รีเฟรช
           </Button>
         </div>
       </div>
 
       {rows.length === 0 && !loading && (
-        <Card><CardContent className="py-10 text-center text-muted-foreground">ไม่มีใบงานในสถานะนี้</CardContent></Card>
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            ไม่มีใบงานในสถานะนี้
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -132,10 +175,19 @@ function ProductionQueuePage() {
             <CardContent className="space-y-3 p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="font-mono text-2xl font-extrabold tracking-tight text-primary">{j.job_no}</div>
-                  {j.order_no && <div className="text-xs font-semibold text-muted-foreground">{j.order_no}</div>}
+                  <div className="font-mono text-2xl font-extrabold tracking-tight text-primary">
+                    {j.job_no}
+                  </div>
+                  {j.order_no && (
+                    <div className="text-xs font-semibold text-muted-foreground">{j.order_no}</div>
+                  )}
                 </div>
-                <span className={cn("rounded-full border px-2 py-0.5 text-xs font-semibold", STATUS_BADGE[j.status])}>
+                <span
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-xs font-semibold",
+                    STATUS_BADGE[j.status],
+                  )}
+                >
                   {STATUS_LABEL[j.status]}
                 </span>
               </div>
@@ -181,16 +233,31 @@ function ProductionQueuePage() {
               )}
 
               <div className="flex gap-2 pt-1">
-                <Button onClick={() => onPrint(j)} size="sm" className="flex-1 gap-1" disabled={j.status === "cancelled"}>
+                <Button
+                  onClick={() => onPrint(j)}
+                  size="sm"
+                  className="flex-1 gap-1"
+                  disabled={j.status === "cancelled"}
+                >
                   <Printer className="h-4 w-4" /> พิมพ์ Label
                 </Button>
                 <Link to="/scan" search={{ job_id: j.job_no }} className="flex-1">
-                  <Button size="sm" variant="secondary" className="w-full gap-1" disabled={j.status === "cancelled" || j.status === "done"}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-full gap-1"
+                    disabled={j.status === "cancelled" || j.status === "done"}
+                  >
                     เปิดสแกน
                   </Button>
                 </Link>
                 {j.status !== "cancelled" && j.status !== "done" && (
-                  <Button onClick={() => onCancel(j)} size="sm" variant="ghost" className="px-2 text-rose-600">
+                  <Button
+                    onClick={() => onCancel(j)}
+                    size="sm"
+                    variant="ghost"
+                    className="px-2 text-rose-600"
+                  >
                     <Ban className="h-4 w-4" />
                   </Button>
                 )}

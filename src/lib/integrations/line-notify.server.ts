@@ -34,14 +34,17 @@ export async function notifyExpenseSubmitted(args: {
   bill_type: string;
 }) {
   const typeLabel =
-    args.bill_type === "full_tax" ? "ใบกำกับเต็ม"
-    : args.bill_type === "short_tax" ? "ใบกำกับย่อ" : "บิลเงินสด";
+    args.bill_type === "full_tax"
+      ? "ใบกำกับเต็ม"
+      : args.bill_type === "short_tax"
+        ? "ใบกำกับย่อ"
+        : "บิลเงินสด";
   await pushText(
     `🧾 [WSC Expense] เบิกใหม่\n` +
-    `${args.exp_no} — ${args.requester_name}\n` +
-    `ร้าน: ${args.merchant_name ?? "—"}\n` +
-    `ยอด: ฿${args.total.toLocaleString()} (${typeLabel})\n` +
-    `อนุมัติได้ที่: ${APP}/expenses-dashboard`,
+      `${args.exp_no} — ${args.requester_name}\n` +
+      `ร้าน: ${args.merchant_name ?? "—"}\n` +
+      `ยอด: ฿${args.total.toLocaleString()} (${typeLabel})\n` +
+      `อนุมัติได้ที่: ${APP}/expenses-dashboard`,
   );
 }
 
@@ -54,12 +57,12 @@ export async function notifyExpenseStatusChanged(args: {
   total?: number;
 }) {
   const statusLabel =
-    args.status === "approved" ? "✅ อนุมัติแล้ว"
-    : args.status === "rejected" ? "❌ ไม่อนุมัติ" : "💸 จ่ายเงินแล้ว";
-  const lines = [
-    `🧾 [WSC Expense] ${statusLabel}`,
-    `${args.exp_no} — ${args.requester_name}`,
-  ];
+    args.status === "approved"
+      ? "✅ อนุมัติแล้ว"
+      : args.status === "rejected"
+        ? "❌ ไม่อนุมัติ"
+        : "💸 จ่ายเงินแล้ว";
+  const lines = [`🧾 [WSC Expense] ${statusLabel}`, `${args.exp_no} — ${args.requester_name}`];
   if (args.total) lines.push(`ยอด: ฿${args.total.toLocaleString()}`);
   if (args.approver_name) lines.push(`โดย: ${args.approver_name}`);
   if (args.reason) lines.push(`เหตุผล: ${args.reason}`);

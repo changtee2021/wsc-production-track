@@ -3,24 +3,45 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  ScrollText, Search, Loader2, Activity, ChevronDown, ChevronRight,
-  AlertTriangle, CheckCircle2, XCircle, Trash2, RefreshCw,
+  ScrollText,
+  Search,
+  Loader2,
+  Activity,
+  ChevronDown,
+  ChevronRight,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Trash2,
+  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
-  adminListErrorLogs, adminRunSsrHealthCheck, adminClearErrorLogs,
-  type ErrorLogRow, type HealthCheckItem,
+  adminListErrorLogs,
+  adminRunSsrHealthCheck,
+  adminClearErrorLogs,
+  type ErrorLogRow,
+  type HealthCheckItem,
 } from "@/lib/features/error-logs.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 
@@ -30,7 +51,11 @@ export const Route = createFileRoute("/_protected/server-logs")({
 });
 
 function fmtDateTime(iso: string): string {
-  try { return new Date(iso).toLocaleString("th-TH"); } catch { return iso; }
+  try {
+    return new Date(iso).toLocaleString("th-TH");
+  } catch {
+    return iso;
+  }
 }
 
 function ServerLogsPage() {
@@ -64,11 +89,16 @@ function ServerLogsPage() {
       });
       setRows(res.rows);
       setTotal(res.total);
-    } catch (e) { showError(e, "โหลดไม่สำเร็จ"); }
-    finally { setLoading(false); }
+    } catch (e) {
+      showError(e, "โหลดไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
   }, [listFn, days, level, source, search]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const onHealthCheck = async () => {
     setHealthLoading(true);
@@ -77,8 +107,12 @@ function ServerLogsPage() {
       setHealth(res.items);
       toast.success(res.healthy ? "ทุก route ปกติ" : "พบ route ที่มีปัญหา");
       void load();
-    } catch (e) { showError(e, "ตรวจไม่สำเร็จ"); setHealth([]); }
-    finally { setHealthLoading(false); }
+    } catch (e) {
+      showError(e, "ตรวจไม่สำเร็จ");
+      setHealth([]);
+    } finally {
+      setHealthLoading(false);
+    }
   };
 
   const onClear = async () => {
@@ -87,7 +121,9 @@ function ServerLogsPage() {
       await clearFn({ data: { token: requireToken() } });
       toast.success("ลบแล้ว");
       load();
-    } catch (e) { showError(e, "ลบไม่สำเร็จ"); }
+    } catch (e) {
+      showError(e, "ลบไม่สำเร็จ");
+    }
   };
 
   return (
@@ -107,7 +143,11 @@ function ServerLogsPage() {
         </div>
         <div className="flex gap-2">
           <Button onClick={onHealthCheck} disabled={healthLoading} variant="outline" size="sm">
-            {healthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
+            {healthLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Activity className="h-4 w-4" />
+            )}
             รันสุขภาพรูทหลัก
           </Button>
           <Button onClick={onClear} variant="ghost" size="sm" className="text-rose-600">
@@ -127,7 +167,11 @@ function ServerLogsPage() {
               <p className="text-sm text-destructive">ตรวจไม่สำเร็จ</p>
             ) : (
               health.map((h) => (
-                <Badge key={h.path} variant={h.ok ? "secondary" : "destructive"} className="gap-1 font-mono">
+                <Badge
+                  key={h.path}
+                  variant={h.ok ? "secondary" : "destructive"}
+                  className="gap-1 font-mono"
+                >
                   {h.ok ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
                   {h.path} · {h.status || "ERR"} · {h.ms}ms
                 </Badge>
@@ -151,7 +195,9 @@ function ServerLogsPage() {
               />
             </div>
             <Select value={days} onValueChange={setDays}>
-              <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="1">1 วัน</SelectItem>
                 <SelectItem value="7">7 วัน</SelectItem>
@@ -160,7 +206,9 @@ function ServerLogsPage() {
               </SelectContent>
             </Select>
             <Select value={level} onValueChange={setLevel}>
-              <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">ทุกระดับ</SelectItem>
                 <SelectItem value="error">Error</SelectItem>
@@ -168,7 +216,9 @@ function ServerLogsPage() {
               </SelectContent>
             </Select>
             <Select value={source} onValueChange={setSource}>
-              <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">ทุกแหล่ง</SelectItem>
                 <SelectItem value="ssr">SSR</SelectItem>
@@ -178,7 +228,11 @@ function ServerLogsPage() {
               </SelectContent>
             </Select>
             <Button onClick={load} variant="outline" size="sm">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </CardHeader>
@@ -210,10 +264,17 @@ function ServerLogsPage() {
                   <TableBody>
                     {rows.map((row) => (
                       <Fragment key={row.id}>
-                        <TableRow className="cursor-pointer" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
+                        <TableRow
+                          className="cursor-pointer"
+                          onClick={() => setExpanded(expanded === row.id ? null : row.id)}
+                        >
                           <TableCell className="whitespace-nowrap text-xs">
                             <span className="inline-flex items-center gap-1">
-                              {expanded === row.id ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                              {expanded === row.id ? (
+                                <ChevronDown className="h-3 w-3" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3" />
+                              )}
                               {fmtDateTime(row.created_at)}
                             </span>
                           </TableCell>
@@ -223,8 +284,12 @@ function ServerLogsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs">{row.source}</TableCell>
-                          <TableCell className="font-mono text-xs">{row.route_path ?? "-"}</TableCell>
-                          <TableCell className="max-w-[400px] truncate text-xs">{row.message}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {row.route_path ?? "-"}
+                          </TableCell>
+                          <TableCell className="max-w-[400px] truncate text-xs">
+                            {row.message}
+                          </TableCell>
                           <TableCell className="text-xs">{row.status_code ?? "-"}</TableCell>
                         </TableRow>
                         {expanded === row.id && (
@@ -264,7 +329,10 @@ function ServerLogsPage() {
       {!loading && rows.length === 0 && (
         <p className="text-center text-xs text-muted-foreground">
           แอปจะบันทึก error อัตโนมัติเมื่อเกิด Internal Server Error · กดทดสอบที่{" "}
-          <a href="/__throw-test" className="underline">/__throw-test</a> เพื่อจำลอง
+          <a href="/__throw-test" className="underline">
+            /__throw-test
+          </a>{" "}
+          เพื่อจำลอง
         </p>
       )}
     </div>

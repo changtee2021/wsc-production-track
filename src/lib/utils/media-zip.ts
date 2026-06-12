@@ -2,8 +2,8 @@
 import JSZip from "jszip";
 
 export interface DownloadableMedia {
-  url: string;          // signed URL ที่พร้อมโหลด
-  filename: string;     // ชื่อไฟล์ใน zip
+  url: string; // signed URL ที่พร้อมโหลด
+  filename: string; // ชื่อไฟล์ใน zip
 }
 
 export async function downloadMediaAsZip(

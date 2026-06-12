@@ -9,7 +9,13 @@ import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDial
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { warnIfMovFiles } from "@/components/MediaLightbox";
@@ -61,7 +67,8 @@ export const Route = createFileRoute("/qc")({
       { property: "og:title", content: "QC — WSC ProductionTrack" },
       {
         property: "og:description",
-        content: "ตรวจสอบคุณภาพงานแบบ checklist พร้อมแนบรูป/วิดีโอเป็นหลักฐาน บันทึกผลผ่าน–ไม่ผ่านแบบเรียลไทม์",
+        content:
+          "ตรวจสอบคุณภาพงานแบบ checklist พร้อมแนบรูป/วิดีโอเป็นหลักฐาน บันทึกผลผ่าน–ไม่ผ่านแบบเรียลไทม์",
       },
       { property: "og:url", content: clientAppPublicPath("/qc") },
     ],
@@ -141,7 +148,11 @@ function QcLogin({ onSuccess }: { onSuccess: () => void }) {
             autoFocus
             required
           />
-          <Button type="submit" disabled={loading} className="mt-4 h-12 w-full text-base font-semibold">
+          <Button
+            type="submit"
+            disabled={loading}
+            className="mt-4 h-12 w-full text-base font-semibold"
+          >
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "เข้าสู่ระบบ"}
           </Button>
         </form>
@@ -254,7 +265,11 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       const token = getQcToken();
       const tasks: Promise<unknown>[] = [
         (async () => {
-          const cat = await supabase.from("categories").select("id, name").eq("active", true).order("name");
+          const cat = await supabase
+            .from("categories")
+            .select("id, name")
+            .eq("active", true)
+            .order("name");
           if (cat.data) setCategories(cat.data);
         })(),
       ];
@@ -342,7 +357,11 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   };
 
   // Generic media uploader. target = "overall" or checklist item id
-  const uploadFiles = async (files: FileList, kind: "image" | "video", target: "overall" | string) => {
+  const uploadFiles = async (
+    files: FileList,
+    kind: "image" | "video",
+    target: "overall" | string,
+  ) => {
     const token = getQcToken();
     if (!token) {
       onLogout();
@@ -354,7 +373,11 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       for (const original of Array.from(files)) {
         const map = kind === "image" ? IMAGE_EXT_BY_MIME : VIDEO_EXT_BY_MIME;
         if (!map[original.type]) {
-          toast.error(kind === "image" ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF" : "รองรับเฉพาะ MP4, WEBM, MOV, M4V");
+          toast.error(
+            kind === "image"
+              ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF"
+              : "รองรับเฉพาะ MP4, WEBM, MOV, M4V",
+          );
           continue;
         }
         // บีบอัดรูป (วิดีโอผ่านตามเดิม)
@@ -415,7 +438,13 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const setItemMotor = (id: string) => {
     setItemStates((prev) => ({
       ...prev,
-      [id]: { ...(prev[id] ?? EMPTY_ITEM_STATE), is_passed: true, tag: "motor", remark: "", media: [] },
+      [id]: {
+        ...(prev[id] ?? EMPTY_ITEM_STATE),
+        is_passed: true,
+        tag: "motor",
+        remark: "",
+        media: [],
+      },
     }));
   };
 
@@ -455,18 +484,19 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     return { passCount: p, failCount: f, motorCount: m, answeredCount: a, total: checklist.length };
   }, [checklist, itemStates]);
 
-
   const submit = async () => {
     if (!job_id) return toast.error("ยังไม่ได้กรอก Job");
     if (!qcEmployeeId) return toast.error("กรุณาเลือกพนักงาน QC");
-    if (checklist.length === 0) return toast.error("ไม่มีรายการ checklist สำหรับหมวดนี้ — แจ้งแอดมินเพิ่ม");
+    if (checklist.length === 0)
+      return toast.error("ไม่มีรายการ checklist สำหรับหมวดนี้ — แจ้งแอดมินเพิ่ม");
     if (answeredCount < total) return toast.error(`ยังตรวจไม่ครบ (${answeredCount}/${total})`);
     // Every failed item must have a remark AND at least one media
     for (let idx = 0; idx < checklist.length; idx++) {
       const it = checklist[idx];
       const s = itemStates[it.id];
       if (s?.is_passed === false) {
-        if (!s.remark.trim()) return toast.error(`ข้อ ${idx + 1}: กรุณากรอกหมายเหตุเหตุผลที่ไม่ผ่าน`);
+        if (!s.remark.trim())
+          return toast.error(`ข้อ ${idx + 1}: กรุณากรอกหมายเหตุเหตุผลที่ไม่ผ่าน`);
         if (!s.media || s.media.length === 0)
           return toast.error(`ข้อ ${idx + 1}: ต้องแนบรูป/วิดีโอหลักฐานอย่างน้อย 1 รายการ`);
       }
@@ -476,7 +506,8 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
 
     const overallResult: "pass" | "fail" = failCount > 0 ? "fail" : "pass";
     // Pick a representative log for back-compat columns (latest with matching category)
-    const repLog = [...logs].reverse().find((l) => l.category_id === categoryId) ?? logs[logs.length - 1];
+    const repLog =
+      [...logs].reverse().find((l) => l.category_id === categoryId) ?? logs[logs.length - 1];
 
     setSubmitting(true);
     try {
@@ -640,7 +671,9 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                 <SelectItem key={e.id} value={e.id} className="py-2">
                   <div className="flex flex-col text-left">
                     <span className="text-base font-semibold leading-tight">{e.name}</span>
-                    {e.emp_code && <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>}
+                    {e.emp_code && (
+                      <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>
+                    )}
                   </div>
                 </SelectItem>
               ))}
@@ -679,7 +712,9 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                   <div className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
                     <User className="h-3.5 w-3.5" />
                     <span>{l.employees?.name ?? "—"}</span>
-                    {l.employees?.emp_code && <span className="font-mono text-xs">({l.employees.emp_code})</span>}
+                    {l.employees?.emp_code && (
+                      <span className="font-mono text-xs">({l.employees.emp_code})</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -793,7 +828,12 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               accept="video/*"
               capture="environment"
               className="hidden"
-              onChange={(e) => { if (e.target.files) { warnIfMovFiles(e.target.files); uploadFiles(e.target.files, "video", "overall"); } }}
+              onChange={(e) => {
+                if (e.target.files) {
+                  warnIfMovFiles(e.target.files);
+                  uploadFiles(e.target.files, "video", "overall");
+                }
+              }}
             />
 
             <div className="grid grid-cols-2 gap-2">
@@ -831,9 +871,19 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                     className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted"
                   >
                     {m.type === "image" ? (
-                      <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" />
+                      <img
+                        src={m.previewUrl ?? m.url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
-                      <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" preload="metadata" muted playsInline />
+                      <video
+                        src={m.previewUrl ?? m.url}
+                        className="h-full w-full object-cover"
+                        preload="metadata"
+                        muted
+                        playsInline
+                      />
                     )}
 
                     <button
@@ -855,9 +905,11 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         {job_id && categoryId && checklist.length > 0 && (
           <section className="mt-5">
             <div className="mb-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">
-              <span className="font-semibold">สรุป:</span> <span className="text-success">ผ่าน {passCount}</span>
-              {motorCount > 0 && <span className="text-amber-600"> (มอเตอร์ {motorCount})</span>} /{" "}
-              <span className="text-destructive">ไม่ผ่าน {failCount}</span> /{" "}
+              <span className="font-semibold">สรุป:</span>{" "}
+              <span className="text-success">ผ่าน {passCount}</span>
+              {motorCount > 0 && (
+                <span className="text-amber-600"> (มอเตอร์ {motorCount})</span>
+              )} / <span className="text-destructive">ไม่ผ่าน {failCount}</span> /{" "}
               <span className="text-muted-foreground">ทั้งหมด {total}</span>
             </div>
             <Button
@@ -865,7 +917,11 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               disabled={submitting || uploading || answeredCount < total}
               className="h-14 w-full gap-2 text-base font-semibold"
             >
-              {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+              {submitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
               ส่งรายงาน QC
             </Button>
           </section>
@@ -972,7 +1028,6 @@ function ChecklistRow({
         </Button>
       </div>
 
-
       {failed && (
         <div className="mt-3 space-y-2">
           <textarea
@@ -1003,7 +1058,10 @@ function ChecklistRow({
             capture="environment"
             className="hidden"
             onChange={(e) => {
-              if (e.target.files) { warnIfMovFiles(e.target.files); onUpload(e.target.files, "video"); }
+              if (e.target.files) {
+                warnIfMovFiles(e.target.files);
+                onUpload(e.target.files, "video");
+              }
               if (vidRef.current) vidRef.current.value = "";
             }}
           />
@@ -1032,7 +1090,9 @@ function ChecklistRow({
           </div>
 
           {state.media.length === 0 ? (
-            <p className="text-xs font-medium text-destructive">* ต้องแนบรูปหรือวิดีโอหลักฐานอย่างน้อย 1 รายการ</p>
+            <p className="text-xs font-medium text-destructive">
+              * ต้องแนบรูปหรือวิดีโอหลักฐานอย่างน้อย 1 รายการ
+            </p>
           ) : (
             <div className="grid grid-cols-4 gap-1.5">
               {state.media.map((m, i) => (
@@ -1041,9 +1101,19 @@ function ChecklistRow({
                   className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
                 >
                   {m.type === "image" ? (
-                    <img src={m.previewUrl ?? m.url} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={m.previewUrl ?? m.url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
-                    <video src={m.previewUrl ?? m.url} className="h-full w-full object-cover" preload="metadata" muted playsInline />
+                    <video
+                      src={m.previewUrl ?? m.url}
+                      className="h-full w-full object-cover"
+                      preload="metadata"
+                      muted
+                      playsInline
+                    />
                   )}
 
                   <button

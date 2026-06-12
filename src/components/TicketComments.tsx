@@ -18,8 +18,11 @@ import { Textarea } from "@/components/ui/textarea";
 type Pending = { id: string; file: File; url: string };
 
 function fmt(s: string) {
-  try { return new Date(s).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" }); }
-  catch { return s; }
+  try {
+    return new Date(s).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return s;
+  }
 }
 
 export function TicketComments({ ticketId }: { ticketId: string }) {
@@ -40,11 +43,16 @@ export function TicketComments({ ticketId }: { ticketId: string }) {
     try {
       const data = await listFn({ data: { adminToken: requireToken(), ticket_id: ticketId } });
       setRows(data);
-    } catch (e) { showError(e, "โหลดคอมเมนต์ไม่สำเร็จ"); }
-    finally { setLoading(false); }
+    } catch (e) {
+      showError(e, "โหลดคอมเมนต์ไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
   }, [listFn, ticketId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const addFiles = (files: FileList | File[]) => {
     const imgs = Array.from(files).filter((f) => f.type.startsWith("image/"));
@@ -53,7 +61,9 @@ export function TicketComments({ ticketId }: { ticketId: string }) {
       return [
         ...prev,
         ...imgs.slice(0, room).map((file) => ({
-          id: crypto.randomUUID(), file, url: URL.createObjectURL(file),
+          id: crypto.randomUUID(),
+          file,
+          url: URL.createObjectURL(file),
         })),
       ];
     });
@@ -77,20 +87,30 @@ export function TicketComments({ ticketId }: { ticketId: string }) {
         const { error } = await supabase.storage
           .from("feedback-media")
           .uploadToSignedUrl(signed.path, signed.token, s.file, {
-            contentType: s.file.type, upsert: false,
+            contentType: s.file.type,
+            upsert: false,
           });
         if (error) throw new Error("อัปโหลดรูปไม่สำเร็จ: " + error.message);
         paths.push(signed.path);
       }
       await addFn({
-        data: { adminToken: token, ticket_id: ticketId, body: body.trim(), image_paths: paths, author_name: "แอดมิน" },
+        data: {
+          adminToken: token,
+          ticket_id: ticketId,
+          body: body.trim(),
+          image_paths: paths,
+          author_name: "แอดมิน",
+        },
       });
       shots.forEach((s) => URL.revokeObjectURL(s.url));
       setShots([]);
       setBody("");
       await load();
-    } catch (e) { showError(e, "ส่งคอมเมนต์ไม่สำเร็จ"); }
-    finally { setSending(false); }
+    } catch (e) {
+      showError(e, "ส่งคอมเมนต์ไม่สำเร็จ");
+    } finally {
+      setSending(false);
+    }
   };
 
   const remove = async (id: string) => {
@@ -98,7 +118,9 @@ export function TicketComments({ ticketId }: { ticketId: string }) {
     try {
       await delFn({ data: { adminToken: requireToken(), id } });
       await load();
-    } catch (e) { showError(e, "ลบไม่สำเร็จ"); }
+    } catch (e) {
+      showError(e, "ลบไม่สำเร็จ");
+    }
   };
 
   return (
@@ -121,7 +143,12 @@ export function TicketComments({ ticketId }: { ticketId: string }) {
                 <span className="font-medium">{c.author_name}</span>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-muted-foreground">{fmt(c.created_at)}</span>
-                  <button type="button" onClick={() => remove(c.id)} aria-label="ลบ" className="text-muted-foreground hover:text-destructive">
+                  <button
+                    type="button"
+                    onClick={() => remove(c.id)}
+                    aria-label="ลบ"
+                    className="text-muted-foreground hover:text-destructive"
+                  >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -130,7 +157,13 @@ export function TicketComments({ ticketId }: { ticketId: string }) {
               {c.image_urls?.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {c.image_urls.map((u, i) => (
-                    <a key={i} href={u} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border">
+                    <a
+                      key={i}
+                      href={u}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block overflow-hidden rounded-md border"
+                    >
                       <img src={u} alt="" className="h-20 w-20 object-cover" loading="lazy" />
                     </a>
                   ))}
@@ -146,8 +179,11 @@ export function TicketComments({ ticketId }: { ticketId: string }) {
           {shots.map((s) => (
             <div key={s.id} className="relative">
               <img src={s.url} alt="" className="h-16 w-16 rounded-md border object-cover" />
-              <button type="button" onClick={() => removeShot(s.id)}
-                className="absolute -right-1.5 -top-1.5 rounded-full bg-destructive p-0.5 text-destructive-foreground">
+              <button
+                type="button"
+                onClick={() => removeShot(s.id)}
+                className="absolute -right-1.5 -top-1.5 rounded-full bg-destructive p-0.5 text-destructive-foreground"
+              >
                 <X className="h-3 w-3" />
               </button>
             </div>
@@ -160,8 +196,13 @@ export function TicketComments({ ticketId }: { ticketId: string }) {
           value={body}
           onChange={(e) => setBody(e.target.value)}
           onPaste={(e) => {
-            const imgs = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"));
-            if (imgs.length) { e.preventDefault(); addFiles(imgs); }
+            const imgs = Array.from(e.clipboardData.files).filter((f) =>
+              f.type.startsWith("image/"),
+            );
+            if (imgs.length) {
+              e.preventDefault();
+              addFiles(imgs);
+            }
           }}
           placeholder="เขียนคอมเมนต์/อัปเดต... (วางรูปได้)"
           rows={2}
@@ -169,13 +210,32 @@ export function TicketComments({ ticketId }: { ticketId: string }) {
           className="resize-none text-sm"
         />
         <div className="flex flex-col gap-1">
-          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
-            onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
-          <Button size="sm" variant="outline" type="button"
-            onClick={() => fileRef.current?.click()} disabled={shots.length >= 4} title="แนบรูป">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) addFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={shots.length >= 4}
+            title="แนบรูป"
+          >
             <ImagePlus className="h-4 w-4" />
           </Button>
-          <Button size="sm" onClick={send} disabled={sending || (body.trim().length === 0 && shots.length === 0)}>
+          <Button
+            size="sm"
+            onClick={send}
+            disabled={sending || (body.trim().length === 0 && shots.length === 0)}
+          >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>

@@ -163,7 +163,9 @@ export function AllStaffPanel() {
           existingId: r.ids[dept] ?? null,
         },
       });
-      toast.success(enabled ? `เพิ่มเข้าแผนก${DEPT_LABEL[dept]}แล้ว` : `ลบออกจากแผนก${DEPT_LABEL[dept]}แล้ว`);
+      toast.success(
+        enabled ? `เพิ่มเข้าแผนก${DEPT_LABEL[dept]}แล้ว` : `ลบออกจากแผนก${DEPT_LABEL[dept]}แล้ว`,
+      );
       await load();
     } catch (err) {
       showError(err);
@@ -176,10 +178,7 @@ export function AllStaffPanel() {
     if (deptFilter !== "all" && !r.departments.includes(deptFilter)) return false;
     if (!query.trim()) return true;
     const q = query.trim().toLowerCase();
-    return (
-      r.name.toLowerCase().includes(q) ||
-      (r.emp_code ?? "").toLowerCase().includes(q)
-    );
+    return r.name.toLowerCase().includes(q) || (r.emp_code ?? "").toLowerCase().includes(q);
   });
 
   return (
@@ -188,7 +187,9 @@ export function AllStaffPanel() {
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-bold">พนักงานทั้งหมด (ทุกแผนก)</h2>
-          <Badge variant="secondary" className="ml-1">{rows.length} คน</Badge>
+          <Badge variant="secondary" className="ml-1">
+            {rows.length} คน
+          </Badge>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -202,14 +203,18 @@ export function AllStaffPanel() {
               type="button"
               onClick={() => setDeptFilter("all")}
               className={`rounded px-2 py-1 text-xs font-semibold ${deptFilter === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-            >ทั้งหมด</button>
+            >
+              ทั้งหมด
+            </button>
             {DEPARTMENTS.map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => setDeptFilter(d)}
                 className={`rounded px-2 py-1 text-xs font-semibold ${deptFilter === d ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-              >{DEPT_LABEL[d]}</button>
+              >
+                {DEPT_LABEL[d]}
+              </button>
             ))}
           </div>
         </div>
@@ -248,14 +253,18 @@ export function AllStaffPanel() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 border border-border">
                           {previewUrl && <AvatarImage src={previewUrl} />}
-                          <AvatarFallback className="bg-muted text-xs">{initialsOf(editing ? editForm.name : r.name)}</AvatarFallback>
+                          <AvatarFallback className="bg-muted text-xs">
+                            {initialsOf(editing ? editForm.name : r.name)}
+                          </AvatarFallback>
                         </Avatar>
                         <div className="min-w-[180px]">
                           {editing ? (
                             <div className="space-y-1">
                               <Input
                                 value={editForm.name}
-                                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                                onChange={(e) =>
+                                  setEditForm((f) => ({ ...f, name: e.target.value }))
+                                }
                                 className="h-8"
                                 placeholder="ชื่อ"
                               />
@@ -289,12 +298,17 @@ export function AllStaffPanel() {
                               onClick={() => openProfile({ name: r.name, emp_code: r.emp_code })}
                               className="text-left font-semibold hover:text-primary hover:underline"
                               title="ดูโปรไฟล์พนักงาน"
-                            >{r.name}</button>
+                            >
+                              {r.name}
+                            </button>
                           )}
                           {!editing && (
                             <div className="mt-0.5 flex flex-wrap gap-1">
                               {r.departments.map((d) => (
-                                <span key={d} className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${DEPT_COLOR[d]}`}>
+                                <span
+                                  key={d}
+                                  className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${DEPT_COLOR[d]}`}
+                                >
                                   {DEPT_LABEL[d]}
                                 </span>
                               ))}
@@ -319,11 +333,15 @@ export function AllStaffPanel() {
                       {editing ? (
                         <select
                           value={editForm.nationality}
-                          onChange={(e) => setEditForm((f) => ({ ...f, nationality: e.target.value }))}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, nationality: e.target.value }))
+                          }
                           className="h-8 rounded-md border border-border bg-background px-2 text-xs"
                         >
                           {NATIONALITIES.map((n) => (
-                            <option key={n} value={n}>{n}</option>
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
                           ))}
                         </select>
                       ) : (
@@ -351,7 +369,12 @@ export function AllStaffPanel() {
                           >
                             <Save className="h-3 w-3" /> บันทึก
                           </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEdit} className="h-8 gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEdit}
+                            className="h-8 gap-1"
+                          >
                             <X className="h-3 w-3" />
                           </Button>
                         </div>
@@ -366,7 +389,12 @@ export function AllStaffPanel() {
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => startEdit(r)} className="h-8 gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => startEdit(r)}
+                            className="h-8 gap-1"
+                          >
                             <Pencil className="h-3 w-3" /> แก้ไข
                           </Button>
                         </div>
@@ -381,7 +409,8 @@ export function AllStaffPanel() {
       )}
 
       <p className="mt-3 text-xs text-muted-foreground">
-        เคล็ดลับ: ติ๊ก checkbox เพื่อเพิ่ม/ลบแผนกของพนักงานคนนั้น • คลิก "แก้ไข" เพื่ออัปเดตชื่อ รหัส รูป และสัญชาติ (จะ sync ทุกแผนกของพนักงานคนนี้)
+        เคล็ดลับ: ติ๊ก checkbox เพื่อเพิ่ม/ลบแผนกของพนักงานคนนั้น • คลิก "แก้ไข" เพื่ออัปเดตชื่อ
+        รหัส รูป และสัญชาติ (จะ sync ทุกแผนกของพนักงานคนนี้)
       </p>
     </section>
   );

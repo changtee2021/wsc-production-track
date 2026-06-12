@@ -42,11 +42,7 @@ function UsageBar({
 }) {
   const level = pct > 90 ? "danger" : pct >= 70 ? "warn" : "ok";
   const barColor =
-    level === "danger"
-      ? "bg-destructive"
-      : level === "warn"
-        ? "bg-yellow-500"
-        : "bg-primary";
+    level === "danger" ? "bg-destructive" : level === "warn" ? "bg-yellow-500" : "bg-primary";
   const badge =
     level === "danger"
       ? { text: "วิกฤติ", cls: "bg-destructive/10 text-destructive" }
@@ -56,7 +52,7 @@ function UsageBar({
 
   // แสดงเป็น GB ถ้าเพดาน ≥ 1024 MB
   const useGB = limitMB >= 1024;
-  const fmt = (mb: number) => useGB ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(1)} MB`;
+  const fmt = (mb: number) => (useGB ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(1)} MB`);
   const limitLabel = useGB ? `${(limitMB / 1024).toFixed(0)} GB` : `${limitMB} MB`;
 
   return (
@@ -109,7 +105,7 @@ function StoragePage() {
   }, [load]);
 
   // แผน Supabase Pro: 8 GB database, 100 GB file storage
-  const DB_LIMIT_MB = 8 * 1024;        // 8 GB
+  const DB_LIMIT_MB = 8 * 1024; // 8 GB
   const STORAGE_LIMIT_MB = 100 * 1024; // 100 GB
   const BYTES_PER_MB = 1_048_576;
   const dbUsedMB = (data?.database.total_bytes ?? 0) / BYTES_PER_MB;
@@ -132,7 +128,11 @@ function StoragePage() {
           </p>
         </div>
         <Button onClick={load} variant="outline" size="sm" disabled={loading} className="gap-1">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
           รีเฟรช
         </Button>
       </div>
@@ -253,7 +253,15 @@ function StoragePage() {
   );
 }
 
-function SummaryCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function SummaryCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
@@ -277,4 +285,3 @@ function SkeletonRows() {
     </div>
   );
 }
-

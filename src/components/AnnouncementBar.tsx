@@ -25,10 +25,8 @@ export function AnnouncementBar() {
     load();
     const ch = supabase
       .channel("announcements-bar")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "announcements" },
-        () => load(),
+      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () =>
+        load(),
       )
       .subscribe();
     return () => {
@@ -39,10 +37,7 @@ export function AnnouncementBar() {
 
   useEffect(() => {
     if (items.length <= 1) return;
-    const t = setInterval(
-      () => setIdx((i) => (i + 1) % items.length),
-      5000,
-    );
+    const t = setInterval(() => setIdx((i) => (i + 1) % items.length), 5000);
     return () => clearInterval(t);
   }, [items.length]);
 

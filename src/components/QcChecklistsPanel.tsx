@@ -117,7 +117,9 @@ export function QcChecklistsPanel() {
     }
     setLoading(true);
     try {
-      const res = await fetchChecklists({ data: { token: requireToken(), category_id: categoryId } });
+      const res = await fetchChecklists({
+        data: { token: requireToken(), category_id: categoryId },
+      });
       setItems((res.rows ?? []) as ChecklistItem[]);
     } catch (err) {
       showError(err);
@@ -225,7 +227,9 @@ export function QcChecklistsPanel() {
         </div>
         <div>
           <h2 className="text-lg font-bold">Checklist QC</h2>
-          <p className="text-xs text-muted-foreground">รายการตรวจสอบสำหรับพนักงาน QC แยกตามหมวดสินค้า</p>
+          <p className="text-xs text-muted-foreground">
+            รายการตรวจสอบสำหรับพนักงาน QC แยกตามหมวดสินค้า
+          </p>
         </div>
       </div>
 
@@ -233,7 +237,9 @@ export function QcChecklistsPanel() {
         <div>
           <Label className="text-xs">หมวดสินค้า</Label>
           <Select value={categoryId} onValueChange={setCategoryId}>
-            <SelectTrigger><SelectValue placeholder="เลือกหมวด" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="เลือกหมวด" />
+            </SelectTrigger>
             <SelectContent>
               {categories.length === 0 && (
                 <div className="px-3 py-2 text-sm text-muted-foreground">
@@ -241,7 +247,9 @@ export function QcChecklistsPanel() {
                 </div>
               )}
               {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -286,7 +294,10 @@ export function QcChecklistsPanel() {
                       index={idx + 1}
                       isEditing={editingId === it.id}
                       editingText={editingText}
-                      onStartEdit={() => { setEditingId(it.id); setEditingText(it.item_text); }}
+                      onStartEdit={() => {
+                        setEditingId(it.id);
+                        setEditingText(it.item_text);
+                      }}
                       onCancelEdit={() => setEditingId(null)}
                       onChangeEditText={setEditingText}
                       onSaveEdit={() => saveEdit(it.id)}
@@ -301,7 +312,8 @@ export function QcChecklistsPanel() {
 
           {items.length > 0 && (
             <p className="mt-3 text-[11px] text-muted-foreground">
-              ลากที่ <GripVertical className="inline h-3 w-3" /> เพื่อจัดเรียงลำดับ — บันทึกอัตโนมัติ
+              ลากที่ <GripVertical className="inline h-3 w-3" /> เพื่อจัดเรียงลำดับ —
+              บันทึกอัตโนมัติ
             </p>
           )}
         </>
@@ -333,7 +345,9 @@ function SortableChecklistRow({
   onToggleActive: () => void;
   onRemove: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -389,13 +403,28 @@ function SortableChecklistRow({
           </>
         ) : (
           <>
-            <Button size="sm" variant="ghost" className="h-8 gap-1" onClick={onToggleActive} title={item.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}>
-              {item.is_active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1"
+              onClick={onToggleActive}
+              title={item.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+            >
+              {item.is_active ? (
+                <Eye className="h-3.5 w-3.5" />
+              ) : (
+                <EyeOff className="h-3.5 w-3.5" />
+              )}
             </Button>
             <Button size="sm" variant="ghost" className="h-8 gap-1" onClick={onStartEdit}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button size="sm" variant="ghost" className="h-8 gap-1 text-destructive hover:text-destructive" onClick={onRemove}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1 text-destructive hover:text-destructive"
+              onClick={onRemove}
+            >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </>

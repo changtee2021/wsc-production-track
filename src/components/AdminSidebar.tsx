@@ -45,7 +45,12 @@ import { AppVersion } from "@/components/AppVersion";
 
 const NAV_GROUPS: Array<{
   label: string;
-  items: Array<{ title: string; url: string; icon: typeof LayoutDashboard; search?: Record<string, string> }>;
+  items: Array<{
+    title: string;
+    url: string;
+    icon: typeof LayoutDashboard;
+    search?: Record<string, string>;
+  }>;
 }> = [
   {
     label: "ภาพรวม",
@@ -111,9 +116,7 @@ const NAV_GROUPS: Array<{
   },
   {
     label: "ระบบ",
-    items: [
-      { title: "พนักงาน", url: "/manage", icon: Users },
-    ],
+    items: [{ title: "พนักงาน", url: "/manage", icon: Users }],
   },
   {
     label: "อัพเดต",
@@ -182,9 +185,7 @@ export function AdminSidebar() {
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Factory className="h-4 w-4" />
           </div>
-          <span className="truncate group-data-[collapsible=icon]:hidden">
-            WSC ProductionTrack
-          </span>
+          <span className="truncate group-data-[collapsible=icon]:hidden">WSC ProductionTrack</span>
         </Link>
       </SidebarHeader>
 
@@ -205,7 +206,11 @@ export function AdminSidebar() {
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                        <Link to={item.url} search={item.search as never} className="flex items-center gap-2">
+                        <Link
+                          to={item.url}
+                          search={item.search as never}
+                          className="flex items-center gap-2"
+                        >
                           <item.icon className="h-4 w-4" />
                           <span className="flex-1">{item.title}</span>
                           {showNewBadge && (
@@ -236,7 +241,7 @@ export function AdminSidebar() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
-                  })}
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

@@ -16,7 +16,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -337,7 +341,9 @@ function StockInventoryAdminPage() {
             </label>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              ยกเลิก
+            </Button>
             <Button onClick={save} disabled={saving}>
               {saving && <Loader2 className="size-4 animate-spin mr-1" />}
               บันทึก

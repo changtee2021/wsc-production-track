@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -156,7 +162,11 @@ export async function acquireCameraStream(
         name: "SecurityError",
       });
     }
-    if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
       throw Object.assign(new Error("ไม่รองรับกล้องบนเบราว์เซอร์นี้"), {
         name: "NotFoundError",
       });
@@ -219,7 +229,12 @@ function buildConstraintLadder(mode: FacingMode): MediaStreamConstraints[] {
   ];
 }
 
-export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream = null }: QrScannerDialogProps) {
+export function QrScannerDialog({
+  open,
+  onOpenChange,
+  onScanned,
+  initialStream = null,
+}: QrScannerDialogProps) {
   const html5Ref = useRef<Html5Qrcode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -438,7 +453,8 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
     let scanning = false;
     const tick = async (ts: number) => {
       if (cancelledRef.current) return;
-      const ready = !scanning && ts - lastScan >= 350 && video.readyState >= 2 && video.videoWidth > 0;
+      const ready =
+        !scanning && ts - lastScan >= 350 && video.readyState >= 2 && video.videoWidth > 0;
       if (ready) {
         lastScan = ts;
         scanning = true;
@@ -559,7 +575,11 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
           name: "SecurityError",
         });
       }
-      if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+      ) {
         throw Object.assign(new Error("ไม่รองรับกล้องบนเบราว์เซอร์นี้"), {
           name: "NotFoundError",
         });
@@ -573,7 +593,11 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
           return;
         } catch (err) {
           const name = (err as { name?: string })?.name;
-          if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
+          if (
+            name === "NotAllowedError" ||
+            name === "PermissionDeniedError" ||
+            name === "SecurityError"
+          ) {
             throw err;
           }
           console.warn("Native BarcodeDetector failed, falling back", err);
@@ -621,7 +645,8 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
 
     (async () => {
       if (await hasNativeQrDetector()) {
-        const Ctor = (window as unknown as { BarcodeDetector: BarcodeDetectorCtor }).BarcodeDetector;
+        const Ctor = (window as unknown as { BarcodeDetector: BarcodeDetectorCtor })
+          .BarcodeDetector;
         detectorRef.current = new Ctor({ formats: ["qr_code"] });
       } else {
         detectorRef.current = null;
@@ -702,7 +727,11 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
         } catch {}
       }
     } catch (err) {
-      toast.error(err instanceof Error ? `อ่าน QR จากรูปไม่สำเร็จ: ${err.message}` : "อ่าน QR จากรูปไม่สำเร็จ");
+      toast.error(
+        err instanceof Error
+          ? `อ่าน QR จากรูปไม่สำเร็จ: ${err.message}`
+          : "อ่าน QR จากรูปไม่สำเร็จ",
+      );
       if (!cancelledRef.current) await startWith(facing);
     }
   };
@@ -733,7 +762,10 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
         )}
 
         <div className="relative w-full flex-1 min-h-[55vh] overflow-hidden rounded-xl bg-black sm:aspect-square sm:flex-none sm:min-h-0">
-          <div id={REGION_ID} className="h-full w-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover" />
+          <div
+            id={REGION_ID}
+            className="h-full w-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover"
+          />
           {starting && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -755,7 +787,12 @@ export function QrScannerDialog({ open, onOpenChange, onScanned, initialStream =
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={switchCamera} disabled={starting} className="h-11 gap-2">
+          <Button
+            variant="outline"
+            onClick={switchCamera}
+            disabled={starting}
+            className="h-11 gap-2"
+          >
             <SwitchCamera className="h-4 w-4" />
             สลับกล้อง
           </Button>

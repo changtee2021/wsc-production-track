@@ -99,9 +99,7 @@ export const aiAdminAsk = createServerFn({ method: "POST" })
       });
 
       const toolsUsed = Array.from(
-        new Set(
-          result.steps.flatMap((s) => s.toolCalls?.map((c) => c.toolName) ?? []),
-        ),
+        new Set(result.steps.flatMap((s) => s.toolCalls?.map((c) => c.toolName) ?? [])),
       );
       const reply = result.text?.trim() || "(ไม่มีคำตอบ)";
       return { ok: true as const, reply, remaining: quota.remaining, toolsUsed };
@@ -109,7 +107,8 @@ export const aiAdminAsk = createServerFn({ method: "POST" })
       const msg = e instanceof Error ? e.message : "เรียก AI ไม่สำเร็จ";
       console.error("aiAdminAsk error", e);
       if (/429/.test(msg)) return { ok: false as const, error: "AI ใช้งานหนัก ลองใหม่อีกครู่" };
-      if (/402/.test(msg)) return { ok: false as const, error: "เครดิต AI หมด — เพิ่มเครดิตที่ Settings → Workspace" };
+      if (/402/.test(msg))
+        return { ok: false as const, error: "เครดิต AI หมด — เพิ่มเครดิตที่ Settings → Workspace" };
       return { ok: false as const, error: msg };
     }
   });

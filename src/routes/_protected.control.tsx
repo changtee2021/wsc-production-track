@@ -15,9 +15,7 @@ function ControlPage() {
       <Toaster richColors position="top-center" />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Control</h1>
-        <p className="text-sm text-muted-foreground">
-          จัดการแบนเนอร์หน้าแรกและประกาศต่างๆ
-        </p>
+        <p className="text-sm text-muted-foreground">จัดการแบนเนอร์หน้าแรกและประกาศต่างๆ</p>
       </div>
       <BannersPanel />
       <AnnouncementsPanel />

@@ -3,24 +3,41 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  Loader2, RefreshCw, MessageSquare, Trash2, ArrowRight, CheckCircle2, Inbox,
+  Loader2,
+  RefreshCw,
+  MessageSquare,
+  Trash2,
+  ArrowRight,
+  CheckCircle2,
+  Inbox,
 } from "lucide-react";
 import {
   adminListFeedback,
   adminUpdateFeedback,
   adminDeleteFeedback,
-  STATUS_LABEL, STATUS_BADGE,
-  PRIORITY_LABEL, PRIORITY_BADGE,
+  STATUS_LABEL,
+  STATUS_BADGE,
+  PRIORITY_LABEL,
+  PRIORITY_BADGE,
   CATEGORY_LABEL,
   NEXT_STATUS,
-  TICKET_STATUSES, TICKET_PRIORITIES,
-  type TicketRow, type TicketStatus, type TicketPriority,
+  TICKET_STATUSES,
+  TICKET_PRIORITIES,
+  type TicketRow,
+  type TicketStatus,
+  type TicketPriority,
 } from "@/lib/features/feedback.functions";
 import { TicketComments } from "@/components/TicketComments";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
@@ -31,8 +48,11 @@ export const Route = createFileRoute("/_protected/feedback-admin")({
 });
 
 function fmt(s: string) {
-  try { return new Date(s).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" }); }
-  catch { return s; }
+  try {
+    return new Date(s).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return s;
+  }
 }
 
 function FeedbackAdminPage() {
@@ -48,33 +68,46 @@ function FeedbackAdminPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await listFn({ data: { adminToken: requireToken(), status, priority, limit: 200 } });
+      const data = await listFn({
+        data: { adminToken: requireToken(), status, priority, limit: 200 },
+      });
       setRows(data as TicketRow[]);
-    } catch (e) { showError(e, "โหลดไม่สำเร็จ"); }
-    finally { setLoading(false); }
+    } catch (e) {
+      showError(e, "โหลดไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
   }, [listFn, status, priority]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const updateStatus = async (id: string, s: TicketStatus) => {
     try {
       await updateFn({ data: { adminToken: requireToken(), id, status: s } });
       toast.success("อัปเดตแล้ว");
       await load();
-    } catch (e) { showError(e, "อัปเดตไม่สำเร็จ"); }
+    } catch (e) {
+      showError(e, "อัปเดตไม่สำเร็จ");
+    }
   };
   const updatePriority = async (id: string, p: TicketPriority) => {
     try {
       await updateFn({ data: { adminToken: requireToken(), id, priority: p } });
       await load();
-    } catch (e) { showError(e, "อัปเดตไม่สำเร็จ"); }
+    } catch (e) {
+      showError(e, "อัปเดตไม่สำเร็จ");
+    }
   };
   const saveNote = async (id: string) => {
     try {
       await updateFn({ data: { adminToken: requireToken(), id, admin_note: noteDraft[id] ?? "" } });
       toast.success("บันทึกหมายเหตุแล้ว");
       await load();
-    } catch (e) { showError(e, "บันทึกไม่สำเร็จ"); }
+    } catch (e) {
+      showError(e, "บันทึกไม่สำเร็จ");
+    }
   };
   const remove = async (id: string) => {
     if (!confirm("ลบ Ticket นี้ (รวมคอมเมนต์ทั้งหมด)?")) return;
@@ -82,7 +115,9 @@ function FeedbackAdminPage() {
       await deleteFn({ data: { adminToken: requireToken(), id } });
       toast.success("ลบแล้ว");
       await load();
-    } catch (e) { showError(e, "ลบไม่สำเร็จ"); }
+    } catch (e) {
+      showError(e, "ลบไม่สำเร็จ");
+    }
   };
 
   return (
@@ -95,25 +130,43 @@ function FeedbackAdminPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">ทุกสถานะ</SelectItem>
               {TICKET_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+                <SelectItem key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={priority} onValueChange={setPriority}>
-            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">ทุกระดับ</SelectItem>
               {TICKET_PRIORITIES.map((p) => (
-                <SelectItem key={p} value={p}>{PRIORITY_LABEL[p]}</SelectItem>
+                <SelectItem key={p} value={p}>
+                  {PRIORITY_LABEL[p]}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={load} disabled={loading} aria-label="โหลดใหม่">
-            {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={load}
+            disabled={loading}
+            aria-label="โหลดใหม่"
+          >
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
           </Button>
         </div>
       </div>
@@ -151,10 +204,20 @@ function FeedbackAdminPage() {
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", STATUS_BADGE[t.status])}>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-xs font-medium",
+                        STATUS_BADGE[t.status],
+                      )}
+                    >
                       {STATUS_LABEL[t.status]}
                     </span>
-                    <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", PRIORITY_BADGE[t.priority])}>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                        PRIORITY_BADGE[t.priority],
+                      )}
+                    >
                       {PRIORITY_LABEL[t.priority]}
                     </span>
                   </div>
@@ -165,21 +228,37 @@ function FeedbackAdminPage() {
                   {t.image_urls?.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {t.image_urls.map((u, i) => (
-                        <a key={i} href={u} target="_blank" rel="noreferrer"
-                          className="block h-24 w-24 overflow-hidden rounded-md border">
-                          <img src={u} alt={`ภาพแนบ ${i + 1}`}
-                            className="h-full w-full object-cover transition hover:scale-105" loading="lazy" />
+                        <a
+                          key={i}
+                          href={u}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block h-24 w-24 overflow-hidden rounded-md border"
+                        >
+                          <img
+                            src={u}
+                            alt={`ภาพแนบ ${i + 1}`}
+                            className="h-full w-full object-cover transition hover:scale-105"
+                            loading="lazy"
+                          />
                         </a>
                       ))}
                     </div>
                   )}
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <Select value={t.priority} onValueChange={(v) => updatePriority(t.id, v as TicketPriority)}>
-                      <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+                    <Select
+                      value={t.priority}
+                      onValueChange={(v) => updatePriority(t.id, v as TicketPriority)}
+                    >
+                      <SelectTrigger className="h-8 w-28 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {TICKET_PRIORITIES.map((p) => (
-                          <SelectItem key={p} value={p}>{PRIORITY_LABEL[p]}</SelectItem>
+                          <SelectItem key={p} value={p}>
+                            {PRIORITY_LABEL[p]}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -190,11 +269,20 @@ function FeedbackAdminPage() {
                         </Button>
                       )}
                       {t.status !== "closed" && (
-                        <Button size="sm" variant="outline" onClick={() => updateStatus(t.id, "closed")}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateStatus(t.id, "closed")}
+                        >
                           <CheckCircle2 className="h-4 w-4" /> ปิดงาน
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" onClick={() => remove(t.id)} aria-label="ลบ">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => remove(t.id)}
+                        aria-label="ลบ"
+                      >
                         <Trash2 className="size-4 text-destructive" />
                       </Button>
                     </div>
@@ -207,7 +295,9 @@ function FeedbackAdminPage() {
                       value={noteDraft[t.id] ?? t.admin_note ?? ""}
                       onChange={(e) => setNoteDraft({ ...noteDraft, [t.id]: e.target.value })}
                     />
-                    <Button size="sm" variant="outline" onClick={() => saveNote(t.id)}>บันทึกหมายเหตุ</Button>
+                    <Button size="sm" variant="outline" onClick={() => saveNote(t.id)}>
+                      บันทึกหมายเหตุ
+                    </Button>
                   </div>
 
                   <TicketComments ticketId={t.id} />

@@ -19,10 +19,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -50,16 +59,28 @@ export function FeedbackFab() {
   const reset = () => {
     shots.forEach((s) => URL.revokeObjectURL(s.url));
     setShots([]);
-    setForm({ from_name: "", from_emp_code: "", subject: "", message: "", category: "bug", priority: "normal" });
+    setForm({
+      from_name: "",
+      from_emp_code: "",
+      subject: "",
+      message: "",
+      category: "bug",
+      priority: "normal",
+    });
   };
 
   const addFiles = (files: FileList | File[]) => {
     const imgs = Array.from(files).filter((f) => f.type.startsWith("image/"));
     setShots((prev) => {
       const room = MAX_IMAGES - prev.length;
-      if (room <= 0) { toast.error(`แนบรูปได้สูงสุด ${MAX_IMAGES} รูป`); return prev; }
+      if (room <= 0) {
+        toast.error(`แนบรูปได้สูงสุด ${MAX_IMAGES} รูป`);
+        return prev;
+      }
       const next = imgs.slice(0, room).map((file) => ({
-        id: crypto.randomUUID(), file, url: URL.createObjectURL(file),
+        id: crypto.randomUUID(),
+        file,
+        url: URL.createObjectURL(file),
       }));
       return [...prev, ...next];
     });
@@ -80,7 +101,8 @@ export function FeedbackFab() {
     try {
       const { default: html2canvas } = await import("html2canvas-pro");
       const canvas = await html2canvas(document.body, {
-        logging: false, useCORS: true,
+        logging: false,
+        useCORS: true,
         scale: Math.min(window.devicePixelRatio || 1, 2),
       });
       const blob: Blob | null = await new Promise((res) =>
@@ -114,7 +136,8 @@ export function FeedbackFab() {
         const { error } = await supabase.storage
           .from("feedback-media")
           .uploadToSignedUrl(signed.path, signed.token, s.file, {
-            contentType: s.file.type, upsert: false,
+            contentType: s.file.type,
+            upsert: false,
           });
         if (error) throw new Error("อัปโหลดรูปไม่สำเร็จ: " + error.message);
         paths.push(signed.path);
@@ -156,43 +179,76 @@ export function FeedbackFab() {
         <MessageSquarePlus className="h-5 w-5" />
       </Button>
 
-      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          setOpen(o);
+          if (!o) reset();
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>ส่งความคิดเห็น/แจ้งปัญหา</DialogTitle>
             <DialogDescription className="text-xs">
-              หน้า: <span className="font-mono">{path}</span> — แนบรูปหรือแคปหน้าจอเพื่ออธิบายให้ละเอียดขึ้นได้
+              หน้า: <span className="font-mono">{path}</span> —
+              แนบรูปหรือแคปหน้าจอเพื่ออธิบายให้ละเอียดขึ้นได้
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="ชื่อ (ไม่บังคับ)" value={form.from_name} maxLength={120}
-              onChange={(e) => setForm({ ...form, from_name: e.target.value })} />
-            <Input placeholder="รหัสพนักงาน" value={form.from_emp_code} maxLength={40}
-              onChange={(e) => setForm({ ...form, from_emp_code: e.target.value })} />
+            <Input
+              placeholder="ชื่อ (ไม่บังคับ)"
+              value={form.from_name}
+              maxLength={120}
+              onChange={(e) => setForm({ ...form, from_name: e.target.value })}
+            />
+            <Input
+              placeholder="รหัสพนักงาน"
+              value={form.from_emp_code}
+              maxLength={40}
+              onChange={(e) => setForm({ ...form, from_emp_code: e.target.value })}
+            />
           </div>
 
           <div className="flex gap-2">
-            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v as TicketCategory })}>
-              <SelectTrigger className="h-9 flex-1 text-sm"><SelectValue /></SelectTrigger>
+            <Select
+              value={form.category}
+              onValueChange={(v) => setForm({ ...form, category: v as TicketCategory })}
+            >
+              <SelectTrigger className="h-9 flex-1 text-sm">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {TICKET_CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>{CATEGORY_LABEL[c]}</SelectItem>
+                  <SelectItem key={c} value={c}>
+                    {CATEGORY_LABEL[c]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v as TicketPriority })}>
-              <SelectTrigger className="h-9 w-32 text-sm"><SelectValue /></SelectTrigger>
+            <Select
+              value={form.priority}
+              onValueChange={(v) => setForm({ ...form, priority: v as TicketPriority })}
+            >
+              <SelectTrigger className="h-9 w-32 text-sm">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {TICKET_PRIORITIES.map((p) => (
-                  <SelectItem key={p} value={p}>{PRIORITY_LABEL[p]}</SelectItem>
+                  <SelectItem key={p} value={p}>
+                    {PRIORITY_LABEL[p]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <Input placeholder="หัวข้อสั้น ๆ *" value={form.subject} maxLength={200}
-            onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+          <Input
+            placeholder="หัวข้อสั้น ๆ *"
+            value={form.subject}
+            maxLength={200}
+            onChange={(e) => setForm({ ...form, subject: e.target.value })}
+          />
 
           <Textarea
             placeholder="รายละเอียด... (วางรูปได้)"
@@ -201,8 +257,13 @@ export function FeedbackFab() {
             rows={5}
             className="resize-none"
             onPaste={(e) => {
-              const imgs = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"));
-              if (imgs.length) { e.preventDefault(); addFiles(imgs); }
+              const imgs = Array.from(e.clipboardData.files).filter((f) =>
+                f.type.startsWith("image/"),
+              );
+              if (imgs.length) {
+                e.preventDefault();
+                addFiles(imgs);
+              }
             }}
             onChange={(e) => setForm({ ...form, message: e.target.value })}
           />
@@ -212,9 +273,12 @@ export function FeedbackFab() {
               {shots.map((s) => (
                 <div key={s.id} className="relative h-20 w-20 overflow-hidden rounded-md border">
                   <img src={s.url} alt="แนบ" className="h-full w-full object-cover" />
-                  <button type="button" onClick={() => removeShot(s.id)}
+                  <button
+                    type="button"
+                    onClick={() => removeShot(s.id)}
                     className="absolute right-0.5 top-0.5 rounded-full bg-background/80 p-0.5 shadow"
-                    aria-label="ลบรูป">
+                    aria-label="ลบรูป"
+                  >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -223,18 +287,35 @@ export function FeedbackFab() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={captureScreen}
-              disabled={capturing || submitting || shots.length >= MAX_IMAGES}>
-              {capturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={captureScreen}
+              disabled={capturing || submitting || shots.length >= MAX_IMAGES}
+            >
+              {capturing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4" />
+              )}
               แคปหน้าจอ
             </Button>
-            <Button type="button" variant="outline" size="sm"
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => fileRef.current?.click()}
-              disabled={submitting || shots.length >= MAX_IMAGES}>
+              disabled={submitting || shots.length >= MAX_IMAGES}
+            >
               <ImagePlus className="h-4 w-4" /> แนบรูป
             </Button>
             <input
-              ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
               onChange={(e) => {
                 if (e.target.files) addFiles(e.target.files);
                 e.target.value = "";
@@ -243,9 +324,20 @@ export function FeedbackFab() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>ยกเลิก</Button>
-            <Button onClick={handleSubmit} disabled={submitting || form.subject.trim().length < 2 || form.message.trim().length < 2}>
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
+              ยกเลิก
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={
+                submitting || form.subject.trim().length < 2 || form.message.trim().length < 2
+              }
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
               ส่ง
             </Button>
           </DialogFooter>

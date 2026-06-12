@@ -11,9 +11,7 @@ export function AppHeader({ children }: { children?: React.ReactNode }) {
           </div>
           <span>WSC ProductionTrack</span>
         </Link>
-        <div className="flex items-center gap-2 text-sm">
-          {children}
-        </div>
+        <div className="flex items-center gap-2 text-sm">{children}</div>
       </div>
     </header>
   );

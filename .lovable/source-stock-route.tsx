@@ -48,11 +48,7 @@ import {
   type StockCountRow,
   type StockCountBatch,
 } from "@/lib/stock-count.functions";
-import {
-  isStockSession,
-  setStockToken,
-  getStockToken,
-} from "@/lib/stock-session";
+import { isStockSession, setStockToken, getStockToken } from "@/lib/stock-session";
 import { getCompany, getWorkerCode, getEmployeeName, getEmployeeId } from "@/lib/tenant";
 
 export const Route = createFileRoute("/stock-count")({
@@ -361,7 +357,9 @@ function StockCountWorkbench() {
             <CardTitle className="flex items-center gap-1.5 text-base">
               <ListChecks className="h-4 w-4 text-primary" />
               รายการในชุดนี้
-              <Badge variant="secondary" className="ml-1">{lines.length}</Badge>
+              <Badge variant="secondary" className="ml-1">
+                {lines.length}
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -542,10 +540,7 @@ function SubmittedBatchRow({ batch }: { batch: StockCountBatch }) {
       {open && (
         <div className="space-y-1 border-t p-2 text-sm">
           {lines.map((r) => (
-            <div
-              key={r.id}
-              className="flex items-center justify-between gap-2 rounded px-2 py-1"
-            >
+            <div key={r.id} className="flex items-center justify-between gap-2 rounded px-2 py-1">
               <div className="min-w-0">
                 <p className="font-mono text-xs text-muted-foreground">{r.item_code}</p>
                 <p className="truncate">{r.item_name}</p>

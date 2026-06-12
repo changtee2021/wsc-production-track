@@ -3,12 +3,7 @@ import { ArrowRight, ChevronRight, FileText, GitBranch, Users } from "lucide-rea
 import type { WorkInstruction, WiStep } from "@/lib/data/work-instructions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -47,18 +42,14 @@ function StepCard({
               </Badge>
             )}
           </div>
-          <CardTitle className="text-sm font-semibold leading-snug">
-            {step.processName}
-          </CardTitle>
+          <CardTitle className="text-sm font-semibold leading-snug">{step.processName}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 p-3 pt-0">
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <Users className="h-3 w-3 shrink-0" />
             {step.department}
           </p>
-          <p className="line-clamp-2 text-xs text-foreground/80">
-            {step.actions[0]}
-          </p>
+          <p className="line-clamp-2 text-xs text-foreground/80">{step.actions[0]}</p>
           <span className="inline-flex items-center text-[11px] font-medium text-primary">
             ดูรายละเอียด
             <ChevronRight className="h-3 w-3" />
@@ -75,9 +66,7 @@ export function WiFlowChart({ wi }: Props) {
   const lanes = useMemo(() => {
     return wi.categories.map((cat) => ({
       ...cat,
-      steps: wi.steps
-        .filter((s) => s.categoryId === cat.id)
-        .sort((a, b) => a.order - b.order),
+      steps: wi.steps.filter((s) => s.categoryId === cat.id).sort((a, b) => a.order - b.order),
     }));
   }, [wi]);
 
@@ -86,10 +75,7 @@ export function WiFlowChart({ wi }: Props) {
       {lanes.map((lane, laneIdx) => (
         <section key={lane.id} className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <div
-              className="h-3 w-3 rounded-full"
-              style={{ backgroundColor: lane.color }}
-            />
+            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: lane.color }} />
             <div>
               <h2 className="text-base font-bold text-foreground">{lane.name}</h2>
               {lane.description && (
@@ -105,16 +91,9 @@ export function WiFlowChart({ wi }: Props) {
             <div className="flex min-w-max items-stretch gap-2 px-1 py-2">
               {lane.steps.map((step, i) => (
                 <div key={step.id} className="flex items-center gap-2">
-                  <StepCard
-                    step={step}
-                    color={lane.color}
-                    onSelect={setSelected}
-                  />
+                  <StepCard step={step} color={lane.color} onSelect={setSelected} />
                   {i < lane.steps.length - 1 && (
-                    <ArrowRight
-                      className="h-5 w-5 shrink-0 text-muted-foreground/60"
-                      aria-hidden
-                    />
+                    <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground/60" aria-hidden />
                   )}
                 </div>
               ))}
@@ -124,8 +103,8 @@ export function WiFlowChart({ wi }: Props) {
           {lane.id === "assembly" && (
             <p className="rounded-lg border border-dashed border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-100">
               <GitBranch className="mr-1 inline h-3.5 w-3.5" />
-              หลังขั้น CNC แยก 2 เส้นทาง: <strong>เส้นทาง A — EURO</strong> (ขั้น 5–6)
-              หรือ <strong>เส้นทาง B — ลูกล้อ</strong> (ขั้น 7–8) แล้วรวมที่ขั้นทำความสะอาด
+              หลังขั้น CNC แยก 2 เส้นทาง: <strong>เส้นทาง A — EURO</strong> (ขั้น 5–6) หรือ{" "}
+              <strong>เส้นทาง B — ลูกล้อ</strong> (ขั้น 7–8) แล้วรวมที่ขั้นทำความสะอาด
             </p>
           )}
 
@@ -147,8 +126,8 @@ export function WiFlowChart({ wi }: Props) {
                     className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                     style={{
                       backgroundColor:
-                        wi.categories.find((c) => c.id === selected.categoryId)
-                          ?.color ?? "hsl(var(--primary))",
+                        wi.categories.find((c) => c.id === selected.categoryId)?.color ??
+                        "hsl(var(--primary))",
                     }}
                   >
                     {selected.order}
@@ -162,9 +141,7 @@ export function WiFlowChart({ wi }: Props) {
                     <Users className="mr-1 h-3 w-3" />
                     {selected.department}
                   </Badge>
-                  {selected.branchLabel && (
-                    <Badge variant="outline">{selected.branchLabel}</Badge>
-                  )}
+                  {selected.branchLabel && <Badge variant="outline">{selected.branchLabel}</Badge>}
                 </div>
 
                 <div>
@@ -218,9 +195,7 @@ export function WiOverviewStrip({ wi }: Props) {
                 )}
                 style={{ borderBottom: `3px solid ${cat?.color ?? "#ccc"}` }}
               >
-                <span className="text-[10px] font-bold text-muted-foreground">
-                  {step.order}
-                </span>
+                <span className="text-[10px] font-bold text-muted-foreground">{step.order}</span>
                 <span className="line-clamp-2 text-[10px] leading-tight text-foreground">
                   {step.processName}
                 </span>

@@ -263,9 +263,7 @@ export const updateCountLine = createServerFn({ method: "POST" })
   });
 
 export const deleteCountLine = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const { company } = requireWorker(data.token);
 
@@ -348,7 +346,11 @@ export const submitBatch = createServerFn({ method: "POST" })
 
     const { error } = await supabaseAdmin
       .from("stock_count_batches")
-      .update({ status: "submitted", submitted_at: new Date().toISOString(), note: data.note ?? "" })
+      .update({
+        status: "submitted",
+        submitted_at: new Date().toISOString(),
+        note: data.note ?? "",
+      })
       .eq("id", data.batchId);
     if (error) throw new Error(error.message);
     return { ok: true };

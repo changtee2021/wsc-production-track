@@ -92,9 +92,7 @@ function MaintenanceAdminPage() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${STATUS_COLOR[s]}`} />
-                <span className="text-2xl font-bold">
-                  {data?.counts[s] ?? 0}
-                </span>
+                <span className="text-2xl font-bold">{data?.counts[s] ?? 0}</span>
               </div>
             </CardContent>
           </Card>
@@ -121,9 +119,7 @@ function MaintenanceAdminPage() {
                 >
                   <div className="min-w-0">
                     <div className="truncate font-medium">{p.name}</div>
-                    {p.code && (
-                      <div className="text-xs text-muted-foreground">{p.code}</div>
-                    )}
+                    {p.code && <div className="text-xs text-muted-foreground">{p.code}</div>}
                   </div>
                   <div className="shrink-0 text-right text-xs">
                     <div className="font-bold text-amber-700 dark:text-amber-400">
@@ -141,9 +137,7 @@ function MaintenanceAdminPage() {
       {/* Tickets */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            ใบงานล่าสุด ({data?.tickets.length ?? 0})
-          </CardTitle>
+          <CardTitle className="text-base">ใบงานล่าสุด ({data?.tickets.length ?? 0})</CardTitle>
         </CardHeader>
         <CardContent>
           {!data?.tickets.length ? (
@@ -151,7 +145,8 @@ function MaintenanceAdminPage() {
           ) : (
             <div className="space-y-1.5">
               {data.tickets.map((t) => {
-                const asset = (t as { assets?: { name: string; code: string | null } | null }).assets;
+                const asset = (t as { assets?: { name: string; code: string | null } | null })
+                  .assets;
                 return (
                   <div
                     key={t.id}
@@ -165,9 +160,7 @@ function MaintenanceAdminPage() {
                           {STATUS_LABEL[t.status]}
                         </Badge>
                         {t.priority === "high" && (
-                          <Badge className="bg-rose-500 text-[10px] hover:bg-rose-600">
-                            ด่วน
-                          </Badge>
+                          <Badge className="bg-rose-500 text-[10px] hover:bg-rose-600">ด่วน</Badge>
                         )}
                       </div>
                       <div className="mt-0.5 truncate text-xs text-muted-foreground">

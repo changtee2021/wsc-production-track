@@ -8,11 +8,7 @@ function assertAdmin(token: string | undefined) {
   if (!verifyAdminToken(token)) throw new Error("Unauthorized");
 }
 
-export type ProductionJobStatus =
-  | "pending"
-  | "in_progress"
-  | "done"
-  | "cancelled";
+export type ProductionJobStatus = "pending" | "in_progress" | "done" | "cancelled";
 
 export type ProductionJobRow = {
   id: string;
@@ -46,9 +42,7 @@ export const adminListProductionJobs = createServerFn({ method: "POST" })
     z
       .object({
         token: tokenStr,
-        status: z
-          .enum(["pending", "in_progress", "done", "cancelled", "all"])
-          .default("pending"),
+        status: z.enum(["pending", "in_progress", "done", "cancelled", "all"]).default("pending"),
         search: z.string().trim().max(64).optional(),
         limit: z.number().int().min(1).max(500).default(200),
       })
@@ -66,9 +60,7 @@ export const adminListProductionJobs = createServerFn({ method: "POST" })
     if (data.status !== "all") q = q.eq("status", data.status);
     if (data.search) {
       const s = data.search;
-      q = q.or(
-        `job_no.ilike.%${s}%,order_no.ilike.%${s}%,customer_name.ilike.%${s}%`,
-      );
+      q = q.or(`job_no.ilike.%${s}%,order_no.ilike.%${s}%,customer_name.ilike.%${s}%`);
     }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
@@ -92,9 +84,7 @@ export const adminGetJobByNo = createServerFn({ method: "POST" })
   });
 
 export const adminMarkLabelPrinted = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, id: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
     const { error } = await supabaseAdmin
@@ -125,49 +115,43 @@ export const adminCancelProductionJob = createServerFn({ method: "POST" })
   });
 
 // Public — weekly leaderboard for worker home screen.
-export const getWeeklyLeaderboard = createServerFn({ method: "GET" })
-  .handler(async () => {
-    // Last 7 days, group by employee
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const [scoresRes, empsRes] = await Promise.all([
-      supabaseAdmin
-        .from("employee_scores")
-        .select("employee_id, points, tier, scored_at")
-        .gte("scored_at", since),
-      supabaseAdmin
-        .from("employees")
-        .select("id, name, emp_code, avatar_url, nationality")
-        .eq("active", true),
-    ]);
-    if (scoresRes.error) throw new Error(scoresRes.error.message);
-    const empMap = new Map(
-      (empsRes.data ?? []).map((e) => [e.id, e]),
-    );
-    const agg = new Map<
-      string,
-      { points: number; bonus: number; finished: number }
-    >();
-    for (const s of scoresRes.data ?? []) {
-      const a = agg.get(s.employee_id) ?? { points: 0, bonus: 0, finished: 0 };
-      a.points += s.points ?? 0;
-      a.finished += 1;
-      if (s.tier === "bonus") a.bonus += 1;
-      agg.set(s.employee_id, a);
-    }
-    const rows = [...agg.entries()]
-      .map(([employee_id, v]) => {
-        const e = empMap.get(employee_id);
-        return {
-          employee_id,
-          name: e?.name ?? "—",
-          emp_code: e?.emp_code ?? null,
-          avatar_url: e?.avatar_url ?? null,
-          nationality: e?.nationality ?? null,
-          ...v,
-        };
-      })
-      .filter((r) => r.name !== "—")
-      .sort((a, b) => b.points - a.points)
-      .slice(0, 10);
-    return { rows };
-  });
+export const getWeeklyLeaderboard = createServerFn({ method: "GET" }).handler(async () => {
+  // Last 7 days, group by employee
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const [scoresRes, empsRes] = await Promise.all([
+    supabaseAdmin
+      .from("employee_scores")
+      .select("employee_id, points, tier, scored_at")
+      .gte("scored_at", since),
+    supabaseAdmin
+      .from("employees")
+      .select("id, name, emp_code, avatar_url, nationality")
+      .eq("active", true),
+  ]);
+  if (scoresRes.error) throw new Error(scoresRes.error.message);
+  const empMap = new Map((empsRes.data ?? []).map((e) => [e.id, e]));
+  const agg = new Map<string, { points: number; bonus: number; finished: number }>();
+  for (const s of scoresRes.data ?? []) {
+    const a = agg.get(s.employee_id) ?? { points: 0, bonus: 0, finished: 0 };
+    a.points += s.points ?? 0;
+    a.finished += 1;
+    if (s.tier === "bonus") a.bonus += 1;
+    agg.set(s.employee_id, a);
+  }
+  const rows = [...agg.entries()]
+    .map(([employee_id, v]) => {
+      const e = empMap.get(employee_id);
+      return {
+        employee_id,
+        name: e?.name ?? "—",
+        emp_code: e?.emp_code ?? null,
+        avatar_url: e?.avatar_url ?? null,
+        nationality: e?.nationality ?? null,
+        ...v,
+      };
+    })
+    .filter((r) => r.name !== "—")
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 10);
+  return { rows };
+});

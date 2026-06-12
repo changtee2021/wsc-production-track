@@ -9,7 +9,13 @@ import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDial
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -124,7 +130,8 @@ function ScanPage() {
   const uploadNote = useServerFn(uploadWorkerNoteImage);
   const submitLog = useServerFn(submitProductionLog);
 
-  const activeKey = job_id && employeeId && stepId ? `wsc:active-start:${job_id}:${stepId}:${employeeId}` : null;
+  const activeKey =
+    job_id && employeeId && stepId ? `wsc:active-start:${job_id}:${stepId}:${employeeId}` : null;
   const [activeStartAt, setActiveStartAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -146,7 +153,11 @@ function ScanPage() {
   useEffect(() => {
     (async () => {
       const [e, s, c] = await Promise.all([
-        supabase.from("employees").select("id,name,emp_code,nationality,avatar_url").eq("active", true).order("name"),
+        supabase
+          .from("employees")
+          .select("id,name,emp_code,nationality,avatar_url")
+          .eq("active", true)
+          .order("name"),
         supabase
           .from("steps")
           .select("id,step_name,description,image_url,std_duration_minutes")
@@ -186,8 +197,7 @@ function ScanPage() {
           category_id: categoryId,
           action,
           note: action === "finish" && hasIssue ? note.trim() : null,
-          note_image_url:
-            action === "finish" && hasIssue ? noteImage?.path ?? null : null,
+          note_image_url: action === "finish" && hasIssue ? (noteImage?.path ?? null) : null,
         },
       });
     } catch (e) {
@@ -212,7 +222,9 @@ function ScanPage() {
       setNote("");
       setNoteImage(null);
     }
-    toast.success(action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }));
+    toast.success(
+      action === "start" ? t("toast.startedAt", { t: at }) : t("toast.finishedAt", { t: at }),
+    );
   };
 
   const uploadNoteImage = async (file: File) => {
@@ -404,7 +416,11 @@ function ScanPage() {
                     <span className="text-xl">{flagFor(e.nationality)}</span>
                     <div className="flex flex-col text-left">
                       <span className="text-base font-semibold leading-tight">{e.name}</span>
-                      {e.emp_code && <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>}
+                      {e.emp_code && (
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {e.emp_code}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </SelectItem>
@@ -429,7 +445,11 @@ function ScanPage() {
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border-2 border-border bg-muted">
                       {s.image_url ? (
-                        <img src={s.image_url} alt={s.step_name} className="h-full w-full object-cover" />
+                        <img
+                          src={s.image_url}
+                          alt={s.step_name}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <ListChecks className="h-6 w-6 text-secondary" />
                       )}
@@ -438,7 +458,8 @@ function ScanPage() {
                       <span className="text-base font-semibold leading-tight">{s.step_name}</span>
                       {s.std_duration_minutes != null && (
                         <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-destructive">
-                          <Clock className="h-3 w-3" />≤ {s.std_duration_minutes} {t("step.minutes")}
+                          <Clock className="h-3 w-3" />≤ {s.std_duration_minutes}{" "}
+                          {t("step.minutes")}
                         </span>
                       )}
                     </div>
@@ -477,7 +498,9 @@ function ScanPage() {
           {activeStartAt !== null &&
             (() => {
               const elapsed = Math.max(0, Math.floor((now - activeStartAt) / 1000));
-              const limit = selectedStep?.std_duration_minutes ? selectedStep.std_duration_minutes * 60 : null;
+              const limit = selectedStep?.std_duration_minutes
+                ? selectedStep.std_duration_minutes * 60
+                : null;
               const over = limit != null && elapsed >= limit;
               const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
               const ss = String(elapsed % 60).padStart(2, "0");
@@ -491,7 +514,9 @@ function ScanPage() {
                 >
                   <div className="flex items-center gap-2">
                     {over ? <AlertTriangle className="h-6 w-6" /> : <Timer className="h-6 w-6" />}
-                    <span className="text-sm font-semibold">{over ? "เกินเวลามาตรฐาน" : "กำลังจับเวลา"}</span>
+                    <span className="text-sm font-semibold">
+                      {over ? "เกินเวลามาตรฐาน" : "กำลังจับเวลา"}
+                    </span>
                   </div>
                   <div className="font-mono text-3xl font-bold tabular-nums">
                     {mm}:{ss}

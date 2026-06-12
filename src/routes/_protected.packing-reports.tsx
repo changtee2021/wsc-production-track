@@ -170,7 +170,6 @@ function PackingReportsPage() {
 
   const signedSrc = (ref: string) => signedMap[ref] ?? ref;
 
-
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,12 +245,18 @@ function PackingReportsPage() {
           </div>
           <div>
             <Label className="text-xs">Job ID</Label>
-            <Input value={jobId} onChange={(e) => setJobId(e.target.value)} placeholder="ค้นหา job" />
+            <Input
+              value={jobId}
+              onChange={(e) => setJobId(e.target.value)}
+              placeholder="ค้นหา job"
+            />
           </div>
           <div>
             <Label className="text-xs">สถานะ</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">ทั้งหมด</SelectItem>
                 <SelectItem value="open">ยังไม่แก้</SelectItem>
@@ -261,7 +266,11 @@ function PackingReportsPage() {
           </div>
           <div className="flex items-end">
             <Button onClick={load} disabled={loading} className="w-full gap-2">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
               ค้นหา
             </Button>
           </div>
@@ -275,14 +284,19 @@ function PackingReportsPage() {
           </div>
         )}
         {rows.map((r) => {
-          const items = [...(r.packing_report_items ?? [])].sort((a, b) => a.item_order - b.item_order);
+          const items = [...(r.packing_report_items ?? [])].sort(
+            (a, b) => a.item_order - b.item_order,
+          );
           // Auto-expand failed items
           const defaultOpen = items.filter((it) => !it.is_passed).map((it) => it.id);
           const passCount = items.filter((it) => it.is_passed).length;
           const failCount = items.length - passCount;
 
           return (
-            <article key={r.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <article
+              key={r.id}
+              className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+            >
               <Accordion type="single" collapsible>
                 <AccordionItem value="card" className="border-0">
                   <AccordionTrigger className="px-4 py-3 hover:no-underline">
@@ -298,10 +312,20 @@ function PackingReportsPage() {
                         {r.packing_employees?.name ? (
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); openProfile({ name: r.packing_employees!.name, emp_code: r.packing_employees!.emp_code }); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openProfile({
+                                name: r.packing_employees!.name,
+                                emp_code: r.packing_employees!.emp_code,
+                              });
+                            }}
                             className="font-semibold hover:text-primary hover:underline"
-                          >{r.packing_employees.name}</button>
-                        ) : <span className="font-semibold">—</span>}
+                          >
+                            {r.packing_employees.name}
+                          </button>
+                        ) : (
+                          <span className="font-semibold">—</span>
+                        )}
                         {r.packing_employees?.emp_code && (
                           <span className="ml-1 font-mono text-[10px] text-muted-foreground">
                             ({r.packing_employees.emp_code})
@@ -345,209 +369,256 @@ function PackingReportsPage() {
                       )}
                     </div>
 
-              {items.length > 0 && (
-                <div className="mt-3">
-                  <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
-                    {items.map((it) => {
-                      const mediaCount = it.media?.length ?? 0;
-                      const isMotor = it.is_passed && it.result_tag === "motor";
-                      return (
-                        <AccordionItem
-                          key={it.id}
-                          value={it.id}
-                          className={`rounded-lg border px-3 ${
-                            isMotor
-                              ? "border-amber-400/50 bg-amber-50/60 dark:bg-amber-950/20"
-                              : it.is_passed
-                                ? "border-success/30 bg-success/5"
-                                : "border-destructive/40 bg-destructive/5"
-                          }`}
-                        >
-                          <AccordionTrigger className="py-2 hover:no-underline">
-                            <div className="flex w-full items-center gap-2 pr-2 text-left">
-                              <span
-                                className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    {items.length > 0 && (
+                      <div className="mt-3">
+                        <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
+                          {items.map((it) => {
+                            const mediaCount = it.media?.length ?? 0;
+                            const isMotor = it.is_passed && it.result_tag === "motor";
+                            return (
+                              <AccordionItem
+                                key={it.id}
+                                value={it.id}
+                                className={`rounded-lg border px-3 ${
                                   isMotor
-                                    ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                                    ? "border-amber-400/50 bg-amber-50/60 dark:bg-amber-950/20"
                                     : it.is_passed
-                                      ? "bg-success/20 text-success"
-                                      : "bg-destructive/20 text-destructive"
+                                      ? "border-success/30 bg-success/5"
+                                      : "border-destructive/40 bg-destructive/5"
                                 }`}
                               >
-                                {isMotor ? "M" : it.is_passed ? "✓" : "✗"}
-                              </span>
-                              <span className="flex-1 truncate text-sm font-medium">
-                                {it.item_order}. {it.item_text_snapshot}
-                              </span>
-                              {isMotor && (
-                                <span className="shrink-0 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
-                                  มอเตอร์
-                                </span>
-                              )}
-                              {mediaCount > 0 && (
-                                <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                                  {mediaCount} สื่อ
-                                </span>
-                              )}
-                            </div>
-                          </AccordionTrigger>
-
-                          <AccordionContent className="pb-3 pt-1">
-                            {it.remark && (
-                              <p className="mb-2 whitespace-pre-wrap rounded-md bg-background/60 p-2 text-xs text-destructive">
-                                <span className="font-semibold">หมายเหตุ: </span>{it.remark}
-                              </p>
-                            )}
-                            {mediaCount > 0 ? (
-                              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-                                {it.media.map((m, i) => (
-                                  <button
-                                    type="button"
-                                    key={i}
-                                    onClick={() => setLightbox(m)}
-                                    className="group relative block aspect-square overflow-hidden rounded-md border border-border bg-muted"
-                                  >
-                                    {m.type === "image" ? (
-                                      <img src={signedSrc(m.url)} alt="" loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-                                    ) : (
-                                      <>
-                                        <video src={signedSrc(m.url)} preload="metadata" muted playsInline className="h-full w-full object-cover" />
-                                        <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                          <VideoIcon className="h-6 w-6 text-white" />
-                                        </span>
-                                      </>
+                                <AccordionTrigger className="py-2 hover:no-underline">
+                                  <div className="flex w-full items-center gap-2 pr-2 text-left">
+                                    <span
+                                      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                        isMotor
+                                          ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                                          : it.is_passed
+                                            ? "bg-success/20 text-success"
+                                            : "bg-destructive/20 text-destructive"
+                                      }`}
+                                    >
+                                      {isMotor ? "M" : it.is_passed ? "✓" : "✗"}
+                                    </span>
+                                    <span className="flex-1 truncate text-sm font-medium">
+                                      {it.item_order}. {it.item_text_snapshot}
+                                    </span>
+                                    {isMotor && (
+                                      <span className="shrink-0 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                                        มอเตอร์
+                                      </span>
                                     )}
-                                  </button>
-                                ))}
+                                    {mediaCount > 0 && (
+                                      <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                        {mediaCount} สื่อ
+                                      </span>
+                                    )}
+                                  </div>
+                                </AccordionTrigger>
+
+                                <AccordionContent className="pb-3 pt-1">
+                                  {it.remark && (
+                                    <p className="mb-2 whitespace-pre-wrap rounded-md bg-background/60 p-2 text-xs text-destructive">
+                                      <span className="font-semibold">หมายเหตุ: </span>
+                                      {it.remark}
+                                    </p>
+                                  )}
+                                  {mediaCount > 0 ? (
+                                    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                                      {it.media.map((m, i) => (
+                                        <button
+                                          type="button"
+                                          key={i}
+                                          onClick={() => setLightbox(m)}
+                                          className="group relative block aspect-square overflow-hidden rounded-md border border-border bg-muted"
+                                        >
+                                          {m.type === "image" ? (
+                                            <img
+                                              src={signedSrc(m.url)}
+                                              alt=""
+                                              loading="lazy"
+                                              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                            />
+                                          ) : (
+                                            <>
+                                              <video
+                                                src={signedSrc(m.url)}
+                                                preload="metadata"
+                                                muted
+                                                playsInline
+                                                className="h-full w-full object-cover"
+                                              />
+                                              <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                                <VideoIcon className="h-6 w-6 text-white" />
+                                              </span>
+                                            </>
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs italic text-muted-foreground">
+                                      ไม่มีสื่อหลักฐาน
+                                    </p>
+                                  )}
+                                </AccordionContent>
+                              </AccordionItem>
+                            );
+                          })}
+                        </Accordion>
+                      </div>
+                    )}
+
+                    <div className="mt-3">
+                      <Accordion
+                        type="single"
+                        collapsible
+                        onValueChange={(v) => {
+                          if (v) loadJobWorkers(r.job_id);
+                        }}
+                      >
+                        <AccordionItem
+                          value="workers"
+                          className="rounded-lg border border-border bg-muted/30 px-3"
+                        >
+                          <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                            พนักงานที่ทำใน Job นี้ทั้งหมด (กดเพื่อดู)
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-3 pt-1">
+                            {jobWorkersLoading[r.job_id] ? (
+                              <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> กำลังโหลด...
                               </div>
+                            ) : !jobWorkersMap[r.job_id] ? (
+                              <p className="py-2 text-xs italic text-muted-foreground">
+                                กดเพื่อโหลดข้อมูล
+                              </p>
+                            ) : jobWorkersMap[r.job_id].length === 0 ? (
+                              <p className="py-2 text-xs italic text-muted-foreground">
+                                ไม่มีบันทึกการผลิตสำหรับ Job นี้
+                              </p>
                             ) : (
-                              <p className="text-xs italic text-muted-foreground">ไม่มีสื่อหลักฐาน</p>
+                              <ol className="space-y-1.5 text-xs">
+                                {jobWorkersMap[r.job_id].map((w, idx) => (
+                                  <li
+                                    key={w.id}
+                                    className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-md bg-background/60 px-2 py-1.5"
+                                  >
+                                    <span className="font-mono text-[10px] text-muted-foreground">
+                                      {idx + 1}.
+                                    </span>
+                                    <span className="font-mono text-[10px] text-muted-foreground">
+                                      {new Date(w.created_at).toLocaleString("th-TH")}
+                                    </span>
+                                    <span className="font-semibold">
+                                      {w.steps?.step_name ?? "—"}
+                                    </span>
+                                    <span className="text-muted-foreground">โดย</span>
+                                    <span className="font-medium">{w.employees?.name ?? "—"}</span>
+                                    {w.employees?.emp_code && (
+                                      <span className="font-mono text-[10px] text-muted-foreground">
+                                        ({w.employees.emp_code})
+                                      </span>
+                                    )}
+                                    {w.categories?.name && (
+                                      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                                        {w.categories.name}
+                                      </span>
+                                    )}
+                                    {w.note && (
+                                      <span className="basis-full whitespace-pre-wrap pl-4 text-muted-foreground">
+                                        หมายเหตุ: {w.note}
+                                      </span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ol>
                             )}
                           </AccordionContent>
                         </AccordionItem>
-                      );
-                    })}
-                  </Accordion>
-                </div>
-              )}
+                      </Accordion>
+                    </div>
 
-              <div className="mt-3">
-                <Accordion
-                  type="single"
-                  collapsible
-                  onValueChange={(v) => {
-                    if (v) loadJobWorkers(r.job_id);
-                  }}
-                >
-                  <AccordionItem value="workers" className="rounded-lg border border-border bg-muted/30 px-3">
-                    <AccordionTrigger className="py-2 text-sm hover:no-underline">
-                      พนักงานที่ทำใน Job นี้ทั้งหมด (กดเพื่อดู)
-                    </AccordionTrigger>
-                    <AccordionContent className="pb-3 pt-1">
-                      {jobWorkersLoading[r.job_id] ? (
-                        <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> กำลังโหลด...
+                    {r.note && (
+                      <div className="mt-3">
+                        <div className="text-xs font-semibold text-muted-foreground mb-1">
+                          หมายเหตุภาพรวม
                         </div>
-                      ) : !jobWorkersMap[r.job_id] ? (
-                        <p className="py-2 text-xs italic text-muted-foreground">กดเพื่อโหลดข้อมูล</p>
-                      ) : jobWorkersMap[r.job_id].length === 0 ? (
-                        <p className="py-2 text-xs italic text-muted-foreground">ไม่มีบันทึกการผลิตสำหรับ Job นี้</p>
-                      ) : (
-                        <ol className="space-y-1.5 text-xs">
-                          {jobWorkersMap[r.job_id].map((w, idx) => (
-                            <li
-                              key={w.id}
-                              className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-md bg-background/60 px-2 py-1.5"
+                        <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm">
+                          {r.note}
+                        </p>
+                      </div>
+                    )}
+
+                    {r.media && r.media.length > 0 && (
+                      <div className="mt-3">
+                        <div className="mb-1 flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                          <ImageIcon className="h-3.5 w-3.5" /> สื่อภาพรวม
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+                          {r.media.map((m, i) => (
+                            <button
+                              type="button"
+                              key={i}
+                              onClick={() => setLightbox(m)}
+                              className="relative block aspect-square overflow-hidden rounded-lg border border-border bg-muted"
                             >
-                              <span className="font-mono text-[10px] text-muted-foreground">
-                                {idx + 1}.
-                              </span>
-                              <span className="font-mono text-[10px] text-muted-foreground">
-                                {new Date(w.created_at).toLocaleString("th-TH")}
-                              </span>
-                              <span className="font-semibold">
-                                {w.steps?.step_name ?? "—"}
-                              </span>
-                              <span className="text-muted-foreground">โดย</span>
-                              <span className="font-medium">{w.employees?.name ?? "—"}</span>
-                              {w.employees?.emp_code && (
-                                <span className="font-mono text-[10px] text-muted-foreground">
-                                  ({w.employees.emp_code})
-                                </span>
+                              {m.type === "image" ? (
+                                <img
+                                  src={signedSrc(m.url)}
+                                  alt=""
+                                  loading="lazy"
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <>
+                                  <video
+                                    src={signedSrc(m.url)}
+                                    preload="metadata"
+                                    muted
+                                    playsInline
+                                    className="h-full w-full object-cover"
+                                  />
+                                  <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                    <VideoIcon className="h-6 w-6 text-white" />
+                                  </span>
+                                </>
                               )}
-                              {w.categories?.name && (
-                                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                                  {w.categories.name}
-                                </span>
-                              )}
-                              {w.note && (
-                                <span className="basis-full whitespace-pre-wrap pl-4 text-muted-foreground">
-                                  หมายเหตุ: {w.note}
-                                </span>
-                              )}
-                            </li>
+                            </button>
                           ))}
-                        </ol>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {r.status === "open" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => setRowStatus(r.id, "resolved")}
+                        >
+                          <Check className="h-4 w-4" /> ทำเครื่องหมายว่าแก้แล้ว
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={() => setRowStatus(r.id, "open")}
+                        >
+                          <Undo2 className="h-4 w-4" /> กลับเป็นยังไม่แก้
+                        </Button>
                       )}
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </div>
-
-
-
-              {r.note && (
-                <div className="mt-3">
-                  <div className="text-xs font-semibold text-muted-foreground mb-1">หมายเหตุภาพรวม</div>
-                  <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm">
-                    {r.note}
-                  </p>
-                </div>
-              )}
-
-              {r.media && r.media.length > 0 && (
-                <div className="mt-3">
-                  <div className="mb-1 flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-                    <ImageIcon className="h-3.5 w-3.5" /> สื่อภาพรวม
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-                    {r.media.map((m, i) => (
-                      <button
-                        type="button"
-                        key={i}
-                        onClick={() => setLightbox(m)}
-                        className="relative block aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1 text-destructive hover:text-destructive"
+                        onClick={() => removeRow(r.id)}
                       >
-                        {m.type === "image" ? (
-                          <img src={signedSrc(m.url)} alt="" loading="lazy" className="h-full w-full object-cover" />
-                        ) : (
-                          <>
-                            <video src={signedSrc(m.url)} preload="metadata" muted playsInline className="h-full w-full object-cover" />
-                            <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                              <VideoIcon className="h-6 w-6 text-white" />
-                            </span>
-                          </>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {r.status === "open" ? (
-                  <Button size="sm" variant="outline" className="gap-1" onClick={() => setRowStatus(r.id, "resolved")}>
-                    <Check className="h-4 w-4" /> ทำเครื่องหมายว่าแก้แล้ว
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" className="gap-1" onClick={() => setRowStatus(r.id, "open")}>
-                    <Undo2 className="h-4 w-4" /> กลับเป็นยังไม่แก้
-                  </Button>
-                )}
-                <Button size="sm" variant="ghost" className="gap-1 text-destructive hover:text-destructive" onClick={() => removeRow(r.id)}>
-                  <Trash2 className="h-4 w-4" /> ลบ
-                </Button>
-              </div>
+                        <Trash2 className="h-4 w-4" /> ลบ
+                      </Button>
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

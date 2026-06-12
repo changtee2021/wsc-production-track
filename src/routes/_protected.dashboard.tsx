@@ -27,11 +27,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   BarChart,
   Bar,
@@ -94,22 +90,22 @@ interface NamedRow {
 const CHART_COLORS = [
   "oklch(0.55 0.22 256)", // blue
   "oklch(0.65 0.20 145)", // green
-  "oklch(0.72 0.18 60)",  // amber
-  "oklch(0.60 0.24 25)",  // red-orange
+  "oklch(0.72 0.18 60)", // amber
+  "oklch(0.60 0.24 25)", // red-orange
   "oklch(0.55 0.22 310)", // magenta
   "oklch(0.65 0.18 190)", // teal
-  "oklch(0.62 0.20 95)",  // yellow-green
+  "oklch(0.62 0.20 95)", // yellow-green
   "oklch(0.50 0.22 280)", // purple
-  "oklch(0.62 0.22 15)",  // red
+  "oklch(0.62 0.22 15)", // red
   "oklch(0.58 0.18 220)", // sky
   "oklch(0.60 0.20 170)", // emerald
-  "oklch(0.68 0.22 45)",  // orange
+  "oklch(0.68 0.22 45)", // orange
   "oklch(0.55 0.22 340)", // pink
   "oklch(0.60 0.20 125)", // lime
   "oklch(0.45 0.18 265)", // indigo deep
   "oklch(0.70 0.15 105)", // olive
   "oklch(0.50 0.18 200)", // ocean
-  "oklch(0.65 0.22 75)",  // gold
+  "oklch(0.65 0.22 75)", // gold
 ];
 
 // Custom label renderer for pies — small font + wraps long names to 2 lines
@@ -134,13 +130,7 @@ const makePieLabel = (suffix = "") => {
       lines = [label];
     }
     return (
-      <text
-        x={x}
-        y={y}
-        fontSize={10}
-        textAnchor={anchor}
-        className="fill-foreground"
-      >
+      <text x={x} y={y} fontSize={10} textAnchor={anchor} className="fill-foreground">
         {lines.map((ln, i) => (
           <tspan key={i} x={x} dy={i === 0 ? 0 : 11}>
             {ln}
@@ -183,9 +173,7 @@ function Section({ icon, title, description, defaultOpen = true, children }: Sec
               {icon}
               {title}
             </h3>
-            {description && (
-              <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-            )}
+            {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
           </div>
           <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
         </button>
@@ -439,26 +427,28 @@ function Dashboard() {
     const prev = stat(prevStart, prevEnd);
 
     const allIds = new Set<string>([...cur.keys(), ...prev.keys()]);
-    return Array.from(allIds).map((id) => {
-      const c = cur.get(id);
-      const p = prev.get(id);
-      const name = c?.name ?? p?.name ?? "—";
-      const curJobs = c?.jobs.size ?? 0;
-      const prevJobs = p?.jobs.size ?? 0;
-      const jobsPct =
-        prevJobs === 0 ? (curJobs > 0 ? 100 : 0) : ((curJobs - prevJobs) / prevJobs) * 100;
+    return Array.from(allIds)
+      .map((id) => {
+        const c = cur.get(id);
+        const p = prev.get(id);
+        const name = c?.name ?? p?.name ?? "—";
+        const curJobs = c?.jobs.size ?? 0;
+        const prevJobs = p?.jobs.size ?? 0;
+        const jobsPct =
+          prevJobs === 0 ? (curJobs > 0 ? 100 : 0) : ((curJobs - prevJobs) / prevJobs) * 100;
 
-      const avg = (xs: number[]) =>
-        xs.length === 0 ? null : xs.reduce((a, b) => a + b, 0) / xs.length;
-      const curAvg = avg(c?.durations ?? []);
-      const prevAvg = avg(p?.durations ?? []);
-      // negative speedPct means faster (good)
-      const speedPct =
-        curAvg == null || prevAvg == null || prevAvg === 0
-          ? null
-          : ((curAvg - prevAvg) / prevAvg) * 100;
-      return { id, name, curJobs, prevJobs, jobsPct, curAvg, prevAvg, speedPct };
-    }).sort((a, b) => b.curJobs - a.curJobs);
+        const avg = (xs: number[]) =>
+          xs.length === 0 ? null : xs.reduce((a, b) => a + b, 0) / xs.length;
+        const curAvg = avg(c?.durations ?? []);
+        const prevAvg = avg(p?.durations ?? []);
+        // negative speedPct means faster (good)
+        const speedPct =
+          curAvg == null || prevAvg == null || prevAvg === 0
+            ? null
+            : ((curAvg - prevAvg) / prevAvg) * 100;
+        return { id, name, curJobs, prevJobs, jobsPct, curAvg, prevAvg, speedPct };
+      })
+      .sort((a, b) => b.curJobs - a.curJobs);
   }, [scopedLogs, sessions]);
 
   // Over-standard sessions in scope
@@ -662,10 +652,7 @@ function Dashboard() {
   // C. Pie: avg minutes per piece per employee
   // "per piece" = sum of all step durations for the same job_id by that employee
   const avgPerJobPie = useMemo(() => {
-    const byEmp = new Map<
-      string,
-      { name: string; jobs: Map<string, number> }
-    >();
+    const byEmp = new Map<string, { name: string; jobs: Map<string, number> }>();
     for (const s of scopedSessions) {
       let row = byEmp.get(s.employee_id);
       if (!row) {
@@ -677,9 +664,7 @@ function Dashboard() {
     return Array.from(byEmp.entries())
       .map(([id, r]) => {
         const totals = Array.from(r.jobs.values());
-        const avg = totals.length
-          ? totals.reduce((a, b) => a + b, 0) / totals.length
-          : 0;
+        const avg = totals.length ? totals.reduce((a, b) => a + b, 0) / totals.length : 0;
         return { id, name: r.name, value: Math.round(avg * 10) / 10, jobs: totals.length };
       })
       .filter((d) => d.value > 0)
@@ -733,40 +718,42 @@ function Dashboard() {
       e.durations.push(s.durationMin);
     }
 
-    return Array.from(map.values())
-      .map((st) => {
-        const emps = Array.from(st.emps.values()).map((e) => {
-          const avg =
-            e.durations.length > 0
-              ? e.durations.reduce((a, b) => a + b, 0) / e.durations.length
-              : null;
-          return {
-            empId: e.empId,
-            name: e.name,
-            jobs: e.jobs.size,
-            avg: avg != null ? Math.round(avg * 10) / 10 : null,
-          };
-        });
-        const jobsData = [...emps].sort((a, b) => b.jobs - a.jobs);
-        const avgData = emps
-          .filter((e) => e.avg != null)
-          .sort((a, b) => (a.avg ?? 0) - (b.avg ?? 0));
-        const totalJobs = emps.reduce((a, b) => a + b.jobs, 0);
+    return Array.from(map.values()).map((st) => {
+      const emps = Array.from(st.emps.values()).map((e) => {
+        const avg =
+          e.durations.length > 0
+            ? e.durations.reduce((a, b) => a + b, 0) / e.durations.length
+            : null;
         return {
-          stepId: st.stepId,
-          stepName: st.stepName,
-          std: st.std,
-          totalJobs,
-          jobsData,
-          avgData,
+          empId: e.empId,
+          name: e.name,
+          jobs: e.jobs.size,
+          avg: avg != null ? Math.round(avg * 10) / 10 : null,
         };
-      })
+      });
+      const jobsData = [...emps].sort((a, b) => b.jobs - a.jobs);
+      const avgData = emps.filter((e) => e.avg != null).sort((a, b) => (a.avg ?? 0) - (b.avg ?? 0));
+      const totalJobs = emps.reduce((a, b) => a + b.jobs, 0);
+      return {
+        stepId: st.stepId,
+        stepName: st.stepName,
+        std: st.std,
+        totalJobs,
+        jobsData,
+        avgData,
+      };
+    });
   }, [filtered, scopedSessions]);
 
   // D2 & E2. Per-category → per-step breakdown by employee
   const stepBreakdownByCategory = useMemo(() => {
     type EmpAgg = { empId: string; name: string; jobs: Set<string>; durations: number[] };
-    type StepAgg = { stepId: string; stepName: string; std: number | null; emps: Map<string, EmpAgg> };
+    type StepAgg = {
+      stepId: string;
+      stepName: string;
+      std: number | null;
+      emps: Map<string, EmpAgg>;
+    };
     type CatAgg = { catId: string; catName: string; steps: Map<string, StepAgg> };
     const cats = new Map<string, CatAgg>();
     // resolve session category via finish log lookup
@@ -961,14 +948,15 @@ function Dashboard() {
     const stepNameById = new Map(steps.map((s) => [s.id, s.name]));
     const catNameById = new Map(categories.map((c) => [c.id, c.name]));
     const namesOf = (ids: Set<string>, src: Map<string, string>, isAll: boolean) =>
-      isAll ? "ทั้งหมด" : Array.from(ids).map((i) => src.get(i) ?? i).join(", ");
+      isAll
+        ? "ทั้งหมด"
+        : Array.from(ids)
+            .map((i) => src.get(i) ?? i)
+            .join(", ");
     const meta = [
       {
         หัวข้อ: "ช่วงเวลา",
-        ค่า:
-          cfg.rangeMode === "all"
-            ? "ทั้งหมด"
-            : `${fmtDate(rangeStart)} → ${fmtDate(rangeEnd)}`,
+        ค่า: cfg.rangeMode === "all" ? "ทั้งหมด" : `${fmtDate(rangeStart)} → ${fmtDate(rangeEnd)}`,
       },
       { หัวข้อ: "พนักงาน", ค่า: namesOf(cfg.empIds, empNameById, isAllEmp) },
       { หัวข้อ: "ขั้นตอน", ค่า: namesOf(cfg.stepIds, stepNameById, isAllStep) },
@@ -1000,7 +988,7 @@ function Dashboard() {
       const rows = Array.from(baseMap.entries())
         .map(([id, name]) => ({ id, name, jobs: finishCountByEmp.get(id) ?? 0 }))
         .sort((a, b) => b.jobs - a.jobs)
-        .map((r, i) => ({ อันดับ: i + 1, พนักงาน: r.name, "งานที่เสร็จ": r.jobs }));
+        .map((r, i) => ({ อันดับ: i + 1, พนักงาน: r.name, งานที่เสร็จ: r.jobs }));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "อันดับพนักงาน");
     }
 
@@ -1040,11 +1028,7 @@ function Dashboard() {
       const cur = stat(rangeStart, rangeEnd);
       const prev = stat(prevStart, prevEnd);
       const baseEmps = employees.filter((e) => cfg.empIds.has(e.id));
-      const ids = new Set<string>([
-        ...baseEmps.map((e) => e.id),
-        ...cur.keys(),
-        ...prev.keys(),
-      ]);
+      const ids = new Set<string>([...baseEmps.map((e) => e.id), ...cur.keys(), ...prev.keys()]);
       const rows = Array.from(ids).map((id) => {
         const c = cur.get(id);
         const p = prev.get(id);
@@ -1059,8 +1043,8 @@ function Dashboard() {
         const speedPct = ca == null || pa == null || pa === 0 ? null : ((ca - pa) / pa) * 100;
         return {
           พนักงาน: name,
-          "งานช่วงนี้": curJ,
-          "งานช่วงก่อน": prevJ,
+          งานช่วงนี้: curJ,
+          งานช่วงก่อน: prevJ,
           "% เปลี่ยนแปลงงาน": Math.round(jobsPct * 10) / 10,
           "เฉลี่ยช่วงนี้ (นาที)": ca != null ? Math.round(ca * 10) / 10 : "",
           "เฉลี่ยช่วงก่อน (นาที)": pa != null ? Math.round(pa * 10) / 10 : "",
@@ -1075,14 +1059,14 @@ function Dashboard() {
       const rows = inScopeSessions
         .sort((a, b) => b.finish.getTime() - a.finish.getTime())
         .map((s) => ({
-          "รหัสงาน": s.job_id,
+          รหัสงาน: s.job_id,
           พนักงาน: s.employee_name,
           ขั้นตอน: s.step_name,
           "มาตรฐาน (นาที)": s.std ?? "",
           "ใช้จริง (นาที)": Math.round(s.durationMin * 10) / 10,
           "เกินมาตรฐาน (นาที)": s.std == null ? "" : Math.round((s.durationMin - s.std) * 10) / 10,
-          "เริ่ม": s.start.toLocaleString("th-TH"),
-          "เสร็จ": s.finish.toLocaleString("th-TH"),
+          เริ่ม: s.start.toLocaleString("th-TH"),
+          เสร็จ: s.finish.toLocaleString("th-TH"),
         }));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "รายการงาน");
     }
@@ -1094,11 +1078,11 @@ function Dashboard() {
         .map((s) => ({
           พนักงาน: s.employee_name,
           ขั้นตอน: s.step_name,
-          "รหัสงาน": s.job_id,
+          รหัสงาน: s.job_id,
           "มาตรฐาน (นาที)": s.std,
           "ใช้จริง (นาที)": Math.round(s.durationMin * 10) / 10,
           "เกิน (นาที)": Math.round((s.durationMin - (s.std ?? 0)) * 10) / 10,
-          "เวลาเสร็จ": s.finish.toLocaleString("th-TH"),
+          เวลาเสร็จ: s.finish.toLocaleString("th-TH"),
         }))
         .sort((a, b) => (b["เกิน (นาที)"] as number) - (a["เกิน (นาที)"] as number));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "เกินมาตรฐาน");
@@ -1118,7 +1102,7 @@ function Dashboard() {
       }
       const rows = Array.from(m.entries())
         .sort((a, b) => b[1] - a[1])
-        .map(([step, jobs]) => ({ ขั้นตอน: step, "งานที่เสร็จ": jobs }));
+        .map(([step, jobs]) => ({ ขั้นตอน: step, งานที่เสร็จ: jobs }));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "ตามขั้นตอน");
     }
 
@@ -1136,19 +1120,19 @@ function Dashboard() {
       }
       const rows = Array.from(m.entries())
         .sort((a, b) => b[1] - a[1])
-        .map(([cat, jobs]) => ({ หมวดหมู่: cat, "งานที่เสร็จ": jobs }));
+        .map(([cat, jobs]) => ({ หมวดหมู่: cat, งานที่เสร็จ: jobs }));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "ตามหมวดหมู่");
     }
 
     // Logs (raw)
     if (want("Logs")) {
       const rows = inScopeLogs.map((l) => ({
-        "เวลา": new Date(l.created_at).toLocaleString("th-TH"),
-        "รหัสงาน": l.job_id,
+        เวลา: new Date(l.created_at).toLocaleString("th-TH"),
+        รหัสงาน: l.job_id,
         พนักงาน: l.employees?.name ?? "",
         หมวดหมู่: l.categories?.name ?? "",
         ขั้นตอน: l.steps?.step_name ?? "",
-        "การกระทำ": l.action === "start" ? "เริ่มงาน" : l.action === "finish" ? "เสร็จงาน" : l.action,
+        การกระทำ: l.action === "start" ? "เริ่มงาน" : l.action === "finish" ? "เสร็จงาน" : l.action,
       }));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "บันทึกดิบ");
     }
@@ -1158,7 +1142,15 @@ function Dashboard() {
   };
 
   // Export dialog state
-  const ALL_SHEETS = ["Ranking", "MoM", "Sessions", "Over_Standard", "By_Step", "By_Category", "Logs"];
+  const ALL_SHEETS = [
+    "Ranking",
+    "MoM",
+    "Sessions",
+    "Over_Standard",
+    "By_Step",
+    "By_Category",
+    "Logs",
+  ];
   const SHEET_LABELS: Record<string, string> = {
     Ranking: "อันดับพนักงาน",
     MoM: "เทียบช่วงก่อน",
@@ -1188,10 +1180,7 @@ function Dashboard() {
     setExCatIds((prev) => (prev.size === 0 ? new Set(categories.map((c) => c.id)) : prev));
   }, [categories]);
 
-  const toggleInSet = (
-    setter: React.Dispatch<React.SetStateAction<Set<string>>>,
-    id: string,
-  ) =>
+  const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) =>
     setter((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -1221,12 +1210,8 @@ function Dashboard() {
       <Toaster richColors position="top-center" />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            แดชบอร์ดการผลิต
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            ภาพรวมงาน ขั้นตอน และประสิทธิภาพพนักงาน
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">แดชบอร์ดการผลิต</h1>
+          <p className="text-sm text-muted-foreground">ภาพรวมงาน ขั้นตอน และประสิทธิภาพพนักงาน</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -1313,7 +1298,6 @@ function Dashboard() {
         />
       </div>
 
-
       <div className="mt-6 space-y-6">
         {/* Scope picker (day/month) — applies to ranking, employee × step, over-standard */}
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -1355,7 +1339,6 @@ function Dashboard() {
           </div>
         </div>
 
-
         {/* F. Per-category daily pies — moved above employee × step */}
         <Section
           icon={<CheckSquare className="h-4 w-4 text-secondary" />}
@@ -1363,9 +1346,7 @@ function Dashboard() {
           description="แต่ละการ์ด = 1 หมวดหมู่ ของวันที่เลือก — pie ซ้าย = จำนวนชุด, pie ขวา = เวลาเฉลี่ย (นาที)"
         >
           {scope !== "day" ? (
-            <p className="text-sm text-muted-foreground">
-              เปลี่ยนเป็นโหมดรายวันเพื่อดูรายงานนี้
-            </p>
+            <p className="text-sm text-muted-foreground">เปลี่ยนเป็นโหมดรายวันเพื่อดูรายงานนี้</p>
           ) : categoryDayReport.length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในวันที่เลือก</p>
           ) : (
@@ -1398,7 +1379,9 @@ function Dashboard() {
                       </ResponsiveContainer>
                     </div>
                     <div>
-                      <div className="mb-1 text-center text-sm font-medium">เวลาเฉลี่ย (นาที)/ขั้นตอน</div>
+                      <div className="mb-1 text-center text-sm font-medium">
+                        เวลาเฉลี่ย (นาที)/ขั้นตอน
+                      </div>
                       {cat.avgData.length === 0 ? (
                         <div className="flex h-[420px] items-center justify-center text-sm text-muted-foreground">
                           ไม่มี session ที่จับคู่ start–finish
@@ -1414,10 +1397,7 @@ function Dashboard() {
                               label={pieLabelMin}
                             >
                               {cat.avgData.map((_, i) => (
-                                <Cell
-                                  key={i}
-                                  fill={CHART_COLORS[(i + 3) % CHART_COLORS.length]}
-                                />
+                                <Cell key={i} fill={CHART_COLORS[(i + 3) % CHART_COLORS.length]} />
                               ))}
                             </Pie>
                             <Tooltip formatter={(v) => [`${v} นาที`, "เฉลี่ย"]} />
@@ -1485,7 +1465,9 @@ function Dashboard() {
                         {t}
                       </td>
                     ))}
-                    <td className="py-2 pr-3 text-right text-primary">{empStepReport.grandTotal}</td>
+                    <td className="py-2 pr-3 text-right text-primary">
+                      {empStepReport.grandTotal}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -1504,7 +1486,10 @@ function Dashboard() {
           ) : (
             <div className="space-y-4 sm:space-y-6">
               {stepBreakdownByCategory.map((cat) => (
-                <div key={cat.catId} className="rounded-xl border border-border bg-muted/20 p-3 sm:p-4">
+                <div
+                  key={cat.catId}
+                  className="rounded-xl border border-border bg-muted/20 p-3 sm:p-4"
+                >
                   <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <h4 className="text-base font-semibold text-primary">{cat.catName}</h4>
                     <span className="text-xs text-muted-foreground">
@@ -1551,7 +1536,6 @@ function Dashboard() {
                 </div>
               ))}
             </div>
-
           )}
         </Section>
 
@@ -1561,7 +1545,8 @@ function Dashboard() {
           title="เวลาเฉลี่ยต่อพนักงาน — แยกตามขั้นตอน"
           description="จัดกลุ่มตามหมวดหมู่ → เวลาเฉลี่ย (นาที) ของพนักงานแต่ละคนต่อขั้นตอน"
         >
-          {stepBreakdownByCategory.flatMap((c) => c.steps).filter((s) => s.avgData.length > 0).length === 0 ? (
+          {stepBreakdownByCategory.flatMap((c) => c.steps).filter((s) => s.avgData.length > 0)
+            .length === 0 ? (
             <p className="text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
           ) : (
             <div className="space-y-4 sm:space-y-6">
@@ -1572,7 +1557,10 @@ function Dashboard() {
                 }))
                 .filter((cat) => cat.steps.length > 0)
                 .map((cat) => (
-                  <div key={cat.catId} className="rounded-xl border border-border bg-muted/20 p-3 sm:p-4">
+                  <div
+                    key={cat.catId}
+                    className="rounded-xl border border-border bg-muted/20 p-3 sm:p-4"
+                  >
                     <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <h4 className="text-base font-semibold text-primary">{cat.catName}</h4>
                       <span className="text-xs text-muted-foreground">
@@ -1631,7 +1619,6 @@ function Dashboard() {
                   </div>
                 ))}
             </div>
-
           )}
         </Section>
 
@@ -1688,9 +1675,7 @@ function Dashboard() {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>ตั้งค่าการส่งออก Excel</DialogTitle>
-            <DialogDescription>
-              เลือกช่วงเวลา ฟิลเตอร์ และชีตที่ต้องการก่อนส่งออก
-            </DialogDescription>
+            <DialogDescription>เลือกช่วงเวลา ฟิลเตอร์ และชีตที่ต้องการก่อนส่งออก</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5">
@@ -1785,7 +1770,9 @@ function Dashboard() {
                   </label>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">ชีต "ข้อมูลทั่วไป" จะถูกใส่ให้เสมอ</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                ชีต "ข้อมูลทั่วไป" จะถูกใส่ให้เสมอ
+              </p>
             </section>
           </div>
 
@@ -1817,7 +1804,9 @@ function PctBadge({ value, higherIsBetter }: { value: number; higherIsBetter: bo
       : "bg-muted text-muted-foreground";
   const Icon = positive ? ArrowUp : negative ? ArrowDown : Minus;
   return (
-    <span className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>
+    <span
+      className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}
+    >
       <Icon className="h-3 w-3" />
       {Math.abs(value).toFixed(1)}%
     </span>
@@ -1914,7 +1903,13 @@ function MultiSelectGroup({
         <h4 className="text-sm font-semibold">
           {title}{" "}
           <span className="text-xs font-normal text-muted-foreground">
-            ({noneSelected ? `ไม่ได้เลือก` : allSelected ? `ทั้งหมด ${items.length}` : `${selected.size}/${items.length}`})
+            (
+            {noneSelected
+              ? `ไม่ได้เลือก`
+              : allSelected
+                ? `ทั้งหมด ${items.length}`
+                : `${selected.size}/${items.length}`}
+            )
           </span>
         </h4>
         <Button type="button" variant="ghost" size="sm" onClick={toggleAll}>
@@ -1924,16 +1919,11 @@ function MultiSelectGroup({
       <div className="grid max-h-40 grid-cols-2 gap-1 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 sm:grid-cols-3">
         {items.map((it) => (
           <label key={it.id} className="flex cursor-pointer items-center gap-2 text-sm">
-            <Checkbox
-              checked={selected.has(it.id)}
-              onCheckedChange={() => handleToggle(it.id)}
-            />
+            <Checkbox checked={selected.has(it.id)} onCheckedChange={() => handleToggle(it.id)} />
             <span className="truncate">{it.name}</span>
           </label>
         ))}
-        {items.length === 0 && (
-          <span className="text-xs text-muted-foreground">ไม่มีรายการ</span>
-        )}
+        {items.length === 0 && <span className="text-xs text-muted-foreground">ไม่มีรายการ</span>}
       </div>
     </section>
   );

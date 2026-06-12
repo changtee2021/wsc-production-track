@@ -11,8 +11,17 @@ import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Plus, Trash2, Pencil, Save, X, Loader2,
-  ArrowUp, ArrowDown, Eye, EyeOff, Megaphone,
+  Plus,
+  Trash2,
+  Pencil,
+  Save,
+  X,
+  Loader2,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  EyeOff,
+  Megaphone,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,7 +51,9 @@ export function AnnouncementsPanel() {
     if (error) toast.error(error.message);
     setItems((data as Announcement[]) ?? []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const add = async () => {
     const m = newMsg.trim();
@@ -54,11 +65,17 @@ export function AnnouncementsPanel() {
       toast.success("เพิ่มประกาศสำเร็จ");
       setNewMsg("");
       await load();
-    } catch (err) { showError(err); }
-    finally { setBusy(false); }
+    } catch (err) {
+      showError(err);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const startEdit = (a: Announcement) => { setEditingId(a.id); setEditMsg(a.message); };
+  const startEdit = (a: Announcement) => {
+    setEditingId(a.id);
+    setEditMsg(a.message);
+  };
 
   const saveEdit = async () => {
     if (!editingId) return;
@@ -69,14 +86,18 @@ export function AnnouncementsPanel() {
       toast.success("บันทึกแล้ว");
       setEditingId(null);
       await load();
-    } catch (err) { showError(err); }
+    } catch (err) {
+      showError(err);
+    }
   };
 
   const toggleActive = async (a: Announcement) => {
     try {
       await updateFn({ data: { token: requireToken(), id: a.id, active: !a.active } });
       await load();
-    } catch (err) { showError(err); }
+    } catch (err) {
+      showError(err);
+    }
   };
 
   const move = async (a: Announcement, dir: -1 | 1) => {
@@ -89,7 +110,9 @@ export function AnnouncementsPanel() {
         updateFn({ data: { token: requireToken(), id: swap.id, sort_order: a.sort_order } }),
       ]);
       await load();
-    } catch (err) { showError(err); }
+    } catch (err) {
+      showError(err);
+    }
   };
 
   const remove = async (a: Announcement) => {
@@ -98,7 +121,9 @@ export function AnnouncementsPanel() {
       await deleteFn({ data: { token: requireToken(), id: a.id } });
       toast.success("ลบสำเร็จ");
       await load();
-    } catch (err) { showError(err); }
+    } catch (err) {
+      showError(err);
+    }
   };
 
   return (
@@ -114,7 +139,9 @@ export function AnnouncementsPanel() {
           onChange={(e) => setNewMsg(e.target.value)}
           placeholder="ข้อความประกาศใหม่..."
           maxLength={500}
-          onKeyDown={(e) => { if (e.key === "Enter") add(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") add();
+          }}
         />
         <Button onClick={add} disabled={busy || !newMsg.trim()} className="shrink-0">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
@@ -129,7 +156,10 @@ export function AnnouncementsPanel() {
       ) : (
         <ul className="space-y-2">
           {items.map((a, i) => (
-            <li key={a.id} className={`rounded-xl border p-3 ${a.active ? "bg-background" : "bg-muted/40 opacity-70"}`}>
+            <li
+              key={a.id}
+              className={`rounded-xl border p-3 ${a.active ? "bg-background" : "bg-muted/40 opacity-70"}`}
+            >
               {editingId === a.id ? (
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
@@ -143,27 +173,64 @@ export function AnnouncementsPanel() {
                     }}
                   />
                   <div className="flex gap-1">
-                    <Button size="sm" onClick={saveEdit} className="gap-1"><Save className="h-4 w-4" /> บันทึก</Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="gap-1"><X className="h-4 w-4" /></Button>
+                    <Button size="sm" onClick={saveEdit} className="gap-1">
+                      <Save className="h-4 w-4" /> บันทึก
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingId(null)}
+                      className="gap-1"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-start gap-2">
                   <p className="flex-1 break-words text-sm">{a.message}</p>
                   <div className="flex shrink-0 items-center gap-1">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" disabled={i === 0} onClick={() => move(a, -1)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      disabled={i === 0}
+                      onClick={() => move(a, -1)}
+                    >
                       <ArrowUp className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" disabled={i === items.length - 1} onClick={() => move(a, 1)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      disabled={i === items.length - 1}
+                      onClick={() => move(a, 1)}
+                    >
                       <ArrowDown className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => toggleActive(a)} title={a.active ? "ซ่อน" : "แสดง"}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => toggleActive(a)}
+                      title={a.active ? "ซ่อน" : "แสดง"}
+                    >
                       {a.active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(a)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => startEdit(a)}
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => remove(a)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => remove(a)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

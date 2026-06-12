@@ -16,12 +16,14 @@ const sinceISO = (days: number) =>
 
 const monthRange = (ym?: string) => {
   const now = new Date();
-  const [y, m] = ym
-    ? ym.split("-").map(Number)
-    : [now.getFullYear(), now.getMonth() + 1];
+  const [y, m] = ym ? ym.split("-").map(Number) : [now.getFullYear(), now.getMonth() + 1];
   const start = new Date(Date.UTC(y, (m ?? 1) - 1, 1));
   const end = new Date(Date.UTC(y, m ?? 1, 1));
-  return { start: start.toISOString(), end: end.toISOString(), ym: `${y}-${String(m).padStart(2, "0")}` };
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+    ym: `${y}-${String(m).padStart(2, "0")}`,
+  };
 };
 
 export const adminTools = {
@@ -65,8 +67,12 @@ export const adminTools = {
         .order("created_at", { ascending: true })
         .limit(5000);
       const rows = (data ?? []) as Array<{
-        job_id: string; action: string; created_at: string;
-        employee_id: string; step_id: string; employees: { name: string } | null;
+        job_id: string;
+        action: string;
+        created_at: string;
+        employee_id: string;
+        step_id: string;
+        employees: { name: string } | null;
       }>;
       const starts = new Map<string, string>();
       const agg = new Map<string, { jobs: Set<string>; total: number; count: number }>();
@@ -79,19 +85,27 @@ export const adminTools = {
           const mins = s ? Math.max(0, (Date.parse(r.created_at) - Date.parse(s)) / 60000) : 0;
           starts.delete(k);
           const a = agg.get(name) ?? { jobs: new Set(), total: 0, count: 0 };
-          a.jobs.add(r.job_id); a.total += mins; a.count += 1;
+          a.jobs.add(r.job_id);
+          a.total += mins;
+          a.count += 1;
           agg.set(name, a);
         }
       }
       return [...agg.entries()]
-        .map(([name, v]) => ({ name, jobs: v.jobs.size, finished: v.count, avgMin: v.count ? Math.round(v.total / v.count) : 0 }))
+        .map(([name, v]) => ({
+          name,
+          jobs: v.jobs.size,
+          finished: v.count,
+          avgMin: v.count ? Math.round(v.total / v.count) : 0,
+        }))
         .sort((a, b) => b.finished - a.finished)
         .slice(0, limit);
     },
   }),
 
   getStepStats: tool({
-    description: "สถิติแต่ละขั้นตอนการผลิต: จำนวนครั้งที่ทำเสร็จ + เวลาเฉลี่ย + std_duration เพื่อหา bottleneck",
+    description:
+      "สถิติแต่ละขั้นตอนการผลิต: จำนวนครั้งที่ทำเสร็จ + เวลาเฉลี่ย + std_duration เพื่อหา bottleneck",
     inputSchema: z.object({ days: z.number().int().min(1).max(365).default(30) }),
     execute: async ({ days }) => {
       const since = sinceISO(days);
@@ -105,8 +119,12 @@ export const adminTools = {
         supabaseAdmin.from("steps").select("step_name, std_duration_minutes").eq("active", true),
       ]);
       const rows = (logsRes.data ?? []) as Array<{
-        job_id: string; action: string; created_at: string;
-        employee_id: string; step_id: string; steps: { step_name: string } | null;
+        job_id: string;
+        action: string;
+        created_at: string;
+        employee_id: string;
+        step_id: string;
+        steps: { step_name: string } | null;
       }>;
       const starts = new Map<string, string>();
       const agg = new Map<string, { count: number; total: number }>();
@@ -119,7 +137,8 @@ export const adminTools = {
           const mins = s ? Math.max(0, (Date.parse(r.created_at) - Date.parse(s)) / 60000) : 0;
           starts.delete(k);
           const a = agg.get(name) ?? { count: 0, total: 0 };
-          a.count += 1; a.total += mins;
+          a.count += 1;
+          a.total += mins;
           agg.set(name, a);
         }
       }
@@ -128,7 +147,8 @@ export const adminTools = {
       );
       return [...agg.entries()]
         .map(([name, v]) => ({
-          name, count: v.count,
+          name,
+          count: v.count,
           avgMin: v.count ? Math.round(v.total / v.count) : 0,
           stdMin: stdMap.get(name) ?? null,
         }))
@@ -192,7 +212,9 @@ export const adminTools = {
       const since = sinceISO(days);
       let q = supabaseAdmin
         .from("maintenance_tickets")
-        .select("ticket_no, status, priority, reporter_name, assignee_name, problem_text, reported_at, started_at, done_at")
+        .select(
+          "ticket_no, status, priority, reporter_name, assignee_name, problem_text, reported_at, started_at, done_at",
+        )
         .gte("reported_at", since)
         .order("reported_at", { ascending: false })
         .limit(100);
@@ -201,7 +223,14 @@ export const adminTools = {
       const rows = data ?? [];
       const done = rows.filter((r) => r.done_at && r.reported_at);
       const mttrH = done.length
-        ? Math.round((done.reduce((s, r) => s + (Date.parse(r.done_at!) - Date.parse(r.reported_at)) / 3600000, 0) / done.length) * 10) / 10
+        ? Math.round(
+            (done.reduce(
+              (s, r) => s + (Date.parse(r.done_at!) - Date.parse(r.reported_at)) / 3600000,
+              0,
+            ) /
+              done.length) *
+              10,
+          ) / 10
         : null;
       return {
         total: rows.length,
@@ -272,24 +301,34 @@ export const adminTools = {
   }),
 
   getExpensesSummary: tool({
-    description: "สรุปค่าใช้จ่าย: ยอดรวม, VAT, แยกตามสถานะ/หมวด ในเดือนที่ระบุ (YYYY-MM) ค่า default = เดือนปัจจุบัน",
+    description:
+      "สรุปค่าใช้จ่าย: ยอดรวม, VAT, แยกตามสถานะ/หมวด ในเดือนที่ระบุ (YYYY-MM) ค่า default = เดือนปัจจุบัน",
     inputSchema: z.object({
-      month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+      month: z
+        .string()
+        .regex(/^\d{4}-\d{2}$/)
+        .optional(),
       status: z.enum(["pending", "approved", "paid", "rejected", "all"]).default("all"),
     }),
     execute: async ({ month, status }) => {
       const { start, end, ym } = monthRange(month);
       let q = supabaseAdmin
         .from("expenses")
-        .select("exp_no, status, bill_type, merchant_name, subtotal, vat_amount, total_amount, receipt_date, category_id, expense_categories(name)")
+        .select(
+          "exp_no, status, bill_type, merchant_name, subtotal, vat_amount, total_amount, receipt_date, category_id, expense_categories(name)",
+        )
         .gte("created_at", start)
         .lt("created_at", end)
         .limit(500);
       if (status !== "all") q = q.eq("status", status);
       const { data } = await q;
       const rows = (data ?? []) as Array<{
-        exp_no: string; status: string; bill_type: string;
-        subtotal: number; vat_amount: number; total_amount: number;
+        exp_no: string;
+        status: string;
+        bill_type: string;
+        subtotal: number;
+        vat_amount: number;
+        total_amount: number;
         expense_categories: { name: string } | null;
       }>;
       const approvedLike = rows.filter((r) => r.status === "approved" || r.status === "paid");
@@ -323,7 +362,12 @@ export const adminTools = {
 
   getAssetDepreciation: tool({
     description: "ค่าเสื่อมราคาเดือน (วิธีเส้นตรง) สำหรับสินทรัพย์ออฟฟิศ + book value ปัจจุบัน",
-    inputSchema: z.object({ month: z.string().regex(/^\d{4}-\d{2}$/).optional() }),
+    inputSchema: z.object({
+      month: z
+        .string()
+        .regex(/^\d{4}-\d{2}$/)
+        .optional(),
+    }),
     execute: async ({ month }) => {
       const { ym } = monthRange(month);
       const { data } = await supabaseAdmin
@@ -333,13 +377,19 @@ export const adminTools = {
         .limit(1000);
       const rows = (data ?? []) as DepreciableAsset[];
       const items = rows.map((a) => ({
-        code: a.code, name: a.name,
+        code: a.code,
+        name: a.name,
         monthly: monthlyDepreciation(a),
         accumulated: accumulatedDepreciation(a),
         bookValue: bookValue(a),
       }));
       const totalMonthly = Math.round(items.reduce((s, i) => s + i.monthly, 0) * 100) / 100;
-      return { month: ym, assetCount: rows.length, totalMonthlyDepreciation: totalMonthly, top: items.sort((a, b) => b.monthly - a.monthly).slice(0, 15) };
+      return {
+        month: ym,
+        assetCount: rows.length,
+        totalMonthlyDepreciation: totalMonthly,
+        top: items.sort((a, b) => b.monthly - a.monthly).slice(0, 15),
+      };
     },
   }),
 
@@ -354,8 +404,14 @@ export const adminTools = {
           .eq("job_id", jobId)
           .order("created_at", { ascending: false })
           .limit(50),
-        supabaseAdmin.from("qc_reports").select("status, overall_result, summary, created_at").eq("job_id", jobId),
-        supabaseAdmin.from("packing_reports").select("status, overall_result, created_at").eq("job_id", jobId),
+        supabaseAdmin
+          .from("qc_reports")
+          .select("status, overall_result, summary, created_at")
+          .eq("job_id", jobId),
+        supabaseAdmin
+          .from("packing_reports")
+          .select("status, overall_result, created_at")
+          .eq("job_id", jobId),
       ]);
       return {
         jobId,

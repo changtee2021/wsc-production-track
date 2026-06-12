@@ -3,7 +3,14 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Loader2, Search, ArrowLeft, Package, Plus, Minus, ShoppingCart, Trash2,
+  Loader2,
+  Search,
+  ArrowLeft,
+  Package,
+  Plus,
+  Minus,
+  ShoppingCart,
+  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,17 +18,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import {
-  issueOfficeSession, officeListAssets, officeListCategories,
+  issueOfficeSession,
+  officeListAssets,
+  officeListCategories,
 } from "@/lib/features/office-assets.functions";
 import { officeSubmitRequest, officeListEmployees } from "@/lib/features/office-requests.functions";
-import {
-  getOfficeToken, setOfficeToken, isOfficeSession,
-} from "@/lib/auth/office-session";
+import { getOfficeToken, setOfficeToken, isOfficeSession } from "@/lib/auth/office-session";
 
 export const Route = createFileRoute("/supplies-request")({
   head: () => ({
@@ -34,21 +45,41 @@ export const Route = createFileRoute("/supplies-request")({
 });
 
 type Asset = {
-  id: string; code: string; name: string;
-  category_id: string | null; category_name: string | null;
-  image_url: string | null; brand: string | null; model: string | null;
-  stock_qty: number; min_qty: number; unit: string;
-  purchase_price: number | null; active: boolean;
+  id: string;
+  code: string;
+  name: string;
+  category_id: string | null;
+  category_name: string | null;
+  image_url: string | null;
+  brand: string | null;
+  model: string | null;
+  stock_qty: number;
+  min_qty: number;
+  unit: string;
+  purchase_price: number | null;
+  active: boolean;
 };
-type Emp = { id: string; name: string; emp_code: string | null; avatar_url: string | null; active: boolean };
+type Emp = {
+  id: string;
+  name: string;
+  emp_code: string | null;
+  avatar_url: string | null;
+  active: boolean;
+};
 
 function SuppliesRequestPage() {
   const issue = useServerFn(issueOfficeSession);
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    if (isOfficeSession()) { setReady(true); return; }
+    if (isOfficeSession()) {
+      setReady(true);
+      return;
+    }
     issue({ data: {} })
-      .then((r) => { setOfficeToken(r.token); setReady(true); })
+      .then((r) => {
+        setOfficeToken(r.token);
+        setReady(true);
+      })
       .catch((e) => toast.error(e instanceof Error ? e.message : "เข้าระบบไม่สำเร็จ"));
   }, [issue]);
   if (!ready) {
@@ -84,10 +115,7 @@ function RequestForm() {
   useEffect(() => {
     const token = getOfficeToken() ?? "";
     setLoading(true);
-    Promise.all([
-      list({ data: { token, includeInactive: false } }),
-      listCats({ data: { token } }),
-    ])
+    Promise.all([list({ data: { token, includeInactive: false } }), listCats({ data: { token } })])
       .then(([a, c]) => {
         setRows(a.rows as unknown as Asset[]);
         setCats(c.rows as { id: string; name: string }[]);
@@ -107,7 +135,6 @@ function RequestForm() {
       }
     })();
   }, [listEmps]);
-
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
@@ -134,9 +161,7 @@ function RequestForm() {
   }, [cart, rows]);
 
   const totalValue = useMemo(() => {
-    return cartItems.reduce(
-      (s, x) => s + x.qty * Number(x.asset?.purchase_price ?? 0), 0,
-    );
+    return cartItems.reduce((s, x) => s + x.qty * Number(x.asset?.purchase_price ?? 0), 0);
   }, [cartItems]);
 
   const addQty = (id: string, max: number, delta: number) => {
@@ -151,8 +176,14 @@ function RequestForm() {
   };
 
   const handleSubmit = async () => {
-    if (!empId) { toast.error("กรุณาเลือกพนักงาน"); return; }
-    if (cartItems.length === 0) { toast.error("ยังไม่มีรายการในตะกร้า"); return; }
+    if (!empId) {
+      toast.error("กรุณาเลือกพนักงาน");
+      return;
+    }
+    if (cartItems.length === 0) {
+      toast.error("ยังไม่มีรายการในตะกร้า");
+      return;
+    }
     setSubmitting(true);
     try {
       const r = await submit({
@@ -164,7 +195,8 @@ function RequestForm() {
         },
       });
       toast.success(`ส่งคำขอแล้ว · ${r.req_no}`);
-      setCart({}); setNote("");
+      setCart({});
+      setNote("");
       setTimeout(() => navigate({ to: "/" }), 1200);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "ส่งคำขอไม่สำเร็จ");
@@ -177,7 +209,11 @@ function RequestForm() {
     <div className="min-h-screen bg-muted/30 pb-32">
       <Toaster richColors position="top-center" />
       <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
-        <Link to="/"><Button size="icon" variant="ghost"><ArrowLeft className="h-5 w-5" /></Button></Link>
+        <Link to="/">
+          <Button size="icon" variant="ghost">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </Link>
         <h1 className="text-base font-semibold">เบิกอุปกรณ์ออฟฟิศ</h1>
       </header>
 
@@ -186,13 +222,18 @@ function RequestForm() {
           <CardContent className="p-3 space-y-2">
             <label className="text-xs font-medium text-muted-foreground">ผู้ขอเบิก *</label>
             <Select value={empId} onValueChange={setEmpId}>
-              <SelectTrigger><SelectValue placeholder="— เลือกพนักงาน —" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="— เลือกพนักงาน —" />
+              </SelectTrigger>
               <SelectContent>
-                {emps.filter((e) => e.active).map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.name}{e.emp_code ? ` (${e.emp_code})` : ""}
-                  </SelectItem>
-                ))}
+                {emps
+                  .filter((e) => e.active)
+                  .map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name}
+                      {e.emp_code ? ` (${e.emp_code})` : ""}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </CardContent>
@@ -202,24 +243,35 @@ function RequestForm() {
           <CardContent className="p-3 space-y-2">
             <div className="flex gap-2">
               <Select value={cat} onValueChange={setCat}>
-                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">ทุกหมวด</SelectItem>
                   {cats.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ค้นหาชื่อ/รหัส/ยี่ห้อ" className="pl-9" />
+                <Input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="ค้นหาชื่อ/รหัส/ยี่ห้อ"
+                  className="pl-9"
+                />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
         ) : filtered.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">— ไม่พบรายการ —</p>
         ) : (
@@ -241,7 +293,11 @@ function RequestForm() {
                 >
                   <CardContent className="flex items-center gap-3 p-3">
                     {a.image_url ? (
-                      <img src={a.image_url} alt={a.name} className="h-14 w-14 shrink-0 rounded border object-cover" />
+                      <img
+                        src={a.image_url}
+                        alt={a.name}
+                        className="h-14 w-14 shrink-0 rounded border object-cover"
+                      />
                     ) : (
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded border bg-muted text-muted-foreground">
                         <Package className="h-5 w-5" />
@@ -253,7 +309,9 @@ function RequestForm() {
                         {out ? (
                           <Badge variant="destructive">หมด</Badge>
                         ) : low ? (
-                          <Badge className="bg-amber-500 hover:bg-amber-500 text-white">ใกล้หมด</Badge>
+                          <Badge className="bg-amber-500 hover:bg-amber-500 text-white">
+                            ใกล้หมด
+                          </Badge>
                         ) : null}
                       </div>
                       <div className="text-[11px] text-muted-foreground">
@@ -263,13 +321,21 @@ function RequestForm() {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      <Button size="icon" variant="outline" disabled={inCart <= 0}
-                        onClick={() => addQty(a.id, a.stock_qty, -1)}>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        disabled={inCart <= 0}
+                        onClick={() => addQty(a.id, a.stock_qty, -1)}
+                      >
                         <Minus className="h-4 w-4" />
                       </Button>
                       <span className="w-8 text-center text-sm font-semibold">{inCart}</span>
-                      <Button size="icon" variant="outline" disabled={out || inCart >= a.stock_qty}
-                        onClick={() => addQty(a.id, a.stock_qty, 1)}>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        disabled={out || inCart >= a.stock_qty}
+                        onClick={() => addQty(a.id, a.stock_qty, 1)}
+                      >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -293,13 +359,22 @@ function RequestForm() {
                   <div key={c.id} className="flex items-center gap-2 text-sm">
                     <span className="flex-1 truncate">{c.asset?.name}</span>
                     <span className="text-muted-foreground">× {c.qty}</span>
-                    <Button size="icon" variant="ghost" onClick={() => addQty(c.id, c.asset!.stock_qty, -c.qty)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => addQty(c.id, c.asset!.stock_qty, -c.qty)}
+                    >
                       <Trash2 className="h-4 w-4 text-rose-600" />
                     </Button>
                   </div>
                 ))}
               </div>
-              <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ (ถ้ามี)" />
+              <Textarea
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="หมายเหตุ (ถ้ามี)"
+              />
             </CardContent>
           </Card>
         )}
@@ -320,4 +395,3 @@ function RequestForm() {
     </div>
   );
 }
-

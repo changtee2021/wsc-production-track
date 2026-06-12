@@ -6,8 +6,11 @@
 function toB64Url(s: string) {
   if (typeof window === "undefined") {
     // SSR / Node
-    return Buffer.from(s, "utf8").toString("base64")
-      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return Buffer.from(s, "utf8")
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
   }
   // Browser: encode UTF-8 → base64
   const bytes = new TextEncoder().encode(s);

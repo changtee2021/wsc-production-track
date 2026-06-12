@@ -15,11 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmployeeNameButton } from "@/components/EmployeeNameButton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -154,8 +156,13 @@ function StockReportsPage() {
                     <td className="p-2 font-mono">#{b.batch_no}</td>
                     <td className="p-2">
                       {b.counted_by_name ? (
-                        <EmployeeNameButton name={b.counted_by_name} emp_code={b.counted_by_emp_code ?? null} />
-                      ) : "-"}
+                        <EmployeeNameButton
+                          name={b.counted_by_name}
+                          emp_code={b.counted_by_emp_code ?? null}
+                        />
+                      ) : (
+                        "-"
+                      )}
                       {b.counted_by_emp_code ? (
                         <span className="text-xs text-muted-foreground ml-1">
                           ({b.counted_by_emp_code})
@@ -233,7 +240,8 @@ function StockReportsPage() {
                               : "text-green-600"
                         }`}
                       >
-                        {l.variance > 0 ? "+" : ""}{l.variance}
+                        {l.variance > 0 ? "+" : ""}
+                        {l.variance}
                       </td>
                       <td className="p-2">
                         {l.status === "match" && <Badge variant="secondary">ตรง</Badge>}

@@ -1,4 +1,11 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
+import {
+  Outlet,
+  Link,
+  createRootRoute,
+  HeadContent,
+  Scripts,
+  useRouterState,
+} from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppVersion } from "@/components/AppVersion";
@@ -56,11 +63,31 @@ export const Route = createRootRoute({
         content:
           "ระบบติดตามการผลิตในโรงงาน บันทึกขั้นตอนงานและการตรวจ QC แบบเรียลไทม์ ใช้งานง่ายบนมือถือ",
       },
-      { name: "description", content: "- WSC ProductionTrack is a mobile-optimized web app for tracking manufacturing production steps, employee activity, and quality control checks, featuring a dyna" },
-      { property: "og:description", content: "- WSC ProductionTrack is a mobile-optimized web app for tracking manufacturing production steps, employee activity, and quality control checks, featuring a dyna" },
-      { name: "twitter:description", content: "- WSC ProductionTrack is a mobile-optimized web app for tracking manufacturing production steps, employee activity, and quality control checks, featuring a dyna" },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/SB11sYmcAcWg6RHXTfd1y5NFKnt2/social-images/social-1779163664268-1003807_0.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/SB11sYmcAcWg6RHXTfd1y5NFKnt2/social-images/social-1779163664268-1003807_0.webp" },
+      {
+        name: "description",
+        content:
+          "- WSC ProductionTrack is a mobile-optimized web app for tracking manufacturing production steps, employee activity, and quality control checks, featuring a dyna",
+      },
+      {
+        property: "og:description",
+        content:
+          "- WSC ProductionTrack is a mobile-optimized web app for tracking manufacturing production steps, employee activity, and quality control checks, featuring a dyna",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "- WSC ProductionTrack is a mobile-optimized web app for tracking manufacturing production steps, employee activity, and quality control checks, featuring a dyna",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/SB11sYmcAcWg6RHXTfd1y5NFKnt2/social-images/social-1779163664268-1003807_0.webp",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/SB11sYmcAcWg6RHXTfd1y5NFKnt2/social-images/social-1779163664268-1003807_0.webp",
+      },
     ],
     links: [
       {

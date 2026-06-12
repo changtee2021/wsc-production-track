@@ -6,5 +6,4 @@ export const APP_VERSION = {
   date: "07.06.26", // DD.MM.YY
 } as const;
 
-export const APP_VERSION_STRING =
-  `${APP_VERSION.code} ${APP_VERSION.revision} bfd ${APP_VERSION.date}`;
+export const APP_VERSION_STRING = `${APP_VERSION.code} ${APP_VERSION.revision} bfd ${APP_VERSION.date}`;
