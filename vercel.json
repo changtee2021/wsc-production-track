@@ -6,7 +6,8 @@
   "regions": ["sin1"],
   "build": {
     "env": {
-      "NITRO_PRESET": "vercel"
+      "NITRO_PRESET": "vercel",
+      "NODE_OPTIONS": "--max-old-space-size=8192"
     }
   }
 }
