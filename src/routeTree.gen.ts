@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WarehouseRouteImport } from './routes/warehouse'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SuppliesRequestRouteImport } from './routes/supplies-request'
 import { Route as SuppliesRouteImport } from './routes/supplies'
@@ -24,7 +25,11 @@ import { Route as ExpenseMineRouteImport } from './routes/expense-mine'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WarehouseReceivingRouteImport } from './routes/warehouse.receiving'
+import { Route as WarehousePalletizingRouteImport } from './routes/warehouse.palletizing'
+import { Route as WarehouseLookupRouteImport } from './routes/warehouse.lookup'
 import { Route as ProtectedWiRouteImport } from './routes/_protected.wi'
+import { Route as ProtectedWarehouseDashboardRouteImport } from './routes/_protected.warehouse-dashboard'
 import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protected.supplies-reports'
 import { Route as ProtectedSuppliesDashboardRouteImport } from './routes/_protected.supplies-dashboard'
 import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
@@ -55,12 +60,23 @@ import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dash
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
 import { Route as ProtectedAdminPolicyRouteImport } from './routes/_protected.admin-policy'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
+import { Route as ProtectedWarehouseSettingsRouteImport } from './routes/_protected.warehouse.settings'
+import { Route as ProtectedWarehouseReportsRouteImport } from './routes/_protected.warehouse.reports'
+import { Route as ProtectedWarehouseReceiptsRouteImport } from './routes/_protected.warehouse.receipts'
+import { Route as ProtectedWarehousePalletsRouteImport } from './routes/_protected.warehouse.pallets'
+import { Route as ProtectedWarehouseExportRouteImport } from './routes/_protected.warehouse.export'
 import { Route as ProtectedPrintLabelJobNoRouteImport } from './routes/_protected.print-label.$jobNo'
 import { Route as ProtectedEmployeeProfileIdRouteImport } from './routes/_protected.employee-profile.$id'
+import { Route as WarehousePalletPalletIdScanRouteImport } from './routes/warehouse.pallet.$palletId.scan'
 import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/public/stock-count.reports'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 import { Route as ApiPublicCurtainFlowJobsRouteImport } from './routes/api/public/curtain-flow/jobs'
 
+const WarehouseRoute = WarehouseRouteImport.update({
+  id: '/warehouse',
+  path: '/warehouse',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -135,11 +151,32 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WarehouseReceivingRoute = WarehouseReceivingRouteImport.update({
+  id: '/receiving',
+  path: '/receiving',
+  getParentRoute: () => WarehouseRoute,
+} as any)
+const WarehousePalletizingRoute = WarehousePalletizingRouteImport.update({
+  id: '/palletizing',
+  path: '/palletizing',
+  getParentRoute: () => WarehouseRoute,
+} as any)
+const WarehouseLookupRoute = WarehouseLookupRouteImport.update({
+  id: '/lookup',
+  path: '/lookup',
+  getParentRoute: () => WarehouseRoute,
+} as any)
 const ProtectedWiRoute = ProtectedWiRouteImport.update({
   id: '/wi',
   path: '/wi',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedWarehouseDashboardRoute =
+  ProtectedWarehouseDashboardRouteImport.update({
+    id: '/warehouse-dashboard',
+    path: '/warehouse-dashboard',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedSuppliesReportsRoute =
   ProtectedSuppliesReportsRouteImport.update({
     id: '/supplies-reports',
@@ -303,6 +340,36 @@ const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
   path: '/api/public/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProtectedWarehouseSettingsRoute =
+  ProtectedWarehouseSettingsRouteImport.update({
+    id: '/warehouse/settings',
+    path: '/warehouse/settings',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedWarehouseReportsRoute =
+  ProtectedWarehouseReportsRouteImport.update({
+    id: '/warehouse/reports',
+    path: '/warehouse/reports',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedWarehouseReceiptsRoute =
+  ProtectedWarehouseReceiptsRouteImport.update({
+    id: '/warehouse/receipts',
+    path: '/warehouse/receipts',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedWarehousePalletsRoute =
+  ProtectedWarehousePalletsRouteImport.update({
+    id: '/warehouse/pallets',
+    path: '/warehouse/pallets',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedWarehouseExportRoute =
+  ProtectedWarehouseExportRouteImport.update({
+    id: '/warehouse/export',
+    path: '/warehouse/export',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
 const ProtectedPrintLabelJobNoRoute =
   ProtectedPrintLabelJobNoRouteImport.update({
     id: '/print-label/$jobNo',
@@ -314,6 +381,12 @@ const ProtectedEmployeeProfileIdRoute =
     id: '/employee-profile/$id',
     path: '/employee-profile/$id',
     getParentRoute: () => ProtectedRoute,
+  } as any)
+const WarehousePalletPalletIdScanRoute =
+  WarehousePalletPalletIdScanRouteImport.update({
+    id: '/pallet/$palletId/scan',
+    path: '/pallet/$palletId/scan',
+    getParentRoute: () => WarehouseRoute,
   } as any)
 const ApiPublicStockCountReportsRoute =
   ApiPublicStockCountReportsRouteImport.update({
@@ -349,6 +422,7 @@ export interface FileRoutesByFullPath {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
+  '/warehouse': typeof WarehouseRouteWithChildren
   '/admin-policy': typeof ProtectedAdminPolicyRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
@@ -378,13 +452,23 @@ export interface FileRoutesByFullPath {
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/warehouse-dashboard': typeof ProtectedWarehouseDashboardRoute
   '/wi': typeof ProtectedWiRoute
+  '/warehouse/lookup': typeof WarehouseLookupRoute
+  '/warehouse/palletizing': typeof WarehousePalletizingRoute
+  '/warehouse/receiving': typeof WarehouseReceivingRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
+  '/warehouse/export': typeof ProtectedWarehouseExportRoute
+  '/warehouse/pallets': typeof ProtectedWarehousePalletsRoute
+  '/warehouse/receipts': typeof ProtectedWarehouseReceiptsRoute
+  '/warehouse/reports': typeof ProtectedWarehouseReportsRoute
+  '/warehouse/settings': typeof ProtectedWarehouseSettingsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
+  '/warehouse/pallet/$palletId/scan': typeof WarehousePalletPalletIdScanRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -401,6 +485,7 @@ export interface FileRoutesByTo {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
+  '/warehouse': typeof WarehouseRouteWithChildren
   '/admin-policy': typeof ProtectedAdminPolicyRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
@@ -430,13 +515,23 @@ export interface FileRoutesByTo {
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/warehouse-dashboard': typeof ProtectedWarehouseDashboardRoute
   '/wi': typeof ProtectedWiRoute
+  '/warehouse/lookup': typeof WarehouseLookupRoute
+  '/warehouse/palletizing': typeof WarehousePalletizingRoute
+  '/warehouse/receiving': typeof WarehouseReceivingRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
+  '/warehouse/export': typeof ProtectedWarehouseExportRoute
+  '/warehouse/pallets': typeof ProtectedWarehousePalletsRoute
+  '/warehouse/receipts': typeof ProtectedWarehouseReceiptsRoute
+  '/warehouse/reports': typeof ProtectedWarehouseReportsRoute
+  '/warehouse/settings': typeof ProtectedWarehouseSettingsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
+  '/warehouse/pallet/$palletId/scan': typeof WarehousePalletPalletIdScanRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -455,6 +550,7 @@ export interface FileRoutesById {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
+  '/warehouse': typeof WarehouseRouteWithChildren
   '/_protected/admin-policy': typeof ProtectedAdminPolicyRoute
   '/_protected/control': typeof ProtectedControlRoute
   '/_protected/dashboard': typeof ProtectedDashboardRoute
@@ -484,13 +580,23 @@ export interface FileRoutesById {
   '/_protected/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/_protected/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/_protected/warehouse-dashboard': typeof ProtectedWarehouseDashboardRoute
   '/_protected/wi': typeof ProtectedWiRoute
+  '/warehouse/lookup': typeof WarehouseLookupRoute
+  '/warehouse/palletizing': typeof WarehousePalletizingRoute
+  '/warehouse/receiving': typeof WarehouseReceivingRoute
   '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/_protected/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
+  '/_protected/warehouse/export': typeof ProtectedWarehouseExportRoute
+  '/_protected/warehouse/pallets': typeof ProtectedWarehousePalletsRoute
+  '/_protected/warehouse/receipts': typeof ProtectedWarehouseReceiptsRoute
+  '/_protected/warehouse/reports': typeof ProtectedWarehouseReportsRoute
+  '/_protected/warehouse/settings': typeof ProtectedWarehouseSettingsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
+  '/warehouse/pallet/$palletId/scan': typeof WarehousePalletPalletIdScanRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -509,6 +615,7 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
+    | '/warehouse'
     | '/admin-policy'
     | '/control'
     | '/dashboard'
@@ -538,13 +645,23 @@ export interface FileRouteTypes {
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
+    | '/warehouse-dashboard'
     | '/wi'
+    | '/warehouse/lookup'
+    | '/warehouse/palletizing'
+    | '/warehouse/receiving'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
+    | '/warehouse/export'
+    | '/warehouse/pallets'
+    | '/warehouse/receipts'
+    | '/warehouse/reports'
+    | '/warehouse/settings'
     | '/api/public/health'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
+    | '/warehouse/pallet/$palletId/scan'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -561,6 +678,7 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
+    | '/warehouse'
     | '/admin-policy'
     | '/control'
     | '/dashboard'
@@ -590,13 +708,23 @@ export interface FileRouteTypes {
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
+    | '/warehouse-dashboard'
     | '/wi'
+    | '/warehouse/lookup'
+    | '/warehouse/palletizing'
+    | '/warehouse/receiving'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
+    | '/warehouse/export'
+    | '/warehouse/pallets'
+    | '/warehouse/receipts'
+    | '/warehouse/reports'
+    | '/warehouse/settings'
     | '/api/public/health'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
+    | '/warehouse/pallet/$palletId/scan'
   id:
     | '__root__'
     | '/'
@@ -614,6 +742,7 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
+    | '/warehouse'
     | '/_protected/admin-policy'
     | '/_protected/control'
     | '/_protected/dashboard'
@@ -643,13 +772,23 @@ export interface FileRouteTypes {
     | '/_protected/supplies-admin'
     | '/_protected/supplies-dashboard'
     | '/_protected/supplies-reports'
+    | '/_protected/warehouse-dashboard'
     | '/_protected/wi'
+    | '/warehouse/lookup'
+    | '/warehouse/palletizing'
+    | '/warehouse/receiving'
     | '/_protected/employee-profile/$id'
     | '/_protected/print-label/$jobNo'
+    | '/_protected/warehouse/export'
+    | '/_protected/warehouse/pallets'
+    | '/_protected/warehouse/receipts'
+    | '/_protected/warehouse/reports'
+    | '/_protected/warehouse/settings'
     | '/api/public/health'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
+    | '/warehouse/pallet/$palletId/scan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -668,6 +807,7 @@ export interface RootRouteChildren {
   SuppliesRoute: typeof SuppliesRoute
   SuppliesRequestRoute: typeof SuppliesRequestRoute
   TermsRoute: typeof TermsRoute
+  WarehouseRoute: typeof WarehouseRouteWithChildren
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicCurtainFlowJobsRoute: typeof ApiPublicCurtainFlowJobsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
@@ -676,6 +816,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/warehouse': {
+      id: '/warehouse'
+      path: '/warehouse'
+      fullPath: '/warehouse'
+      preLoaderRoute: typeof WarehouseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -781,11 +928,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/warehouse/receiving': {
+      id: '/warehouse/receiving'
+      path: '/receiving'
+      fullPath: '/warehouse/receiving'
+      preLoaderRoute: typeof WarehouseReceivingRouteImport
+      parentRoute: typeof WarehouseRoute
+    }
+    '/warehouse/palletizing': {
+      id: '/warehouse/palletizing'
+      path: '/palletizing'
+      fullPath: '/warehouse/palletizing'
+      preLoaderRoute: typeof WarehousePalletizingRouteImport
+      parentRoute: typeof WarehouseRoute
+    }
+    '/warehouse/lookup': {
+      id: '/warehouse/lookup'
+      path: '/lookup'
+      fullPath: '/warehouse/lookup'
+      preLoaderRoute: typeof WarehouseLookupRouteImport
+      parentRoute: typeof WarehouseRoute
+    }
     '/_protected/wi': {
       id: '/_protected/wi'
       path: '/wi'
       fullPath: '/wi'
       preLoaderRoute: typeof ProtectedWiRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/warehouse-dashboard': {
+      id: '/_protected/warehouse-dashboard'
+      path: '/warehouse-dashboard'
+      fullPath: '/warehouse-dashboard'
+      preLoaderRoute: typeof ProtectedWarehouseDashboardRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/supplies-reports': {
@@ -998,6 +1173,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_protected/warehouse/settings': {
+      id: '/_protected/warehouse/settings'
+      path: '/warehouse/settings'
+      fullPath: '/warehouse/settings'
+      preLoaderRoute: typeof ProtectedWarehouseSettingsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/warehouse/reports': {
+      id: '/_protected/warehouse/reports'
+      path: '/warehouse/reports'
+      fullPath: '/warehouse/reports'
+      preLoaderRoute: typeof ProtectedWarehouseReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/warehouse/receipts': {
+      id: '/_protected/warehouse/receipts'
+      path: '/warehouse/receipts'
+      fullPath: '/warehouse/receipts'
+      preLoaderRoute: typeof ProtectedWarehouseReceiptsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/warehouse/pallets': {
+      id: '/_protected/warehouse/pallets'
+      path: '/warehouse/pallets'
+      fullPath: '/warehouse/pallets'
+      preLoaderRoute: typeof ProtectedWarehousePalletsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/warehouse/export': {
+      id: '/_protected/warehouse/export'
+      path: '/warehouse/export'
+      fullPath: '/warehouse/export'
+      preLoaderRoute: typeof ProtectedWarehouseExportRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/print-label/$jobNo': {
       id: '/_protected/print-label/$jobNo'
       path: '/print-label/$jobNo'
@@ -1011,6 +1221,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/employee-profile/$id'
       preLoaderRoute: typeof ProtectedEmployeeProfileIdRouteImport
       parentRoute: typeof ProtectedRoute
+    }
+    '/warehouse/pallet/$palletId/scan': {
+      id: '/warehouse/pallet/$palletId/scan'
+      path: '/pallet/$palletId/scan'
+      fullPath: '/warehouse/pallet/$palletId/scan'
+      preLoaderRoute: typeof WarehousePalletPalletIdScanRouteImport
+      parentRoute: typeof WarehouseRoute
     }
     '/api/public/stock-count/reports': {
       id: '/api/public/stock-count/reports'
@@ -1066,9 +1283,15 @@ interface ProtectedRouteChildren {
   ProtectedSuppliesAdminRoute: typeof ProtectedSuppliesAdminRoute
   ProtectedSuppliesDashboardRoute: typeof ProtectedSuppliesDashboardRoute
   ProtectedSuppliesReportsRoute: typeof ProtectedSuppliesReportsRoute
+  ProtectedWarehouseDashboardRoute: typeof ProtectedWarehouseDashboardRoute
   ProtectedWiRoute: typeof ProtectedWiRoute
   ProtectedEmployeeProfileIdRoute: typeof ProtectedEmployeeProfileIdRoute
   ProtectedPrintLabelJobNoRoute: typeof ProtectedPrintLabelJobNoRoute
+  ProtectedWarehouseExportRoute: typeof ProtectedWarehouseExportRoute
+  ProtectedWarehousePalletsRoute: typeof ProtectedWarehousePalletsRoute
+  ProtectedWarehouseReceiptsRoute: typeof ProtectedWarehouseReceiptsRoute
+  ProtectedWarehouseReportsRoute: typeof ProtectedWarehouseReportsRoute
+  ProtectedWarehouseSettingsRoute: typeof ProtectedWarehouseSettingsRoute
 }
 
 const ProtectedRouteChildren: ProtectedRouteChildren = {
@@ -1101,13 +1324,37 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedSuppliesAdminRoute: ProtectedSuppliesAdminRoute,
   ProtectedSuppliesDashboardRoute: ProtectedSuppliesDashboardRoute,
   ProtectedSuppliesReportsRoute: ProtectedSuppliesReportsRoute,
+  ProtectedWarehouseDashboardRoute: ProtectedWarehouseDashboardRoute,
   ProtectedWiRoute: ProtectedWiRoute,
   ProtectedEmployeeProfileIdRoute: ProtectedEmployeeProfileIdRoute,
   ProtectedPrintLabelJobNoRoute: ProtectedPrintLabelJobNoRoute,
+  ProtectedWarehouseExportRoute: ProtectedWarehouseExportRoute,
+  ProtectedWarehousePalletsRoute: ProtectedWarehousePalletsRoute,
+  ProtectedWarehouseReceiptsRoute: ProtectedWarehouseReceiptsRoute,
+  ProtectedWarehouseReportsRoute: ProtectedWarehouseReportsRoute,
+  ProtectedWarehouseSettingsRoute: ProtectedWarehouseSettingsRoute,
 }
 
 const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
   ProtectedRouteChildren,
+)
+
+interface WarehouseRouteChildren {
+  WarehouseLookupRoute: typeof WarehouseLookupRoute
+  WarehousePalletizingRoute: typeof WarehousePalletizingRoute
+  WarehouseReceivingRoute: typeof WarehouseReceivingRoute
+  WarehousePalletPalletIdScanRoute: typeof WarehousePalletPalletIdScanRoute
+}
+
+const WarehouseRouteChildren: WarehouseRouteChildren = {
+  WarehouseLookupRoute: WarehouseLookupRoute,
+  WarehousePalletizingRoute: WarehousePalletizingRoute,
+  WarehouseReceivingRoute: WarehouseReceivingRoute,
+  WarehousePalletPalletIdScanRoute: WarehousePalletPalletIdScanRoute,
+}
+
+const WarehouseRouteWithChildren = WarehouseRoute._addFileChildren(
+  WarehouseRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -1126,6 +1373,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuppliesRoute: SuppliesRoute,
   SuppliesRequestRoute: SuppliesRequestRoute,
   TermsRoute: TermsRoute,
+  WarehouseRoute: WarehouseRouteWithChildren,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicCurtainFlowJobsRoute: ApiPublicCurtainFlowJobsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,

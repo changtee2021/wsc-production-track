@@ -17,6 +17,7 @@ import {
   SlidersHorizontal,
   Receipt,
   Layers,
+  Truck,
   ListChecks,
   Activity,
   Timer,
@@ -98,6 +99,17 @@ const NAV_GROUPS: Array<{
       { title: "แดชบอร์ดเบิก-สต๊อก", url: "/supplies-dashboard", icon: LayoutDashboard },
       { title: "จัดการสินทรัพย์", url: "/supplies-admin", icon: Boxes },
       { title: "รายงานค่าเสื่อม", url: "/supplies-reports", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "คลังสินค้า (WH)",
+    items: [
+      { title: "Dashboard", url: "/warehouse-dashboard", icon: LayoutDashboard },
+      { title: "รายการรับของ", url: "/warehouse/receipts", icon: Package },
+      { title: "สถานะ Pallet", url: "/warehouse/pallets", icon: Layers },
+      { title: "โหลดตู้ส่งออก", url: "/warehouse/export", icon: Truck },
+      { title: "รายงาน", url: "/warehouse/reports", icon: BarChart3 },
+      { title: "ตั้งค่าคลัง", url: "/warehouse/settings", icon: SlidersHorizontal },
     ],
   },
   {

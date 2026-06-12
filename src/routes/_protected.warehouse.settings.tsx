@@ -1,0 +1,453 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { ChevronDown, Loader2, RotateCcw, Save } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Toaster } from "@/components/ui/sonner";
+import { getAdminToken } from "@/lib/auth/admin-session";
+import {
+  adminWhGetSettings,
+  adminWhUpdateSettings,
+  adminWhResetSettings,
+  adminWhListTemplates,
+  adminWhUpsertTemplate,
+  adminWhListDestinations,
+  adminWhUpsertDestination,
+  adminWhListZones,
+  adminWhUpsertZone,
+  adminWhListReasonCodes,
+  adminWhUpsertReasonCode,
+  adminWhListLabelTemplates,
+  adminWhUpsertLabelTemplate,
+  adminWhListSyncLogs,
+} from "@/lib/features/warehouse-settings.functions";
+import type { WhSettingsKey } from "@/lib/warehouse/types";
+
+export const Route = createFileRoute("/_protected/warehouse/settings")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    tab: typeof s.tab === "string" ? s.tab : undefined,
+  }),
+  head: () => ({ meta: [{ title: "ตั้งค่าคลังสินค้า" }] }),
+  component: WarehouseSettingsPage,
+});
+
+const SECTIONS: { id: string; title: string; key?: WhSettingsKey }[] = [
+  { id: "general", title: "ทั่วไป", key: "general" },
+  { id: "receiving", title: "รับของ", key: "receiving" },
+  { id: "pallet", title: "Pallet", key: "pallet" },
+  { id: "templates", title: "Pallet Templates" },
+  { id: "scan", title: "พฤติกรรมสแกน", key: "scan" },
+  { id: "export", title: "ส่งออก", key: "export" },
+  { id: "zones", title: "โซนคลัง" },
+  { id: "reasons", title: "Reason codes" },
+  { id: "labels", title: "ฉลาก & PDF" },
+  { id: "integration", title: "เชื่อม Backoffice", key: "integration" },
+  { id: "audit", title: "Audit", key: "audit" },
+];
+
+function Section({
+  title,
+  defaultOpen,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Collapsible
+      defaultOpen={defaultOpen}
+      className="rounded-2xl border border-border bg-card shadow-sm"
+    >
+      <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-2xl px-5 py-3 text-left font-semibold hover:bg-muted/40">
+        <span>{title}</span>
+        <ChevronDown className="h-4 w-4 shrink-0 transition-transform [[data-state=open]_&]:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="border-t border-border p-5">{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function JsonSettingsForm({
+  settingsKey,
+  values,
+  onSave,
+  onReset,
+  fields,
+}: {
+  settingsKey: WhSettingsKey;
+  values: Record<string, unknown>;
+  onSave: (v: Record<string, unknown>) => void;
+  onReset: () => void;
+  fields: Array<{
+    key: string;
+    label: string;
+    type: "text" | "number" | "boolean" | "select";
+    options?: string[];
+  }>;
+}) {
+  const [local, setLocal] = useState(values);
+  if (JSON.stringify(local) !== JSON.stringify(values) && Object.keys(local).length === 0) {
+    setLocal(values);
+  }
+
+  return (
+    <div className="space-y-4">
+      {fields.map((f) => (
+        <div key={f.key}>
+          <Label>{f.label}</Label>
+          {f.type === "boolean" ? (
+            <Switch
+              checked={!!local[f.key]}
+              onCheckedChange={(v) => setLocal((p) => ({ ...p, [f.key]: v }))}
+            />
+          ) : f.type === "select" ? (
+            <select
+              className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+              value={String(local[f.key] ?? "")}
+              onChange={(e) => setLocal((p) => ({ ...p, [f.key]: e.target.value }))}
+            >
+              {(f.options ?? []).map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Input
+              type={f.type === "number" ? "number" : "text"}
+              value={String(local[f.key] ?? "")}
+              onChange={(e) =>
+                setLocal((p) => ({
+                  ...p,
+                  [f.key]: f.type === "number" ? Number(e.target.value) : e.target.value,
+                }))
+              }
+            />
+          )}
+        </div>
+      ))}
+      <div className="flex gap-2">
+        <Button onClick={() => onSave(local)}>
+          <Save className="mr-2 h-4 w-4" />
+          บันทึก
+        </Button>
+        <Button variant="outline" onClick={onReset}>
+          <RotateCcw className="mr-2 h-4 w-4" />
+          คืนค่าเริ่มต้น
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function WarehouseSettingsPage() {
+  const { tab } = Route.useSearch();
+  const token = getAdminToken() ?? "";
+  const qc = useQueryClient();
+  const getSettings = useServerFn(adminWhGetSettings);
+  const updateSettings = useServerFn(adminWhUpdateSettings);
+  const resetSettings = useServerFn(adminWhResetSettings);
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["wh-settings"],
+    queryFn: () => getSettings({ data: { token } }),
+    enabled: !!token,
+  });
+
+  const save = async (key: WhSettingsKey, value: Record<string, unknown>) => {
+    await updateSettings({ data: { token, key, value } });
+    toast.success("บันทึกแล้ว");
+    qc.invalidateQueries({ queryKey: ["wh-settings"] });
+  };
+
+  const reset = async (key: WhSettingsKey) => {
+    await resetSettings({ data: { token, key } });
+    toast.success("คืนค่าเริ่มต้นแล้ว");
+    qc.invalidateQueries({ queryKey: ["wh-settings"] });
+  };
+
+  const openId = tab && SECTIONS.some((s) => s.id === tab) ? tab : "general";
+
+  if (isLoading || !settings) {
+    return (
+      <div className="flex justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl space-y-4 p-4">
+      <Toaster richColors />
+      <h1 className="text-2xl font-bold">ตั้งค่าคลังสินค้า</h1>
+      <p className="text-sm text-muted-foreground">
+        ปรับพฤติกรรมระบบได้ทั้งหมดที่นี่ — ไม่ต้องแก้โค้ด
+      </p>
+
+      <Section title="ทั่วไป" defaultOpen={openId === "general"}>
+        <JsonSettingsForm
+          settingsKey="general"
+          values={settings.general}
+          onSave={(v) => save("general", v)}
+          onReset={() => reset("general")}
+          fields={[
+            { key: "passcode_enabled", label: "เปิดรหัสผ่านหน้า Floor", type: "boolean" },
+            { key: "passcode", label: "รหัสผ่าน", type: "text" },
+            { key: "session_ttl_hours", label: "Session (ชม.)", type: "number" },
+            { key: "company_code", label: "รหัสบริษัท", type: "text" },
+          ]}
+        />
+      </Section>
+
+      <Section title="รับของ" defaultOpen={openId === "receiving"}>
+        <JsonSettingsForm
+          settingsKey="receiving"
+          values={settings.receiving}
+          onSave={(v) => save("receiving", v)}
+          onReset={() => reset("receiving")}
+          fields={[
+            { key: "po_required", label: "บังคับ PO", type: "boolean" },
+            { key: "adhoc_receipt_allowed", label: "รับแบบไม่มี PO", type: "boolean" },
+            { key: "lot_no_required", label: "บังคับ Lot", type: "boolean" },
+            { key: "mfg_date_required", label: "บังคับ MFG", type: "boolean" },
+            { key: "exp_date_required", label: "บังคับ EXP", type: "boolean" },
+            {
+              key: "default_barcode_mode",
+              label: "โหมด Barcode เริ่มต้น",
+              type: "select",
+              options: ["system", "supplier", "ask_each_receipt"],
+            },
+            { key: "box_code_format", label: "รูปแบบรหัสกล่อง", type: "text" },
+            { key: "auto_confirm_on_full_scan", label: "ยืนยันอัตโนมัติเมื่อครบ", type: "boolean" },
+          ]}
+        />
+      </Section>
+
+      <Section title="Pallet" defaultOpen={openId === "pallet"}>
+        <JsonSettingsForm
+          settingsKey="pallet"
+          values={settings.pallet}
+          onSave={(v) => save("pallet", v)}
+          onReset={() => reset("pallet")}
+          fields={[
+            { key: "mixed_lot_allowed", label: "อนุญาตหลาย Lot", type: "boolean" },
+            { key: "mixed_product_allowed", label: "อนุญาตหลายสินค้า", type: "boolean" },
+            { key: "pallet_no_format", label: "รูปแบบเลข Pallet", type: "text" },
+            { key: "default_boxes_per_layer", label: "กล่อง/ชั้น เริ่มต้น", type: "number" },
+            { key: "default_layers", label: "ชั้นเริ่มต้น", type: "number" },
+            { key: "allow_manual_close_incomplete", label: "ปิดก่อนครบได้", type: "boolean" },
+            { key: "require_supervisor_pin", label: "ต้อง PIN หัวหน้า", type: "boolean" },
+          ]}
+        />
+      </Section>
+
+      <Section title="พฤติกรรมสแกน" defaultOpen={openId === "scan"}>
+        <JsonSettingsForm
+          settingsKey="scan"
+          values={settings.scan}
+          onSave={(v) => save("scan", v)}
+          onReset={() => reset("scan")}
+          fields={[
+            {
+              key: "duplicate_scan_action",
+              label: "สแกนซ้ำ",
+              type: "select",
+              options: ["reject", "warn_only"],
+            },
+            {
+              key: "over_capacity_action",
+              label: "เกินจำนวน",
+              type: "select",
+              options: ["block", "warn_allow"],
+            },
+            {
+              key: "wrong_lot_action",
+              label: "Lot ผิด",
+              type: "select",
+              options: ["block", "warn_allow"],
+            },
+            { key: "sound_enabled", label: "เสียง", type: "boolean" },
+            { key: "vibration_enabled", label: "สั่น", type: "boolean" },
+            { key: "almost_full_threshold_pct", label: "แจ้งเตือนใกล้เต็ม (%)", type: "number" },
+          ]}
+        />
+      </Section>
+
+      <Section title="ส่งออก" defaultOpen={openId === "export"}>
+        <JsonSettingsForm
+          settingsKey="export"
+          values={settings.export}
+          onSave={(v) => save("export", v)}
+          onReset={() => reset("export")}
+          fields={[
+            { key: "container_no_required", label: "บังคับ Container", type: "boolean" },
+            { key: "seal_no_required", label: "บังคับ Seal", type: "boolean" },
+            { key: "destination_required", label: "บังคับปลายทาง", type: "boolean" },
+            { key: "only_complete_pallets", label: "เฉพาะ Pallet ครบ", type: "boolean" },
+            {
+              key: "allow_incomplete_with_approval",
+              label: "อนุญาต incomplete",
+              type: "boolean",
+            },
+          ]}
+        />
+        <TemplatesCrud token={token} type="destinations" />
+      </Section>
+
+      <Section title="Pallet Templates" defaultOpen={openId === "templates"}>
+        <TemplatesCrud token={token} type="templates" />
+      </Section>
+
+      <Section title="โซนคลัง" defaultOpen={openId === "zones"}>
+        <TemplatesCrud token={token} type="zones" />
+      </Section>
+
+      <Section title="Reason codes" defaultOpen={openId === "reasons"}>
+        <TemplatesCrud token={token} type="reasons" />
+      </Section>
+
+      <Section title="ฉลาก & PDF" defaultOpen={openId === "labels"}>
+        <JsonSettingsForm
+          settingsKey="labels"
+          values={settings.labels}
+          onSave={(v) => save("labels", v)}
+          onReset={() => reset("labels")}
+          fields={[
+            { key: "pdf_footer_text", label: "ข้อความท้าย PDF", type: "text" },
+            { key: "show_lot_on_label", label: "แสดง Lot บนฉลาก", type: "boolean" },
+            { key: "show_exp_on_label", label: "แสดง EXP บนฉลาก", type: "boolean" },
+          ]}
+        />
+        <TemplatesCrud token={token} type="labels" />
+      </Section>
+
+      <Section title="เชื่อม Backoffice" defaultOpen={openId === "integration"}>
+        <JsonSettingsForm
+          settingsKey="integration"
+          values={settings.integration}
+          onSave={(v) => save("integration", v)}
+          onReset={() => reset("integration")}
+          fields={[
+            { key: "backoffice_sync_enabled", label: "เปิด sync", type: "boolean" },
+            { key: "stock_sync_trigger", label: "ตัดสต๊อกเมื่อ", type: "select", options: ["on_receipt"] },
+            { key: "webhook_retry_count", label: "Retry", type: "number" },
+          ]}
+        />
+        <SyncLogs token={token} />
+      </Section>
+
+      <Section title="Audit" defaultOpen={openId === "audit"}>
+        <JsonSettingsForm
+          settingsKey="audit"
+          values={settings.audit}
+          onSave={(v) => save("audit", v)}
+          onReset={() => reset("audit")}
+          fields={[
+            { key: "scan_log_retention_days", label: "เก็บ log (วัน)", type: "number" },
+          ]}
+        />
+      </Section>
+    </main>
+  );
+}
+
+function SyncLogs({ token }: { token: string }) {
+  const listFn = useServerFn(adminWhListSyncLogs);
+  const { data: logs = [] } = useQuery({
+    queryKey: ["wh-sync-logs"],
+    queryFn: () => listFn({ data: { token, limit: 20 } }),
+    enabled: !!token,
+  });
+  return (
+    <div className="mt-4 space-y-2">
+      <Label>Sync log ล่าสุด</Label>
+      {logs.map((l) => (
+        <div key={l.id} className="rounded border p-2 text-xs">
+          {l.event_type} · {l.ref_no} · {l.status} — {l.response?.slice(0, 80)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TemplatesCrud({
+  token,
+  type,
+}: {
+  token: string;
+  type: "templates" | "destinations" | "zones" | "reasons" | "labels";
+}) {
+  const qc = useQueryClient();
+  const listTpl = useServerFn(adminWhListTemplates);
+  const upsertTpl = useServerFn(adminWhUpsertTemplate);
+  const listDest = useServerFn(adminWhListDestinations);
+  const upsertDest = useServerFn(adminWhUpsertDestination);
+  const listZones = useServerFn(adminWhListZones);
+  const upsertZone = useServerFn(adminWhUpsertZone);
+  const listReasons = useServerFn(adminWhListReasonCodes);
+  const upsertReason = useServerFn(adminWhUpsertReasonCode);
+  const listLabels = useServerFn(adminWhListLabelTemplates);
+  const upsertLabel = useServerFn(adminWhUpsertLabelTemplate);
+
+  const qk = `wh-crud-${type}`;
+  const { data: rows = [] } = useQuery({
+    queryKey: [qk],
+    queryFn: async () => {
+      if (type === "templates") return listTpl({ data: { token } });
+      if (type === "destinations") return listDest({ data: { token } });
+      if (type === "zones") return listZones({ data: { token } });
+      if (type === "reasons") return listReasons({ data: { token } });
+      return listLabels({ data: { token } });
+    },
+    enabled: !!token,
+  });
+
+  const add = async () => {
+    try {
+      if (type === "templates") {
+        await upsertTpl({
+          data: {
+            token,
+            item_code: "NEW",
+            item_name: "สินค้าใหม่",
+            boxes_per_layer: 12,
+            layers: 8,
+          },
+        });
+      } else if (type === "destinations") {
+        await upsertDest({ data: { token, code: "DEST", name: "ปลายทางใหม่" } });
+      } else if (type === "zones") {
+        await upsertZone({ data: { token, code: "Z1", name: "โซนใหม่" } });
+      } else if (type === "reasons") {
+        await upsertReason({ data: { token, code: "R1", label: "เหตุผลใหม่" } });
+      } else {
+        await upsertLabel({ data: { token, code: "LBL", name: "ฉลากใหม่" } });
+      }
+      qc.invalidateQueries({ queryKey: [qk] });
+      toast.success("เพิ่มแล้ว");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "ผิดพลาด");
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Button size="sm" variant="outline" onClick={add}>
+        + เพิ่ม
+      </Button>
+      {rows.map((r: Record<string, unknown>) => (
+        <div key={String(r.id)} className="rounded border p-2 text-sm">
+          {String(r.code ?? r.item_code ?? r.name ?? r.id)}
+        </div>
+      ))}
+    </div>
+  );
+}

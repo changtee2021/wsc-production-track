@@ -11,6 +11,7 @@ import {
   Wrench,
   ShoppingCart,
   Boxes,
+  Warehouse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -215,6 +216,16 @@ function WelcomePage() {
               สแกน
             </Button>
             <div className="flex gap-2">
+              <Link to="/warehouse" className="flex-1">
+                <Button
+                  variant="ghost"
+                  aria-label="คลังสินค้า"
+                  className="h-12 w-full rounded-2xl bg-teal-600 text-white ring-1 ring-white/30 hover:bg-teal-700 hover:text-white"
+                >
+                  <Warehouse className="h-4 w-4 mr-1" />
+                  คลัง
+                </Button>
+              </Link>
               <Link to="/qc" search={{ job_id: "" }} className="flex-1">
                 <Button
                   variant="ghost"

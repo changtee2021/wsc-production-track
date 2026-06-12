@@ -42,6 +42,12 @@ const PAGE_TITLES: Record<string, string> = {
   "/expenses-dashboard": "เบิกค่าใช้จ่าย (AI Scan)",
   "/expenses-reports": "รายงานค่าใช้จ่ายรายเดือน",
   "/wi": "WI คู่มือปฏิบัติงาน",
+  "/warehouse-dashboard": "คลังสินค้า Dashboard",
+  "/warehouse/receipts": "รายการรับของ",
+  "/warehouse/pallets": "สถานะ Pallet",
+  "/warehouse/export": "โหลดตู้ส่งออก",
+  "/warehouse/reports": "รายงานคลัง",
+  "/warehouse/settings": "ตั้งค่าคลังสินค้า",
 };
 
 function AdminLayout() {
