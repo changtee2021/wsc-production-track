@@ -2,6 +2,7 @@
 //   - adminSendLineTest (manual button)
 //   - /api/public/hooks/line-daily-send (pg_cron tick)
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { serverAppPublicUrl } from "@/lib/app-public-url";
 
 function startOfTodayBangkokISO(): string {
   const now = new Date();
@@ -125,7 +126,7 @@ export async function sendDailySummary() {
     }
   }
 
-  const appUrl = "https://wsc-production-track.lovable.app";
+  const appUrl = serverAppPublicUrl();
   const dateStr = formatBangkokDate();
   const alertSection =
     qcFailed > 0

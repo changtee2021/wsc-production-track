@@ -1,6 +1,8 @@
 // Server-only LINE notification helpers for the expense workflow.
 // Reuses LINE_CHANNEL_ACCESS_TOKEN + LINE_TARGET_GROUP_ID secrets.
 
+import { serverAppPublicUrl } from "@/lib/app-public-url";
+
 async function pushText(text: string): Promise<void> {
   const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   const targetId = process.env.LINE_TARGET_GROUP_ID || process.env.LINE_TARGET_USER_ID;
@@ -22,7 +24,7 @@ async function pushText(text: string): Promise<void> {
   }
 }
 
-const APP = "https://wsc-production-track.lovable.app";
+const APP = serverAppPublicUrl();
 
 export async function notifyExpenseSubmitted(args: {
   exp_no: string;

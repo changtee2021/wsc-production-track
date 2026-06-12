@@ -14,6 +14,9 @@
    - `SUPABASE_SCHEMA=wsc_production`
    - Remove `ERP_CUTOVER_PENDING` or set `false`
 5. Restore `PRODUCTION_INTAKE_SECRET` on wsc-backoffice pointing to this app
-6. Smoke test: scan, QC, stock-count, curtain-flow jobs API
+6. Update `APP_PUBLIC_URL` / `VITE_APP_PUBLIC_URL` to `https://wsc-production-track.vercel.app`
+7. Update wsc-backoffice `PRODUCTION_INTAKE_URL` to Vercel intake URL
+8. Remove `LOVABLE_BASE_OVERRIDES` for wsc-prod in `wpgroup-portal/src/lib/vercel-urls.ts`
+9. Smoke test: scan, QC, stock-count, curtain-flow jobs API
 
 See [wp-group-erp/docs/MIGRATION-RUNBOOK.md](../../wp-group-erp/docs/MIGRATION-RUNBOOK.md).

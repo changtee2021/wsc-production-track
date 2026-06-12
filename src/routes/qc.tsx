@@ -43,6 +43,7 @@ import {
 } from "@/lib/features/qc.functions";
 import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
 import { compressMedia } from "@/lib/utils/media-compress";
+import { clientAppPublicPath } from "@/lib/app-public-url";
 
 const qcSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -62,9 +63,9 @@ export const Route = createFileRoute("/qc")({
         property: "og:description",
         content: "ตรวจสอบคุณภาพงานแบบ checklist พร้อมแนบรูป/วิดีโอเป็นหลักฐาน บันทึกผลผ่าน–ไม่ผ่านแบบเรียลไทม์",
       },
-      { property: "og:url", content: "https://wsc-production-track.lovable.app/qc" },
+      { property: "og:url", content: clientAppPublicPath("/qc") },
     ],
-    links: [{ rel: "canonical", href: "https://wsc-production-track.lovable.app/qc" }],
+    links: [{ rel: "canonical", href: clientAppPublicPath("/qc") }],
   }),
   component: QcPage,
 });

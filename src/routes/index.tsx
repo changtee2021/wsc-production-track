@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/welcome-hero.png";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { AppVersion } from "@/components/AppVersion";
+import { clientAppPublicPath } from "@/lib/app-public-url";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,10 +30,10 @@ export const Route = createFileRoute("/")({
         content:
           "บันทึกเวลาเริ่ม–เสร็จงานในสายการผลิตด้วย QR code พร้อมระบบ QC แบบ checklist บนมือถือ",
       },
-      { property: "og:url", content: "https://wsc-production-track.lovable.app/" },
+      { property: "og:url", content: clientAppPublicPath("/") },
     ],
     links: [
-      { rel: "canonical", href: "https://wsc-production-track.lovable.app/" },
+      { rel: "canonical", href: clientAppPublicPath("/") },
     ],
   }),
   component: WelcomePage,

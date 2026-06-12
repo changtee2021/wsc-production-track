@@ -38,6 +38,7 @@ import { flagFor, initialsOf, useI18n } from "@/lib/utils/i18n";
 import { useServerFn } from "@tanstack/react-start";
 import { uploadWorkerNoteImage } from "@/lib/features/worker-upload.functions";
 import { submitProductionLog } from "@/lib/features/scan.functions";
+import { clientAppPublicPath } from "@/lib/app-public-url";
 
 const ALLOWED_NOTE_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_NOTE_BYTES = 5 * 1024 * 1024;
@@ -73,9 +74,9 @@ export const Route = createFileRoute("/scan")({
         property: "og:description",
         content: "สแกน QR code เพื่อบันทึกเวลาเริ่ม–เสร็จงานในสายการผลิตอย่างรวดเร็ว",
       },
-      { property: "og:url", content: "https://wsc-production-track.lovable.app/scan" },
+      { property: "og:url", content: clientAppPublicPath("/scan") },
     ],
-    links: [{ rel: "canonical", href: "https://wsc-production-track.lovable.app/scan" }],
+    links: [{ rel: "canonical", href: clientAppPublicPath("/scan") }],
   }),
   component: ScanPage,
 });
