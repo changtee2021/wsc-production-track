@@ -221,7 +221,12 @@ function ReceivingPage() {
                   สแกนกล่อง
                 </Button>
               ) : (
-                <Button className="w-full" variant="secondary" onClick={generateAll} disabled={busy}>
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  onClick={generateAll}
+                  disabled={busy}
+                >
                   สร้าง Barcode ทั้งหมด ({expected - received} กล่อง)
                 </Button>
               )}

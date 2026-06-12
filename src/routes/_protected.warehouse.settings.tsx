@@ -337,7 +337,12 @@ function WarehouseSettingsPage() {
           onReset={() => reset("integration")}
           fields={[
             { key: "backoffice_sync_enabled", label: "เปิด sync", type: "boolean" },
-            { key: "stock_sync_trigger", label: "ตัดสต๊อกเมื่อ", type: "select", options: ["on_receipt"] },
+            {
+              key: "stock_sync_trigger",
+              label: "ตัดสต๊อกเมื่อ",
+              type: "select",
+              options: ["on_receipt"],
+            },
             { key: "webhook_retry_count", label: "Retry", type: "number" },
           ]}
         />
@@ -350,9 +355,7 @@ function WarehouseSettingsPage() {
           values={settings.audit}
           onSave={(v) => save("audit", v)}
           onReset={() => reset("audit")}
-          fields={[
-            { key: "scan_log_retention_days", label: "เก็บ log (วัน)", type: "number" },
-          ]}
+          fields={[{ key: "scan_log_retention_days", label: "เก็บ log (วัน)", type: "number" }]}
         />
       </Section>
     </main>

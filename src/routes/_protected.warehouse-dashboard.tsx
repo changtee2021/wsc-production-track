@@ -58,10 +58,7 @@ function WarehouseDashboard() {
         <CardContent>
           <div className="flex h-32 items-end gap-2">
             {(data?.boxes_last_7_days ?? []).map((d) => {
-              const max = Math.max(
-                ...(data?.boxes_last_7_days ?? []).map((x) => x.boxes),
-                1,
-              );
+              const max = Math.max(...(data?.boxes_last_7_days ?? []).map((x) => x.boxes), 1);
               const h = (d.boxes / max) * 100;
               return (
                 <div key={d.date} className="flex flex-1 flex-col items-center gap-1">
@@ -69,9 +66,7 @@ function WarehouseDashboard() {
                     className="w-full rounded-t bg-primary/80"
                     style={{ height: `${Math.max(h, 4)}%` }}
                   />
-                  <span className="text-[10px] text-muted-foreground">
-                    {d.date.slice(5)}
-                  </span>
+                  <span className="text-[10px] text-muted-foreground">{d.date.slice(5)}</span>
                 </div>
               );
             })}

@@ -37,10 +37,7 @@ export const adminWhDashboardKpis = createServerFn({ method: "GET" })
         .eq("status", "incomplete"),
     ]);
 
-    const boxesToday = (receipts.data ?? []).reduce(
-      (s, r) => s + Number(r.received_boxes ?? 0),
-      0,
-    );
+    const boxesToday = (receipts.data ?? []).reduce((s, r) => s + Number(r.received_boxes ?? 0), 0);
 
     const statusCounts = await supabaseAdmin.from("wh_pallets").select("status");
     const byStatus: Record<string, number> = {};

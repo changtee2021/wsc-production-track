@@ -45,9 +45,7 @@ function ExportPage() {
     enabled: !!token,
   });
 
-  const ready = pallets.filter(
-    (p) => p.status === "complete" || p.status === "incomplete",
-  );
+  const ready = pallets.filter((p) => p.status === "complete" || p.status === "incomplete");
 
   const toggle = (id: string) => {
     setSelected((prev) => {

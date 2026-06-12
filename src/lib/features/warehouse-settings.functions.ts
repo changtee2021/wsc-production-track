@@ -3,10 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 import { verifyWarehouseToken } from "@/lib/auth/warehouse-token.server";
-import {
-  WH_SETTINGS_DEFAULTS,
-  type WhSettingsKey,
-} from "@/lib/warehouse/types";
+import { WH_SETTINGS_DEFAULTS, type WhSettingsKey } from "@/lib/warehouse/types";
 
 const SETTINGS_KEYS = Object.keys(WH_SETTINGS_DEFAULTS) as WhSettingsKey[];
 

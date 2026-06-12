@@ -88,9 +88,7 @@ function PalletScanPage() {
   };
 
   if (!pallet) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center p-4">กำลังโหลด…</div>
-    );
+    return <div className="flex min-h-[100dvh] items-center justify-center p-4">กำลังโหลด…</div>;
   }
 
   const receipt = pallet.wh_receipts as {
@@ -142,9 +140,7 @@ function PalletScanPage() {
               <ScanLine className="mr-2 h-6 w-6" />
               สแกนนับกล่อง
             </Button>
-            {lastBox && (
-              <p className="text-sm text-muted-foreground">ล่าสุด: {lastBox}</p>
-            )}
+            {lastBox && <p className="text-sm text-muted-foreground">ล่าสุด: {lastBox}</p>}
             {alert && (
               <p className="flex items-center gap-1 text-sm text-amber-600">
                 <AlertTriangle className="h-4 w-4" />

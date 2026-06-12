@@ -40,7 +40,11 @@ export const adminWhCreateShipment = createServerFn({ method: "POST" })
     if (exportSettings.seal_no_required && !data.seal_no.trim()) {
       throw new Error("ต้องระบุ Seal No.");
     }
-    if (exportSettings.destination_required && !data.destination_id && !data.destination_text.trim()) {
+    if (
+      exportSettings.destination_required &&
+      !data.destination_id &&
+      !data.destination_text.trim()
+    ) {
       throw new Error("ต้องระบุปลายทาง");
     }
 

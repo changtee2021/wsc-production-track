@@ -40,8 +40,7 @@ function PalletizingPage() {
 
   const { data: pallets = [], refetch } = useQuery({
     queryKey: ["wh-pallets-active"],
-    queryFn: () =>
-      listPallets({ data: { token, status: "all", limit: 50 } }),
+    queryFn: () => listPallets({ data: { token, status: "all", limit: 50 } }),
     enabled: !!token,
   });
 
@@ -127,9 +126,7 @@ function PalletizingPage() {
                 />
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              ความจุ: {bpl * layers} กล่อง
-            </p>
+            <p className="text-sm text-muted-foreground">ความจุ: {bpl * layers} กล่อง</p>
             <Button className="w-full" onClick={onCreate}>
               <Layers className="mr-2 h-4 w-4" />
               สร้าง Pallet
@@ -153,10 +150,7 @@ function PalletizingPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{p.status}</Badge>
-                  <Link
-                    to="/warehouse/pallet/$palletId/scan"
-                    params={{ palletId: p.id }}
-                  >
+                  <Link to="/warehouse/pallet/$palletId/scan" params={{ palletId: p.id }}>
                     <Button size="sm">
                       <ScanLine className="h-4 w-4" />
                     </Button>

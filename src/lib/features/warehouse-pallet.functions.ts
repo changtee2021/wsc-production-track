@@ -215,7 +215,12 @@ export const whScanPalletBox = createServerFn({ method: "POST" })
     return {
       ok: true,
       result: "ok" as ScanResult,
-      message: newStatus === "complete" ? "ครบแล้ว!" : almostFull ? `เหลืออีก ${pallet.target_boxes - newCount} กล่อง` : "",
+      message:
+        newStatus === "complete"
+          ? "ครบแล้ว!"
+          : almostFull
+            ? `เหลืออีก ${pallet.target_boxes - newCount} กล่อง`
+            : "",
       counted_boxes: newCount,
       target_boxes: pallet.target_boxes,
       pallet: updated,
