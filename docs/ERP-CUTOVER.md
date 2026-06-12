@@ -4,6 +4,7 @@
 
 ## When ready
 
+0. **Redeploy** current branch to Lovable (or Vercel) so `/api/public/health` exists — older deploys return 404 SPA.
 1. Set `INTEGRATIONS_ENABLED=false` on wsc-backoffice
 2. Backup legacy Supabase: `wp-group-erp/scripts/backup-all.ps1`
 3. Import data into schema `wsc_production` on project `erpzxusskbtdxvqadwxv`
