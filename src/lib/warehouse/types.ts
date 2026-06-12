@@ -6,7 +6,8 @@ export type WhSettingsKey =
   | "export"
   | "integration"
   | "labels"
-  | "audit";
+  | "audit"
+  | "vision";
 
 export type BarcodeMode = "system" | "supplier" | "ask_each_receipt";
 export type ReceiptStatus = "draft" | "confirmed" | "cancelled";
@@ -152,5 +153,9 @@ export const WH_SETTINGS_DEFAULTS: Record<WhSettingsKey, Record<string, unknown>
   },
   audit: {
     scan_log_retention_days: 365,
+  },
+  vision: {
+    enabled: true,
+    require_all_before_confirm: true,
   },
 };

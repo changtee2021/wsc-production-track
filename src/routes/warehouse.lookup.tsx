@@ -38,7 +38,7 @@ function LookupPage() {
     <div className="min-h-[100dvh] bg-background p-4">
       <Toaster richColors position="top-center" />
       <div className="mx-auto max-w-md space-y-4">
-        <Link to="/warehouse">
+        <Link to="/warehouse/">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-1 h-4 w-4" />
             คลังสินค้า

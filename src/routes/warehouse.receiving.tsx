@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Plus, Check, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,13 @@ import { BarcodeScannerDialog } from "@/components/stock/BarcodeScannerDialog";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { getWarehouseToken } from "@/lib/auth/warehouse-session";
+import { useWarehouseEmployee } from "@/components/warehouse/warehouse-employee-context";
+import {
+  WarehouseVisionChecklist,
+  visionChecksComplete,
+  type VisionCheckState,
+} from "@/components/warehouse/warehouse-vision-checklist";
+import { whListVisionItems } from "@/lib/features/warehouse-settings.functions";
 import {
   whCreateReceipt,
   whAddBox,
@@ -32,8 +40,7 @@ export const Route = createFileRoute("/warehouse/receiving")({
 
 function ReceivingPage() {
   const token = getWarehouseToken() ?? "";
-  const [empCode, setEmpCode] = useState("");
-  const [empName, setEmpName] = useState("");
+  const { empCode, empName } = useWarehouseEmployee();
   const [poNumber, setPoNumber] = useState("");
   const [itemCode, setItemCode] = useState("");
   const [itemName, setItemName] = useState("");
@@ -46,6 +53,14 @@ function ReceivingPage() {
   const [received, setReceived] = useState(0);
   const [scanOpen, setScanOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [visionChecks, setVisionChecks] = useState<VisionCheckState>({});
+
+  const listVisionFn = useServerFn(whListVisionItems);
+  const { data: visionItems = [] } = useQuery({
+    queryKey: ["wh-vision-items"],
+    queryFn: () => listVisionFn({ data: { token } }),
+    enabled: !!token,
+  });
 
   const createFn = useServerFn(whCreateReceipt);
   const addBoxFn = useServerFn(whAddBox);
@@ -54,7 +69,7 @@ function ReceivingPage() {
 
   const startReceipt = async () => {
     if (!empCode || !itemCode) {
-      toast.error("กรอกรหัสพนักงานและรหัสสินค้า");
+      toast.error("เลือกพนักงานและกรอกรหัสสินค้า");
       return;
     }
     setBusy(true);
@@ -74,6 +89,7 @@ function ReceivingPage() {
       });
       setReceiptId(r.id);
       setReceived(0);
+      setVisionChecks({});
       toast.success(`สร้างใบรับ ${r.receipt_no}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "ผิดพลาด");
@@ -118,12 +134,28 @@ function ReceivingPage() {
 
   const confirm = async () => {
     if (!receiptId) return;
+    if (!visionChecksComplete(visionItems, visionChecks, true)) {
+      toast.error("กรุณาเช็ควิสให้ครบทุกข้อที่บังคับ (ต้องกด ผ่าน)");
+      return;
+    }
+    const payload = Object.entries(visionChecks)
+      .filter(([, v]) => v === "pass" || v === "fail")
+      .map(([item_id, result]) => {
+        const it = visionItems.find((x) => x.id === item_id);
+        return {
+          item_id,
+          label: it?.label ?? "",
+          result: result as "pass" | "fail",
+        };
+      });
+
     setBusy(true);
     try {
-      await confirmFn({ data: { token, receiptId } });
+      await confirmFn({ data: { token, receiptId, vision_checks: payload } });
       toast.success("ยืนยันรับของแล้ว");
       setReceiptId(null);
       setReceived(0);
+      setVisionChecks({});
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "ผิดพลาด");
     } finally {
@@ -135,7 +167,7 @@ function ReceivingPage() {
     <div className="min-h-[100dvh] bg-background p-4">
       <Toaster richColors position="top-center" />
       <div className="mx-auto max-w-md space-y-4">
-        <Link to="/warehouse">
+        <Link to="/warehouse/">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-1 h-4 w-4" />
             คลังสินค้า
@@ -149,16 +181,6 @@ function ReceivingPage() {
               <CardTitle className="text-base">สร้างใบรับของ</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label>รหัสพนักงาน</Label>
-                  <Input value={empCode} onChange={(e) => setEmpCode(e.target.value)} />
-                </div>
-                <div>
-                  <Label>ชื่อ</Label>
-                  <Input value={empName} onChange={(e) => setEmpName(e.target.value)} />
-                </div>
-              </div>
               <div>
                 <Label>PO No.</Label>
                 <Input value={poNumber} onChange={(e) => setPoNumber(e.target.value)} />
@@ -205,37 +227,46 @@ function ReceivingPage() {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between text-base">
-                กำลังรับของ
-                <Badge>
-                  {received}/{expected}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {barcodeMode === "supplier" ? (
-                <Button className="w-full" onClick={() => setScanOpen(true)} disabled={busy}>
-                  <ScanLine className="mr-2 h-4 w-4" />
-                  สแกนกล่อง
-                </Button>
-              ) : (
-                <Button
-                  className="w-full"
-                  variant="secondary"
-                  onClick={generateAll}
-                  disabled={busy}
-                >
-                  สร้าง Barcode ทั้งหมด ({expected - received} กล่อง)
-                </Button>
-              )}
-              <Button className="w-full" onClick={confirm} disabled={busy || received === 0}>
-                <Check className="mr-2 h-4 w-4" />
-                ยืนยันรับของ
-              </Button>
-            </CardContent>
-          </Card>
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-base">
+                  กำลังรับของ
+                  <Badge>
+                    {received}/{expected}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {barcodeMode === "supplier" ? (
+                  <Button className="w-full" onClick={() => setScanOpen(true)} disabled={busy}>
+                    <ScanLine className="mr-2 h-4 w-4" />
+                    สแกนกล่อง
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full"
+                    variant="secondary"
+                    onClick={generateAll}
+                    disabled={busy}
+                  >
+                    สร้าง Barcode ทั้งหมด ({expected - received} กล่อง)
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <WarehouseVisionChecklist checks={visionChecks} onChange={setVisionChecks} />
+              </CardContent>
+            </Card>
+
+            <Button className="w-full" onClick={confirm} disabled={busy || received === 0}>
+              <Check className="mr-2 h-4 w-4" />
+              ยืนยันรับของ
+            </Button>
+          </>
         )}
       </div>
       <BarcodeScannerDialog open={scanOpen} onOpenChange={setScanOpen} onDetected={onBoxScanned} />

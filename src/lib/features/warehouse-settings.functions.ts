@@ -36,6 +36,44 @@ export async function loadSettingSection(key: WhSettingsKey): Promise<Record<str
   return { ...WH_SETTINGS_DEFAULTS[key], ...((data?.value as Record<string, unknown>) ?? {}) };
 }
 
+export const whGetAuthConfig = createServerFn({ method: "GET" }).handler(async () => {
+  const general = await loadSettingSection("general");
+  return { passcode_enabled: !!general.passcode_enabled };
+});
+
+export const whListEmployees = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    requireWorker(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("wh_employees")
+      .select("id, name, emp_code")
+      .eq("active", true)
+      .order("sort_order")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r) => ({
+      id: r.id as string,
+      name: r.name as string,
+      emp_code: String(r.emp_code ?? ""),
+    }));
+  });
+
+export const whListVisionItems = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    requireWorker(data.token);
+    const vision = await loadSettingSection("vision");
+    if (!vision.enabled) return [];
+    const { data: rows, error } = await supabaseAdmin
+      .from("wh_vision_check_items")
+      .select("id, label, required")
+      .eq("active", true)
+      .order("sort_order");
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as { id: string; label: string; required: boolean }[];
+  });
+
 export const whIssueSession = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
@@ -92,6 +130,7 @@ export const adminWhUpdateSettings = createServerFn({ method: "POST" })
           "integration",
           "labels",
           "audit",
+          "vision",
         ]),
         value: z.record(z.string(), z.unknown()),
       })
@@ -121,6 +160,7 @@ export const adminWhResetSettings = createServerFn({ method: "POST" })
           "integration",
           "labels",
           "audit",
+          "vision",
         ]),
       })
       .parse(d),
@@ -406,6 +446,111 @@ export const adminWhUpsertLabelTemplate = createServerFn({ method: "POST" })
     }
     const { data: created, error } = await supabaseAdmin
       .from("wh_label_templates")
+      .insert(row)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return created;
+  });
+
+export const adminWhListEmployees = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    requireAdmin(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("wh_employees")
+      .select("*")
+      .order("sort_order")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const adminWhUpsertEmployee = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        id: z.string().uuid().optional(),
+        name: z.string().min(1).max(200),
+        emp_code: z.string().max(64).default(""),
+        active: z.boolean().default(true),
+        sort_order: z.number().int().default(0),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    requireAdmin(data.token);
+    const row = {
+      name: data.name.trim(),
+      emp_code: data.emp_code.trim(),
+      active: data.active,
+      sort_order: data.sort_order,
+    };
+    if (data.id) {
+      const { data: updated, error } = await supabaseAdmin
+        .from("wh_employees")
+        .update(row)
+        .eq("id", data.id)
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      return updated;
+    }
+    const { data: created, error } = await supabaseAdmin
+      .from("wh_employees")
+      .insert(row)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return created;
+  });
+
+export const adminWhListVisionItems = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    requireAdmin(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("wh_vision_check_items")
+      .select("*")
+      .order("sort_order");
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const adminWhUpsertVisionItem = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        id: z.string().uuid().optional(),
+        label: z.string().min(1).max(500),
+        required: z.boolean().default(true),
+        active: z.boolean().default(true),
+        sort_order: z.number().int().default(0),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    requireAdmin(data.token);
+    const row = {
+      label: data.label.trim(),
+      required: data.required,
+      active: data.active,
+      sort_order: data.sort_order,
+    };
+    if (data.id) {
+      const { data: updated, error } = await supabaseAdmin
+        .from("wh_vision_check_items")
+        .update(row)
+        .eq("id", data.id)
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      return updated;
+    }
+    const { data: created, error } = await supabaseAdmin
+      .from("wh_vision_check_items")
       .insert(row)
       .select("*")
       .single();

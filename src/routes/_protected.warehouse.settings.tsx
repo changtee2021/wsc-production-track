@@ -27,6 +27,10 @@ import {
   adminWhListLabelTemplates,
   adminWhUpsertLabelTemplate,
   adminWhListSyncLogs,
+  adminWhListEmployees,
+  adminWhUpsertEmployee,
+  adminWhListVisionItems,
+  adminWhUpsertVisionItem,
 } from "@/lib/features/warehouse-settings.functions";
 import type { WhSettingsKey } from "@/lib/warehouse/types";
 
@@ -40,6 +44,8 @@ export const Route = createFileRoute("/_protected/warehouse/settings")({
 
 const SECTIONS: { id: string; title: string; key?: WhSettingsKey }[] = [
   { id: "general", title: "ทั่วไป", key: "general" },
+  { id: "employees", title: "พนักงานคลัง" },
+  { id: "vision", title: "เช็ควิสรับของ" },
   { id: "receiving", title: "รับของ", key: "receiving" },
   { id: "pallet", title: "Pallet", key: "pallet" },
   { id: "templates", title: "Pallet Templates" },
@@ -204,6 +210,36 @@ function WarehouseSettingsPage() {
             { key: "session_ttl_hours", label: "Session (ชม.)", type: "number" },
             { key: "company_code", label: "รหัสบริษัท", type: "text" },
           ]}
+        />
+      </Section>
+
+      <Section title="พนักงานคลัง" defaultOpen={openId === "employees"}>
+        <MasterListCrud
+          token={token}
+          type="employees"
+          emptyHint="เพิ่มพนักงานที่ใช้งานหน้า Floor คลัง (เลือกจาก dropdown เหมือน QC)"
+        />
+      </Section>
+
+      <Section title="เช็ควิสรับของ" defaultOpen={openId === "vision"}>
+        <JsonSettingsForm
+          settingsKey="vision"
+          values={settings.vision ?? { enabled: true, require_all_before_confirm: true }}
+          onSave={(v) => save("vision", v)}
+          onReset={() => reset("vision")}
+          fields={[
+            { key: "enabled", label: "เปิดใช้เช็ควิส", type: "boolean" },
+            {
+              key: "require_all_before_confirm",
+              label: "บังคับครบก่อนยืนยันรับของ",
+              type: "boolean",
+            },
+          ]}
+        />
+        <MasterListCrud
+          token={token}
+          type="vision"
+          emptyHint="รายการตรวจสอบก่อนยืนยันรับของ (ผ่าน/ไม่ผ่าน)"
         />
       </Section>
 
@@ -375,6 +411,154 @@ function SyncLogs({ token }: { token: string }) {
       {logs.map((l) => (
         <div key={l.id} className="rounded border p-2 text-xs">
           {l.event_type} · {l.ref_no} · {l.status} — {l.response?.slice(0, 80)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MasterListCrud({
+  token,
+  type,
+  emptyHint,
+}: {
+  token: string;
+  type: "employees" | "vision";
+  emptyHint: string;
+}) {
+  const qc = useQueryClient();
+  const listEmp = useServerFn(adminWhListEmployees);
+  const upsertEmp = useServerFn(adminWhUpsertEmployee);
+  const listVis = useServerFn(adminWhListVisionItems);
+  const upsertVis = useServerFn(adminWhUpsertVisionItem);
+  const qk = `wh-master-${type}`;
+  const [draft, setDraft] = useState<Record<string, Record<string, unknown>>>({});
+
+  const { data: rows = [] } = useQuery({
+    queryKey: [qk],
+    queryFn: () =>
+      type === "employees" ? listEmp({ data: { token } }) : listVis({ data: { token } }),
+    enabled: !!token,
+  });
+
+  const rowVal = (row: Record<string, unknown>, key: string) => {
+    const id = String(row.id);
+    if (draft[id] && key in draft[id]) return draft[id][key];
+    return row[key];
+  };
+
+  const setRowVal = (id: string, key: string, value: unknown) => {
+    setDraft((p) => ({ ...p, [id]: { ...p[id], [key]: value } }));
+  };
+
+  const add = async () => {
+    try {
+      if (type === "employees") {
+        await upsertEmp({ data: { token, name: "พนักงานใหม่", emp_code: "WH001" } });
+      } else {
+        await upsertVis({
+          data: { token, label: "รายการตรวจใหม่", required: true, sort_order: rows.length + 1 },
+        });
+      }
+      qc.invalidateQueries({ queryKey: [qk] });
+      toast.success("เพิ่มแล้ว");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "ผิดพลาด");
+    }
+  };
+
+  const saveRow = async (row: Record<string, unknown>) => {
+    const id = String(row.id);
+    const d = { ...row, ...(draft[id] ?? {}) };
+    try {
+      if (type === "employees") {
+        await upsertEmp({
+          data: {
+            token,
+            id: d.id as string,
+            name: String(d.name ?? ""),
+            emp_code: String(d.emp_code ?? ""),
+            active: !!d.active,
+            sort_order: Number(d.sort_order ?? 0),
+          },
+        });
+      } else {
+        await upsertVis({
+          data: {
+            token,
+            id: d.id as string,
+            label: String(d.label ?? ""),
+            required: !!d.required,
+            active: !!d.active,
+            sort_order: Number(d.sort_order ?? 0),
+          },
+        });
+      }
+      setDraft((p) => {
+        const next = { ...p };
+        delete next[id];
+        return next;
+      });
+      qc.invalidateQueries({ queryKey: [qk] });
+      toast.success("บันทึกแล้ว");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "ผิดพลาด");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">{emptyHint}</p>
+      <Button size="sm" variant="outline" onClick={add}>
+        + เพิ่ม
+      </Button>
+      {rows.length === 0 && (
+        <p className="text-sm text-amber-600">ยังไม่มีรายการ — พนักงาน Floor จะเข้าใช้งานไม่ได้</p>
+      )}
+      {rows.map((row: Record<string, unknown>) => (
+        <div key={String(row.id)} className="space-y-2 rounded border p-3">
+          {type === "employees" ? (
+            <>
+              <Input
+                value={String(rowVal(row, "name") ?? "")}
+                onChange={(e) => setRowVal(String(row.id), "name", e.target.value)}
+                placeholder="ชื่อ"
+              />
+              <Input
+                value={String(rowVal(row, "emp_code") ?? "")}
+                onChange={(e) => setRowVal(String(row.id), "emp_code", e.target.value)}
+                placeholder="รหัสพนักงาน"
+              />
+            </>
+          ) : (
+            <Textarea
+              value={String(rowVal(row, "label") ?? "")}
+              onChange={(e) => setRowVal(String(row.id), "label", e.target.value)}
+              rows={2}
+              placeholder="ข้อความเช็ควิส"
+            />
+          )}
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <Switch
+                checked={!!rowVal(row, "active")}
+                onCheckedChange={(v) => setRowVal(String(row.id), "active", v)}
+              />
+              ใช้งาน
+            </label>
+            {type === "vision" && (
+              <label className="flex items-center gap-2 text-sm">
+                <Switch
+                  checked={!!rowVal(row, "required")}
+                  onCheckedChange={(v) => setRowVal(String(row.id), "required", v)}
+                />
+                บังคับ
+              </label>
+            )}
+          </div>
+          <Button size="sm" onClick={() => saveRow(row)}>
+            บันทึก
+          </Button>
         </div>
       ))}
     </div>

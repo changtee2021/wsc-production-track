@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { getWarehouseToken } from "@/lib/auth/warehouse-session";
+import { useWarehouseEmployee } from "@/components/warehouse/warehouse-employee-context";
 import { whListReceipts } from "@/lib/features/warehouse-receiving.functions";
 import { whCreatePallet, whListPallets } from "@/lib/features/warehouse-pallet.functions";
 
@@ -22,8 +23,7 @@ export const Route = createFileRoute("/warehouse/palletizing")({
 function PalletizingPage() {
   const token = getWarehouseToken() ?? "";
   const navigate = useNavigate();
-  const [empCode, setEmpCode] = useState("");
-  const [empName, setEmpName] = useState("");
+  const { empCode, empName } = useWarehouseEmployee();
   const [receiptId, setReceiptId] = useState("");
   const [bpl, setBpl] = useState(12);
   const [layers, setLayers] = useState(8);
@@ -74,7 +74,7 @@ function PalletizingPage() {
     <div className="min-h-[100dvh] bg-background p-4">
       <Toaster richColors position="top-center" />
       <div className="mx-auto max-w-md space-y-4">
-        <Link to="/warehouse">
+        <Link to="/warehouse/">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-1 h-4 w-4" />
             คลังสินค้า
@@ -87,16 +87,6 @@ function PalletizingPage() {
             <CardTitle className="text-base">สร้าง Pallet ใหม่</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label>รหัสพนักงาน</Label>
-                <Input value={empCode} onChange={(e) => setEmpCode(e.target.value)} />
-              </div>
-              <div>
-                <Label>ชื่อ</Label>
-                <Input value={empName} onChange={(e) => setEmpName(e.target.value)} />
-              </div>
-            </div>
             <div>
               <Label>ใบรับของ (confirmed)</Label>
               <select

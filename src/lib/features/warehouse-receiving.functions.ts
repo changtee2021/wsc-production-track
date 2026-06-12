@@ -213,7 +213,22 @@ export const whBulkGenerateBoxes = createServerFn({ method: "POST" })
 
 export const whConfirmReceipt = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ token: tokenStr, receiptId: z.string().uuid() }).parse(d),
+    z
+      .object({
+        token: tokenStr,
+        receiptId: z.string().uuid(),
+        vision_checks: z
+          .array(
+            z.object({
+              item_id: z.string().uuid(),
+              label: z.string(),
+              result: z.enum(["pass", "fail"]),
+            }),
+          )
+          .optional()
+          .default([]),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     requireWorker(data.token);
@@ -224,6 +239,22 @@ export const whConfirmReceipt = createServerFn({ method: "POST" })
       .single();
     if (error || !receipt) throw new Error("ไม่พบใบรับของ");
     if (receipt.status === "confirmed") return receipt;
+
+    const vision = await loadSettingSection("vision");
+    if (vision.enabled) {
+      const { data: items } = await supabaseAdmin
+        .from("wh_vision_check_items")
+        .select("id, label, required")
+        .eq("active", true);
+      const checks = data.vision_checks ?? [];
+      for (const it of items ?? []) {
+        if (!it.required) continue;
+        const hit = checks.find((c) => c.item_id === it.id);
+        if (!hit || hit.result !== "pass") {
+          throw new Error(`ต้องเช็ควิสให้ครบ: ${it.label}`);
+        }
+      }
+    }
 
     const confirmedAt = new Date().toISOString();
     const general = await loadSettingSection("general");
@@ -259,6 +290,7 @@ export const whConfirmReceipt = createServerFn({ method: "POST" })
       .update({
         status: "confirmed",
         confirmed_at: confirmedAt,
+        vision_checks: data.vision_checks ?? [],
         backoffice_synced_at: fwd.ok ? confirmedAt : null,
         backoffice_sync_error: fwd.error ?? "",
         updated_at: confirmedAt,

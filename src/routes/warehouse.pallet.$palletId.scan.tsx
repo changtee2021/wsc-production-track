@@ -11,6 +11,7 @@ import { BarcodeScannerDialog } from "@/components/stock/BarcodeScannerDialog";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { getWarehouseToken } from "@/lib/auth/warehouse-session";
+import { useWarehouseEmployee } from "@/components/warehouse/warehouse-employee-context";
 import {
   whGetPallet,
   whScanPalletBox,
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/warehouse/pallet/$palletId/scan")({
 function PalletScanPage() {
   const { palletId } = Route.useParams();
   const token = getWarehouseToken() ?? "";
-  const [empCode, setEmpCode] = useState("");
+  const { empCode } = useWarehouseEmployee();
   const [scanOpen, setScanOpen] = useState(false);
   const [lastBox, setLastBox] = useState("");
   const [alert, setAlert] = useState("");
@@ -125,12 +126,6 @@ function PalletScanPage() {
           <CheckCircle2 className="h-16 w-16 text-green-600" />
         ) : (
           <>
-            <Input
-              placeholder="รหัสพนักงาน"
-              value={empCode}
-              onChange={(e) => setEmpCode(e.target.value)}
-              className="max-w-xs"
-            />
             <Button
               size="lg"
               className="h-20 w-full max-w-sm rounded-2xl text-lg"

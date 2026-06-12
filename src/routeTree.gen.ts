@@ -25,6 +25,7 @@ import { Route as ExpenseMineRouteImport } from './routes/expense-mine'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WarehouseIndexRouteImport } from './routes/warehouse.index'
 import { Route as WarehouseReceivingRouteImport } from './routes/warehouse.receiving'
 import { Route as WarehousePalletizingRouteImport } from './routes/warehouse.palletizing'
 import { Route as WarehouseLookupRouteImport } from './routes/warehouse.lookup'
@@ -150,6 +151,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const WarehouseIndexRoute = WarehouseIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WarehouseRoute,
 } as any)
 const WarehouseReceivingRoute = WarehouseReceivingRouteImport.update({
   id: '/receiving',
@@ -457,6 +463,7 @@ export interface FileRoutesByFullPath {
   '/warehouse/lookup': typeof WarehouseLookupRoute
   '/warehouse/palletizing': typeof WarehousePalletizingRoute
   '/warehouse/receiving': typeof WarehouseReceivingRoute
+  '/warehouse/': typeof WarehouseIndexRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
   '/warehouse/export': typeof ProtectedWarehouseExportRoute
@@ -485,7 +492,6 @@ export interface FileRoutesByTo {
   '/supplies': typeof SuppliesRoute
   '/supplies-request': typeof SuppliesRequestRoute
   '/terms': typeof TermsRoute
-  '/warehouse': typeof WarehouseRouteWithChildren
   '/admin-policy': typeof ProtectedAdminPolicyRoute
   '/control': typeof ProtectedControlRoute
   '/dashboard': typeof ProtectedDashboardRoute
@@ -520,6 +526,7 @@ export interface FileRoutesByTo {
   '/warehouse/lookup': typeof WarehouseLookupRoute
   '/warehouse/palletizing': typeof WarehousePalletizingRoute
   '/warehouse/receiving': typeof WarehouseReceivingRoute
+  '/warehouse': typeof WarehouseIndexRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
   '/warehouse/export': typeof ProtectedWarehouseExportRoute
@@ -585,6 +592,7 @@ export interface FileRoutesById {
   '/warehouse/lookup': typeof WarehouseLookupRoute
   '/warehouse/palletizing': typeof WarehousePalletizingRoute
   '/warehouse/receiving': typeof WarehouseReceivingRoute
+  '/warehouse/': typeof WarehouseIndexRoute
   '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/_protected/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
   '/_protected/warehouse/export': typeof ProtectedWarehouseExportRoute
@@ -650,6 +658,7 @@ export interface FileRouteTypes {
     | '/warehouse/lookup'
     | '/warehouse/palletizing'
     | '/warehouse/receiving'
+    | '/warehouse/'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
     | '/warehouse/export'
@@ -678,7 +687,6 @@ export interface FileRouteTypes {
     | '/supplies'
     | '/supplies-request'
     | '/terms'
-    | '/warehouse'
     | '/admin-policy'
     | '/control'
     | '/dashboard'
@@ -713,6 +721,7 @@ export interface FileRouteTypes {
     | '/warehouse/lookup'
     | '/warehouse/palletizing'
     | '/warehouse/receiving'
+    | '/warehouse'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
     | '/warehouse/export'
@@ -777,6 +786,7 @@ export interface FileRouteTypes {
     | '/warehouse/lookup'
     | '/warehouse/palletizing'
     | '/warehouse/receiving'
+    | '/warehouse/'
     | '/_protected/employee-profile/$id'
     | '/_protected/print-label/$jobNo'
     | '/_protected/warehouse/export'
@@ -927,6 +937,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/warehouse/': {
+      id: '/warehouse/'
+      path: '/'
+      fullPath: '/warehouse/'
+      preLoaderRoute: typeof WarehouseIndexRouteImport
+      parentRoute: typeof WarehouseRoute
     }
     '/warehouse/receiving': {
       id: '/warehouse/receiving'
@@ -1343,6 +1360,7 @@ interface WarehouseRouteChildren {
   WarehouseLookupRoute: typeof WarehouseLookupRoute
   WarehousePalletizingRoute: typeof WarehousePalletizingRoute
   WarehouseReceivingRoute: typeof WarehouseReceivingRoute
+  WarehouseIndexRoute: typeof WarehouseIndexRoute
   WarehousePalletPalletIdScanRoute: typeof WarehousePalletPalletIdScanRoute
 }
 
@@ -1350,6 +1368,7 @@ const WarehouseRouteChildren: WarehouseRouteChildren = {
   WarehouseLookupRoute: WarehouseLookupRoute,
   WarehousePalletizingRoute: WarehousePalletizingRoute,
   WarehouseReceivingRoute: WarehouseReceivingRoute,
+  WarehouseIndexRoute: WarehouseIndexRoute,
   WarehousePalletPalletIdScanRoute: WarehousePalletPalletIdScanRoute,
 }
 
