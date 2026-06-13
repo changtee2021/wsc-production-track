@@ -23,7 +23,6 @@ import {
   Square,
   QrCode,
   CheckCircle2,
-  ShieldCheck,
   ScanLine,
   Clock,
   AlertTriangle,
@@ -280,12 +279,6 @@ function ScanPage() {
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">หน้าแรก</span>
-          </Button>
-        </Link>
-        <Link to="/admin">
-          <Button variant="secondary" size="sm" className="gap-1">
-            <ShieldCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("header.admin")}</span>
           </Button>
         </Link>
       </AppHeader>
