@@ -1,98 +1,98 @@
-# WSC Production — Cutover prep checklist
+# WSC Production — Vercel cutover (Monday go-live)
 
-**Scope:** `wsc-production-track` only · stay on `https://wsc-production-track.lovable.app`
-
-## Safety rules (read first)
-
-| Safe now (prep)                                                         | Cutover night only                                       |
-| ----------------------------------------------------------------------- | -------------------------------------------------------- |
-| Schema/RLS on **ERP** (`erpzxusskbtdxvqadwxv`) — empty `wsc_production` | Pause `INTEGRATIONS_ENABLED=false` on wsc-backoffice     |
-| Read-only checks, local `npm run build`                                 | Fresh `pg_dump` from **legacy** (`ylipwbnoyipzqfivmpjk`) |
-| Trial import → then **truncate** before go-live                         | Import data → switch Lovable env → Publish               |
-| Document/copy secrets locally                                           | Re-enable integrations after smoke test                  |
-
-**Never during prep:** change Lovable Cloud production env (`VITE_SUPABASE_*`) — that switches the live app to a different DB.
+**Production URL:** `https://wsc-production-track.vercel.app`  
+**Archive (read-only, ~1 month):** `https://wsc-production-track.lovable.app` — **do not change Lovable env**
 
 ---
 
-## Prep status (auto-check)
+## Status (2026-06-13)
+
+| Item | Status |
+|------|--------|
+| ERP `wsc_production` data import from Lovable backup | **Done** — 38,407 rows, all manifest checks OK |
+| `production-intake` route on Vercel | **Done** |
+| Vercel deploy + `nitro: true` in `vite.config.ts` | **Done** — health 200 |
+| Integrations → Vercel URLs | **Done** — wsc-backoffice, portal, changtee-curatin-traker |
+| `PRODUCTION_INTAKE_SECRET` on Vercel | **Done** (wsc-production-track + wsc-backoffice) |
+| Lovable left untouched | **Yes** |
+
+### Import command (re-run if needed)
 
 ```powershell
 cd "C:\Users\Admin\WP GROUP\wp-group-erp\scripts"
-.\wsc-prep-status.ps1
+node import-wsc-backup-sql.mjs --truncate
 ```
+
+Backup folder: `wp-group-erp/backups/wsc-backup-20260613-0617/`  
+Scripts: `import-wsc-backup-sql.mjs`, `wsc-backup-fix-stub-tables.sql`, `wsc-backup-missing-tables.sql`
 
 ---
 
-## Already done (prep session)
+## Tonight runbook (13–14 Jun)
 
-- [x] ERP `wsc_production`: **34 tables**, **37 policies**, **0 rows** (schema ready, live app untouched)
-- [x] `prep-cutover.ps1`: all 10 repos local env → ERP project
-- [x] `npm run build` in `wsc-production-track` — passes
-- [x] Live homepage `https://wsc-production-track.lovable.app/` — **200 OK**
-- [x] `ERP_DATABASE_URL` in `wp-group-erp/.env.local`
-- [x] PostgreSQL 17 client at `C:\Program Files\PostgreSQL\17\bin\psql.exe`
-
-## Still before cutover night
-
-- [ ] Add legacy pooler to `wp-group-erp/.env.local`:
-  ```powershell
-  node scripts/find-pooler.mjs ylipwbnoyipzqfivmpjk YOUR_LEGACY_DB_PASSWORD
-  # → WSC_PRODUCTION_DATABASE_URL=postgresql://...
-  ```
-- [ ] **Publish** current branch in Lovable (same env — no DB switch) so `/api/public/health` works  
-      Today health returns 404 (old deploy); homepage still works.
-- [ ] Copy Lovable secrets to a secure note (values for cutover night paste):
-  - `ADMIN_PASSWORD`, `PACKING_PASSWORD`
-  - `LINE_*`, `WSC_REPORTS_SECRET`, `CURTAIN_FLOW_API_KEY`, `LOVABLE_API_KEY`
-  - ERP keys: `VITE_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] Confirm wsc-backoffice `PRODUCTION_INTAKE_SECRET` matches wsc-production-track
-- [ ] Plan storage copy: buckets `qc-media`, `packing-media`, `log-notes` (legacy → ERP)
+Step-by-step checklist for finishing before Monday: **[WSC-MONDAY-GO-LIVE-TONIGHT.md](./WSC-MONDAY-GO-LIVE-TONIGHT.md)**
 
 ---
 
-## Cutover night runbook (~2–3 h if prep complete)
+## Before Monday — manual checklist
 
-Reference: [ERP-CUTOVER.md](./ERP-CUTOVER.md)
-
-```
-20:00  INTEGRATIONS_ENABLED=false  (wsc-backoffice Lovable Cloud)
-20:10  pg_dump legacy → backups/wsc-production-legacy-YYYYMMDD.sql
-20:30  Import → wsc_production on ERP (verify row counts)
-21:00  Copy storage files (if any)
-21:30  Update Lovable env (ERP URL + schema wsc_production + keys)
-       APP_PUBLIC_URL stays https://wsc-production-track.lovable.app
-21:45  Publish in Lovable
-22:00  Smoke test (below)
-22:30  INTEGRATIONS_ENABLED=true
-23:00  Go / rollback decision
-```
-
-### Smoke test
-
-1. `GET /api/public/health` → `{ ok: true }`
-2. Admin / packing PIN login
-3. Production scan + QC + stock count
-4. Curtain Flow → job appears
-5. wsc-backoffice → production intake (test order)
-6. LINE notify (if used)
-
-### Rollback (if broken after env switch)
-
-1. Revert Lovable env to **legacy** Supabase project + Publish (~15 min)
-2. `INTEGRATIONS_ENABLED=true` on wsc-backoffice
-3. Legacy DB unchanged — employees can work again
+1. **PINs on Vercel** — set `ADMIN_PASSWORD` and `PACKING_PASSWORD` on `wsc-production-track` (same values staff use on Lovable today). Empty in local `.env` — must be set in Vercel dashboard or CLI.
+2. **Optional:** `CURTAIN_FLOW_API_KEY` on Vercel + `changtee-curatin-traker` if Curtain Flow → production jobs is used.
+3. **LINE tokens** — copy from Lovable secure note if daily LINE reports are required Monday.
+4. Smoke test on `https://wsc-production-track.vercel.app`:
+   - `GET /api/public/health` → `{ ok: true }`
+   - Admin / packing PIN login
+   - Employee list (30 names)
+   - QC checklists (26) / packing checklists (11)
+   - New production scan writes to ERP
+5. **wsc-backoffice** — approve a test order → `production-intake` on Vercel
 
 ---
 
-## Verify row counts after import
+## Architecture
 
-```sql
-SELECT relname, n_live_tup
-FROM pg_stat_user_tables
-WHERE schemaname = 'wsc_production'
-ORDER BY n_live_tup DESC
-LIMIT 20;
+```
+Staff (Monday) → wsc-production-track.vercel.app → ERP wsc_production
+Archive        → wsc-production-track.lovable.app → legacy ylipwbnoyipzqfivmpjk
+wsc-backoffice → POST /api/public/production-intake (Vercel)
+changtee       → POST /api/public/curtain-flow/jobs (Vercel)
 ```
 
-Compare key tables vs legacy (employees, production_logs, qc_reports, production_jobs).
+**Never:** switch Lovable Cloud env to ERP (breaks archive).
+
+---
+
+## Staff message (Monday 15 Jun)
+
+**English**
+
+> WSC Production Flow — new link from Monday:  
+> **https://wsc-production-track.vercel.app**  
+> Use this for all daily work (scan, QC, packing, stock).  
+> Old Lovable link stays for viewing history only:  
+> https://wsc-production-track.lovable.app  
+> PINs are the same as before.
+
+**ไทย**
+
+> ตั้งแต่วันจันทร์ ใช้ลิงก์ใหม่นี้ทำงานประจำวัน:  
+> **https://wsc-production-track.vercel.app**  
+> (สแกนงาน / QC / แพ็ค / เช็คสต๊อก)  
+> ลิงก์ Lovable เดิมเก็บไว้ดูประวัติอย่างเดียว ~1 เดือน  
+> รหัส PIN ใช้เหมือนเดิม
+
+---
+
+## Rollback
+
+If Vercel is broken Monday morning:
+
+1. Staff use Lovable link temporarily (unchanged, legacy DB).
+2. Fix Vercel; re-import from backup if ERP data needs reset.
+3. **Do not** switch Lovable env as rollback.
+
+---
+
+## Storage / avatars
+
+Employee `avatar_url` values still point at legacy public storage (`ylipwbnoyipzqfivmpjk.supabase.co`). Photos load while the Lovable project stays up. Copy `avatars` bucket to ERP later when legacy service role is available (`storage/download-storage.mjs` in backup).

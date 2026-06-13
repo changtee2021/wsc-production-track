@@ -60,6 +60,8 @@ import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protec
 import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
 import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
 import { Route as ProtectedAdminPolicyRouteImport } from './routes/_protected.admin-policy'
+import { Route as ApiPublicProductionIntakeRouteImport } from './routes/api/public/production-intake'
+import { Route as ApiPublicMigrationExportRouteImport } from './routes/api/public/migration-export'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ProtectedWarehouseSettingsRouteImport } from './routes/_protected.warehouse.settings'
 import { Route as ProtectedWarehouseReportsRouteImport } from './routes/_protected.warehouse.reports'
@@ -341,6 +343,18 @@ const ProtectedAdminPolicyRoute = ProtectedAdminPolicyRouteImport.update({
   path: '/admin-policy',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ApiPublicProductionIntakeRoute =
+  ApiPublicProductionIntakeRouteImport.update({
+    id: '/api/public/production-intake',
+    path: '/api/public/production-intake',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicMigrationExportRoute =
+  ApiPublicMigrationExportRouteImport.update({
+    id: '/api/public/migration-export',
+    path: '/api/public/migration-export',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
   id: '/api/public/health',
   path: '/api/public/health',
@@ -472,6 +486,8 @@ export interface FileRoutesByFullPath {
   '/warehouse/reports': typeof ProtectedWarehouseReportsRoute
   '/warehouse/settings': typeof ProtectedWarehouseSettingsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
+  '/api/public/migration-export': typeof ApiPublicMigrationExportRoute
+  '/api/public/production-intake': typeof ApiPublicProductionIntakeRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
@@ -535,6 +551,8 @@ export interface FileRoutesByTo {
   '/warehouse/reports': typeof ProtectedWarehouseReportsRoute
   '/warehouse/settings': typeof ProtectedWarehouseSettingsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
+  '/api/public/migration-export': typeof ApiPublicMigrationExportRoute
+  '/api/public/production-intake': typeof ApiPublicProductionIntakeRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
@@ -601,6 +619,8 @@ export interface FileRoutesById {
   '/_protected/warehouse/reports': typeof ProtectedWarehouseReportsRoute
   '/_protected/warehouse/settings': typeof ProtectedWarehouseSettingsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
+  '/api/public/migration-export': typeof ApiPublicMigrationExportRoute
+  '/api/public/production-intake': typeof ApiPublicProductionIntakeRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
@@ -667,6 +687,8 @@ export interface FileRouteTypes {
     | '/warehouse/reports'
     | '/warehouse/settings'
     | '/api/public/health'
+    | '/api/public/migration-export'
+    | '/api/public/production-intake'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
@@ -730,6 +752,8 @@ export interface FileRouteTypes {
     | '/warehouse/reports'
     | '/warehouse/settings'
     | '/api/public/health'
+    | '/api/public/migration-export'
+    | '/api/public/production-intake'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
@@ -795,6 +819,8 @@ export interface FileRouteTypes {
     | '/_protected/warehouse/reports'
     | '/_protected/warehouse/settings'
     | '/api/public/health'
+    | '/api/public/migration-export'
+    | '/api/public/production-intake'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
@@ -819,6 +845,8 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   WarehouseRoute: typeof WarehouseRouteWithChildren
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
+  ApiPublicMigrationExportRoute: typeof ApiPublicMigrationExportRoute
+  ApiPublicProductionIntakeRoute: typeof ApiPublicProductionIntakeRoute
   ApiPublicCurtainFlowJobsRoute: typeof ApiPublicCurtainFlowJobsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
   ApiPublicStockCountReportsRoute: typeof ApiPublicStockCountReportsRoute
@@ -1183,6 +1211,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedAdminPolicyRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/api/public/production-intake': {
+      id: '/api/public/production-intake'
+      path: '/api/public/production-intake'
+      fullPath: '/api/public/production-intake'
+      preLoaderRoute: typeof ApiPublicProductionIntakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/migration-export': {
+      id: '/api/public/migration-export'
+      path: '/api/public/migration-export'
+      fullPath: '/api/public/migration-export'
+      preLoaderRoute: typeof ApiPublicMigrationExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/health': {
       id: '/api/public/health'
       path: '/api/public/health'
@@ -1394,6 +1436,8 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   WarehouseRoute: WarehouseRouteWithChildren,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
+  ApiPublicMigrationExportRoute: ApiPublicMigrationExportRoute,
+  ApiPublicProductionIntakeRoute: ApiPublicProductionIntakeRoute,
   ApiPublicCurtainFlowJobsRoute: ApiPublicCurtainFlowJobsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
   ApiPublicStockCountReportsRoute: ApiPublicStockCountReportsRoute,
