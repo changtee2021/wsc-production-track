@@ -9,6 +9,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { aiChatCompletions, getAiBackend, proModelId, throwOnAiHttpError } from "@/lib/ai/ai-provider.server";
+import { APP_SLUG } from "@/lib/erp-config";
 import {
   issueExpenseToken,
   verifyExpenseToken,
@@ -209,8 +211,7 @@ export const expenseScanReceipt = createServerFn({ method: "POST" })
     const ip = clientIp();
     if (!checkScanLimit(ip)) throw new Error("เรียก AI บ่อยเกินไป รอสักครู่");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY ไม่ได้ตั้งค่า");
+    getAiBackend();
 
     // Load categories for AI mapping
     const { data: cats } = await supabaseAdmin
@@ -290,25 +291,25 @@ export const expenseScanReceipt = createServerFn({ method: "POST" })
       { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
     > = [{ type: "text", text: "อ่านใบเสร็จต่อไปนี้แล้วตอบเป็น JSON ตามสคีมา:" }, ...imageMessages];
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+    const res = await aiChatCompletions(
+      {
+        model: proModelId(),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
           { role: "user", content: userContent },
         ],
-      }),
-    });
+      },
+      {
+        appSlug: APP_SLUG,
+        feature: "receipt_ocr",
+        userLabel: `expense:${data.token.slice(0, 12)}`,
+        routePath: "/expense-scan",
+      },
+    );
 
-    if (res.status === 429) throw new Error("AI ใช้งานหนาก ลองใหม่อีกครู่");
-    if (res.status === 402) throw new Error("เครดิต AI หมด — เพิ่มเครดิตที่ Settings");
     if (!res.ok) {
+      throwOnAiHttpError(res.status);
       const t = await res.text().catch(() => "");
       throw new Error(`AI error ${res.status}: ${t.slice(0, 200)}`);
     }

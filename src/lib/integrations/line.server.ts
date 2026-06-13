@@ -3,6 +3,8 @@
 //   - /api/public/hooks/line-daily-send (pg_cron tick)
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { serverAppPublicUrl } from "@/lib/app-public-url";
+import { aiChatCompletions, flashModelId } from "@/lib/ai/ai-provider.server";
+import { APP_SLUG } from "@/lib/erp-config";
 
 function startOfTodayBangkokISO(): string {
   const now = new Date();
@@ -132,41 +134,39 @@ export async function sendDailySummary() {
     qcFailed > 0 ? `⚠️ แจ้งเตือนพิเศษ:\n${failedDetails.join("\n")}` : `⚠️ แจ้งเตือนพิเศษ: ไม่มี`;
 
   let aiAnalysis = "";
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  if (lovableKey) {
-    try {
-      const stats = {
-        date: dateStr,
-        overall: overallStats,
-        perCategory,
-        qc: { total: qcTotal, passed: qcPassed, failed: qcFailed },
-        failedDetails,
-      };
-      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableKey}`,
-          "Content-Type": "application/json",
+  try {
+    const stats = {
+      date: dateStr,
+      overall: overallStats,
+      perCategory,
+      qc: { total: qcTotal, passed: qcPassed, failed: qcFailed },
+      failedDetails,
+    };
+    const aiRes = await aiChatCompletions(
+      {
+        model: flashModelId(),
+        messages: [
+        {
+          role: "system",
+          content:
+            "คุณเป็นผู้ช่วยวิเคราะห์ข้อมูลการผลิตและ QC ของโรงงานม่าน/มู่ลี่ ให้สรุปภาพรวมประจำวันแบบกระชับ 3-5 บรรทัด ภาษาไทย เน้น: (1) ภาพรวมโดยรวม (2) ข้อสังเกตหมวดที่โดดเด่นหรือน่าห่วง (3) คำแนะนำเชิงปฏิบัติสั้นๆ ห้ามใส่หัวข้อ ห้ามใส่ markdown ห้ามใส่ bullet",
         },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content:
-                "คุณเป็นผู้ช่วยวิเคราะห์ข้อมูลการผลิตและ QC ของโรงงานม่าน/มู่ลี่ ให้สรุปภาพรวมประจำวันแบบกระชับ 3-5 บรรทัด ภาษาไทย เน้น: (1) ภาพรวมโดยรวม (2) ข้อสังเกตหมวดที่โดดเด่นหรือน่าห่วง (3) คำแนะนำเชิงปฏิบัติสั้นๆ ห้ามใส่หัวข้อ ห้ามใส่ markdown ห้ามใส่ bullet",
-            },
-            { role: "user", content: `ข้อมูลวันนี้: ${JSON.stringify(stats)}` },
-          ],
-        }),
-      });
-      if (aiRes.ok) {
-        const j = (await aiRes.json()) as { choices?: Array<{ message?: { content?: string } }> };
-        aiAnalysis = j.choices?.[0]?.message?.content?.trim() ?? "";
-      }
-    } catch {
-      // optional
+        { role: "user", content: `ข้อมูลวันนี้: ${JSON.stringify(stats)}` },
+      ],
+    },
+    {
+      appSlug: APP_SLUG,
+      feature: "line_summary",
+      userLabel: "system",
+      routePath: "/cron/line-daily",
+    },
+    );
+    if (aiRes.ok) {
+      const j = (await aiRes.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      aiAnalysis = j.choices?.[0]?.message?.content?.trim() ?? "";
     }
+  } catch {
+    // optional
   }
   const aiSection = aiAnalysis ? `\n\n🧠 บทวิเคราะห์ประจำวัน (AI)\n${aiAnalysis}` : "";
 

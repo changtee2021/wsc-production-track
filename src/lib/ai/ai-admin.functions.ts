@@ -6,7 +6,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { generateText, stepCountIs, type ModelMessage } from "ai";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { getFlashModel } from "@/lib/ai/gemini.server";
+import { flashModelId, getAiBackend } from "@/lib/ai/ai-provider.server";
+import { logAiUsageEvent } from "@/lib/ai/ai-usage-log.server";
+import { APP_SLUG } from "@/lib/erp-config";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 import { adminTools } from "@/lib/ai/ai-admin-tools.server";
 
@@ -56,18 +59,9 @@ export const aiAdminAsk = createServerFn({ method: "POST" })
       };
     }
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return { ok: false as const, error: "LOVABLE_API_KEY ไม่ได้ตั้งค่า" };
+    getAiBackend();
 
-    const provider = createOpenAICompatible({
-      name: "lovable",
-      baseURL: "https://ai.gateway.lovable.dev/v1",
-      headers: {
-        "Lovable-API-Key": apiKey,
-        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-      },
-    });
-    const model = provider("google/gemini-2.5-flash");
+    const model = getFlashModel();
 
     const modeRule =
       data.mode === "plan"
@@ -85,6 +79,7 @@ export const aiAdminAsk = createServerFn({ method: "POST" })
     ].join("\n");
 
     try {
+      const startMs = Date.now();
       const modelMessages: ModelMessage[] = data.messages.slice(-10).map((m) => ({
         role: m.role,
         content: m.content,
@@ -102,6 +97,18 @@ export const aiAdminAsk = createServerFn({ method: "POST" })
         new Set(result.steps.flatMap((s) => s.toolCalls?.map((c) => c.toolName) ?? [])),
       );
       const reply = result.text?.trim() || "(ไม่มีคำตอบ)";
+      void logAiUsageEvent({
+        appSlug: APP_SLUG,
+        feature: "admin_ai",
+        userLabel: `admin:${data.token.slice(0, 12)}`,
+        routePath: "/admin/ai",
+        model: flashModelId(),
+        backend: getAiBackend(),
+        inputTokens: result.usage?.inputTokens ?? 0,
+        outputTokens: result.usage?.outputTokens ?? 0,
+        status: "ok",
+        latencyMs: Date.now() - startMs,
+      });
       return { ok: true as const, reply, remaining: quota.remaining, toolsUsed };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "เรียก AI ไม่สำเร็จ";
