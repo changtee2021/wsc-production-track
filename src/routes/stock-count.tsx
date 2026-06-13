@@ -60,7 +60,7 @@ import { isStockSession, setStockToken, getStockToken } from "@/lib/auth/stock-s
 
 const LAST_EMP_KEY = "wsc_stock_last_emp";
 const UNLOCK_KEY = "wsc_stock_unlocked";
-const PASSCODE = "wscstock123";
+const PASSCODE = import.meta.env.VITE_STOCK_PASSCODE || "wscstock123";
 
 export const Route = createFileRoute("/stock-count")({
   head: () => ({

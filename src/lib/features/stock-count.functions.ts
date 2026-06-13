@@ -568,3 +568,71 @@ export const adminDeleteInventory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const bulkRowSchema = z.object({
+  item_code: z.string().min(1).max(120),
+  item_name: z.string().min(1).max(300),
+  unit: z.string().max(40).optional(),
+  total_qty: z.number().min(0).max(100_000_000).optional(),
+  min_safety_stock: z.number().min(0).max(100_000_000).optional(),
+  max_stock_level: z.number().min(0).max(100_000_000).optional(),
+  category: z.string().max(120).optional().nullable(),
+  location: z.string().max(120).optional().nullable(),
+  note: z.string().max(1000).optional().nullable(),
+  active: z.boolean().optional(),
+});
+
+export const adminBulkImportInventory = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        adminToken: tokenStr,
+        rows: z.array(bulkRowSchema).min(1).max(2000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    if (!verifyAdminToken(data.adminToken)) throw new Error("Unauthorized");
+
+    let upserted = 0;
+    let skipped = 0;
+    for (const row of data.rows) {
+      const itemCode = row.item_code.trim();
+      const itemName = row.item_name.trim();
+      if (!itemCode || !itemName) {
+        skipped++;
+        continue;
+      }
+      const payload = {
+        item_code: itemCode,
+        item_name: itemName,
+        unit: (row.unit ?? "ชิ้น").trim() || "ชิ้น",
+        total_qty: row.total_qty ?? 0,
+        min_safety_stock: row.min_safety_stock ?? 0,
+        max_stock_level: row.max_stock_level ?? 0,
+        category: row.category ?? null,
+        location: row.location ?? null,
+        note: row.note ?? null,
+        active: row.active ?? true,
+      };
+
+      const { data: existing } = await supabaseAdmin
+        .from("inventory_items")
+        .select("id")
+        .eq("item_code", itemCode)
+        .maybeSingle();
+
+      if (existing?.id) {
+        const { error } = await supabaseAdmin
+          .from("inventory_items")
+          .update(payload)
+          .eq("id", existing.id);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabaseAdmin.from("inventory_items").insert(payload);
+        if (error) throw new Error(error.message);
+      }
+      upserted++;
+    }
+    return { ok: true, upserted, skipped };
+  });

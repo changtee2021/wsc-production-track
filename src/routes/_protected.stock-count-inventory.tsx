@@ -1,11 +1,12 @@
 // Admin: จัดการคลังสินค้า (inventory_items) สำหรับระบบนับสต๊อก
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   adminListInventory,
   adminUpsertInventory,
   adminDeleteInventory,
+  adminBulkImportInventory,
 } from "@/lib/features/stock-count.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Loader2, Search, Boxes } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Search, Boxes, Upload } from "lucide-react";
 
 export const Route = createFileRoute("/_protected/stock-count-inventory")({
   head: () => ({ meta: [{ title: "คลังสินค้า (นับสต๊อก) — Admin" }] }),
@@ -75,9 +76,12 @@ function StockInventoryAdminPage() {
   const listFn = useServerFn(adminListInventory);
   const upsertFn = useServerFn(adminUpsertInventory);
   const delFn = useServerFn(adminDeleteInventory);
+  const bulkFn = useServerFn(adminBulkImportInventory);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -169,6 +173,78 @@ function StockInventoryAdminPage() {
     }
   };
 
+  const parseCsvLine = (line: string): string[] => {
+    const out: string[] = [];
+    let field = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (line[i + 1] === '"') {
+            field += '"';
+            i++;
+          } else inQuotes = false;
+        } else field += c;
+      } else if (c === '"') inQuotes = true;
+      else if (c === ",") {
+        out.push(field);
+        field = "";
+      } else field += c;
+    }
+    out.push(field);
+    return out;
+  };
+
+  const importCsv = async (file: File) => {
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text
+        .replace(/^\uFEFF/, "")
+        .split(/\r?\n/)
+        .filter(Boolean);
+      if (lines.length < 2) throw new Error("CSV ว่าง");
+      const headers = parseCsvLine(lines[0]).map((h) => h.trim());
+      const codeIdx = headers.indexOf("item_code");
+      const nameIdx = headers.indexOf("item_name");
+      if (codeIdx < 0 || nameIdx < 0) throw new Error("ต้องมีคอลัมน์ item_code และ item_name");
+
+      const idx = (name: string) => headers.indexOf(name);
+      const rows = lines.slice(1).map((line) => {
+        const cols = parseCsvLine(line);
+        const get = (name: string) => {
+          const i = idx(name);
+          return i >= 0 ? (cols[i] ?? "").trim() : "";
+        };
+        return {
+          item_code: get("item_code"),
+          item_name: get("item_name"),
+          unit: get("unit") || undefined,
+          total_qty: get("total_qty") ? Number(get("total_qty")) : undefined,
+          min_safety_stock: get("min_safety_stock") ? Number(get("min_safety_stock")) : undefined,
+          max_stock_level: get("max_stock_level") ? Number(get("max_stock_level")) : undefined,
+          category: get("category") || null,
+          location: get("location") || null,
+          note: get("note") || null,
+          active: get("active") ? get("active").toLowerCase() !== "false" : undefined,
+        };
+      });
+
+      const token = requireToken();
+      const result = await bulkFn({ data: { adminToken: token, rows } });
+      toast.success(
+        `นำเข้า ${result.upserted} รายการ${result.skipped ? ` (ข้าม ${result.skipped})` : ""}`,
+      );
+      await load();
+    } catch (e) {
+      showError(e, "นำเข้า CSV ไม่สำเร็จ");
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
       <Toaster richColors position="top-center" />
@@ -177,9 +253,29 @@ function StockInventoryAdminPage() {
           <Boxes className="size-6 text-primary" />
           <h1 className="text-2xl font-bold">คลังสินค้า (นับสต๊อก)</h1>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4 mr-1" /> เพิ่มสินค้า
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void importCsv(f);
+            }}
+          />
+          <Button variant="outline" disabled={importing} onClick={() => fileRef.current?.click()}>
+            {importing ? (
+              <Loader2 className="size-4 animate-spin mr-1" />
+            ) : (
+              <Upload className="size-4 mr-1" />
+            )}
+            นำเข้า CSV
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="size-4 mr-1" /> เพิ่มสินค้า
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2">
