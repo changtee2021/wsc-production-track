@@ -100,7 +100,7 @@ export type WhShipment = {
 export const WH_SETTINGS_DEFAULTS: Record<WhSettingsKey, Record<string, unknown>> = {
   general: {
     passcode_enabled: true,
-    passcode: "wscwarehouse123",
+    passcode: "wscadmin123",
     session_ttl_hours: 12,
     company_code: "WSC",
   },

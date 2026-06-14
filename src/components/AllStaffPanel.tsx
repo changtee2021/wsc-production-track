@@ -41,6 +41,7 @@ const DEPT_LABEL: Record<Department, string> = {
   packing: "แพ็ค",
   maintenance: "ซ่อม",
   office: "ออฟฟิศ",
+  stock: "สต๊อก",
 };
 
 const DEPT_COLOR: Record<Department, string> = {
@@ -49,6 +50,7 @@ const DEPT_COLOR: Record<Department, string> = {
   packing: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   maintenance: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
   office: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+  stock: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
 };
 
 const NATIONALITIES = ["Thai", "Burmese", "Lao", "Khmer", "Other"];
@@ -236,10 +238,11 @@ export function AllStaffPanel() {
                 <th className="py-2 pr-3">พนักงาน</th>
                 <th className="py-2 pr-3">รหัส</th>
                 <th className="py-2 pr-3">สัญชาติ</th>
-                <th className="py-2 pr-3 text-center">ผลิต</th>
-                <th className="py-2 pr-3 text-center">QC</th>
-                <th className="py-2 pr-3 text-center">แพ็ค</th>
-                <th className="py-2 pr-3 text-center">ซ่อม</th>
+                {DEPARTMENTS.map((d) => (
+                  <th key={d} className="py-2 pr-3 text-center">
+                    {DEPT_LABEL[d]}
+                  </th>
+                ))}
                 <th className="py-2 pr-3 text-right">จัดการ</th>
               </tr>
             </thead>

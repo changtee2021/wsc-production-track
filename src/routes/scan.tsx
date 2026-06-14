@@ -36,7 +36,6 @@ import {
   RotateCcw,
   Check,
   Timer,
-  Package,
 } from "lucide-react";
 import { flagFor, initialsOf, useI18n } from "@/lib/utils/i18n";
 
@@ -303,32 +302,24 @@ function ScanPage() {
             <p className="mt-2 text-sm text-destructive">{t("job.empty")}</p>
           )}
 
-          <div className="mt-3 flex gap-2">
-            <Button
-              onClick={async () => {
-                const result = await acquireCameraStream("environment");
-                if ("errorInfo" in result) {
-                  toast.error(
-                    result.errorInfo.hint
-                      ? `${result.errorInfo.message} — ${result.errorInfo.hint}`
-                      : result.errorInfo.message,
-                  );
-                  return;
-                }
-                setScannerStream(result.stream);
-              }}
-              className="h-11 flex-[2] gap-1 bg-secondary hover:bg-secondary/90 shadow-md shadow-secondary/30"
-            >
-              <ScanLine className="h-4 w-4" />
-              {t("job.scan")}
-            </Button>
-            <Link to="/packing" search={{ job_id: "" }}>
-              <Button className="h-11 flex-1 gap-1 bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/30">
-                <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">แพ็คของ</span>
-              </Button>
-            </Link>
-          </div>
+          <Button
+            onClick={async () => {
+              const result = await acquireCameraStream("environment");
+              if ("errorInfo" in result) {
+                toast.error(
+                  result.errorInfo.hint
+                    ? `${result.errorInfo.message} — ${result.errorInfo.hint}`
+                    : result.errorInfo.message,
+                );
+                return;
+              }
+              setScannerStream(result.stream);
+            }}
+            className="mt-3 h-11 w-full gap-1 bg-secondary hover:bg-secondary/90 shadow-md shadow-secondary/30"
+          >
+            <ScanLine className="h-4 w-4" />
+            {t("job.scan")}
+          </Button>
 
           <div className="mt-2 flex gap-2">
             <Input

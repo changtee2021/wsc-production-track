@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_SCHEMA } from "@/lib/erp-config";
 
 interface Announcement {
   id: string;
@@ -25,7 +26,7 @@ export function AnnouncementBar() {
     load();
     const ch = supabase
       .channel("announcements-bar")
-      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () =>
+      .on("postgres_changes", { event: "*", schema: SUPABASE_SCHEMA, table: "announcements" }, () =>
         load(),
       )
       .subscribe();

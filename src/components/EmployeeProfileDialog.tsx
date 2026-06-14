@@ -43,6 +43,7 @@ const DEPT_LABEL: Record<string, string> = {
   packing: "แพ็ค",
   maintenance: "ซ่อม",
   office: "ออฟฟิศ",
+  stock: "สต๊อก",
 };
 const DEPT_COLOR: Record<string, string> = {
   production: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
@@ -50,6 +51,7 @@ const DEPT_COLOR: Record<string, string> = {
   packing: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   maintenance: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
   office: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+  stock: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
 };
 
 function fmtTime(iso: string) {

@@ -93,6 +93,7 @@ const DEPT_TABLES = [
   { dept: "packing", table: "packing_employees", extra: null },
   { dept: "maintenance", table: "maintenance_employees", extra: null },
   { dept: "office", table: "office_employees", extra: null },
+  { dept: "stock", table: "stock_employees", extra: null },
 ] as const;
 
 type DeptName = (typeof DEPT_TABLES)[number]["dept"];

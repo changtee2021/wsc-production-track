@@ -84,9 +84,9 @@ export const getOrCreateDraftBatch = createServerFn({ method: "POST" })
     requireWorker(data.token);
     const empCode = data.empCode.trim();
 
-    // resolve employee id from main employees table
+    // resolve employee id from stock department table
     const { data: empRow } = await supabaseAdmin
-      .from("employees")
+      .from("stock_employees" as never)
       .select("id")
       .eq("emp_code", empCode)
       .eq("active", true)
@@ -376,7 +376,7 @@ export const listActiveEmployees = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     requireWorker(data.token);
     const { data: rows, error } = await supabaseAdmin
-      .from("employees")
+      .from("stock_employees" as never)
       .select("id, name, emp_code")
       .eq("active", true)
       .order("name", { ascending: true })
