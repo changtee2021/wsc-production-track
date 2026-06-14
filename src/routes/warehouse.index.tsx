@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PackageOpen, Layers, Search, ArrowLeft, ClipboardCheck } from "lucide-react";
+import { PackageOpen, Layers, Search, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { clearWarehouseSession } from "@/lib/auth/warehouse-session";
-import { useWarehouseEmployee } from "@/components/warehouse/warehouse-employee-context";
+import {
+  useWarehouseEmployee,
+  WarehouseEmployeePicker,
+} from "@/components/warehouse/warehouse-employee-context";
 
 export const Route = createFileRoute("/warehouse/")({
   head: () => ({
@@ -16,7 +19,7 @@ export const Route = createFileRoute("/warehouse/")({
 });
 
 function WarehouseHub() {
-  const { empName } = useWarehouseEmployee();
+  const { empCode } = useWarehouseEmployee();
 
   return (
     <div className="min-h-[100dvh] bg-background p-4">
@@ -34,28 +37,17 @@ function WarehouseHub() {
             ออก
           </Button>
         </div>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ClipboardCheck className="h-4 w-4 text-teal-600" />
-              พนักงานคลัง
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {empName
-                ? `กำลังทำงานในนาม: ${empName}`
-                : "เลือกพนักงานจากแถบด้านบนก่อนเริ่มงาน (หรือเลือกด้านล่างเมื่อเข้าหน้าย่อย)"}
-            </p>
-          </CardContent>
-        </Card>
+
+        <WarehouseEmployeePicker />
+
         <p className="text-sm text-muted-foreground">เลือกงานที่ต้องการทำ</p>
-        {!empName && (
+        {!empCode && (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-            เลือกพนักงานจากแถบด้านบนก่อนกดเข้างาน — ถ้าไม่มีรายชื่อ ให้แอดมินเพิ่มที่ ตั้งค่าคลัง → พนักงานคลัง
+            เลือกพนักงานด้านบนก่อนกดเข้างาน — ถ้าไม่มีรายชื่อ ให้แอดมินเพิ่มใน Staff Directory →
+            แผนก stock
           </p>
         )}
-        <div className={`grid gap-3 ${!empName ? "pointer-events-none opacity-50" : ""}`}>
+        <div className={`grid gap-3 ${!empCode ? "pointer-events-none opacity-50" : ""}`}>
           <Link to="/warehouse/receiving">
             <Card className="cursor-pointer border-teal-200 bg-teal-50/50 hover:bg-teal-50 dark:border-teal-900 dark:bg-teal-950/30">
               <CardContent className="flex items-center gap-4 p-4">

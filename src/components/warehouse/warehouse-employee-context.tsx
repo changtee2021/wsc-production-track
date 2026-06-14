@@ -12,8 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getWarehouseToken } from "@/lib/auth/warehouse-session";
 import { whListEmployees } from "@/lib/features/warehouse-settings.functions";
-
-const LAST_EMP_KEY = "ptrack_wh_emp";
+import { loadStoredStockEmployee, saveStoredStockEmployee } from "@/lib/stock-employee-persistence";
 
 export type WhEmployee = { id: string; name: string; emp_code: string };
 
@@ -21,6 +20,7 @@ type Ctx = {
   empCode: string;
   empName: string;
   empId: string;
+  employees: WhEmployee[];
   setEmployee: (emp: WhEmployee) => void;
   ready: boolean;
 };
@@ -33,6 +33,71 @@ export function useWarehouseEmployee() {
   return ctx;
 }
 
+function useWarehouseEmployeesQuery() {
+  const token = getWarehouseToken() ?? "";
+  const listFn = useServerFn(whListEmployees);
+  return useQuery({
+    queryKey: ["wh-employees"],
+    queryFn: () => listFn({ data: { token } }),
+    enabled: !!token,
+  });
+}
+
+export function WarehouseEmployeePicker({
+  title = "พนักงานคลัง",
+  showCard = true,
+}: {
+  title?: string;
+  showCard?: boolean;
+}) {
+  const { empId, setEmployee, employees } = useWarehouseEmployee();
+
+  const select = (
+    <Select
+      value={empId}
+      onValueChange={(id) => {
+        const e = employees.find((x) => x.id === id);
+        if (e) setEmployee(e);
+      }}
+    >
+      <SelectTrigger className="h-14 rounded-2xl text-base">
+        <SelectValue placeholder="เลือกพนักงาน" />
+      </SelectTrigger>
+      <SelectContent>
+        {employees.length === 0 && (
+          <div className="px-3 py-2 text-sm text-muted-foreground">
+            ยังไม่มีพนักงาน — ให้แอดมินเพิ่มใน Staff Directory → แผนก stock
+          </div>
+        )}
+        {employees.map((e) => (
+          <SelectItem key={e.id} value={e.id} className="py-2">
+            <div className="flex flex-col text-left">
+              <span className="text-base font-semibold leading-tight">{e.name}</span>
+              {e.emp_code && (
+                <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>
+              )}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  if (!showCard) return select;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ClipboardCheck className="h-4 w-4 text-teal-600" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>{select}</CardContent>
+    </Card>
+  );
+}
+
 export function WarehouseEmployeeProvider({
   children,
   requireSelection = true,
@@ -40,144 +105,55 @@ export function WarehouseEmployeeProvider({
   children: ReactNode;
   requireSelection?: boolean;
 }) {
-  const token = getWarehouseToken() ?? "";
-  const listFn = useServerFn(whListEmployees);
-  const { data: employees = [] } = useQuery({
-    queryKey: ["wh-employees"],
-    queryFn: () => listFn({ data: { token } }),
-    enabled: !!token,
-  });
+  const { data: employees = [] } = useWarehouseEmployeesQuery();
 
   const [empId, setEmpId] = useState("");
   const [empCode, setEmpCode] = useState("");
   const [empName, setEmpName] = useState("");
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(LAST_EMP_KEY);
-      if (!raw) return;
-      const { id, code, name } = JSON.parse(raw) as { id: string; code: string; name: string };
-      setEmpId(id);
-      setEmpCode(code);
-      setEmpName(name);
-    } catch {
-      /* ignore */
-    }
+    const stored = loadStoredStockEmployee();
+    if (!stored) return;
+    setEmpId(stored.id);
+    setEmpCode(stored.code);
+    setEmpName(stored.name);
   }, []);
+
+  useEffect(() => {
+    if (!employees.length || !empCode) return;
+    const match = employees.find((e) => e.emp_code === empCode);
+    if (match && match.id !== empId) setEmpId(match.id);
+  }, [employees, empCode, empId]);
 
   const setEmployee = (emp: WhEmployee) => {
     setEmpId(emp.id);
     setEmpCode(emp.emp_code);
     setEmpName(emp.name);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        LAST_EMP_KEY,
-        JSON.stringify({ id: emp.id, code: emp.emp_code, name: emp.name }),
-      );
-    }
+    saveStoredStockEmployee({ id: emp.id, code: emp.emp_code, name: emp.name });
   };
 
   const ready = !requireSelection || !!empCode;
 
   const value = useMemo(
-    () => ({ empCode, empName, empId, setEmployee, ready }),
-    [empCode, empName, empId, ready],
+    () => ({ empCode, empName, empId, employees, setEmployee, ready }),
+    [empCode, empName, empId, employees, ready],
   );
 
   if (requireSelection && !ready) {
     return (
-      <div className="min-h-[100dvh] bg-background p-4">
-        <div className="mx-auto max-w-md space-y-4 pt-8">
-          <h1 className="text-xl font-bold">คลังสินค้า</h1>
-          <p className="text-sm text-muted-foreground">เลือกพนักงานก่อนเริ่มงาน</p>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ClipboardCheck className="h-4 w-4 text-teal-600" />
-                พนักงานคลัง
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select
-                value={empId}
-                onValueChange={(id) => {
-                  const e = employees.find((x) => x.id === id);
-                  if (e) setEmployee(e);
-                }}
-              >
-                <SelectTrigger className="h-14 rounded-2xl text-base">
-                  <SelectValue placeholder="เลือกพนักงาน" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.length === 0 && (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">
-                      ยังไม่มีพนักงาน — ให้แอดมินเพิ่มใน ตั้งค่าคลัง → พนักงานคลัง
-                    </div>
-                  )}
-                  {employees.map((e) => (
-                    <SelectItem key={e.id} value={e.id} className="py-2">
-                      <div className="flex flex-col text-left">
-                        <span className="text-base font-semibold leading-tight">{e.name}</span>
-                        {e.emp_code && (
-                          <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+      <WarehouseEmployeeContext.Provider value={value}>
+        <div className="min-h-[100dvh] bg-background p-4">
+          <div className="mx-auto max-w-md space-y-4 pt-8">
+            <h1 className="text-xl font-bold">คลังสินค้า</h1>
+            <p className="text-sm text-muted-foreground">เลือกพนักงานก่อนเริ่มงาน</p>
+            <WarehouseEmployeePicker />
+          </div>
         </div>
-      </div>
+      </WarehouseEmployeeContext.Provider>
     );
   }
 
   return (
     <WarehouseEmployeeContext.Provider value={value}>{children}</WarehouseEmployeeContext.Provider>
-  );
-}
-
-export function WarehouseEmployeeBar() {
-  const { empId, empName, setEmployee } = useWarehouseEmployee();
-  const token = getWarehouseToken() ?? "";
-  const listFn = useServerFn(whListEmployees);
-  const { data: employees = [] } = useQuery({
-    queryKey: ["wh-employees"],
-    queryFn: () => listFn({ data: { token } }),
-    enabled: !!token,
-  });
-
-  return (
-    <div className="border-b bg-muted/30 px-3 py-2">
-      <Select
-        value={empId}
-        onValueChange={(id) => {
-          const e = employees.find((x) => x.id === id);
-          if (e) setEmployee(e);
-        }}
-      >
-        <SelectTrigger className="h-11 rounded-xl border-0 bg-background text-sm shadow-sm">
-          <SelectValue placeholder="เลือกพนักงาน">
-            {empName ? (
-              <span className="flex items-center gap-2">
-                <ClipboardCheck className="h-4 w-4 text-teal-600" />
-                {empName}
-              </span>
-            ) : (
-              "เลือกพนักงาน"
-            )}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {employees.map((e) => (
-            <SelectItem key={e.id} value={e.id}>
-              {e.name} {e.emp_code ? `(${e.emp_code})` : ""}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
   );
 }

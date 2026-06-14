@@ -214,10 +214,14 @@ function WarehouseSettingsPage() {
       </Section>
 
       <Section title="พนักงานคลัง" defaultOpen={openId === "employees"}>
+        <p className="mb-3 text-sm text-muted-foreground">
+          รายชื่อพนักงานคลังและตรวจนับสต๊อกใช้ชุดเดียวกัน — จัดการที่{" "}
+          <strong>Staff Directory → แผนก stock</strong>
+        </p>
         <MasterListCrud
           token={token}
           type="employees"
-          emptyHint="เพิ่มพนักงานที่ใช้งานหน้า Floor คลัง (เลือกจาก dropdown เหมือน QC)"
+          emptyHint="(legacy) รายการด้านล่างไม่ใช้แล้ว — เพิ่มพนักงานใน Staff Directory → แผนก stock"
         />
       </Section>
 

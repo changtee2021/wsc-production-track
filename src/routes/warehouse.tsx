@@ -6,18 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import {
-  whGetAuthConfig,
-  whIssueSession,
-} from "@/lib/features/warehouse-settings.functions";
-import {
-  setWarehouseToken,
-  isWarehouseSession,
-} from "@/lib/auth/warehouse-session";
-import {
-  WarehouseEmployeeBar,
-  WarehouseEmployeeProvider,
-} from "@/components/warehouse/warehouse-employee-context";
+import { whGetAuthConfig, whIssueSession } from "@/lib/features/warehouse-settings.functions";
+import { setWarehouseToken, isWarehouseSession } from "@/lib/auth/warehouse-session";
+import { WarehouseEmployeeProvider } from "@/components/warehouse/warehouse-employee-context";
 
 export const Route = createFileRoute("/warehouse")({
   component: WarehouseLayout,
@@ -120,7 +111,6 @@ function WarehouseLayout() {
   return (
     <WarehouseEmployeeProvider requireSelection={!isHub}>
       <Toaster richColors position="top-center" />
-      <WarehouseEmployeeBar />
       <Outlet />
     </WarehouseEmployeeProvider>
   );

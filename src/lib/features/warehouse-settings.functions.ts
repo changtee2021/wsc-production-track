@@ -46,11 +46,11 @@ export const whListEmployees = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     requireWorker(data.token);
     const { data: rows, error } = await supabaseAdmin
-      .from("wh_employees")
+      .from("stock_employees" as never)
       .select("id, name, emp_code")
       .eq("active", true)
-      .order("sort_order")
-      .order("name");
+      .order("name", { ascending: true })
+      .limit(500);
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r) => ({
       id: r.id as string,

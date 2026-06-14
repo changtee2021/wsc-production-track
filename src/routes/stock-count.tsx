@@ -57,8 +57,8 @@ import {
   type StockCountBatch,
 } from "@/lib/features/stock-count.functions";
 import { isStockSession, setStockToken, getStockToken } from "@/lib/auth/stock-session";
+import { loadStoredStockEmployee, saveStoredStockEmployee } from "@/lib/stock-employee-persistence";
 
-const LAST_EMP_KEY = "wsc_stock_last_emp";
 const UNLOCK_KEY = "wsc_stock_unlocked";
 const PASSCODE = import.meta.env.VITE_STOCK_PASSCODE || "wscstock123";
 
@@ -197,15 +197,10 @@ function StockCountWorkbench() {
   const [empCode, setEmpCode] = useState<string>("");
   const [empName, setEmpName] = useState<string>("");
   useEffect(() => {
-    const last = typeof window !== "undefined" ? localStorage.getItem(LAST_EMP_KEY) : null;
-    if (last) {
-      try {
-        const { code, name } = JSON.parse(last);
-        setEmpCode(code);
-        setEmpName(name);
-      } catch {
-        /* ignore */
-      }
+    const stored = loadStoredStockEmployee();
+    if (stored) {
+      setEmpCode(stored.code);
+      setEmpName(stored.name);
     }
   }, []);
 
@@ -214,8 +209,7 @@ function StockCountWorkbench() {
     if (!e) return;
     setEmpCode(e.emp_code ?? "");
     setEmpName(e.name);
-    if (typeof window !== "undefined")
-      localStorage.setItem(LAST_EMP_KEY, JSON.stringify({ code: e.emp_code, name: e.name }));
+    saveStoredStockEmployee({ id: e.id, code: e.emp_code ?? "", name: e.name });
   };
 
   // ===== draft batch =====

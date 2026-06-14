@@ -8,6 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { getWarehouseToken } from "@/lib/auth/warehouse-session";
@@ -71,84 +79,101 @@ function PalletizingPage() {
   const active = pallets.filter((p) => ["open", "counting", "incomplete"].includes(p.status));
 
   return (
-    <div className="min-h-[100dvh] bg-background p-4">
+    <div className="min-h-[100dvh] bg-background">
       <Toaster richColors position="top-center" />
-      <div className="mx-auto max-w-md space-y-4">
+      <header className="sticky top-0 z-20 border-b bg-background/95 px-3 py-2 backdrop-blur">
         <Link to="/warehouse/">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-1 h-4 w-4" />
+          <Button variant="ghost" size="sm" className="gap-1">
+            <ArrowLeft className="h-4 w-4" />
             คลังสินค้า
           </Button>
         </Link>
-        <h1 className="text-xl font-bold">จัด Pallet</h1>
+        <h1 className="mt-1 text-lg font-bold">จัด Pallet</h1>
+      </header>
 
+      <div className="mx-auto max-w-md space-y-4 p-3 pb-28">
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-base">สร้าง Pallet ใหม่</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div>
+            <div className="space-y-1.5">
               <Label>ใบรับของ (confirmed)</Label>
-              <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={receiptId}
-                onChange={(e) => setReceiptId(e.target.value)}
-              >
-                <option value="">— เลือก —</option>
-                {receipts.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.receipt_no} · {r.item_code} · Lot {r.lot_no}
-                  </option>
-                ))}
-              </select>
+              <Select value={receiptId} onValueChange={setReceiptId}>
+                <SelectTrigger className="h-14 text-base">
+                  <SelectValue placeholder="— เลือกใบรับของ —" />
+                </SelectTrigger>
+                <SelectContent>
+                  {receipts.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.receipt_no} · {r.item_code} · Lot {r.lot_no}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div>
+              <div className="space-y-1.5">
                 <Label>กล่อง/ชั้น</Label>
-                <Input type="number" value={bpl} onChange={(e) => setBpl(Number(e.target.value))} />
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  className="h-12 text-base"
+                  value={bpl}
+                  onChange={(e) => setBpl(Number(e.target.value))}
+                />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>จำนวนชั้น</Label>
                 <Input
                   type="number"
+                  inputMode="numeric"
+                  className="h-12 text-base"
                   value={layers}
                   onChange={(e) => setLayers(Number(e.target.value))}
                 />
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">ความจุ: {bpl * layers} กล่อง</p>
-            <Button className="w-full" onClick={onCreate}>
-              <Layers className="mr-2 h-4 w-4" />
+            <Badge variant="secondary" className="text-sm">
+              ความจุ: {bpl * layers} กล่อง
+            </Badge>
+            <Button className="h-14 w-full text-base" onClick={onCreate}>
+              <Layers className="mr-2 h-5 w-5" />
               สร้าง Pallet
             </Button>
           </CardContent>
         </Card>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <h2 className="font-semibold">Pallet ที่กำลังทำ</h2>
           {active.length === 0 && (
             <p className="text-sm text-muted-foreground">ยังไม่มี Pallet ที่เปิดอยู่</p>
           )}
-          {active.map((p) => (
-            <Card key={p.id}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <p className="font-medium">{p.pallet_no}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.counted_boxes}/{p.target_boxes} · {p.status}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">{p.status}</Badge>
+          {active.map((p) => {
+            const pct = Math.min(100, (p.counted_boxes / p.target_boxes) * 100);
+            return (
+              <Card key={p.id}>
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{p.pallet_no}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {p.counted_boxes}/{p.target_boxes} กล่อง
+                      </p>
+                    </div>
+                    <Badge variant="outline">{p.status}</Badge>
+                  </div>
+                  <Progress value={pct} className="h-2" />
                   <Link to="/warehouse/pallet/$palletId/scan" params={{ palletId: p.id }}>
-                    <Button size="sm">
-                      <ScanLine className="h-4 w-4" />
+                    <Button className="h-12 w-full text-base">
+                      <ScanLine className="mr-2 h-5 w-5" />
+                      สแกนนับ
                     </Button>
                   </Link>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </div>
