@@ -961,6 +961,66 @@ export const adminDeleteOfficeEmployee = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---- Stock / Warehouse Employees -----------------------------------------
+// `stock_employees` table — used by warehouse floor + stock count.
+
+type StockEmpTable = {
+  select: (s: string) => {
+    order: (
+      c: string,
+    ) => Promise<{ data: MaintEmpRow[] | null; error: { message: string } | null }>;
+  };
+  insert: (row: Partial<MaintEmpRow>) => Promise<{ error: { message: string } | null }>;
+  update: (row: Partial<MaintEmpRow>) => {
+    eq: (a: string, b: string) => Promise<{ error: { message: string } | null }>;
+  };
+  delete: () => { eq: (a: string, b: string) => Promise<{ error: { message: string } | null }> };
+};
+
+function stockEmpTbl() {
+  return supabaseAdmin.from("stock_employees" as never) as unknown as StockEmpTable;
+}
+
+export const adminListStockEmployees = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { data: rows, error } = await stockEmpTbl()
+      .select("id, name, emp_code, avatar_url, active")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return { rows: rows ?? [] };
+  });
+
+export const adminUpsertStockEmployee = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => maintEmployeePayload.parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const row: Partial<MaintEmpRow> = {
+      name: data.name,
+      emp_code: data.emp_code ?? null,
+      avatar_url: data.avatar_url ?? null,
+      ...(data.active !== undefined ? { active: data.active } : {}),
+    };
+    if (data.id) {
+      const { error } = await stockEmpTbl().update(row).eq("id", data.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await stockEmpTbl().insert(row);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const adminDeleteStockEmployee = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await stockEmpTbl().delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const adminFetchPackingChecklists = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z

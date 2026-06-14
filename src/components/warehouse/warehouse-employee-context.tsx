@@ -66,7 +66,7 @@ export function WarehouseEmployeePicker({
       <SelectContent>
         {employees.length === 0 && (
           <div className="px-3 py-2 text-sm text-muted-foreground">
-            ยังไม่มีพนักงาน — ให้แอดมินเพิ่มใน Staff Directory → แผนก stock
+            ยังไม่มีพนักงาน — ให้แอดมินเพิ่มใน เมนู พนักงาน → พนักงานคลัง / นับสต๊อก
           </div>
         )}
         {employees.map((e) => (

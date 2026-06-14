@@ -43,8 +43,8 @@ function WarehouseHub() {
         <p className="text-sm text-muted-foreground">เลือกงานที่ต้องการทำ</p>
         {!empCode && (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-            เลือกพนักงานด้านบนก่อนกดเข้างาน — ถ้าไม่มีรายชื่อ ให้แอดมินเพิ่มใน Staff Directory →
-            แผนก stock
+            เลือกพนักงานด้านบนก่อนกดเข้างาน — ถ้าไม่มีรายชื่อ ให้แอดมินเพิ่มใน เมนู พนักงาน →
+            พนักงานคลัง / นับสต๊อก
           </p>
         )}
         <div className={`grid gap-3 ${!empCode ? "pointer-events-none opacity-50" : ""}`}>

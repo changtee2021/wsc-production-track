@@ -58,6 +58,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { flagFor, initialsOf } from "@/lib/utils/i18n";
 import { AllStaffPanel } from "@/components/AllStaffPanel";
 import { OfficeEmployeesPanel } from "@/components/OfficeEmployeesPanel";
+import { StockEmployeesPanel } from "@/components/StockEmployeesPanel";
 
 export const Route = createFileRoute("/_protected/manage")({
   head: () => ({ meta: [{ title: "จัดการ — WSC ProductionTrack" }] }),
@@ -122,6 +123,7 @@ function Manage() {
     { id: "pack", title: "พนักงานแพ็คของ", node: <PackingEmployeesPanel /> },
     { id: "maint", title: "ช่างซ่อม / พนักงานแผนกซ่อม", node: <MaintenanceEmployeesPanel /> },
     { id: "office", title: "พนักงานออฟฟิศ", node: <OfficeEmployeesPanel /> },
+    { id: "stock", title: "พนักงานคลัง / นับสต๊อก", node: <StockEmployeesPanel /> },
   ];
   const openId = tab && sections.some((s) => s.id === tab) ? tab : "all";
 

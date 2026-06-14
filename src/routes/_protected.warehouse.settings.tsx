@@ -27,8 +27,6 @@ import {
   adminWhListLabelTemplates,
   adminWhUpsertLabelTemplate,
   adminWhListSyncLogs,
-  adminWhListEmployees,
-  adminWhUpsertEmployee,
   adminWhListVisionItems,
   adminWhUpsertVisionItem,
 } from "@/lib/features/warehouse-settings.functions";
@@ -44,7 +42,6 @@ export const Route = createFileRoute("/_protected/warehouse/settings")({
 
 const SECTIONS: { id: string; title: string; key?: WhSettingsKey }[] = [
   { id: "general", title: "ทั่วไป", key: "general" },
-  { id: "employees", title: "พนักงานคลัง" },
   { id: "vision", title: "เช็ควิสรับของ" },
   { id: "receiving", title: "รับของ", key: "receiving" },
   { id: "pallet", title: "Pallet", key: "pallet" },
@@ -213,18 +210,6 @@ function WarehouseSettingsPage() {
         />
       </Section>
 
-      <Section title="พนักงานคลัง" defaultOpen={openId === "employees"}>
-        <p className="mb-3 text-sm text-muted-foreground">
-          รายชื่อพนักงานคลังและตรวจนับสต๊อกใช้ชุดเดียวกัน — จัดการที่{" "}
-          <strong>Staff Directory → แผนก stock</strong>
-        </p>
-        <MasterListCrud
-          token={token}
-          type="employees"
-          emptyHint="(legacy) รายการด้านล่างไม่ใช้แล้ว — เพิ่มพนักงานใน Staff Directory → แผนก stock"
-        />
-      </Section>
-
       <Section title="เช็ควิสรับของ" defaultOpen={openId === "vision"}>
         <JsonSettingsForm
           settingsKey="vision"
@@ -240,11 +225,7 @@ function WarehouseSettingsPage() {
             },
           ]}
         />
-        <MasterListCrud
-          token={token}
-          type="vision"
-          emptyHint="รายการตรวจสอบก่อนยืนยันรับของ (ผ่าน/ไม่ผ่าน)"
-        />
+        <MasterListCrud token={token} emptyHint="รายการตรวจสอบก่อนยืนยันรับของ (ผ่าน/ไม่ผ่าน)" />
       </Section>
 
       <Section title="รับของ" defaultOpen={openId === "receiving"}>
@@ -421,27 +402,16 @@ function SyncLogs({ token }: { token: string }) {
   );
 }
 
-function MasterListCrud({
-  token,
-  type,
-  emptyHint,
-}: {
-  token: string;
-  type: "employees" | "vision";
-  emptyHint: string;
-}) {
+function MasterListCrud({ token, emptyHint }: { token: string; emptyHint: string }) {
   const qc = useQueryClient();
-  const listEmp = useServerFn(adminWhListEmployees);
-  const upsertEmp = useServerFn(adminWhUpsertEmployee);
   const listVis = useServerFn(adminWhListVisionItems);
   const upsertVis = useServerFn(adminWhUpsertVisionItem);
-  const qk = `wh-master-${type}`;
+  const qk = "wh-master-vision";
   const [draft, setDraft] = useState<Record<string, Record<string, unknown>>>({});
 
   const { data: rows = [] } = useQuery({
     queryKey: [qk],
-    queryFn: () =>
-      type === "employees" ? listEmp({ data: { token } }) : listVis({ data: { token } }),
+    queryFn: () => listVis({ data: { token } }),
     enabled: !!token,
   });
 
@@ -457,13 +427,9 @@ function MasterListCrud({
 
   const add = async () => {
     try {
-      if (type === "employees") {
-        await upsertEmp({ data: { token, name: "พนักงานใหม่", emp_code: "WH001" } });
-      } else {
-        await upsertVis({
-          data: { token, label: "รายการตรวจใหม่", required: true, sort_order: rows.length + 1 },
-        });
-      }
+      await upsertVis({
+        data: { token, label: "รายการตรวจใหม่", required: true, sort_order: rows.length + 1 },
+      });
       qc.invalidateQueries({ queryKey: [qk] });
       toast.success("เพิ่มแล้ว");
     } catch (e) {
@@ -475,29 +441,16 @@ function MasterListCrud({
     const id = String(row.id);
     const d = { ...row, ...(draft[id] ?? {}) };
     try {
-      if (type === "employees") {
-        await upsertEmp({
-          data: {
-            token,
-            id: d.id as string,
-            name: String(d.name ?? ""),
-            emp_code: String(d.emp_code ?? ""),
-            active: !!d.active,
-            sort_order: Number(d.sort_order ?? 0),
-          },
-        });
-      } else {
-        await upsertVis({
-          data: {
-            token,
-            id: d.id as string,
-            label: String(d.label ?? ""),
-            required: !!d.required,
-            active: !!d.active,
-            sort_order: Number(d.sort_order ?? 0),
-          },
-        });
-      }
+      await upsertVis({
+        data: {
+          token,
+          id: d.id as string,
+          label: String(d.label ?? ""),
+          required: !!d.required,
+          active: !!d.active,
+          sort_order: Number(d.sort_order ?? 0),
+        },
+      });
       setDraft((p) => {
         const next = { ...p };
         delete next[id];
@@ -521,27 +474,12 @@ function MasterListCrud({
       )}
       {rows.map((row: Record<string, unknown>) => (
         <div key={String(row.id)} className="space-y-2 rounded border p-3">
-          {type === "employees" ? (
-            <>
-              <Input
-                value={String(rowVal(row, "name") ?? "")}
-                onChange={(e) => setRowVal(String(row.id), "name", e.target.value)}
-                placeholder="ชื่อ"
-              />
-              <Input
-                value={String(rowVal(row, "emp_code") ?? "")}
-                onChange={(e) => setRowVal(String(row.id), "emp_code", e.target.value)}
-                placeholder="รหัสพนักงาน"
-              />
-            </>
-          ) : (
-            <Textarea
-              value={String(rowVal(row, "label") ?? "")}
-              onChange={(e) => setRowVal(String(row.id), "label", e.target.value)}
-              rows={2}
-              placeholder="ข้อความเช็ควิส"
-            />
-          )}
+          <Textarea
+            value={String(rowVal(row, "label") ?? "")}
+            onChange={(e) => setRowVal(String(row.id), "label", e.target.value)}
+            rows={2}
+            placeholder="ข้อความเช็ควิส"
+          />
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-sm">
               <Switch
@@ -550,15 +488,13 @@ function MasterListCrud({
               />
               ใช้งาน
             </label>
-            {type === "vision" && (
-              <label className="flex items-center gap-2 text-sm">
-                <Switch
-                  checked={!!rowVal(row, "required")}
-                  onCheckedChange={(v) => setRowVal(String(row.id), "required", v)}
-                />
-                บังคับ
-              </label>
-            )}
+            <label className="flex items-center gap-2 text-sm">
+              <Switch
+                checked={!!rowVal(row, "required")}
+                onCheckedChange={(v) => setRowVal(String(row.id), "required", v)}
+              />
+              บังคับ
+            </label>
           </div>
           <Button size="sm" onClick={() => saveRow(row)}>
             บันทึก
