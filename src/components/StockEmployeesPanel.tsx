@@ -13,8 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, Trash2, Pencil, Save, X, Upload, Eye, EyeOff, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
-import { initialsOf } from "@/lib/i18n";
-import { EmployeeNameButton } from "@/components/EmployeeNameButton";
+import { initialsOf } from "@/lib/utils/i18n";
 
 interface StockEmp {
   id: string;
@@ -221,11 +220,7 @@ export function StockEmployeesPanel() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <EmployeeNameButton
-                    name={e.name}
-                    emp_code={e.emp_code}
-                    className="font-semibold"
-                  />
+                  <div className="font-semibold">{e.name}</div>
                   {e.emp_code && (
                     <div className="font-mono text-xs text-muted-foreground">{e.emp_code}</div>
                   )}
