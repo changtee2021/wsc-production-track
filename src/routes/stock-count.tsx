@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -204,6 +204,12 @@ function StockCountWorkbench() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!emps.length || !empCode) return;
+    const match = emps.find((e) => e.emp_code === empCode);
+    if (match && match.name !== empName) setEmpName(match.name);
+  }, [emps, empCode, empName]);
+
   const pickEmp = (code: string) => {
     const e = emps.find((x) => x.emp_code === code);
     if (!e) return;
@@ -214,12 +220,37 @@ function StockCountWorkbench() {
 
   // ===== draft batch =====
   const draftFn = useServerFn(getOrCreateDraftBatch);
-  const { data: batch } = useQuery({
-    queryKey: ["stock-draft-batch", empCode],
+  const {
+    data: batch,
+    isLoading: batchLoading,
+    isFetching: batchFetching,
+    isError: batchError,
+    error: batchErr,
+    refetch: refetchBatch,
+  } = useQuery({
+    queryKey: ["stock-draft-batch", empCode, empName],
     queryFn: () => draftFn({ data: { token, empCode, empName } }),
     enabled: !!empCode && !!empName,
   });
   const batchId = batch?.id ?? "";
+  const batchPreparing = !!empCode && !!empName && (batchLoading || batchFetching) && !batchId;
+
+  const ensureDraftBatch = useCallback(async (): Promise<string> => {
+    if (batchId) return batchId;
+    if (!empCode || !empName) throw new Error("เลือกพนักงานก่อนเริ่มนับ");
+    const b = await draftFn({ data: { token, empCode, empName } });
+    qc.setQueryData(["stock-draft-batch", empCode, empName], b);
+    return b.id;
+  }, [batchId, empCode, empName, draftFn, qc, token]);
+
+  const batchErrorShown = useRef(false);
+  useEffect(() => {
+    if (batchError && batchErr && !batchErrorShown.current) {
+      batchErrorShown.current = true;
+      toast.error(batchErr instanceof Error ? batchErr.message : "สร้างชุดนับไม่สำเร็จ");
+    }
+    if (!batchError) batchErrorShown.current = false;
+  }, [batchError, batchErr]);
 
   const linesFn = useServerFn(listBatchLines);
   const { data: lines = [] } = useQuery({
@@ -233,26 +264,43 @@ function StockCountWorkbench() {
   const [countedQty, setCountedQty] = useState("");
   const [note, setNote] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [ensuringBatch, setEnsuringBatch] = useState(false);
   const skuRef = useRef<HTMLInputElement>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
 
   const addFn = useServerFn(addCountLine);
   const addMut = useMutation({
-    mutationFn: (vars: { sku: string; countedQty: number; note: string }) =>
-      addFn({ data: { token, batchId, ...vars } }),
-    onSuccess: (row) => {
+    mutationFn: (vars: { batchId: string; sku: string; countedQty: number; note: string }) =>
+      addFn({ data: { token, ...vars } }),
+    onSuccess: (row, vars) => {
       toast.success(`เพิ่มแล้ว: ${(row as StockCountRow).item_code}`);
       setSku("");
       setCountedQty("");
       setNote("");
-      qc.invalidateQueries({ queryKey: ["stock-batch-lines", batchId] });
+      qc.invalidateQueries({ queryKey: ["stock-batch-lines", vars.batchId] });
       skuRef.current?.focus();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const addLine = () => {
-    if (!batchId) return;
+  const canCount = !!empCode && !!empName;
+  const countBusy = ensuringBatch || addMut.isPending;
+
+  const openScanner = async () => {
+    if (!canCount) return toast.error("เลือกพนักงานก่อนเริ่มนับ");
+    setEnsuringBatch(true);
+    try {
+      await ensureDraftBatch();
+      setScannerOpen(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "สร้างชุดนับไม่สำเร็จ");
+    } finally {
+      setEnsuringBatch(false);
+    }
+  };
+
+  const addLine = async () => {
+    if (!canCount) return toast.error("เลือกพนักงานก่อนเริ่มนับ");
     const code = sku.trim();
     if (!code) {
       skuRef.current?.focus();
@@ -261,7 +309,15 @@ function StockCountWorkbench() {
     const qty = Number(countedQty);
     if (countedQty === "" || Number.isNaN(qty) || qty < 0)
       return toast.error("กรุณากรอกจำนวนที่นับได้ให้ถูกต้อง");
-    addMut.mutate({ sku: code, countedQty: qty, note });
+    setEnsuringBatch(true);
+    try {
+      const id = await ensureDraftBatch();
+      addMut.mutate({ batchId: id, sku: code, countedQty: qty, note });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "สร้างชุดนับไม่สำเร็จ");
+    } finally {
+      setEnsuringBatch(false);
+    }
   };
 
   // ===== edit / delete =====
@@ -310,7 +366,7 @@ function StockCountWorkbench() {
     onSuccess: () => {
       toast.success("ส่งรายการเรียบร้อย — ชุดนี้ถูกล็อกแล้ว");
       setConfirmSubmit(false);
-      qc.invalidateQueries({ queryKey: ["stock-draft-batch", empCode] });
+      qc.invalidateQueries({ queryKey: ["stock-draft-batch", empCode, empName] });
       qc.invalidateQueries({ queryKey: ["stock-batch-lines"] });
       qc.invalidateQueries({ queryKey: ["stock-my-batches", empCode] });
     },
@@ -383,14 +439,38 @@ function StockCountWorkbench() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {!canCount && (
+              <p className="text-center text-sm text-muted-foreground">เลือกพนักงานก่อนเริ่มนับ</p>
+            )}
+            {canCount && batchPreparing && (
+              <p className="flex items-center justify-center gap-2 py-1 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                กำลังเตรียมชุดนับ...
+              </p>
+            )}
+            {canCount && batchError && (
+              <div className="space-y-2 rounded-lg border border-destructive/50 bg-destructive/5 p-3">
+                <p className="text-sm text-destructive">
+                  {batchErr instanceof Error ? batchErr.message : "สร้างชุดนับไม่สำเร็จ"}
+                </p>
+                <Button type="button" variant="outline" size="sm" onClick={() => refetchBatch()}>
+                  ลองใหม่
+                </Button>
+              </div>
+            )}
+
             <Button
               type="button"
               size="lg"
               className="h-14 w-full text-base"
-              onClick={() => setScannerOpen(true)}
-              disabled={!batchId}
+              onClick={() => void openScanner()}
+              disabled={!canCount || countBusy}
             >
-              <ScanLine className="h-5 w-5" />
+              {ensuringBatch ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <ScanLine className="h-5 w-5" />
+              )}
               <span className="ml-2">สแกน QR / บาร์โค้ด</span>
             </Button>
 
@@ -452,8 +532,8 @@ function StockCountWorkbench() {
             </div>
 
             <Button
-              onClick={addLine}
-              disabled={addMut.isPending || !batchId}
+              onClick={() => void addLine()}
+              disabled={!canCount || countBusy}
               size="lg"
               className="h-12 w-full text-base"
             >

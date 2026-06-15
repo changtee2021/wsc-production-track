@@ -1,5 +1,6 @@
-// Unified staff directory across 6 department tables:
-//   employees (production), qc_employees, packing_employees, maintenance_employees, office_employees, stock_employees.
+// Unified staff directory across 8 department tables:
+//   employees, qc_employees, packing_employees, maintenance_employees, office_employees,
+//   stock_employees, wh_employees, transport_employees.
 // Rows are grouped by (name + emp_code) — same person can belong to several departments.
 
 import { createServerFn } from "@tanstack/react-start";
@@ -19,7 +20,16 @@ function rejectStaffWrites() {
 
 const tokenStr = z.string().min(1);
 
-export const DEPARTMENTS = ["production", "qc", "packing", "maintenance", "office", "stock"] as const;
+export const DEPARTMENTS = [
+  "production",
+  "qc",
+  "packing",
+  "maintenance",
+  "office",
+  "stock",
+  "warehouse",
+  "transport",
+] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 
 const DEPT_TABLE: Record<Department, string> = {
@@ -29,6 +39,8 @@ const DEPT_TABLE: Record<Department, string> = {
   maintenance: "maintenance_employees",
   office: "office_employees",
   stock: "stock_employees",
+  warehouse: "wh_employees",
+  transport: "transport_employees",
 };
 
 type Row = {
@@ -56,7 +68,9 @@ async function fetchDept(dept: Department): Promise<Row[]> {
   const select =
     dept === "production"
       ? "id, name, emp_code, avatar_url, active, nationality"
-      : "id, name, emp_code, avatar_url, active";
+      : dept === "warehouse"
+        ? "id, name, emp_code, active"
+        : "id, name, emp_code, avatar_url, active";
   // Cast for tables not yet present in generated types.
   const { data, error } = await (
     supabaseAdmin.from(table as never) as unknown as {
@@ -75,13 +89,15 @@ export const adminListAllStaff = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const [prod, qc, pack, maint, office, stock] = await Promise.all([
+    const [prod, qc, pack, maint, office, stock, warehouse, transport] = await Promise.all([
       fetchDept("production"),
       fetchDept("qc"),
       fetchDept("packing"),
       fetchDept("maintenance"),
       fetchDept("office"),
       fetchDept("stock"),
+      fetchDept("warehouse"),
+      fetchDept("transport"),
     ]);
 
     const map = new Map<string, StaffEntry>();
@@ -115,6 +131,8 @@ export const adminListAllStaff = createServerFn({ method: "POST" })
     ingest(maint, "maintenance");
     ingest(office, "office");
     ingest(stock, "stock");
+    ingest(warehouse, "warehouse");
+    ingest(transport, "transport");
 
     const rows = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
     return { rows };
@@ -151,7 +169,7 @@ export const adminUpdateStaffMeta = createServerFn({ method: "POST" })
         targets: z
           .array(z.object({ department: deptEnum, id: z.string().uuid() }))
           .min(1)
-          .max(8),
+          .max(10),
         name: z.string().trim().min(1).max(100),
         emp_code: z.string().trim().max(50).nullable().optional(),
         avatar_url: z.string().url().max(2000).nullable().optional(),

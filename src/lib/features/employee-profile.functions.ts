@@ -94,6 +94,8 @@ const DEPT_TABLES = [
   { dept: "maintenance", table: "maintenance_employees", extra: null },
   { dept: "office", table: "office_employees", extra: null },
   { dept: "stock", table: "stock_employees", extra: null },
+  { dept: "warehouse", table: "wh_employees", extra: null },
+  { dept: "transport", table: "transport_employees", extra: null },
 ] as const;
 
 type DeptName = (typeof DEPT_TABLES)[number]["dept"];
@@ -110,9 +112,12 @@ async function resolveStaff(name: string, emp_code: string | null) {
 
   await Promise.all(
     DEPT_TABLES.map(async ({ dept, table, extra }) => {
-      const cols = extra
-        ? `id, name, emp_code, avatar_url, ${extra}`
-        : `id, name, emp_code, avatar_url`;
+      const cols =
+        dept === "warehouse"
+          ? "id, name, emp_code"
+          : extra
+            ? `id, name, emp_code, avatar_url, ${extra}`
+            : `id, name, emp_code, avatar_url`;
       const q = (
         supabaseAdmin.from(table as never) as unknown as {
           select: (s: string) => {
