@@ -42,6 +42,7 @@ import { adminOfficeBadgeCounts } from "@/lib/features/office-requests.functions
 import { adminExpenseBadgeCounts } from "@/lib/features/expenses-admin.functions";
 import { getAdminToken } from "@/lib/auth/admin-session";
 import { hasUnseen } from "@/lib/utils/log-seen";
+import { hrFloorStaffUrl } from "@/lib/hr-app-url";
 import { AppVersion } from "@/components/AppVersion";
 
 const NAV_GROUPS: Array<{
@@ -51,6 +52,7 @@ const NAV_GROUPS: Array<{
     url: string;
     icon: typeof LayoutDashboard;
     search?: Record<string, string>;
+    external?: boolean;
   }>;
 }> = [
   {
@@ -128,7 +130,7 @@ const NAV_GROUPS: Array<{
   },
   {
     label: "ระบบ",
-    items: [{ title: "พนักงาน", url: "/manage", icon: Users }],
+    items: [{ title: "พนักงาน (HR)", url: hrFloorStaffUrl("WSC"), icon: Users, external: true }],
   },
   {
     label: "อัพเดต",
@@ -208,7 +210,7 @@ export function AdminSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
-                  const active = currentPath === item.url;
+                  const active = !item.external && currentPath === item.url;
                   const showNewBadge = item.url === "/logs-update" && hasNew;
                   const isSupply = item.url === "/supplies-dashboard";
                   const supplyCount = isSupply ? pendingReq : 0;
@@ -218,6 +220,17 @@ export function AdminSidebar() {
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
+                        {item.external ? (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2"
+                          >
+                            <item.icon className="h-4 w-4" />
+                            <span className="flex-1">{item.title}</span>
+                          </a>
+                        ) : (
                         <Link
                           to={item.url}
                           search={item.search as never}
@@ -250,6 +263,7 @@ export function AdminSidebar() {
                             <span className="ml-auto hidden h-2 w-2 rounded-full bg-rose-500 group-data-[collapsible=icon]:inline-block" />
                           )}
                         </Link>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );

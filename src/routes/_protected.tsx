@@ -31,7 +31,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/logs": "ประวัติงานผลิต",
   "/qc-reports": "รายงาน QC",
   "/qc-summary": "สรุป QC",
-  "/manage": "พนักงาน",
   "/control": "Control",
   "/storage": "พื้นที่จัดเก็บ",
   "/logs-update": "LogUpdate",

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Toaster } from "@/components/ui/sonner";
-import { CategoriesPanel, StepsPanel } from "@/routes/_protected.manage";
+import { CategoriesPanel, StepsPanel } from "@/components/production-setup-panels";
 import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
 import { PackingChecklistsPanel } from "@/components/PackingChecklistsPanel";
 

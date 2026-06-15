@@ -9,11 +9,17 @@ import {
   verifyAdminToken,
   constantTimePasswordEquals,
 } from "@/lib/auth/admin-token.server";
+import { hrFloorStaffUrl } from "@/lib/hr-app-url";
 
 function assertAdmin(token: string | undefined) {
   if (!verifyAdminToken(token)) {
     throw new Error("Unauthorized");
   }
+}
+
+/** Floor staff CRUD moved to hr-wpgroup */
+function rejectStaffWrites() {
+  throw new Error(`จัดการพนักงานย้ายไป HR: ${hrFloorStaffUrl("WSC")}`);
 }
 
 // ---- Auth ----------------------------------------------------------------
@@ -89,30 +95,14 @@ export const adminUpsertEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => employeePayload.parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const row = {
-      name: data.name,
-      emp_code: data.emp_code ?? null,
-      nationality: data.nationality ?? null,
-      avatar_url: data.avatar_url ?? null,
-      ...(data.active !== undefined ? { active: data.active } : {}),
-    };
-    if (data.id) {
-      const { error } = await supabaseAdmin.from("employees").update(row).eq("id", data.id);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await supabaseAdmin.from("employees").insert(row);
-      if (error) throw new Error(error.message);
-    }
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 export const adminDeleteEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin.from("employees").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 // ---- Steps ---------------------------------------------------------------
@@ -353,20 +343,7 @@ export const adminUpsertQcEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => qcEmployeePayload.parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const row = {
-      name: data.name,
-      emp_code: data.emp_code ?? null,
-      avatar_url: data.avatar_url ?? null,
-      ...(data.active !== undefined ? { active: data.active } : {}),
-    };
-    if (data.id) {
-      const { error } = await supabaseAdmin.from("qc_employees").update(row).eq("id", data.id);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await supabaseAdmin.from("qc_employees").insert(row);
-      if (error) throw new Error(error.message);
-    }
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 export const adminListEmployees = createServerFn({ method: "POST" })
@@ -397,9 +374,7 @@ export const adminDeleteQcEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin.from("qc_employees").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 // ---- QC Reports (admin reads) --------------------------------------------
@@ -786,20 +761,7 @@ export const adminUpsertPackingEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => packingEmployeePayload.parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const row = {
-      name: data.name,
-      emp_code: data.emp_code ?? null,
-      avatar_url: data.avatar_url ?? null,
-      ...(data.active !== undefined ? { active: data.active } : {}),
-    };
-    if (data.id) {
-      const { error } = await supabaseAdmin.from("packing_employees").update(row).eq("id", data.id);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await supabaseAdmin.from("packing_employees").insert(row);
-      if (error) throw new Error(error.message);
-    }
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 export const adminListPackingEmployees = createServerFn({ method: "POST" })
@@ -818,9 +780,7 @@ export const adminDeletePackingEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await supabaseAdmin.from("packing_employees").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 // ---- Maintenance Employees -----------------------------------------------
@@ -876,29 +836,14 @@ export const adminUpsertMaintenanceEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => maintEmployeePayload.parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const row: Partial<MaintEmpRow> = {
-      name: data.name,
-      emp_code: data.emp_code ?? null,
-      avatar_url: data.avatar_url ?? null,
-      ...(data.active !== undefined ? { active: data.active } : {}),
-    };
-    if (data.id) {
-      const { error } = await maintEmpTbl().update(row).eq("id", data.id);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await maintEmpTbl().insert(row);
-      if (error) throw new Error(error.message);
-    }
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 export const adminDeleteMaintenanceEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await maintEmpTbl().delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 // ---- Office Employees ----------------------------------------------------
@@ -936,29 +881,14 @@ export const adminUpsertOfficeEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => maintEmployeePayload.parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const row: Partial<MaintEmpRow> = {
-      name: data.name,
-      emp_code: data.emp_code ?? null,
-      avatar_url: data.avatar_url ?? null,
-      ...(data.active !== undefined ? { active: data.active } : {}),
-    };
-    if (data.id) {
-      const { error } = await officeEmpTbl().update(row).eq("id", data.id);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await officeEmpTbl().insert(row);
-      if (error) throw new Error(error.message);
-    }
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 export const adminDeleteOfficeEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await officeEmpTbl().delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 // ---- Stock / Warehouse Employees -----------------------------------------
@@ -996,29 +926,14 @@ export const adminUpsertStockEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => maintEmployeePayload.parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const row: Partial<MaintEmpRow> = {
-      name: data.name,
-      emp_code: data.emp_code ?? null,
-      avatar_url: data.avatar_url ?? null,
-      ...(data.active !== undefined ? { active: data.active } : {}),
-    };
-    if (data.id) {
-      const { error } = await stockEmpTbl().update(row).eq("id", data.id);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await stockEmpTbl().insert(row);
-      if (error) throw new Error(error.message);
-    }
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 export const adminDeleteStockEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const { error } = await stockEmpTbl().delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    rejectStaffWrites();
   });
 
 export const adminFetchPackingChecklists = createServerFn({ method: "POST" })

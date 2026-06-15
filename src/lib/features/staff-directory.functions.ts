@@ -7,8 +7,14 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 
+import { hrFloorStaffUrl } from "@/lib/hr-app-url";
+
 function assertAdmin(token: string | undefined) {
   if (!verifyAdminToken(token)) throw new Error("Unauthorized");
+}
+
+function rejectStaffWrites() {
+  throw new Error(`จัดการพนักงานย้ายไป HR: ${hrFloorStaffUrl("WSC")}`);
 }
 
 const tokenStr = z.string().min(1);
@@ -133,34 +139,7 @@ export const adminToggleStaffDepartment = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    const table = DEPT_TABLE[data.department];
-    const tbl = supabaseAdmin.from(table as never) as unknown as {
-      insert: (row: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
-      delete: () => {
-        eq: (a: string, b: string) => Promise<{ error: { message: string } | null }>;
-      };
-    };
-
-    if (data.enabled) {
-      if (data.existingId) return { ok: true };
-      const row: Record<string, unknown> = {
-        name: data.name,
-        emp_code: data.emp_code ?? null,
-        avatar_url: data.avatar_url ?? null,
-        active: true,
-      };
-      if (data.department === "production") {
-        row.nationality = data.nationality ?? "Thai";
-      }
-      const { error } = await tbl.insert(row);
-      if (error) throw new Error(error.message);
-      return { ok: true };
-    } else {
-      if (!data.existingId) return { ok: true };
-      const { error } = await tbl.delete().eq("id", data.existingId);
-      if (error) throw new Error(error.message);
-      return { ok: true };
-    }
+    rejectStaffWrites();
   });
 
 export const adminUpdateStaffMeta = createServerFn({ method: "POST" })
@@ -182,23 +161,5 @@ export const adminUpdateStaffMeta = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    for (const t of data.targets) {
-      const table = DEPT_TABLE[t.department];
-      const patch: Record<string, unknown> = {
-        name: data.name,
-        emp_code: data.emp_code ?? null,
-        avatar_url: data.avatar_url ?? null,
-      };
-      if (t.department === "production" && data.nationality) {
-        patch.nationality = data.nationality;
-      }
-      const tbl = supabaseAdmin.from(table as never) as unknown as {
-        update: (row: Record<string, unknown>) => {
-          eq: (a: string, b: string) => Promise<{ error: { message: string } | null }>;
-        };
-      };
-      const { error } = await tbl.update(patch).eq("id", t.id);
-      if (error) throw new Error(`${t.department}: ${error.message}`);
-    }
-    return { ok: true };
+    rejectStaffWrites();
   });
