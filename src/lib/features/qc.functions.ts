@@ -262,3 +262,28 @@ export const qcUploadMedia = createServerFn({ method: "POST" })
       .createSignedUrl(path, 60 * 60);
     return { path, previewUrl: signed?.signedUrl ?? "", type: data.kind };
   });
+
+const videoUploadExt = z.enum(["mp4", "webm", "mov", "m4v"]);
+
+/** Issue a signed upload URL so the client can PUT video bytes directly to Storage. */
+export const qcCreateVideoUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        ext: videoUploadExt,
+        sizeBytes: z.number().int().min(1).max(MAX_VIDEO_BYTES),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertQc(data.token);
+    const path = `video/${crypto.randomUUID()}.${data.ext}`;
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("qc-media")
+      .createSignedUploadUrl(path);
+    if (error || !signed) {
+      throw new Error(error?.message ?? "สร้างลิงก์อัปโหลดไม่สำเร็จ");
+    }
+    return { path: signed.path, token: signed.token };
+  });

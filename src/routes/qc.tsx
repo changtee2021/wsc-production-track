@@ -45,10 +45,13 @@ import {
   qcFetchChecklist,
   qcSubmitReport,
   qcUploadMedia,
+  qcCreateVideoUploadUrl,
   qcListEmployees,
 } from "@/lib/features/qc.functions";
 import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
 import { compressMedia } from "@/lib/utils/media-compress";
+import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
 import { clientAppPublicPath } from "@/lib/app-public-url";
 
 const qcSearch = z.object({
@@ -221,8 +224,6 @@ const VIDEO_EXT_BY_MIME: Record<string, string> = {
   "video/quicktime": "mov",
   "video/x-m4v": "m4v",
 };
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10MB
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB
 
 function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const { job_id } = Route.useSearch();
@@ -256,6 +257,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const fetchLogs = useServerFn(qcFetchJobLogs);
   const fetchChecklist = useServerFn(qcFetchChecklist);
   const uploadMedia = useServerFn(qcUploadMedia);
+  const prepareVideoUpload = useServerFn(qcCreateVideoUploadUrl);
   const listQcEmployees = useServerFn(qcListEmployees);
   const submitReport = useServerFn(qcSubmitReport);
 
@@ -380,23 +382,33 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           );
           continue;
         }
-        // บีบอัดรูป (วิดีโอผ่านตามเดิม)
+        // บีบอัดรูป / วิดีโอ (>10MB บีบอัดวิดีโออัตโนมัติ)
         const f = await compressMedia(original, kind);
         const max = kind === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
         if (f.size > max) {
           toast.error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
           continue;
         }
-        // Convert to base64 and upload via server (magic-byte validated).
-        const buf = await f.arrayBuffer();
-        let binary = "";
-        const u8 = new Uint8Array(buf);
-        const CHUNK = 0x8000;
-        for (let i = 0; i < u8.length; i += CHUNK) {
-          binary += String.fromCharCode.apply(null, Array.from(u8.subarray(i, i + CHUNK)));
-        }
-        const dataBase64 = btoa(binary);
         try {
+          if (kind === "video") {
+            const res = await uploadVideoViaSignedUrl({
+              bucket: "qc-media",
+              file: f,
+              deptToken: token,
+              prepareUpload: prepareVideoUpload,
+            });
+            items.push({ url: res.path, previewUrl: res.previewUrl, type: kind });
+            continue;
+          }
+          // Images: small enough for base64 via server function (with compression).
+          const buf = await f.arrayBuffer();
+          let binary = "";
+          const u8 = new Uint8Array(buf);
+          const CHUNK = 0x8000;
+          for (let i = 0; i < u8.length; i += CHUNK) {
+            binary += String.fromCharCode.apply(null, Array.from(u8.subarray(i, i + CHUNK)));
+          }
+          const dataBase64 = btoa(binary);
           const res = await uploadMedia({
             data: { token, kind, dataBase64 },
           });

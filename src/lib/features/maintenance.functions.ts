@@ -472,6 +472,30 @@ export const maintenanceUploadMedia = createServerFn({ method: "POST" })
     return { path, previewUrl: signed?.signedUrl ?? "", type: data.kind };
   });
 
+const videoUploadExt = z.enum(["mp4", "webm", "mov", "m4v"]);
+
+export const maintenanceCreateVideoUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        ext: videoUploadExt,
+        sizeBytes: z.number().int().min(1).max(MAX_VIDEO_BYTES),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertMaintOrAdmin(data.token);
+    const path = `video/${crypto.randomUUID()}.${data.ext}`;
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("maintenance-media")
+      .createSignedUploadUrl(path);
+    if (error || !signed) {
+      throw new Error(error?.message ?? "สร้างลิงก์อัปโหลดไม่สำเร็จ");
+    }
+    return { path: signed.path, token: signed.token };
+  });
+
 // ============ ADMIN VIEW ============
 export const adminMaintenanceSummary = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))

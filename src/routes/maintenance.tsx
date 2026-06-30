@@ -35,6 +35,7 @@ import {
   listAssets,
   listSpareParts,
   maintenanceUploadMedia,
+  maintenanceCreateVideoUploadUrl,
   listMaintenanceEmployees,
 } from "@/lib/features/maintenance.functions";
 import {
@@ -43,6 +44,7 @@ import {
   clearMaintenanceSession,
 } from "@/lib/auth/maintenance-session";
 import { compressMedia } from "@/lib/utils/media-compress";
+import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
 import { warnIfMovFiles } from "@/components/MediaLightbox";
 
 export const Route = createFileRoute("/maintenance")({
@@ -669,14 +671,24 @@ function MediaUploader({
   label?: string;
 }) {
   const upload = useServerFn(maintenanceUploadMedia);
+  const prepareVideoUpload = useServerFn(maintenanceCreateVideoUploadUrl);
   const [busy, setBusy] = useState(false);
 
   const handleFile = async (file: File, kind: "image" | "video") => {
     setBusy(true);
     try {
       const compressed = await compressMedia(file, kind);
+      if (kind === "video") {
+        const r = await uploadVideoViaSignedUrl({
+          bucket: "maintenance-media",
+          file: compressed,
+          deptToken: token,
+          prepareUpload: prepareVideoUpload,
+        });
+        onChange([...media, { url: r.path, type: kind }]);
+        return;
+      }
       const buf = await compressed.arrayBuffer();
-      // base64
       let s = "";
       const arr = new Uint8Array(buf);
       const CHUNK = 0x8000;

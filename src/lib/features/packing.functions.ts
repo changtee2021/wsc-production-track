@@ -255,3 +255,27 @@ export const packingUploadMedia = createServerFn({ method: "POST" })
       .createSignedUrl(path, 60 * 60);
     return { path, previewUrl: signed?.signedUrl ?? "", type: data.kind };
   });
+
+const videoUploadExt = z.enum(["mp4", "webm", "mov", "m4v"]);
+
+export const packingCreateVideoUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        ext: videoUploadExt,
+        sizeBytes: z.number().int().min(1).max(MAX_VIDEO_BYTES),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertPacking(data.token);
+    const path = `video/${crypto.randomUUID()}.${data.ext}`;
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("packing-media")
+      .createSignedUploadUrl(path);
+    if (error || !signed) {
+      throw new Error(error?.message ?? "สร้างลิงก์อัปโหลดไม่สำเร็จ");
+    }
+    return { path: signed.path, token: signed.token };
+  });

@@ -44,6 +44,7 @@ import {
   packingFetchChecklist,
   packingSubmitReport,
   packingUploadMedia,
+  packingCreateVideoUploadUrl,
   packingListEmployees,
 } from "@/lib/features/packing.functions";
 import {
@@ -53,6 +54,8 @@ import {
   clearPackingSession,
 } from "@/lib/auth/packing-session";
 import { compressMedia } from "@/lib/utils/media-compress";
+import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
 
 const packingSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -146,8 +149,8 @@ const VID_EXT: Record<string, string> = {
   "video/quicktime": "mov",
   "video/x-m4v": "m4v",
 };
-const MAX_IMG = 10 * 1024 * 1024;
-const MAX_VID = 50 * 1024 * 1024;
+const MAX_IMG = MAX_IMAGE_BYTES;
+const MAX_VID = MAX_VIDEO_BYTES;
 
 function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
   const { job_id } = Route.useSearch();
@@ -175,6 +178,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
   const fetchLogs = useServerFn(packingFetchJobLogs);
   const fetchChecklist = useServerFn(packingFetchChecklist);
   const uploadMedia = useServerFn(packingUploadMedia);
+  const prepareVideoUpload = useServerFn(packingCreateVideoUploadUrl);
   const listEmps = useServerFn(packingListEmployees);
   const submitReport = useServerFn(packingSubmitReport);
 
@@ -295,14 +299,24 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
           toast.error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
           continue;
         }
-        const buf = await f.arrayBuffer();
-        let binary = "";
-        const u8 = new Uint8Array(buf);
-        const CH = 0x8000;
-        for (let i = 0; i < u8.length; i += CH)
-          binary += String.fromCharCode.apply(null, Array.from(u8.subarray(i, i + CH)));
-        const dataBase64 = btoa(binary);
         try {
+          if (kind === "video") {
+            const res = await uploadVideoViaSignedUrl({
+              bucket: "packing-media",
+              file: f,
+              deptToken: token,
+              prepareUpload: prepareVideoUpload,
+            });
+            items.push({ url: res.path, previewUrl: res.previewUrl, type: kind });
+            continue;
+          }
+          const buf = await f.arrayBuffer();
+          let binary = "";
+          const u8 = new Uint8Array(buf);
+          const CH = 0x8000;
+          for (let i = 0; i < u8.length; i += CH)
+            binary += String.fromCharCode.apply(null, Array.from(u8.subarray(i, i + CH)));
+          const dataBase64 = btoa(binary);
           const res = await uploadMedia({ data: { token, kind, dataBase64 } });
           items.push({ url: res.path, previewUrl: res.previewUrl, type: kind });
         } catch (e) {
