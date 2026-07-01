@@ -59,7 +59,7 @@ import {
 } from "@/lib/auth/packing-session";
 import { compressMedia, canBrowserCompressVideo } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFile } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_AUTO_COMPRESS_ABOVE_BYTES, formatVideoMaxSizeError, normalizeVideoFile } from "@/lib/utils/media-limits";
 
 const packingSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -286,11 +286,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
       return;
     }
     setUploading(true);
-    setUploadStatus(
-      kind === "video" && canBrowserCompressVideo()
-        ? { phase: "compressing", percent: 0 }
-        : { phase: "uploading" },
-    );
+    setUploadStatus({ phase: "uploading" });
     try {
       const items: MediaItem[] = [];
       for (const original of Array.from(files)) {
@@ -310,6 +306,9 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
           if (file.size > MAX_VID) {
             toast.error(formatVideoMaxSizeError());
             continue;
+          }
+          if (file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES && canBrowserCompressVideo()) {
+            setUploadStatus({ phase: "compressing", percent: 0 });
           }
         }
 

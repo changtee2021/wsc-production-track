@@ -55,7 +55,7 @@ import {
 import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
 import { compressMedia, canBrowserCompressVideo } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFile } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_AUTO_COMPRESS_ABOVE_BYTES, formatVideoMaxSizeError, normalizeVideoFile } from "@/lib/utils/media-limits";
 import { clientAppPublicPath } from "@/lib/app-public-url";
 
 const qcSearch = z.object({
@@ -369,11 +369,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       return;
     }
     setUploading(true);
-    setUploadStatus(
-      kind === "video" && canBrowserCompressVideo()
-        ? { phase: "compressing", percent: 0 }
-        : { phase: "uploading" },
-    );
+    setUploadStatus({ phase: "uploading" });
     try {
       const items: MediaItem[] = [];
       for (const original of Array.from(files)) {
@@ -393,6 +389,9 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           if (file.size > MAX_VIDEO_BYTES) {
             toast.error(formatVideoMaxSizeError());
             continue;
+          }
+          if (file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES && canBrowserCompressVideo()) {
+            setUploadStatus({ phase: "compressing", percent: 0 });
           }
         }
 

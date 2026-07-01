@@ -688,6 +688,10 @@ function MediaUploader({
         return;
       }
       const compressed = await compressMedia(source ?? file, kind);
+      if (kind === "video" && compressed.size > MAX_VIDEO_BYTES) {
+        toast.error(formatVideoMaxSizeError());
+        return;
+      }
       if (kind === "video") {
         const r = await uploadVideoViaSignedUrl({
           bucket: "maintenance-media",

@@ -1,4 +1,4 @@
-// บีบอัดรูปภาพ/วิดีโอก่อนอัปโหลด — วิดีโอใหญ่บีบหลายรอบจนใต้ MAX_VIDEO_BYTES
+// ≤50 MB อัปตรง | >50 MB ลองบีบ (Android) ไม่ได้ก็ส่งต้นฉบับ | iPhone ส่งต้นฉบับเสมอ
 import {
   MAX_VIDEO_BYTES,
   VIDEO_AUTO_COMPRESS_ABOVE_BYTES,
@@ -76,34 +76,26 @@ function targetBitrateForPass(durationSec: number, pass: TranscodePass): number 
   return Math.min(pass.maxBitrate, Math.max(pass.minBitrate, raw));
 }
 
-function buildTranscodePasses(fileSize: number, maxBytes: number): TranscodePass[] {
-  const mild: TranscodePass = {
-    maxDimension: VIDEO_COMPRESS_MAX_DIMENSION,
-    targetBytes: VIDEO_COMPRESS_TARGET_BYTES,
-    minBitrate: 350_000,
-    maxBitrate: 1_400_000,
-  };
-
-  if (fileSize <= 50 * 1024 * 1024) return [mild];
-
+function buildTranscodePasses(): TranscodePass[] {
+  const cap = VIDEO_AUTO_COMPRESS_ABOVE_BYTES;
   return [
     {
+      maxDimension: VIDEO_COMPRESS_MAX_DIMENSION,
+      targetBytes: VIDEO_COMPRESS_TARGET_BYTES,
+      minBitrate: 1_500_000,
+      maxBitrate: 8_000_000,
+    },
+    {
       maxDimension: 1280,
-      targetBytes: Math.round(maxBytes * 0.5),
-      minBitrate: 280_000,
-      maxBitrate: 1_200_000,
+      targetBytes: Math.round(cap * 0.9),
+      minBitrate: 800_000,
+      maxBitrate: 4_000_000,
     },
     {
       maxDimension: 960,
-      targetBytes: Math.round(maxBytes * 0.42),
-      minBitrate: 200_000,
-      maxBitrate: 900_000,
-    },
-    {
-      maxDimension: 720,
-      targetBytes: Math.round(maxBytes * 0.38),
-      minBitrate: 120_000,
-      maxBitrate: 600_000,
+      targetBytes: Math.round(cap * 0.82),
+      minBitrate: 450_000,
+      maxBitrate: 2_500_000,
     },
   ];
 }
@@ -245,37 +237,43 @@ export async function compressImage(file: File): Promise<File> {
   }
 }
 
-function skipCompressReturnOriginal(
+function returnOriginalIfAllowed(
   file: File,
   maxBytes: number,
   onProgress?: CompressProgress,
 ): File {
-  if (file.size > maxBytes) {
-    throw new Error(`${formatVideoMaxSizeError()} — เครื่องนี้บีบอัดไม่ได้ ลองตัดคลิปสั้นลง`);
-  }
+  if (file.size > maxBytes) throw new Error(formatVideoMaxSizeError());
   onProgress?.(100);
   return file;
 }
 
+function pickBestVideoResult(original: File, compressed: File, maxBytes: number): File {
+  const best = compressed.size < original.size ? compressed : original;
+  if (best.size > maxBytes) throw new Error(formatVideoMaxSizeError());
+  return best;
+}
+
 export async function compressVideo(file: File, options?: CompressVideoOptions): Promise<File> {
   const maxBytes = options?.maxBytes ?? MAX_VIDEO_BYTES;
-  if (file.size > maxBytes) {
-    throw new Error(formatVideoMaxSizeError());
-  }
-  const needsCompress = file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES;
-  if (!needsCompress) return file;
+  if (file.size > maxBytes) throw new Error(formatVideoMaxSizeError());
 
-  // iOS / browser ที่บีบไม่ได้ → ส่งต้นฉบับเลยถ้าไม่เกิน limit
+  // iPhone: ส่งต้นฉบับเสมอ (ไม่บีบ)
+  if (isAppleMobile()) return file;
+
+  // ≤50 MB: อัปตรง
+  if (file.size <= VIDEO_AUTO_COMPRESS_ABOVE_BYTES) return file;
+
+  // >50 MB Android: ลองบีบ — ไม่ได้ก็ส่งต้นฉบับ
   if (!canBrowserCompressVideo()) {
-    return skipCompressReturnOriginal(file, maxBytes, options?.onProgress);
+    return returnOriginalIfAllowed(file, maxBytes, options?.onProgress);
   }
 
   const mimeType = pickRecorderMimeType();
   if (!mimeType) {
-    return skipCompressReturnOriginal(file, maxBytes, options?.onProgress);
+    return returnOriginalIfAllowed(file, maxBytes, options?.onProgress);
   }
 
-  const passes = buildTranscodePasses(file.size, maxBytes);
+  const passes = buildTranscodePasses();
   let objectUrl = "";
   let videoEl: HTMLVideoElement | null = null;
   let workingFile = file;
@@ -285,7 +283,7 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
     try {
       loaded = await loadVideoElement(file);
     } catch {
-      return skipCompressReturnOriginal(file, maxBytes, options?.onProgress);
+      return returnOriginalIfAllowed(file, maxBytes, options?.onProgress);
     }
     objectUrl = loaded.objectUrl;
     videoEl = loaded.video;
@@ -305,18 +303,12 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
         out = null;
       }
 
-      if (!out?.size) {
-        if (file.size <= maxBytes) {
-          options?.onProgress?.(100);
-          return file;
-        }
-        break;
-      }
+      if (!out?.size) break;
 
       workingFile = out;
       options?.onProgress?.(Math.min(99, Math.round(((i + 1) / passes.length) * 100)));
 
-      if (workingFile.size <= maxBytes) {
+      if (workingFile.size <= VIDEO_AUTO_COMPRESS_ABOVE_BYTES) {
         options?.onProgress?.(100);
         return workingFile;
       }
@@ -329,17 +321,8 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
       }
     }
 
-    if (workingFile.size <= maxBytes) {
-      options?.onProgress?.(100);
-      return workingFile;
-    }
-
-    if (file.size <= maxBytes) {
-      options?.onProgress?.(100);
-      return file;
-    }
-
-    throw new Error(`${formatVideoMaxSizeError()} — ลองตัดคลิปสั้นลงหรือลดความละเอียดกล้อง`);
+    options?.onProgress?.(100);
+    return pickBestVideoResult(file, workingFile, maxBytes);
   } finally {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
