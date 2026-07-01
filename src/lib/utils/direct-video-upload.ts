@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   MAX_VIDEO_BYTES,
   VIDEO_EXT_BY_MIME,
+  inferVideoMime,
   type DeptMediaBucket,
 } from "@/lib/utils/media-limits";
 
@@ -20,8 +21,9 @@ export async function uploadVideoViaSignedUrl(opts: {
   deptToken: string;
   prepareUpload: PrepareVideoUpload;
 }): Promise<{ path: string; previewUrl: string }> {
-  const ext = VIDEO_EXT_BY_MIME[opts.file.type];
-  if (!ext) {
+  const mime = opts.file.type && VIDEO_EXT_BY_MIME[opts.file.type] ? opts.file.type : inferVideoMime(opts.file);
+  const ext = mime ? VIDEO_EXT_BY_MIME[mime] : undefined;
+  if (!ext || !mime) {
     throw new Error("รองรับเฉพาะ MP4, WEBM, MOV, M4V");
   }
   if (opts.file.size > MAX_VIDEO_BYTES) {
@@ -35,7 +37,7 @@ export async function uploadVideoViaSignedUrl(opts: {
   const { error } = await supabase.storage
     .from(opts.bucket)
     .uploadToSignedUrl(prepared.path, prepared.token, opts.file, {
-      contentType: opts.file.type,
+      contentType: mime,
       upsert: false,
     });
   if (error) throw new Error(error.message);

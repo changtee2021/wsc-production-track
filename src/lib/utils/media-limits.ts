@@ -14,3 +14,26 @@ export const VIDEO_EXT_BY_MIME: Record<string, "mp4" | "webm" | "mov" | "m4v"> =
   "video/quicktime": "mov",
   "video/x-m4v": "m4v",
 };
+
+const VIDEO_MIME_BY_EXT: Record<string, keyof typeof VIDEO_EXT_BY_MIME> = {
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  m4v: "video/x-m4v",
+};
+
+/** Infer MIME when the device leaves file.type empty (common on mobile). */
+export function inferVideoMime(file: File): string | null {
+  if (file.type && VIDEO_EXT_BY_MIME[file.type]) return file.type;
+  const ext = file.name.match(/\.([^.]+)$/i)?.[1]?.toLowerCase();
+  if (!ext) return null;
+  return VIDEO_MIME_BY_EXT[ext] ?? null;
+}
+
+/** Return the same file with a corrected video MIME, or null if unsupported. */
+export function normalizeVideoFile(file: File): File | null {
+  const mime = inferVideoMime(file);
+  if (!mime) return null;
+  if (file.type === mime) return file;
+  return new File([file], file.name, { type: mime, lastModified: file.lastModified });
+}

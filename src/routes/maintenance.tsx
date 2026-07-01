@@ -45,6 +45,7 @@ import {
 } from "@/lib/auth/maintenance-session";
 import { compressMedia } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
+import { normalizeVideoFile } from "@/lib/utils/media-limits";
 import { warnIfMovFiles } from "@/components/MediaLightbox";
 
 export const Route = createFileRoute("/maintenance")({
@@ -677,7 +678,12 @@ function MediaUploader({
   const handleFile = async (file: File, kind: "image" | "video") => {
     setBusy(true);
     try {
-      const compressed = await compressMedia(file, kind);
+      const source = kind === "video" ? normalizeVideoFile(file) : file;
+      if (kind === "video" && !source) {
+        toast.error("รองรับเฉพาะ MP4, WEBM, MOV, M4V");
+        return;
+      }
+      const compressed = await compressMedia(source ?? file, kind);
       if (kind === "video") {
         const r = await uploadVideoViaSignedUrl({
           bucket: "maintenance-media",

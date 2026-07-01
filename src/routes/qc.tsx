@@ -20,6 +20,10 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { warnIfMovFiles } from "@/components/MediaLightbox";
 import {
+  MediaUploadStatusLine,
+  type MediaUploadStatus,
+} from "@/components/MediaUploadStatus";
+import {
   ScanLine,
   QrCode,
   ArrowLeft,
@@ -51,7 +55,7 @@ import {
 import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
 import { compressMedia } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, normalizeVideoFile } from "@/lib/utils/media-limits";
 import { clientAppPublicPath } from "@/lib/app-public-url";
 
 const qcSearch = z.object({
@@ -218,12 +222,6 @@ const IMAGE_EXT_BY_MIME: Record<string, string> = {
   "image/webp": "webp",
   "image/gif": "gif",
 };
-const VIDEO_EXT_BY_MIME: Record<string, string> = {
-  "video/mp4": "mp4",
-  "video/webm": "webm",
-  "video/quicktime": "mov",
-  "video/x-m4v": "m4v",
-};
 
 function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const { job_id } = Route.useSearch();
@@ -249,6 +247,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const [note, setNote] = useState("");
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<MediaUploadStatus>({ phase: "idle" });
   const [submitting, setSubmitting] = useState(false);
 
   const imgInput = useRef<HTMLInputElement>(null);
@@ -370,25 +369,45 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       return;
     }
     setUploading(true);
+    setUploadStatus(kind === "video" ? { phase: "compressing", percent: 0 } : { phase: "uploading" });
     try {
       const items: MediaItem[] = [];
       for (const original of Array.from(files)) {
-        const map = kind === "image" ? IMAGE_EXT_BY_MIME : VIDEO_EXT_BY_MIME;
-        if (!map[original.type]) {
-          toast.error(
-            kind === "image"
-              ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF"
-              : "รองรับเฉพาะ MP4, WEBM, MOV, M4V",
-          );
+        let file = original;
+        if (kind === "image") {
+          if (!IMAGE_EXT_BY_MIME[original.type]) {
+            toast.error("รองรับเฉพาะ JPG, PNG, WEBP, GIF");
+            continue;
+          }
+        } else {
+          const normalized = normalizeVideoFile(original);
+          if (!normalized) {
+            toast.error("รองรับเฉพาะ MP4, WEBM, MOV, M4V");
+            continue;
+          }
+          file = normalized;
+        }
+
+        let f: File;
+        try {
+          f = await compressMedia(file, kind, {
+            onProgress:
+              kind === "video"
+                ? (percent) => setUploadStatus({ phase: "compressing", percent })
+                : undefined,
+          });
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "บีบอัดวิดีโอไม่สำเร็จ");
           continue;
         }
-        // บีบอัดรูป / วิดีโอ (>10MB บีบอัดวิดีโออัตโนมัติ)
-        const f = await compressMedia(original, kind);
+
         const max = kind === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
         if (f.size > max) {
           toast.error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
           continue;
         }
+
+        setUploadStatus({ phase: "uploading" });
         try {
           if (kind === "video") {
             const res = await uploadVideoViaSignedUrl({
@@ -435,6 +454,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
     } finally {
       setUploading(false);
+      setUploadStatus({ phase: "idle" });
       if (imgInput.current) imgInput.current.value = "";
       if (vidInput.current) vidInput.current.value = "";
     }
@@ -800,6 +820,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                     item={it}
                     state={s}
                     uploading={uploading}
+                    uploadStatus={uploadStatus}
                     onPass={(v) => setItemPass(it.id, v)}
                     onMotor={() => setItemMotor(it.id)}
                     onRemark={(v) => setItemRemark(it.id, v)}
@@ -869,11 +890,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               </Button>
             </div>
 
-            {uploading && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" /> กำลังอัปโหลด...
-              </div>
-            )}
+            <MediaUploadStatusLine status={uploadStatus} />
 
             {media.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
@@ -957,6 +974,7 @@ function ChecklistRow({
   item,
   state,
   uploading,
+  uploadStatus,
   onPass,
   onMotor,
   onRemark,
@@ -967,6 +985,7 @@ function ChecklistRow({
   item: ChecklistItem;
   state: ItemState;
   uploading: boolean;
+  uploadStatus: MediaUploadStatus;
   onPass: (v: boolean) => void;
   onMotor: () => void;
   onRemark: (v: string) => void;
@@ -1100,6 +1119,10 @@ function ChecklistRow({
               <VideoIcon className="h-4 w-4" /> วิดีโอ
             </Button>
           </div>
+
+          {uploading && uploadStatus.phase !== "idle" && (
+            <MediaUploadStatusLine status={uploadStatus} />
+          )}
 
           {state.media.length === 0 ? (
             <p className="text-xs font-medium text-destructive">

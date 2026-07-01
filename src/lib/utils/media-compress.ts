@@ -1,6 +1,6 @@
-// บีบอัดรูปภาพก่อนอัปโหลด เพื่อลดขนาดไฟล์โดยยังคงความชัด
-// วิดีโอ > 10 MB บีบรอบเดียวเป้า ~4 MB (1280px) — ไม่สำเร็จจะอัปไฟล์ต้นฉบับตรง
+// บีบอัดรูปภาพ/วิดีโอก่อนอัปโหลด — วิดีโอใหญ่บีบหลายรอบจนใต้ MAX_VIDEO_BYTES
 import {
+  MAX_VIDEO_BYTES,
   VIDEO_AUTO_COMPRESS_ABOVE_BYTES,
   VIDEO_COMPRESS_MAX_DIMENSION,
   VIDEO_COMPRESS_TARGET_BYTES,
@@ -10,8 +10,23 @@ const MAX_IMAGE_DIMENSION = 1920;
 const JPEG_QUALITY = 0.82;
 const COMPRESSIBLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const MIN_VIDEO_BITRATE = 450_000;
-const MAX_VIDEO_BITRATE = 1_400_000;
+export type CompressProgress = (percent: number) => void;
+
+export interface CompressVideoOptions {
+  onProgress?: CompressProgress;
+  maxBytes?: number;
+}
+
+export interface CompressMediaOptions {
+  onProgress?: CompressProgress;
+}
+
+interface TranscodePass {
+  maxDimension: number;
+  targetBytes: number;
+  minBitrate: number;
+  maxBitrate: number;
+}
 
 function pickRecorderMimeType(): string | null {
   const candidates = [
@@ -34,10 +49,43 @@ function mimeToFileType(mimeType: string): { type: string; ext: string } {
   return { type: "video/webm", ext: "webm" };
 }
 
-function targetBitrateForDuration(durationSec: number): number {
+function targetBitrateForPass(durationSec: number, pass: TranscodePass): number {
   const sec = durationSec > 0 ? durationSec : 30;
-  const raw = Math.round((VIDEO_COMPRESS_TARGET_BYTES * 8) / sec);
-  return Math.min(MAX_VIDEO_BITRATE, Math.max(MIN_VIDEO_BITRATE, raw));
+  const budgetBits = pass.targetBytes * 8 * 0.88;
+  const raw = Math.round(budgetBits / sec);
+  return Math.min(pass.maxBitrate, Math.max(pass.minBitrate, raw));
+}
+
+function buildTranscodePasses(fileSize: number, maxBytes: number): TranscodePass[] {
+  const mild: TranscodePass = {
+    maxDimension: VIDEO_COMPRESS_MAX_DIMENSION,
+    targetBytes: VIDEO_COMPRESS_TARGET_BYTES,
+    minBitrate: 350_000,
+    maxBitrate: 1_400_000,
+  };
+
+  if (fileSize <= maxBytes) return [mild];
+
+  return [
+    {
+      maxDimension: 1280,
+      targetBytes: Math.round(maxBytes * 0.5),
+      minBitrate: 280_000,
+      maxBitrate: 1_200_000,
+    },
+    {
+      maxDimension: 960,
+      targetBytes: Math.round(maxBytes * 0.42),
+      minBitrate: 200_000,
+      maxBitrate: 900_000,
+    },
+    {
+      maxDimension: 720,
+      targetBytes: Math.round(maxBytes * 0.38),
+      minBitrate: 120_000,
+      maxBitrate: 600_000,
+    },
+  ];
 }
 
 async function loadVideoElement(file: File): Promise<{ video: HTMLVideoElement; objectUrl: string }> {
@@ -58,14 +106,13 @@ async function transcodeVideoOnce(
   video: HTMLVideoElement,
   mimeType: string,
   sourceName: string,
+  pass: TranscodePass,
+  onProgress?: CompressProgress,
 ): Promise<File | null> {
-  const scale = Math.min(
-    1,
-    VIDEO_COMPRESS_MAX_DIMENSION / Math.max(video.videoWidth, video.videoHeight),
-  );
+  const scale = Math.min(1, pass.maxDimension / Math.max(video.videoWidth, video.videoHeight));
   const w = Math.max(2, Math.round(video.videoWidth * scale));
   const h = Math.max(2, Math.round(video.videoHeight * scale));
-  const videoBitsPerSecond = targetBitrateForDuration(video.duration);
+  const videoBitsPerSecond = targetBitrateForPass(video.duration, pass);
 
   const canvas = document.createElement("canvas");
   canvas.width = w;
@@ -73,7 +120,7 @@ async function transcodeVideoOnce(
   const ctx = canvas.getContext("2d");
   if (!ctx || typeof canvas.captureStream !== "function") return null;
 
-  const stream = canvas.captureStream(30);
+  const stream = canvas.captureStream(24);
   const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond });
 
   const chunks: BlobPart[] = [];
@@ -86,9 +133,16 @@ async function transcodeVideoOnce(
     recorder.onerror = () => reject(new Error("บีบอัดวิดีโอไม่สำเร็จ"));
   });
 
+  const reportProgress = () => {
+    if (!onProgress || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    const pct = Math.min(99, Math.round((video.currentTime / video.duration) * 100));
+    onProgress(pct);
+  };
+
   recorder.start(250);
   video.pause();
   video.currentTime = 0;
+  video.ontimeupdate = reportProgress;
   await new Promise<void>((resolve) => {
     if (video.readyState >= 2 && video.currentTime === 0) resolve();
     else video.onseeked = () => resolve();
@@ -108,10 +162,11 @@ async function transcodeVideoOnce(
     new Promise<void>((resolve) => {
       video.onended = () => resolve();
     }),
-    new Promise<void>((resolve) => setTimeout(resolve, durationMs + 8_000)),
+    new Promise<void>((resolve) => setTimeout(resolve, durationMs + 10_000)),
   ]);
 
   cancelAnimationFrame(raf);
+  video.ontimeupdate = null;
   ctx.drawImage(video, 0, 0, w, h);
   video.pause();
 
@@ -120,6 +175,8 @@ async function transcodeVideoOnce(
 
   const blob = await blobPromise;
   if (!blob.size) return null;
+
+  onProgress?.(100);
 
   const { type, ext } = mimeToFileType(mimeType);
   const newName = sourceName.replace(/\.[^.]+$/, "") + `.${ext}`;
@@ -168,29 +225,86 @@ export async function compressImage(file: File): Promise<File> {
   }
 }
 
-export async function compressVideo(file: File): Promise<File> {
-  if (file.size <= VIDEO_AUTO_COMPRESS_ABOVE_BYTES) return file;
-  if (typeof document === "undefined" || typeof MediaRecorder === "undefined") return file;
+export async function compressVideo(file: File, options?: CompressVideoOptions): Promise<File> {
+  const maxBytes = options?.maxBytes ?? MAX_VIDEO_BYTES;
+  const needsCompress = file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES || file.size > maxBytes;
+  if (!needsCompress) return file;
+  if (typeof document === "undefined" || typeof MediaRecorder === "undefined") {
+    if (file.size > maxBytes) {
+      throw new Error("เบราว์เซอร์นี้บีบอัดวิดีโอไม่ได้ ลองใช้ Chrome หรือตัดคลิปสั้นลง");
+    }
+    return file;
+  }
 
   const mimeType = pickRecorderMimeType();
-  if (!mimeType) return file;
+  if (!mimeType) {
+    if (file.size > maxBytes) {
+      throw new Error("เบราว์เซอร์นี้บีบอัดวิดีโอไม่ได้ ลองใช้ Chrome หรือตัดคลิปสั้นลง");
+    }
+    return file;
+  }
 
+  const passes = buildTranscodePasses(file.size, maxBytes);
   let objectUrl = "";
+  let videoEl: HTMLVideoElement | null = null;
+  let workingFile = file;
+
   try {
     const loaded = await loadVideoElement(file);
     objectUrl = loaded.objectUrl;
-    const out = await transcodeVideoOnce(loaded.video, mimeType, file.name);
-    // รอบเดียว — ใช้ผลเมื่อเล็กลงจริง ไม่งั้นอัปต้นฉบับตรง
-    if (out && out.size > 0 && out.size < file.size) return out;
-    return file;
-  } catch {
-    return file;
+    videoEl = loaded.video;
+
+    for (let i = 0; i < passes.length; i++) {
+      const pass = passes[i]!;
+      const passStart = Math.round((i / passes.length) * 100);
+      const passSpan = 100 / passes.length;
+
+      const out = await transcodeVideoOnce(videoEl, mimeType, workingFile.name, pass, (p) => {
+        const overall = Math.min(99, Math.round(passStart + (p * passSpan) / 100));
+        options?.onProgress?.(overall);
+      });
+
+      if (!out?.size) break;
+
+      workingFile = out;
+      options?.onProgress?.(Math.min(99, Math.round(((i + 1) / passes.length) * 100)));
+
+      if (workingFile.size <= maxBytes) {
+        options?.onProgress?.(100);
+        return workingFile;
+      }
+
+      if (i < passes.length - 1) {
+        URL.revokeObjectURL(objectUrl);
+        const reloaded = await loadVideoElement(workingFile);
+        objectUrl = reloaded.objectUrl;
+        videoEl = reloaded.video;
+      }
+    }
+
+    if (workingFile.size <= maxBytes) {
+      options?.onProgress?.(100);
+      return workingFile;
+    }
+
+    if (file.size <= maxBytes && workingFile.size < file.size) {
+      options?.onProgress?.(100);
+      return workingFile;
+    }
+
+    throw new Error(
+      `บีบอัดแล้วยังใหญ่เกิน ${Math.round(maxBytes / (1024 * 1024))}MB — ลองตัดคลิปสั้นลงหรือลดความละเอียดกล้อง`,
+    );
   } finally {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
 }
 
-export async function compressMedia(file: File, kind: "image" | "video"): Promise<File> {
+export async function compressMedia(
+  file: File,
+  kind: "image" | "video",
+  options?: CompressMediaOptions,
+): Promise<File> {
   if (kind === "image") return compressImage(file);
-  return compressVideo(file);
+  return compressVideo(file, { onProgress: options?.onProgress });
 }

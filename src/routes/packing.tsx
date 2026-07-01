@@ -7,6 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import { warnIfMovFiles } from "@/components/MediaLightbox";
+import {
+  MediaUploadStatusLine,
+  type MediaUploadStatus,
+} from "@/components/MediaUploadStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,7 +59,7 @@ import {
 } from "@/lib/auth/packing-session";
 import { compressMedia } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, normalizeVideoFile } from "@/lib/utils/media-limits";
 
 const packingSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -171,6 +175,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
   const [note, setNote] = useState("");
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<MediaUploadStatus>({ phase: "idle" });
   const [submitting, setSubmitting] = useState(false);
   const imgInput = useRef<HTMLInputElement>(null);
   const vidInput = useRef<HTMLInputElement>(null);
@@ -281,24 +286,45 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
       return;
     }
     setUploading(true);
+    setUploadStatus(kind === "video" ? { phase: "compressing", percent: 0 } : { phase: "uploading" });
     try {
       const items: MediaItem[] = [];
       for (const original of Array.from(files)) {
-        const map = kind === "image" ? IMG_EXT : VID_EXT;
-        if (!map[original.type]) {
-          toast.error(
-            kind === "image"
-              ? "รองรับเฉพาะ JPG, PNG, WEBP, GIF"
-              : "รองรับเฉพาะ MP4, WEBM, MOV, M4V",
-          );
+        let file = original;
+        if (kind === "image") {
+          if (!IMG_EXT[original.type]) {
+            toast.error("รองรับเฉพาะ JPG, PNG, WEBP, GIF");
+            continue;
+          }
+        } else {
+          const normalized = normalizeVideoFile(original);
+          if (!normalized) {
+            toast.error("รองรับเฉพาะ MP4, WEBM, MOV, M4V");
+            continue;
+          }
+          file = normalized;
+        }
+
+        let f: File;
+        try {
+          f = await compressMedia(file, kind, {
+            onProgress:
+              kind === "video"
+                ? (percent) => setUploadStatus({ phase: "compressing", percent })
+                : undefined,
+          });
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "บีบอัดวิดีโอไม่สำเร็จ");
           continue;
         }
-        const f = await compressMedia(original, kind);
+
         const max = kind === "image" ? MAX_IMG : MAX_VID;
         if (f.size > max) {
           toast.error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
           continue;
         }
+
+        setUploadStatus({ phase: "uploading" });
         try {
           if (kind === "video") {
             const res = await uploadVideoViaSignedUrl({
@@ -337,6 +363,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
       }
     } finally {
       setUploading(false);
+      setUploadStatus({ phase: "idle" });
       if (imgInput.current) imgInput.current.value = "";
       if (vidInput.current) vidInput.current.value = "";
     }
@@ -675,11 +702,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
                 <VideoIcon className="h-4 w-4" /> เพิ่มวิดีโอ
               </Button>
             </div>
-            {uploading && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" /> กำลังอัปโหลด...
-              </div>
-            )}
+            <MediaUploadStatusLine status={uploadStatus} />
             {media.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
                 {media.map((m, i) => (
