@@ -7,6 +7,7 @@ import {
   verifyPackingToken,
   checkPackingPassword,
 } from "@/lib/auth/packing-token.server";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
 
 function assertPacking(token: string | undefined) {
   if (!verifyPackingToken(token)) throw new Error("Unauthorized");
@@ -162,8 +163,6 @@ export const packingListEmployees = createServerFn({ method: "POST" })
   });
 
 // Media upload — mirrors qcUploadMedia but uploads into the packing-media bucket.
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
 type Detected = { mime: string; ext: string };
 

@@ -55,7 +55,7 @@ import {
 import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
 import { compressMedia, canBrowserCompressVideo } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, normalizeVideoFile } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFile } from "@/lib/utils/media-limits";
 import { clientAppPublicPath } from "@/lib/app-public-url";
 
 const qcSearch = z.object({
@@ -390,6 +390,10 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
             continue;
           }
           file = normalized;
+          if (file.size > MAX_VIDEO_BYTES) {
+            toast.error(formatVideoMaxSizeError());
+            continue;
+          }
         }
 
         let f: File;
@@ -407,7 +411,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
 
         const max = kind === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
         if (f.size > max) {
-          toast.error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
+          toast.error(kind === "video" ? formatVideoMaxSizeError() : `ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
           continue;
         }
 

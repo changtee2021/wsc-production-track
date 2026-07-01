@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { issueQcToken, verifyQcToken, checkQcPassword } from "@/lib/auth/qc-token.server";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
 
 function assertQc(token: string | undefined) {
   if (!verifyQcToken(token)) throw new Error("Unauthorized");
@@ -164,8 +165,6 @@ export const qcListEmployees = createServerFn({ method: "POST" })
 // Server-side validated media upload for qc-media bucket. The client sends
 // base64 bytes; we verify magic bytes for the declared kind before uploading
 // with the admin client (the bucket has no public INSERT policy).
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50 MB
 
 type Detected = { mime: string; ext: string };
 

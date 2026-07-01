@@ -45,7 +45,7 @@ import {
 } from "@/lib/auth/maintenance-session";
 import { compressMedia } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { normalizeVideoFile } from "@/lib/utils/media-limits";
+import { normalizeVideoFile, MAX_VIDEO_BYTES, formatVideoMaxSizeError } from "@/lib/utils/media-limits";
 import { warnIfMovFiles } from "@/components/MediaLightbox";
 
 export const Route = createFileRoute("/maintenance")({
@@ -681,6 +681,10 @@ function MediaUploader({
       const source = kind === "video" ? normalizeVideoFile(file) : file;
       if (kind === "video" && !source) {
         toast.error("รองรับเฉพาะ MP4, WEBM, MOV, M4V");
+        return;
+      }
+      if (kind === "video" && (source ?? file).size > MAX_VIDEO_BYTES) {
+        toast.error(formatVideoMaxSizeError());
         return;
       }
       const compressed = await compressMedia(source ?? file, kind);

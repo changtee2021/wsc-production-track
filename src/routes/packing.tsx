@@ -59,7 +59,7 @@ import {
 } from "@/lib/auth/packing-session";
 import { compressMedia, canBrowserCompressVideo } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, normalizeVideoFile } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFile } from "@/lib/utils/media-limits";
 
 const packingSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -307,6 +307,10 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
             continue;
           }
           file = normalized;
+          if (file.size > MAX_VID) {
+            toast.error(formatVideoMaxSizeError());
+            continue;
+          }
         }
 
         let f: File;
@@ -324,7 +328,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
 
         const max = kind === "image" ? MAX_IMG : MAX_VID;
         if (f.size > max) {
-          toast.error(`ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
+          toast.error(kind === "video" ? formatVideoMaxSizeError() : `ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
           continue;
         }
 

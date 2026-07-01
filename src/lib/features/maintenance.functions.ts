@@ -8,6 +8,7 @@ import {
   checkMaintenancePassword,
 } from "@/lib/auth/maintenance-token.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
 
 function assertMaint(token: string | undefined) {
   if (!verifyMaintenanceToken(token)) throw new Error("Unauthorized");
@@ -397,8 +398,6 @@ export const removePartsUsed = createServerFn({ method: "POST" })
   });
 
 // ============ MEDIA UPLOAD ============
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
 type Detected = { mime: string; ext: string };
 

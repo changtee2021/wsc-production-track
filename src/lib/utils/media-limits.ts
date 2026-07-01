@@ -1,5 +1,11 @@
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
-export const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50 MB
+export const MAX_VIDEO_BYTES = 1024 * 1024 * 1024; // 1 GB per file
+export const MAX_VIDEO_SIZE_LABEL = "1 GB";
+
+/** User-facing error when a video exceeds the per-file upload cap. */
+export function formatVideoMaxSizeError(): string {
+  return `ไฟล์ใหญ่เกิน ${MAX_VIDEO_SIZE_LABEL} ต่อไฟล์`;
+}
 /** วิดีโอใหญ่กว่านี้จะถูกบีบอัดอัตโนมัติก่อนอัปโหลด (ไม่แจ้งเตือนพนักงาน) */
 export const VIDEO_AUTO_COMPRESS_ABOVE_BYTES = 10 * 1024 * 1024; // 10 MB
 /** เป้าขนาดหลังบีบรอบเดียว (~3–5 MB) */

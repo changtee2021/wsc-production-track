@@ -4,6 +4,7 @@ import {
   VIDEO_AUTO_COMPRESS_ABOVE_BYTES,
   VIDEO_COMPRESS_MAX_DIMENSION,
   VIDEO_COMPRESS_TARGET_BYTES,
+  formatVideoMaxSizeError,
 } from "@/lib/utils/media-limits";
 
 const MAX_IMAGE_DIMENSION = 1920;
@@ -83,7 +84,7 @@ function buildTranscodePasses(fileSize: number, maxBytes: number): TranscodePass
     maxBitrate: 1_400_000,
   };
 
-  if (fileSize <= maxBytes) return [mild];
+  if (fileSize <= 50 * 1024 * 1024) return [mild];
 
   return [
     {
@@ -250,9 +251,7 @@ function skipCompressReturnOriginal(
   onProgress?: CompressProgress,
 ): File {
   if (file.size > maxBytes) {
-    throw new Error(
-      `ไฟล์ใหญ่เกิน ${Math.round(maxBytes / (1024 * 1024))}MB — เครื่องนี้บีบอัดไม่ได้ ลองตัดคลิปสั้นลงหรือใช้ Android/Chrome`,
-    );
+    throw new Error(`${formatVideoMaxSizeError()} — เครื่องนี้บีบอัดไม่ได้ ลองตัดคลิปสั้นลง`);
   }
   onProgress?.(100);
   return file;
@@ -260,7 +259,10 @@ function skipCompressReturnOriginal(
 
 export async function compressVideo(file: File, options?: CompressVideoOptions): Promise<File> {
   const maxBytes = options?.maxBytes ?? MAX_VIDEO_BYTES;
-  const needsCompress = file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES || file.size > maxBytes;
+  if (file.size > maxBytes) {
+    throw new Error(formatVideoMaxSizeError());
+  }
+  const needsCompress = file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES;
   if (!needsCompress) return file;
 
   // iOS / browser ที่บีบไม่ได้ → ส่งต้นฉบับเลยถ้าไม่เกิน limit
@@ -337,9 +339,7 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
       return file;
     }
 
-    throw new Error(
-      `บีบอัดแล้วยังใหญ่เกิน ${Math.round(maxBytes / (1024 * 1024))}MB — ลองตัดคลิปสั้นลงหรือลดความละเอียดกล้อง`,
-    );
+    throw new Error(`${formatVideoMaxSizeError()} — ลองตัดคลิปสั้นลงหรือลดความละเอียดกล้อง`);
   } finally {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
