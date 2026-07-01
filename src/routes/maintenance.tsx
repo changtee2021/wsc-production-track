@@ -45,7 +45,7 @@ import {
 } from "@/lib/auth/maintenance-session";
 import { compressMedia } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { normalizeVideoFile, MAX_VIDEO_BYTES, formatVideoMaxSizeError } from "@/lib/utils/media-limits";
+import { normalizeVideoFileAsync, MAX_VIDEO_BYTES, formatVideoMaxSizeError, VIDEO_FILE_ACCEPT } from "@/lib/utils/media-limits";
 import { warnIfMovFiles } from "@/components/MediaLightbox";
 
 export const Route = createFileRoute("/maintenance")({
@@ -678,7 +678,7 @@ function MediaUploader({
   const handleFile = async (file: File, kind: "image" | "video") => {
     setBusy(true);
     try {
-      const source = kind === "video" ? normalizeVideoFile(file) : file;
+      const source = kind === "video" ? await normalizeVideoFileAsync(file) : file;
       if (kind === "video" && !source) {
         toast.error("รองรับเฉพาะ MP4, WEBM, MOV, M4V");
         return;
@@ -742,6 +742,7 @@ function MediaUploader({
             type="file"
             className="hidden"
             accept="image/*"
+            capture="environment"
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0], "image")}
           />
         </label>
@@ -750,7 +751,7 @@ function MediaUploader({
           <input
             type="file"
             className="hidden"
-            accept="video/*"
+            accept={VIDEO_FILE_ACCEPT}
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) {

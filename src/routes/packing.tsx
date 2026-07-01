@@ -59,7 +59,7 @@ import {
 } from "@/lib/auth/packing-session";
 import { compressMedia, canBrowserCompressVideo } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_AUTO_COMPRESS_ABOVE_BYTES, formatVideoMaxSizeError, normalizeVideoFile } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_AUTO_COMPRESS_ABOVE_BYTES, formatVideoMaxSizeError, IOS_SAFE_FILE_INPUT_CLASS, VIDEO_FILE_ACCEPT, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
 
 const packingSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -297,7 +297,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
             continue;
           }
         } else {
-          const normalized = normalizeVideoFile(original);
+          const normalized = await normalizeVideoFileAsync(original);
           if (!normalized) {
             toast.error("รองรับเฉพาะ MP4, WEBM, MOV, M4V");
             continue;
@@ -673,15 +673,15 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
               accept="image/*"
               multiple
               capture="environment"
-              className="hidden"
+              className={IOS_SAFE_FILE_INPUT_CLASS}
               onChange={(e) => e.target.files && uploadFiles(e.target.files, "image", "overall")}
             />
             <input
               ref={vidInput}
               type="file"
-              accept="video/*"
-              capture="environment"
-              className="hidden"
+              accept={VIDEO_FILE_ACCEPT}
+              multiple
+              className={IOS_SAFE_FILE_INPUT_CLASS}
               onChange={(e) => {
                 if (e.target.files) {
                   warnIfMovFiles(e.target.files);
@@ -849,7 +849,7 @@ function PackingRow({
             accept="image/*"
             multiple
             capture="environment"
-            className="hidden"
+            className={IOS_SAFE_FILE_INPUT_CLASS}
             onChange={(e) => {
               if (e.target.files) onUpload(e.target.files, "image");
               if (imgRef.current) imgRef.current.value = "";
@@ -858,9 +858,9 @@ function PackingRow({
           <input
             ref={vidRef}
             type="file"
-            accept="video/*"
-            capture="environment"
-            className="hidden"
+            accept={VIDEO_FILE_ACCEPT}
+            multiple
+            className={IOS_SAFE_FILE_INPUT_CLASS}
             onChange={(e) => {
               if (e.target.files) {
                 warnIfMovFiles(e.target.files);
