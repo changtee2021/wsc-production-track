@@ -57,7 +57,7 @@ import {
   getPackingToken,
   clearPackingSession,
 } from "@/lib/auth/packing-session";
-import { compressMedia } from "@/lib/utils/media-compress";
+import { compressMedia, canBrowserCompressVideo } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, normalizeVideoFile } from "@/lib/utils/media-limits";
 
@@ -286,7 +286,11 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
       return;
     }
     setUploading(true);
-    setUploadStatus(kind === "video" ? { phase: "compressing", percent: 0 } : { phase: "uploading" });
+    setUploadStatus(
+      kind === "video" && canBrowserCompressVideo()
+        ? { phase: "compressing", percent: 0 }
+        : { phase: "uploading" },
+    );
     try {
       const items: MediaItem[] = [];
       for (const original of Array.from(files)) {

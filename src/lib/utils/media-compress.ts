@@ -28,6 +28,25 @@ interface TranscodePass {
   maxBitrate: number;
 }
 
+/** iPhone/iPad — canvas.captureStream มักใช้ไม่ได้ จึงข้ามบีบอัดแล้วอัปต้นฉบับ */
+export function isAppleMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+/** บีบอัดวิดีโอใน browser ได้จริงหรือไม่ (Android/Chrome ส่วนใหญ่ได้, iOS ส่วนใหญ่ไม่ได้) */
+export function canBrowserCompressVideo(): boolean {
+  if (typeof document === "undefined") return false;
+  if (isAppleMobile()) return false;
+  if (typeof MediaRecorder === "undefined") return false;
+  if (!pickRecorderMimeType()) return false;
+  const canvas = document.createElement("canvas");
+  return typeof canvas.captureStream === "function";
+}
+
 function pickRecorderMimeType(): string | null {
   const candidates = [
     "video/webm;codecs=vp9",
@@ -225,23 +244,33 @@ export async function compressImage(file: File): Promise<File> {
   }
 }
 
+function skipCompressReturnOriginal(
+  file: File,
+  maxBytes: number,
+  onProgress?: CompressProgress,
+): File {
+  if (file.size > maxBytes) {
+    throw new Error(
+      `ไฟล์ใหญ่เกิน ${Math.round(maxBytes / (1024 * 1024))}MB — เครื่องนี้บีบอัดไม่ได้ ลองตัดคลิปสั้นลงหรือใช้ Android/Chrome`,
+    );
+  }
+  onProgress?.(100);
+  return file;
+}
+
 export async function compressVideo(file: File, options?: CompressVideoOptions): Promise<File> {
   const maxBytes = options?.maxBytes ?? MAX_VIDEO_BYTES;
   const needsCompress = file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES || file.size > maxBytes;
   if (!needsCompress) return file;
-  if (typeof document === "undefined" || typeof MediaRecorder === "undefined") {
-    if (file.size > maxBytes) {
-      throw new Error("เบราว์เซอร์นี้บีบอัดวิดีโอไม่ได้ ลองใช้ Chrome หรือตัดคลิปสั้นลง");
-    }
-    return file;
+
+  // iOS / browser ที่บีบไม่ได้ → ส่งต้นฉบับเลยถ้าไม่เกิน limit
+  if (!canBrowserCompressVideo()) {
+    return skipCompressReturnOriginal(file, maxBytes, options?.onProgress);
   }
 
   const mimeType = pickRecorderMimeType();
   if (!mimeType) {
-    if (file.size > maxBytes) {
-      throw new Error("เบราว์เซอร์นี้บีบอัดวิดีโอไม่ได้ ลองใช้ Chrome หรือตัดคลิปสั้นลง");
-    }
-    return file;
+    return skipCompressReturnOriginal(file, maxBytes, options?.onProgress);
   }
 
   const passes = buildTranscodePasses(file.size, maxBytes);
@@ -250,7 +279,12 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
   let workingFile = file;
 
   try {
-    const loaded = await loadVideoElement(file);
+    let loaded: { video: HTMLVideoElement; objectUrl: string };
+    try {
+      loaded = await loadVideoElement(file);
+    } catch {
+      return skipCompressReturnOriginal(file, maxBytes, options?.onProgress);
+    }
     objectUrl = loaded.objectUrl;
     videoEl = loaded.video;
 
@@ -259,12 +293,23 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
       const passStart = Math.round((i / passes.length) * 100);
       const passSpan = 100 / passes.length;
 
-      const out = await transcodeVideoOnce(videoEl, mimeType, workingFile.name, pass, (p) => {
-        const overall = Math.min(99, Math.round(passStart + (p * passSpan) / 100));
-        options?.onProgress?.(overall);
-      });
+      let out: File | null = null;
+      try {
+        out = await transcodeVideoOnce(videoEl, mimeType, workingFile.name, pass, (p) => {
+          const overall = Math.min(99, Math.round(passStart + (p * passSpan) / 100));
+          options?.onProgress?.(overall);
+        });
+      } catch {
+        out = null;
+      }
 
-      if (!out?.size) break;
+      if (!out?.size) {
+        if (file.size <= maxBytes) {
+          options?.onProgress?.(100);
+          return file;
+        }
+        break;
+      }
 
       workingFile = out;
       options?.onProgress?.(Math.min(99, Math.round(((i + 1) / passes.length) * 100)));
@@ -287,9 +332,9 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
       return workingFile;
     }
 
-    if (file.size <= maxBytes && workingFile.size < file.size) {
+    if (file.size <= maxBytes) {
       options?.onProgress?.(100);
-      return workingFile;
+      return file;
     }
 
     throw new Error(

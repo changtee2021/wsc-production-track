@@ -30,17 +30,23 @@ export async function uploadVideoViaSignedUrl(opts: {
     throw new Error(`ไฟล์ใหญ่เกิน ${Math.round(MAX_VIDEO_BYTES / (1024 * 1024))}MB`);
   }
 
+  const body =
+    opts.file.type === mime
+      ? opts.file
+      : new File([opts.file], opts.file.name, { type: mime, lastModified: opts.file.lastModified });
+
   const prepared = await opts.prepareUpload({
-    data: { token: opts.deptToken, ext, sizeBytes: opts.file.size },
+    data: { token: opts.deptToken, ext, sizeBytes: body.size },
   });
 
   const { error } = await supabase.storage
     .from(opts.bucket)
-    .uploadToSignedUrl(prepared.path, prepared.token, opts.file, {
+    .uploadToSignedUrl(prepared.path, prepared.token, body, {
       contentType: mime,
+      cacheControl: "3600",
       upsert: false,
     });
   if (error) throw new Error(error.message);
 
-  return { path: prepared.path, previewUrl: URL.createObjectURL(opts.file) };
+  return { path: prepared.path, previewUrl: URL.createObjectURL(body) };
 }
