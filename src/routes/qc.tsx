@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { useServerFn } from "@tanstack/react-start";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { warnIfMovFiles } from "@/components/MediaLightbox";
+import { MediaAttachButtons } from "@/components/MediaAttachButtons";
 import {
   MediaUploadStatusLine,
   type MediaUploadStatus,
@@ -30,8 +30,6 @@ import {
   RotateCcw,
   Check,
   Loader2,
-  Camera,
-  Video as VideoIcon,
   X,
   Send,
   ClipboardCheck,
@@ -55,7 +53,8 @@ import {
 import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
 import { compressMedia, canBrowserCompressVideo } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_AUTO_COMPRESS_ABOVE_BYTES, formatVideoMaxSizeError, IOS_SAFE_FILE_INPUT_CLASS, VIDEO_FILE_ACCEPT, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_AUTO_COMPRESS_ABOVE_BYTES, formatVideoMaxSizeError, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
+import { getReportSubmitBlockReason } from "@/lib/utils/report-media-validation";
 import { clientAppPublicPath } from "@/lib/app-public-url";
 
 const qcSearch = z.object({
@@ -249,9 +248,6 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<MediaUploadStatus>({ phase: "idle" });
   const [submitting, setSubmitting] = useState(false);
-
-  const imgInput = useRef<HTMLInputElement>(null);
-  const vidInput = useRef<HTMLInputElement>(null);
 
   const fetchLogs = useServerFn(qcFetchJobLogs);
   const fetchChecklist = useServerFn(qcFetchChecklist);
@@ -462,8 +458,6 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     } finally {
       setUploading(false);
       setUploadStatus({ phase: "idle" });
-      if (imgInput.current) imgInput.current.value = "";
-      if (vidInput.current) vidInput.current.value = "";
     }
   };
 
@@ -482,7 +476,6 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         is_passed: true,
         tag: "motor",
         remark: "",
-        media: [],
       },
     }));
   };
@@ -523,23 +516,18 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     return { passCount: p, failCount: f, motorCount: m, answeredCount: a, total: checklist.length };
   }, [checklist, itemStates]);
 
+  const submitBlockReason = useMemo(
+    () => getReportSubmitBlockReason(checklist, itemStates),
+    [checklist, itemStates],
+  );
+
   const submit = async () => {
     if (!job_id) return toast.error("ยังไม่ได้กรอก Job");
     if (!qcEmployeeId) return toast.error("กรุณาเลือกพนักงาน QC");
     if (checklist.length === 0)
       return toast.error("ไม่มีรายการ checklist สำหรับหมวดนี้ — แจ้งแอดมินเพิ่ม");
-    if (answeredCount < total) return toast.error(`ยังตรวจไม่ครบ (${answeredCount}/${total})`);
-    // Every failed item must have a remark AND at least one media
-    for (let idx = 0; idx < checklist.length; idx++) {
-      const it = checklist[idx];
-      const s = itemStates[it.id];
-      if (s?.is_passed === false) {
-        if (!s.remark.trim())
-          return toast.error(`ข้อ ${idx + 1}: กรุณากรอกหมายเหตุเหตุผลที่ไม่ผ่าน`);
-        if (!s.media || s.media.length === 0)
-          return toast.error(`ข้อ ${idx + 1}: ต้องแนบรูป/วิดีโอหลักฐานอย่างน้อย 1 รายการ`);
-      }
-    }
+    const blockReason = getReportSubmitBlockReason(checklist, itemStates);
+    if (blockReason) return toast.error(blockReason);
     const token = getQcToken();
     if (!token) return onLogout();
 
@@ -853,49 +841,10 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               className="w-full rounded-lg border border-border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
             />
 
-            <input
-              ref={imgInput}
-              type="file"
-              accept="image/*"
-              multiple
-              capture="environment"
-              className={IOS_SAFE_FILE_INPUT_CLASS}
-              onChange={(e) => e.target.files && uploadFiles(e.target.files, "image", "overall")}
+            <MediaAttachButtons
+              disabled={uploading}
+              onFiles={(files, kind) => uploadFiles(files, kind, "overall")}
             />
-            <input
-              ref={vidInput}
-              type="file"
-              accept={VIDEO_FILE_ACCEPT}
-              multiple
-              className={IOS_SAFE_FILE_INPUT_CLASS}
-              onChange={(e) => {
-                if (e.target.files) {
-                  warnIfMovFiles(e.target.files);
-                  uploadFiles(e.target.files, "video", "overall");
-                }
-              }}
-            />
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-1"
-                onClick={() => imgInput.current?.click()}
-                disabled={uploading}
-              >
-                <Camera className="h-4 w-4" /> เพิ่มรูป
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-1"
-                onClick={() => vidInput.current?.click()}
-                disabled={uploading}
-              >
-                <VideoIcon className="h-4 w-4" /> เพิ่มวิดีโอ
-              </Button>
-            </div>
 
             <MediaUploadStatusLine status={uploadStatus} />
 
@@ -950,7 +899,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
             </div>
             <Button
               onClick={submit}
-              disabled={submitting || uploading || answeredCount < total}
+              disabled={submitting || uploading || !!submitBlockReason}
               className="h-14 w-full gap-2 text-base font-semibold"
             >
               {submitting ? (
@@ -960,6 +909,11 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               )}
               ส่งรายงาน QC
             </Button>
+            {submitBlockReason && (
+              <p className="mt-2 text-center text-sm font-medium text-destructive">
+                {submitBlockReason}
+              </p>
+            )}
           </section>
         )}
       </main>
@@ -999,9 +953,6 @@ function ChecklistRow({
   onUpload: (files: FileList, kind: "image" | "video") => void;
   onRemoveMedia: (i: number) => void;
 }) {
-  const imgRef = useRef<HTMLInputElement>(null);
-  const vidRef = useRef<HTMLInputElement>(null);
-
   const failed = state.is_passed === false;
   const isMotor = state.is_passed === true && state.tag === "motor";
   const passed = state.is_passed === true && !isMotor;
@@ -1066,8 +1017,8 @@ function ChecklistRow({
         </Button>
       </div>
 
-      {failed && (
-        <div className="mt-3 space-y-2">
+      <div className="mt-3 space-y-2">
+        {failed && (
           <textarea
             value={state.remark}
             onChange={(e) => onRemark(e.target.value)}
@@ -1076,102 +1027,58 @@ function ChecklistRow({
             maxLength={2000}
             className="w-full rounded-lg border border-destructive/40 bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-destructive"
           />
+        )}
 
-          <input
-            ref={imgRef}
-            type="file"
-            accept="image/*"
-            multiple
-            capture="environment"
-            className={IOS_SAFE_FILE_INPUT_CLASS}
-            onChange={(e) => {
-              if (e.target.files) onUpload(e.target.files, "image");
-              if (imgRef.current) imgRef.current.value = "";
-            }}
-          />
-          <input
-            ref={vidRef}
-            type="file"
-            accept={VIDEO_FILE_ACCEPT}
-            multiple
-            className={IOS_SAFE_FILE_INPUT_CLASS}
-            onChange={(e) => {
-              if (e.target.files) {
-                warnIfMovFiles(e.target.files);
-                onUpload(e.target.files, "video");
-              }
-              if (vidRef.current) vidRef.current.value = "";
-            }}
-          />
+        <MediaAttachButtons
+          size="sm"
+          disabled={uploading}
+          onFiles={(files, kind) => onUpload(files, kind)}
+        />
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="gap-1"
-              disabled={uploading}
-              onClick={() => imgRef.current?.click()}
-            >
-              <Camera className="h-4 w-4" /> รูป
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="gap-1"
-              disabled={uploading}
-              onClick={() => vidRef.current?.click()}
-            >
-              <VideoIcon className="h-4 w-4" /> วิดีโอ
-            </Button>
-          </div>
+        {uploading && uploadStatus.phase !== "idle" && (
+          <MediaUploadStatusLine status={uploadStatus} />
+        )}
 
-          {uploading && uploadStatus.phase !== "idle" && (
-            <MediaUploadStatusLine status={uploadStatus} />
-          )}
+        {state.media.length === 0 ? (
+          <p className="text-xs font-medium text-destructive">
+            * ต้องแนบรูปหรือวิดีโอหลักฐานอย่างน้อย 1 รายการ
+          </p>
+        ) : (
+          <div className="grid grid-cols-4 gap-1.5">
+            {state.media.map((m, i) => (
+              <div
+                key={i}
+                className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
+              >
+                {m.type === "image" ? (
+                  <img
+                    src={m.previewUrl ?? m.url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <video
+                    src={m.previewUrl ?? m.url}
+                    className="h-full w-full object-cover"
+                    preload="metadata"
+                    muted
+                    playsInline
+                  />
+                )}
 
-          {state.media.length === 0 ? (
-            <p className="text-xs font-medium text-destructive">
-              * ต้องแนบรูปหรือวิดีโอหลักฐานอย่างน้อย 1 รายการ
-            </p>
-          ) : (
-            <div className="grid grid-cols-4 gap-1.5">
-              {state.media.map((m, i) => (
-                <div
-                  key={i}
-                  className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
+                <button
+                  type="button"
+                  onClick={() => onRemoveMedia(i)}
+                  aria-label="ลบไฟล์หลักฐานของรายการนี้"
+                  className="absolute top-0.5 right-0.5 rounded-full bg-background/90 p-0.5 shadow"
                 >
-                  {m.type === "image" ? (
-                    <img
-                      src={m.previewUrl ?? m.url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <video
-                      src={m.previewUrl ?? m.url}
-                      className="h-full w-full object-cover"
-                      preload="metadata"
-                      muted
-                      playsInline
-                    />
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => onRemoveMedia(i)}
-                    aria-label="ลบไฟล์หลักฐานของรายการนี้"
-                    className="absolute top-0.5 right-0.5 rounded-full bg-background/90 p-0.5 shadow"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

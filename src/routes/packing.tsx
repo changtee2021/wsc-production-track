@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
-import { warnIfMovFiles } from "@/components/MediaLightbox";
+import { MediaAttachButtons } from "@/components/MediaAttachButtons";
 import {
   MediaUploadStatusLine,
   type MediaUploadStatus,
@@ -30,8 +30,6 @@ import {
   RotateCcw,
   Check,
   Loader2,
-  Camera,
-  Video as VideoIcon,
   X,
   Send,
   Package,
@@ -59,7 +57,8 @@ import {
 } from "@/lib/auth/packing-session";
 import { compressMedia, canBrowserCompressVideo } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_AUTO_COMPRESS_ABOVE_BYTES, formatVideoMaxSizeError, IOS_SAFE_FILE_INPUT_CLASS, VIDEO_FILE_ACCEPT, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_AUTO_COMPRESS_ABOVE_BYTES, formatVideoMaxSizeError, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
+import { getReportSubmitBlockReason } from "@/lib/utils/report-media-validation";
 
 const packingSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -177,8 +176,6 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<MediaUploadStatus>({ phase: "idle" });
   const [submitting, setSubmitting] = useState(false);
-  const imgInput = useRef<HTMLInputElement>(null);
-  const vidInput = useRef<HTMLInputElement>(null);
 
   const fetchLogs = useServerFn(packingFetchJobLogs);
   const fetchChecklist = useServerFn(packingFetchChecklist);
@@ -371,8 +368,6 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
     } finally {
       setUploading(false);
       setUploadStatus({ phase: "idle" });
-      if (imgInput.current) imgInput.current.value = "";
-      if (vidInput.current) vidInput.current.value = "";
     }
   };
 
@@ -406,20 +401,17 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
     return { passCount: p, failCount: f, answeredCount: a, total: checklist.length };
   }, [checklist, itemStates]);
 
+  const submitBlockReason = useMemo(
+    () => getReportSubmitBlockReason(checklist, itemStates),
+    [checklist, itemStates],
+  );
+
   const submit = async () => {
     if (!job_id) return toast.error("ยังไม่ได้กรอก Job");
     if (!empId) return toast.error("กรุณาเลือกพนักงานแพ็คของ");
     if (checklist.length === 0) return toast.error("ไม่มีรายการ checklist สำหรับหมวดนี้");
-    if (answeredCount < total) return toast.error(`ยังตรวจไม่ครบ (${answeredCount}/${total})`);
-    for (let idx = 0; idx < checklist.length; idx++) {
-      const it = checklist[idx];
-      const s = itemStates[it.id];
-      if (s?.is_passed === false) {
-        if (!s.remark.trim()) return toast.error(`ข้อ ${idx + 1}: กรุณากรอกหมายเหตุ`);
-        if (!s.media || s.media.length === 0)
-          return toast.error(`ข้อ ${idx + 1}: ต้องแนบรูป/วิดีโออย่างน้อย 1 รายการ`);
-      }
-    }
+    const blockReason = getReportSubmitBlockReason(checklist, itemStates);
+    if (blockReason) return toast.error(blockReason);
     const token = getPackingToken();
     if (!token) return onLogout();
     const overall: "pass" | "fail" = failCount > 0 ? "fail" : "pass";
@@ -667,48 +659,10 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
               maxLength={2000}
               className="w-full rounded-lg border border-border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
             />
-            <input
-              ref={imgInput}
-              type="file"
-              accept="image/*"
-              multiple
-              capture="environment"
-              className={IOS_SAFE_FILE_INPUT_CLASS}
-              onChange={(e) => e.target.files && uploadFiles(e.target.files, "image", "overall")}
+            <MediaAttachButtons
+              disabled={uploading}
+              onFiles={(files, kind) => uploadFiles(files, kind, "overall")}
             />
-            <input
-              ref={vidInput}
-              type="file"
-              accept={VIDEO_FILE_ACCEPT}
-              multiple
-              className={IOS_SAFE_FILE_INPUT_CLASS}
-              onChange={(e) => {
-                if (e.target.files) {
-                  warnIfMovFiles(e.target.files);
-                  uploadFiles(e.target.files, "video", "overall");
-                }
-              }}
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-1"
-                onClick={() => imgInput.current?.click()}
-                disabled={uploading}
-              >
-                <Camera className="h-4 w-4" /> เพิ่มรูป
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-1"
-                onClick={() => vidInput.current?.click()}
-                disabled={uploading}
-              >
-                <VideoIcon className="h-4 w-4" /> เพิ่มวิดีโอ
-              </Button>
-            </div>
             <MediaUploadStatusLine status={uploadStatus} />
             {media.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
@@ -757,7 +711,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
             </div>
             <Button
               onClick={submit}
-              disabled={submitting || uploading || answeredCount < total}
+              disabled={submitting || uploading || !!submitBlockReason}
               className="h-14 w-full gap-2 text-base font-semibold"
             >
               {submitting ? (
@@ -767,6 +721,11 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
               )}{" "}
               ส่งรายงานแพ็คของ
             </Button>
+            {submitBlockReason && (
+              <p className="mt-2 text-center text-sm font-medium text-destructive">
+                {submitBlockReason}
+              </p>
+            )}
           </section>
         )}
       </main>
@@ -802,8 +761,6 @@ function PackingRow({
   onUpload: (files: FileList, kind: "image" | "video") => void;
   onRemoveMedia: (i: number) => void;
 }) {
-  const imgRef = useRef<HTMLInputElement>(null);
-  const vidRef = useRef<HTMLInputElement>(null);
   const failed = state.is_passed === false;
   const passed = state.is_passed === true;
 
@@ -833,8 +790,9 @@ function PackingRow({
           <XCircle className="h-4 w-4" /> ไม่ผ่าน
         </Button>
       </div>
-      {failed && (
-        <div className="mt-3 space-y-2">
+
+      <div className="mt-3 space-y-2">
+        {failed && (
           <textarea
             value={state.remark}
             onChange={(e) => onRemark(e.target.value)}
@@ -843,94 +801,53 @@ function PackingRow({
             maxLength={2000}
             className="w-full rounded-lg border border-destructive/40 bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-destructive"
           />
-          <input
-            ref={imgRef}
-            type="file"
-            accept="image/*"
-            multiple
-            capture="environment"
-            className={IOS_SAFE_FILE_INPUT_CLASS}
-            onChange={(e) => {
-              if (e.target.files) onUpload(e.target.files, "image");
-              if (imgRef.current) imgRef.current.value = "";
-            }}
-          />
-          <input
-            ref={vidRef}
-            type="file"
-            accept={VIDEO_FILE_ACCEPT}
-            multiple
-            className={IOS_SAFE_FILE_INPUT_CLASS}
-            onChange={(e) => {
-              if (e.target.files) {
-                warnIfMovFiles(e.target.files);
-                onUpload(e.target.files, "video");
-              }
-              if (vidRef.current) vidRef.current.value = "";
-            }}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="gap-1"
-              disabled={uploading}
-              onClick={() => imgRef.current?.click()}
-            >
-              <Camera className="h-4 w-4" /> รูป
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="gap-1"
-              disabled={uploading}
-              onClick={() => vidRef.current?.click()}
-            >
-              <VideoIcon className="h-4 w-4" /> วิดีโอ
-            </Button>
-          </div>
-          {state.media.length === 0 ? (
-            <p className="text-xs font-medium text-destructive">
-              * ต้องแนบรูป/วิดีโออย่างน้อย 1 รายการ
-            </p>
-          ) : (
-            <div className="grid grid-cols-4 gap-1.5">
-              {state.media.map((m, i) => (
-                <div
-                  key={i}
-                  className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
+        )}
+
+        <MediaAttachButtons
+          size="sm"
+          disabled={uploading}
+          onFiles={(files, kind) => onUpload(files, kind)}
+        />
+
+        {state.media.length === 0 ? (
+          <p className="text-xs font-medium text-destructive">
+            * ต้องแนบรูป/วิดีโออย่างน้อย 1 รายการ
+          </p>
+        ) : (
+          <div className="grid grid-cols-4 gap-1.5">
+            {state.media.map((m, i) => (
+              <div
+                key={i}
+                className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
+              >
+                {m.type === "image" ? (
+                  <img
+                    src={m.previewUrl ?? m.url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <video
+                    src={m.previewUrl ?? m.url}
+                    className="h-full w-full object-cover"
+                    preload="metadata"
+                    muted
+                    playsInline
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => onRemoveMedia(i)}
+                  aria-label="ลบ"
+                  className="absolute top-0.5 right-0.5 rounded-full bg-background/90 p-0.5 shadow"
                 >
-                  {m.type === "image" ? (
-                    <img
-                      src={m.previewUrl ?? m.url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <video
-                      src={m.previewUrl ?? m.url}
-                      className="h-full w-full object-cover"
-                      preload="metadata"
-                      muted
-                      playsInline
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onRemoveMedia(i)}
-                    aria-label="ลบ"
-                    className="absolute top-0.5 right-0.5 rounded-full bg-background/90 p-0.5 shadow"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

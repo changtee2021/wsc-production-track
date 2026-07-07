@@ -8,6 +8,7 @@ import {
   checkPackingPassword,
 } from "@/lib/auth/packing-token.server";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
+import { assertReportItemsValid } from "@/lib/utils/report-media-validation";
 
 function assertPacking(token: string | undefined) {
   if (!verifyPackingToken(token)) throw new Error("Unauthorized");
@@ -106,6 +107,7 @@ export const packingSubmitReport = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertPacking(data.token);
+    assertReportItemsValid(data.items);
     const passCount = data.items.filter((i) => i.is_passed).length;
     const total = data.items.length;
     const computedOverall =

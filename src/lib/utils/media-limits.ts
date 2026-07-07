@@ -33,6 +33,9 @@ const VIDEO_MIME_BY_EXT: Record<string, keyof typeof VIDEO_EXT_BY_MIME> = {
 export const IOS_SAFE_FILE_INPUT_CLASS =
   "fixed left-0 top-0 -z-50 h-px w-px overflow-hidden opacity-0";
 
+/** accept ชัดเจนสำหรับรูปจากมือถือ */
+export const IMAGE_FILE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,image/*";
+
 /** accept ชัดเจนสำหรับวิดีโอจาก iPhone (MOV/MP4) */
 export const VIDEO_FILE_ACCEPT =
   "video/mp4,video/quicktime,video/x-m4v,video/webm,video/*";

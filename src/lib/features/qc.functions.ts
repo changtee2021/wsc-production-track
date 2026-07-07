@@ -4,6 +4,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { issueQcToken, verifyQcToken, checkQcPassword } from "@/lib/auth/qc-token.server";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
+import { assertReportItemsValid } from "@/lib/utils/report-media-validation";
 
 function assertQc(token: string | undefined) {
   if (!verifyQcToken(token)) throw new Error("Unauthorized");
@@ -102,6 +103,7 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertQc(data.token);
+    assertReportItemsValid(data.items);
     const passCount = data.items.filter((i) => i.is_passed).length;
     const total = data.items.length;
     const computedOverall =
