@@ -377,12 +377,6 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
   const setItemRemark = (id: string, remark: string) => {
     setItemStates((prev) => ({ ...prev, [id]: { ...(prev[id] ?? EMPTY), remark } }));
   };
-  const removeItemMedia = (id: string, i: number) => {
-    setItemStates((prev) => ({
-      ...prev,
-      [id]: { ...(prev[id] ?? EMPTY), media: (prev[id]?.media ?? []).filter((_, j) => j !== i) },
-    }));
-  };
 
   const { passCount, failCount, answeredCount, total } = useMemo(() => {
     let p = 0,
@@ -402,15 +396,15 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
   }, [checklist, itemStates]);
 
   const submitBlockReason = useMemo(
-    () => getReportSubmitBlockReason(checklist, itemStates),
-    [checklist, itemStates],
+    () => getReportSubmitBlockReason(checklist, itemStates, media.length),
+    [checklist, itemStates, media.length],
   );
 
   const submit = async () => {
     if (!job_id) return toast.error("ยังไม่ได้กรอก Job");
     if (!empId) return toast.error("กรุณาเลือกพนักงานแพ็คของ");
     if (checklist.length === 0) return toast.error("ไม่มีรายการ checklist สำหรับหมวดนี้");
-    const blockReason = getReportSubmitBlockReason(checklist, itemStates);
+    const blockReason = getReportSubmitBlockReason(checklist, itemStates, media.length);
     if (blockReason) return toast.error(blockReason);
     const token = getPackingToken();
     if (!token) return onLogout();
@@ -636,11 +630,8 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
                     index={idx + 1}
                     item={it}
                     state={s}
-                    uploading={uploading}
                     onPass={(v) => setItemPass(it.id, v)}
                     onRemark={(v) => setItemRemark(it.id, v)}
-                    onUpload={(files, kind) => uploadFiles(files, kind, it.id)}
-                    onRemoveMedia={(i) => removeItemMedia(it.id, i)}
                   />
                 );
               })}
@@ -664,7 +655,11 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
               onFiles={(files, kind) => uploadFiles(files, kind, "overall")}
             />
             <MediaUploadStatusLine status={uploadStatus} />
-            {media.length > 0 && (
+            {media.length === 0 ? (
+              <p className="text-xs font-medium text-destructive">
+                * ต้องแนบรูปหรือวิดีโอในหลักฐานรวมอย่างน้อย 1 รายการ
+              </p>
+            ) : (
               <div className="grid grid-cols-3 gap-2">
                 {media.map((m, i) => (
                   <div
@@ -746,20 +741,14 @@ function PackingRow({
   index,
   item,
   state,
-  uploading,
   onPass,
   onRemark,
-  onUpload,
-  onRemoveMedia,
 }: {
   index: number;
   item: ChecklistItem;
   state: ItemState;
-  uploading: boolean;
   onPass: (v: boolean) => void;
   onRemark: (v: string) => void;
-  onUpload: (files: FileList, kind: "image" | "video") => void;
-  onRemoveMedia: (i: number) => void;
 }) {
   const failed = state.is_passed === false;
   const passed = state.is_passed === true;
@@ -791,8 +780,8 @@ function PackingRow({
         </Button>
       </div>
 
-      <div className="mt-3 space-y-2">
-        {failed && (
+      {failed && (
+        <div className="mt-3">
           <textarea
             value={state.remark}
             onChange={(e) => onRemark(e.target.value)}
@@ -801,53 +790,8 @@ function PackingRow({
             maxLength={2000}
             className="w-full rounded-lg border border-destructive/40 bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-destructive"
           />
-        )}
-
-        <MediaAttachButtons
-          size="sm"
-          disabled={uploading}
-          onFiles={(files, kind) => onUpload(files, kind)}
-        />
-
-        {state.media.length === 0 ? (
-          <p className="text-xs font-medium text-destructive">
-            * ต้องแนบรูป/วิดีโออย่างน้อย 1 รายการ
-          </p>
-        ) : (
-          <div className="grid grid-cols-4 gap-1.5">
-            {state.media.map((m, i) => (
-              <div
-                key={i}
-                className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
-              >
-                {m.type === "image" ? (
-                  <img
-                    src={m.previewUrl ?? m.url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <video
-                    src={m.previewUrl ?? m.url}
-                    className="h-full w-full object-cover"
-                    preload="metadata"
-                    muted
-                    playsInline
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() => onRemoveMedia(i)}
-                  aria-label="ลบ"
-                  className="absolute top-0.5 right-0.5 rounded-full bg-background/90 p-0.5 shadow"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
