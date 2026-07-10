@@ -440,18 +440,10 @@ function PackingReportsPage() {
                                               className="h-full w-full object-cover transition-transform group-hover:scale-105"
                                             />
                                           ) : (
-                                            <>
-                                              <video
-                                                src={signedSrc(m.url)}
-                                                preload="metadata"
-                                                muted
-                                                playsInline
-                                                className="h-full w-full object-cover"
-                                              />
-                                              <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                                <VideoIcon className="h-6 w-6 text-white" />
-                                              </span>
-                                            </>
+                                            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-800 text-white">
+                                              <VideoIcon className="h-6 w-6" />
+                                              <span className="text-[10px] font-medium">วิดีโอ</span>
+                                            </span>
                                           )}
                                         </button>
                                       ))}
@@ -571,18 +563,10 @@ function PackingReportsPage() {
                                   className="h-full w-full object-cover"
                                 />
                               ) : (
-                                <>
-                                  <video
-                                    src={signedSrc(m.url)}
-                                    preload="metadata"
-                                    muted
-                                    playsInline
-                                    className="h-full w-full object-cover"
-                                  />
-                                  <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                    <VideoIcon className="h-6 w-6 text-white" />
-                                  </span>
-                                </>
+                                <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-800 text-white">
+                                  <VideoIcon className="h-6 w-6" />
+                                  <span className="text-[10px] font-medium">วิดีโอ</span>
+                                </span>
                               )}
                             </button>
                           ))}

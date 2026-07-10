@@ -386,7 +386,8 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
             toast.error(formatVideoMaxSizeError());
             continue;
           }
-          if (file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES && canBrowserCompressVideo()) {
+          // Always show prepare progress — may repair/remux even under 50 MB
+          if (canBrowserCompressVideo() || file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES) {
             setUploadStatus({ phase: "compressing", percent: 0 });
           }
         }

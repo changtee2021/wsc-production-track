@@ -868,18 +868,9 @@ function MediaThumb({
       className="group relative h-16 w-16 overflow-hidden rounded-md border bg-muted"
     >
       {m.type === "video" ? (
-        <>
-          <video
-            src={signedSrc(m.url)}
-            className="h-full w-full object-cover"
-            preload="metadata"
-            muted
-            playsInline
-          />
-          <span className="absolute inset-0 grid place-items-center bg-black/30 text-white">
-            <VideoIcon className="h-4 w-4" />
-          </span>
-        </>
+        <span className="absolute inset-0 grid place-items-center bg-slate-800 text-white">
+          <VideoIcon className="h-4 w-4" />
+        </span>
       ) : (
         <>
           <img src={signedSrc(m.url)} alt="" className="h-full w-full object-cover" />

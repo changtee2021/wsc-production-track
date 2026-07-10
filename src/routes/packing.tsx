@@ -306,6 +306,8 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
           }
           if (file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES && canBrowserCompressVideo()) {
             setUploadStatus({ phase: "compressing", percent: 0 });
+          } else if (canBrowserCompressVideo()) {
+            setUploadStatus({ phase: "compressing", percent: 0 });
           }
         }
 

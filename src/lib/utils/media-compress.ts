@@ -6,6 +6,12 @@ import {
   VIDEO_COMPRESS_TARGET_BYTES,
   formatVideoMaxSizeError,
 } from "@/lib/utils/media-limits";
+import {
+  canHtmlVideoPlay,
+  inspectMp4,
+  needsWebSafeRemux,
+  repairMp4IfNeeded,
+} from "@/lib/utils/mp4-repair";
 
 const MAX_IMAGE_DIMENSION = 1920;
 const JPEG_QUALITY = 0.82;
@@ -16,6 +22,8 @@ export type CompressProgress = (percent: number) => void;
 export interface CompressVideoOptions {
   onProgress?: CompressProgress;
   maxBytes?: number;
+  /** Force remux/transcode even when under size threshold (broken/HEVC files). */
+  forceRemux?: boolean;
 }
 
 export interface CompressMediaOptions {
@@ -257,13 +265,25 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
   const maxBytes = options?.maxBytes ?? MAX_VIDEO_BYTES;
   if (file.size > maxBytes) throw new Error(formatVideoMaxSizeError());
 
-  // iPhone: ส่งต้นฉบับเสมอ (ไม่บีบ)
-  if (isAppleMobile()) return file;
+  // Patch broken MP4 boxes (e.g. LINE mdat size=1) before anything else — works on iOS too
+  const { file: repaired } = await repairMp4IfNeeded(file);
+  file = repaired;
 
-  // ≤50 MB: อัปตรง
-  if (file.size <= VIDEO_AUTO_COMPRESS_ABOVE_BYTES) return file;
+  const forceRemux = options?.forceRemux === true;
+  const overSize = file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES;
 
-  // >50 MB Android: ลองบีบ — ไม่ได้ก็ส่งต้นฉบับ
+  // iPhone: cannot MediaRecorder-remux — return repaired original
+  if (isAppleMobile()) {
+    options?.onProgress?.(100);
+    return file;
+  }
+
+  if (!forceRemux && !overSize) {
+    options?.onProgress?.(100);
+    return file;
+  }
+
+  // >50 MB or forceRemux: try browser transcode — fallback to original
   if (!canBrowserCompressVideo()) {
     return returnOriginalIfAllowed(file, maxBytes, options?.onProgress);
   }
@@ -273,7 +293,16 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
     return returnOriginalIfAllowed(file, maxBytes, options?.onProgress);
   }
 
-  const passes = buildTranscodePasses();
+  const passes = forceRemux && !overSize
+    ? [
+        {
+          maxDimension: VIDEO_COMPRESS_MAX_DIMENSION,
+          targetBytes: Math.min(file.size, VIDEO_COMPRESS_TARGET_BYTES),
+          minBitrate: 1_200_000,
+          maxBitrate: 6_000_000,
+        } satisfies TranscodePass,
+      ]
+    : buildTranscodePasses();
   let objectUrl = "";
   let videoEl: HTMLVideoElement | null = null;
   let workingFile = file;
@@ -308,7 +337,7 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
       workingFile = out;
       options?.onProgress?.(Math.min(99, Math.round(((i + 1) / passes.length) * 100)));
 
-      if (workingFile.size <= VIDEO_AUTO_COMPRESS_ABOVE_BYTES) {
+      if (forceRemux || workingFile.size <= VIDEO_AUTO_COMPRESS_ABOVE_BYTES) {
         options?.onProgress?.(100);
         return workingFile;
       }
@@ -328,11 +357,46 @@ export async function compressVideo(file: File, options?: CompressVideoOptions):
   }
 }
 
+/**
+ * Normalize + repair + remux when needed so Chrome/Edge can play the result.
+ * Call this on every video upload (QC / packing / maintenance).
+ */
+export async function prepareVideoForUpload(
+  file: File,
+  options?: CompressMediaOptions,
+): Promise<File> {
+  const { file: repaired } = await repairMp4IfNeeded(file);
+  let working = repaired;
+
+  let forceRemux = false;
+  if (!isAppleMobile() && canBrowserCompressVideo()) {
+    const head = new Uint8Array(
+      await working.slice(0, Math.min(working.size, 512 * 1024)).arrayBuffer(),
+    );
+    const health = inspectMp4(head);
+    if (health.hasHevc || needsWebSafeRemux(health)) {
+      forceRemux = true;
+    } else {
+      const playable = await canHtmlVideoPlay(working);
+      if (!playable) forceRemux = true;
+    }
+  }
+
+  if (forceRemux) {
+    options?.onProgress?.(0);
+  }
+
+  return compressVideo(working, {
+    onProgress: options?.onProgress,
+    forceRemux,
+  });
+}
+
 export async function compressMedia(
   file: File,
   kind: "image" | "video",
   options?: CompressMediaOptions,
 ): Promise<File> {
   if (kind === "image") return compressImage(file);
-  return compressVideo(file, { onProgress: options?.onProgress });
+  return prepareVideoForUpload(file, options);
 }
