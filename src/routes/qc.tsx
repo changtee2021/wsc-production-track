@@ -51,9 +51,9 @@ import {
   qcListEmployees,
 } from "@/lib/features/qc.functions";
 import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
-import { compressMedia, canBrowserCompressVideo } from "@/lib/utils/media-compress";
+import { compressMedia } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, VIDEO_AUTO_COMPRESS_ABOVE_BYTES, formatVideoMaxSizeError, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
 import { getReportSubmitBlockReason } from "@/lib/utils/report-media-validation";
 import { clientAppPublicPath } from "@/lib/app-public-url";
 
@@ -386,22 +386,13 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
             toast.error(formatVideoMaxSizeError());
             continue;
           }
-          // Always show prepare progress — may repair/remux even under 50 MB
-          if (canBrowserCompressVideo() || file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES) {
-            setUploadStatus({ phase: "compressing", percent: 0 });
-          }
         }
 
         let f: File;
         try {
-          f = await compressMedia(file, kind, {
-            onProgress:
-              kind === "video"
-                ? (percent) => setUploadStatus({ phase: "compressing", percent })
-                : undefined,
-          });
+          f = await compressMedia(file, kind);
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "บีบอัดวิดีโอไม่สำเร็จ");
+          toast.error(e instanceof Error ? e.message : "เตรียมไฟล์ไม่สำเร็จ");
           continue;
         }
 

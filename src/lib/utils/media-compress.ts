@@ -1,17 +1,6 @@
-// ≤50 MB อัปตรง | >50 MB ลองบีบ (Android) ไม่ได้ก็ส่งต้นฉบับ | iPhone ส่งต้นฉบับเสมอ
-import {
-  MAX_VIDEO_BYTES,
-  VIDEO_AUTO_COMPRESS_ABOVE_BYTES,
-  VIDEO_COMPRESS_MAX_DIMENSION,
-  VIDEO_COMPRESS_TARGET_BYTES,
-  formatVideoMaxSizeError,
-} from "@/lib/utils/media-limits";
-import {
-  canHtmlVideoPlay,
-  inspectMp4,
-  needsWebSafeRemux,
-  repairMp4IfNeeded,
-} from "@/lib/utils/mp4-repair";
+// วิดีโอ: อัปต้นฉบับตรง (ซ่อม header MP4 เร็ว ๆ เท่านั้น) — ไม่บีบอัด MediaRecorder
+import { MAX_VIDEO_BYTES, formatVideoMaxSizeError } from "@/lib/utils/media-limits";
+import { repairMp4IfNeeded } from "@/lib/utils/mp4-repair";
 
 const MAX_IMAGE_DIMENSION = 1920;
 const JPEG_QUALITY = 0.82;
@@ -22,22 +11,13 @@ export type CompressProgress = (percent: number) => void;
 export interface CompressVideoOptions {
   onProgress?: CompressProgress;
   maxBytes?: number;
-  /** Force remux/transcode even when under size threshold (broken/HEVC files). */
-  forceRemux?: boolean;
 }
 
 export interface CompressMediaOptions {
   onProgress?: CompressProgress;
 }
 
-interface TranscodePass {
-  maxDimension: number;
-  targetBytes: number;
-  minBitrate: number;
-  maxBitrate: number;
-}
-
-/** iPhone/iPad — canvas.captureStream มักใช้ไม่ได้ จึงข้ามบีบอัดแล้วอัปต้นฉบับ */
+/** iPhone/iPad detection (kept for callers that still check platform). */
 export function isAppleMobile(): boolean {
   if (typeof navigator === "undefined") return false;
   return (
@@ -46,161 +26,9 @@ export function isAppleMobile(): boolean {
   );
 }
 
-/** บีบอัดวิดีโอใน browser ได้จริงหรือไม่ (Android/Chrome ส่วนใหญ่ได้, iOS ส่วนใหญ่ไม่ได้) */
+/** Always false — video compression disabled; upload original immediately. */
 export function canBrowserCompressVideo(): boolean {
-  if (typeof document === "undefined") return false;
-  if (isAppleMobile()) return false;
-  if (typeof MediaRecorder === "undefined") return false;
-  if (!pickRecorderMimeType()) return false;
-  const canvas = document.createElement("canvas");
-  return typeof canvas.captureStream === "function";
-}
-
-function pickRecorderMimeType(): string | null {
-  const candidates = [
-    "video/webm;codecs=vp9",
-    "video/webm;codecs=vp8",
-    "video/webm",
-    "video/mp4",
-    "video/mp4;codecs=avc1",
-  ];
-  if (typeof MediaRecorder === "undefined") return null;
-  for (const mime of candidates) {
-    if (MediaRecorder.isTypeSupported(mime)) return mime;
-  }
-  return null;
-}
-
-function mimeToFileType(mimeType: string): { type: string; ext: string } {
-  const base = mimeType.split(";")[0]!.trim().toLowerCase();
-  if (base === "video/mp4") return { type: "video/mp4", ext: "mp4" };
-  return { type: "video/webm", ext: "webm" };
-}
-
-function targetBitrateForPass(durationSec: number, pass: TranscodePass): number {
-  const sec = durationSec > 0 ? durationSec : 30;
-  const budgetBits = pass.targetBytes * 8 * 0.88;
-  const raw = Math.round(budgetBits / sec);
-  return Math.min(pass.maxBitrate, Math.max(pass.minBitrate, raw));
-}
-
-function buildTranscodePasses(): TranscodePass[] {
-  const cap = VIDEO_AUTO_COMPRESS_ABOVE_BYTES;
-  return [
-    {
-      maxDimension: VIDEO_COMPRESS_MAX_DIMENSION,
-      targetBytes: VIDEO_COMPRESS_TARGET_BYTES,
-      minBitrate: 1_500_000,
-      maxBitrate: 8_000_000,
-    },
-    {
-      maxDimension: 1280,
-      targetBytes: Math.round(cap * 0.9),
-      minBitrate: 800_000,
-      maxBitrate: 4_000_000,
-    },
-    {
-      maxDimension: 960,
-      targetBytes: Math.round(cap * 0.82),
-      minBitrate: 450_000,
-      maxBitrate: 2_500_000,
-    },
-  ];
-}
-
-async function loadVideoElement(file: File): Promise<{ video: HTMLVideoElement; objectUrl: string }> {
-  const objectUrl = URL.createObjectURL(file);
-  const video = document.createElement("video");
-  video.muted = true;
-  video.playsInline = true;
-  video.preload = "auto";
-  video.src = objectUrl;
-  await new Promise<void>((resolve, reject) => {
-    video.onloadedmetadata = () => resolve();
-    video.onerror = () => reject(new Error("โหลดวิดีโอไม่สำเร็จ"));
-  });
-  return { video, objectUrl };
-}
-
-async function transcodeVideoOnce(
-  video: HTMLVideoElement,
-  mimeType: string,
-  sourceName: string,
-  pass: TranscodePass,
-  onProgress?: CompressProgress,
-): Promise<File | null> {
-  const scale = Math.min(1, pass.maxDimension / Math.max(video.videoWidth, video.videoHeight));
-  const w = Math.max(2, Math.round(video.videoWidth * scale));
-  const h = Math.max(2, Math.round(video.videoHeight * scale));
-  const videoBitsPerSecond = targetBitrateForPass(video.duration, pass);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx || typeof canvas.captureStream !== "function") return null;
-
-  const stream = canvas.captureStream(24);
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond });
-
-  const chunks: BlobPart[] = [];
-  recorder.ondataavailable = (e) => {
-    if (e.data.size > 0) chunks.push(e.data);
-  };
-
-  const blobPromise = new Promise<Blob>((resolve, reject) => {
-    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType.split(";")[0] }));
-    recorder.onerror = () => reject(new Error("บีบอัดวิดีโอไม่สำเร็จ"));
-  });
-
-  const reportProgress = () => {
-    if (!onProgress || !Number.isFinite(video.duration) || video.duration <= 0) return;
-    const pct = Math.min(99, Math.round((video.currentTime / video.duration) * 100));
-    onProgress(pct);
-  };
-
-  recorder.start(250);
-  video.pause();
-  video.currentTime = 0;
-  video.ontimeupdate = reportProgress;
-  await new Promise<void>((resolve) => {
-    if (video.readyState >= 2 && video.currentTime === 0) resolve();
-    else video.onseeked = () => resolve();
-  });
-  await video.play();
-
-  let raf = 0;
-  const draw = () => {
-    if (video.ended) return;
-    ctx.drawImage(video, 0, 0, w, h);
-    raf = requestAnimationFrame(draw);
-  };
-  draw();
-
-  const durationMs = Number.isFinite(video.duration) ? video.duration * 1000 : 60_000;
-  await Promise.race([
-    new Promise<void>((resolve) => {
-      video.onended = () => resolve();
-    }),
-    new Promise<void>((resolve) => setTimeout(resolve, durationMs + 10_000)),
-  ]);
-
-  cancelAnimationFrame(raf);
-  video.ontimeupdate = null;
-  ctx.drawImage(video, 0, 0, w, h);
-  video.pause();
-
-  if (recorder.state !== "inactive") recorder.stop();
-  stream.getTracks().forEach((t) => t.stop());
-
-  const blob = await blobPromise;
-  if (!blob.size) return null;
-
-  onProgress?.(100);
-
-  const { type, ext } = mimeToFileType(mimeType);
-  const newName = sourceName.replace(/\.[^.]+$/, "") + `.${ext}`;
-  return new File([blob], newName || `video.${ext}`, { type });
+  return false;
 }
 
 async function loadImage(file: File): Promise<HTMLImageElement> {
@@ -245,151 +73,23 @@ export async function compressImage(file: File): Promise<File> {
   }
 }
 
-function returnOriginalIfAllowed(
-  file: File,
-  maxBytes: number,
-  onProgress?: CompressProgress,
-): File {
-  if (file.size > maxBytes) throw new Error(formatVideoMaxSizeError());
-  onProgress?.(100);
-  return file;
-}
-
-function pickBestVideoResult(original: File, compressed: File, maxBytes: number): File {
-  const best = compressed.size < original.size ? compressed : original;
-  if (best.size > maxBytes) throw new Error(formatVideoMaxSizeError());
-  return best;
-}
-
+/** Video: fast MP4 header repair only — no MediaRecorder compress. */
 export async function compressVideo(file: File, options?: CompressVideoOptions): Promise<File> {
-  const maxBytes = options?.maxBytes ?? MAX_VIDEO_BYTES;
-  if (file.size > maxBytes) throw new Error(formatVideoMaxSizeError());
-
-  // Patch broken MP4 boxes (e.g. LINE mdat size=1) before anything else — works on iOS too
-  const { file: repaired } = await repairMp4IfNeeded(file);
-  file = repaired;
-
-  const forceRemux = options?.forceRemux === true;
-  const overSize = file.size > VIDEO_AUTO_COMPRESS_ABOVE_BYTES;
-
-  // iPhone: cannot MediaRecorder-remux — return repaired original
-  if (isAppleMobile()) {
-    options?.onProgress?.(100);
-    return file;
-  }
-
-  if (!forceRemux && !overSize) {
-    options?.onProgress?.(100);
-    return file;
-  }
-
-  // >50 MB or forceRemux: try browser transcode — fallback to original
-  if (!canBrowserCompressVideo()) {
-    return returnOriginalIfAllowed(file, maxBytes, options?.onProgress);
-  }
-
-  const mimeType = pickRecorderMimeType();
-  if (!mimeType) {
-    return returnOriginalIfAllowed(file, maxBytes, options?.onProgress);
-  }
-
-  const passes = forceRemux && !overSize
-    ? [
-        {
-          maxDimension: VIDEO_COMPRESS_MAX_DIMENSION,
-          targetBytes: Math.min(file.size, VIDEO_COMPRESS_TARGET_BYTES),
-          minBitrate: 1_200_000,
-          maxBitrate: 6_000_000,
-        } satisfies TranscodePass,
-      ]
-    : buildTranscodePasses();
-  let objectUrl = "";
-  let videoEl: HTMLVideoElement | null = null;
-  let workingFile = file;
-
-  try {
-    let loaded: { video: HTMLVideoElement; objectUrl: string };
-    try {
-      loaded = await loadVideoElement(file);
-    } catch {
-      return returnOriginalIfAllowed(file, maxBytes, options?.onProgress);
-    }
-    objectUrl = loaded.objectUrl;
-    videoEl = loaded.video;
-
-    for (let i = 0; i < passes.length; i++) {
-      const pass = passes[i]!;
-      const passStart = Math.round((i / passes.length) * 100);
-      const passSpan = 100 / passes.length;
-
-      let out: File | null = null;
-      try {
-        out = await transcodeVideoOnce(videoEl, mimeType, workingFile.name, pass, (p) => {
-          const overall = Math.min(99, Math.round(passStart + (p * passSpan) / 100));
-          options?.onProgress?.(overall);
-        });
-      } catch {
-        out = null;
-      }
-
-      if (!out?.size) break;
-
-      workingFile = out;
-      options?.onProgress?.(Math.min(99, Math.round(((i + 1) / passes.length) * 100)));
-
-      if (forceRemux || workingFile.size <= VIDEO_AUTO_COMPRESS_ABOVE_BYTES) {
-        options?.onProgress?.(100);
-        return workingFile;
-      }
-
-      if (i < passes.length - 1) {
-        URL.revokeObjectURL(objectUrl);
-        const reloaded = await loadVideoElement(workingFile);
-        objectUrl = reloaded.objectUrl;
-        videoEl = reloaded.video;
-      }
-    }
-
-    options?.onProgress?.(100);
-    return pickBestVideoResult(file, workingFile, maxBytes);
-  } finally {
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-  }
+  return prepareVideoForUpload(file, options);
 }
 
 /**
- * Normalize + repair + remux when needed so Chrome/Edge can play the result.
- * Call this on every video upload (QC / packing / maintenance).
+ * Prepare video for upload: fast MP4 header repair only.
+ * Staff upload the original immediately (up to MAX_VIDEO_BYTES / 1 GB).
  */
 export async function prepareVideoForUpload(
   file: File,
   options?: CompressMediaOptions,
 ): Promise<File> {
+  if (file.size > MAX_VIDEO_BYTES) throw new Error(formatVideoMaxSizeError());
   const { file: repaired } = await repairMp4IfNeeded(file);
-  let working = repaired;
-
-  let forceRemux = false;
-  if (!isAppleMobile() && canBrowserCompressVideo()) {
-    const head = new Uint8Array(
-      await working.slice(0, Math.min(working.size, 512 * 1024)).arrayBuffer(),
-    );
-    const health = inspectMp4(head);
-    if (health.hasHevc || needsWebSafeRemux(health)) {
-      forceRemux = true;
-    } else {
-      const playable = await canHtmlVideoPlay(working);
-      if (!playable) forceRemux = true;
-    }
-  }
-
-  if (forceRemux) {
-    options?.onProgress?.(0);
-  }
-
-  return compressVideo(working, {
-    onProgress: options?.onProgress,
-    forceRemux,
-  });
+  options?.onProgress?.(100);
+  return repaired;
 }
 
 export async function compressMedia(
