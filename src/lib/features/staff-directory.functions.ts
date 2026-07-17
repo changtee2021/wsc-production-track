@@ -7,8 +7,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
-
 import { hrFloorStaffUrl } from "@/lib/hr-app-url";
+import { DEPARTMENTS, type Department } from "@/lib/staff-departments";
+
+export { DEPARTMENTS, type Department };
 
 function assertAdmin(token: string | undefined) {
   if (!verifyAdminToken(token)) throw new Error("Unauthorized");
@@ -19,18 +21,6 @@ function rejectStaffWrites() {
 }
 
 const tokenStr = z.string().min(1);
-
-export const DEPARTMENTS = [
-  "production",
-  "qc",
-  "packing",
-  "maintenance",
-  "office",
-  "stock",
-  "warehouse",
-  "transport",
-] as const;
-export type Department = (typeof DEPARTMENTS)[number];
 
 const DEPT_TABLE: Record<Department, string> = {
   production: "employees",

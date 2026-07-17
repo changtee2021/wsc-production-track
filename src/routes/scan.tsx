@@ -43,6 +43,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { uploadWorkerNoteImage } from "@/lib/features/worker-upload.functions";
 import { submitProductionLog } from "@/lib/features/scan.functions";
 import { clientAppPublicPath } from "@/lib/app-public-url";
+import { EmployeeDeptGate } from "@/components/EmployeeDeptGate";
+import { getEmployeeProfile } from "@/lib/auth/employee-session";
 
 const ALLOWED_NOTE_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_NOTE_BYTES = 5 * 1024 * 1024;
@@ -82,8 +84,16 @@ export const Route = createFileRoute("/scan")({
     ],
     links: [{ rel: "canonical", href: clientAppPublicPath("/scan") }],
   }),
-  component: ScanPage,
+  component: ScanPageGate,
 });
+
+function ScanPageGate() {
+  return (
+    <EmployeeDeptGate dept="production">
+      <ScanPage />
+    </EmployeeDeptGate>
+  );
+}
 
 interface Employee {
   id: string;
@@ -163,13 +173,30 @@ function ScanPage() {
           .order("step_name"),
         supabase.from("categories").select("id,name").eq("active", true).order("name"),
       ]);
-      if (e.data) setEmployees(e.data);
+      const list = (e.data as Employee[] | null) ?? [];
+      if (e.data) setEmployees(list);
       if (s.data) setSteps(s.data);
       if (c.data) setCategories(c.data);
+
+      // Lock to logged-in production employee (no re-select).
+      const session = getEmployeeProfile();
+      const byId = session?.ids?.production
+        ? list.find((row) => row.id === session.ids?.production)
+        : undefined;
+      const byCode = session?.emp_code
+        ? list.find((row) => row.emp_code === session.emp_code)
+        : undefined;
+      const locked = byId ?? byCode;
+      if (locked) setEmployeeId(locked.id);
+
       setLoading(false);
     })();
   }, []);
 
+  const selectedEmployee = useMemo(
+    () => employees.find((e) => e.id === employeeId) ?? null,
+    [employees, employeeId],
+  );
   const selectedStep = useMemo(() => steps.find((s) => s.id === stepId) ?? null, [steps, stepId]);
 
   const submit = async (action: "start" | "finish") => {
@@ -357,6 +384,48 @@ function ScanPage() {
           </div>
         </div>
 
+        {/* Logged-in employee (locked — above category) */}
+        <section className="mt-5">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <User className="h-4 w-4 text-secondary" />
+            {t("emp.title")}
+          </h2>
+          {loading ? (
+            <div className="flex h-16 items-center rounded-2xl border border-border bg-muted/40 px-4 text-sm text-muted-foreground">
+              {t("emp.loading")}
+            </div>
+          ) : selectedEmployee ? (
+            <div className="flex h-16 items-center gap-3 rounded-2xl border border-border bg-card px-3 shadow-sm">
+              <Avatar className="h-12 w-12 border-2 border-border">
+                {selectedEmployee.avatar_url ? (
+                  <AvatarImage src={selectedEmployee.avatar_url} alt={selectedEmployee.name} />
+                ) : null}
+                <AvatarFallback className="bg-primary text-sm font-bold text-primary-foreground">
+                  {initialsOf(selectedEmployee.name)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-xl">{flagFor(selectedEmployee.nationality)}</span>
+              <div className="min-w-0 flex-1 text-left">
+                <div className="truncate text-base font-semibold leading-tight">
+                  {selectedEmployee.name}
+                </div>
+                {selectedEmployee.emp_code && (
+                  <div className="font-mono text-xs text-muted-foreground">
+                    {selectedEmployee.emp_code}
+                  </div>
+                )}
+              </div>
+              <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                จากล็อกอิน
+              </span>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              ไม่พบพนักงานผลิตจากบัญชีที่ล็อกอิน — ติดต่อแอดมิน/HR ให้เพิ่มแผนกผลิต
+            </div>
+          )}
+        </section>
+
         {/* Category dropdown */}
         <section className="mt-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -371,42 +440,6 @@ function ScanPage() {
               {categories.map((c) => (
                 <SelectItem key={c.id} value={c.id} className="py-3">
                   <span className="text-base font-semibold">{c.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </section>
-
-        {/* Employee dropdown */}
-        <section className="mt-5">
-          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <User className="h-4 w-4 text-secondary" />
-            {t("emp.title")}
-          </h2>
-          <Select value={employeeId} onValueChange={setEmployeeId} disabled={loading}>
-            <SelectTrigger className="h-16 w-full rounded-2xl text-base">
-              <SelectValue placeholder={loading ? t("emp.loading") : t("emp.placeholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {employees.map((e) => (
-                <SelectItem key={e.id} value={e.id} className="py-2">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12 border-2 border-border">
-                      {e.avatar_url ? <AvatarImage src={e.avatar_url} alt={e.name} /> : null}
-                      <AvatarFallback className="bg-primary text-sm font-bold text-primary-foreground">
-                        {initialsOf(e.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xl">{flagFor(e.nationality)}</span>
-                    <div className="flex flex-col text-left">
-                      <span className="text-base font-semibold leading-tight">{e.name}</span>
-                      {e.emp_code && (
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {e.emp_code}
-                        </span>
-                      )}
-                    </div>
-                  </div>
                 </SelectItem>
               ))}
             </SelectContent>

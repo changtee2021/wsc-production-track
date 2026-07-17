@@ -56,6 +56,7 @@ import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
 import { getReportSubmitBlockReason } from "@/lib/utils/report-media-validation";
 import { clientAppPublicPath } from "@/lib/app-public-url";
+import { EmployeeDeptGate } from "@/components/EmployeeDeptGate";
 
 const qcSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -80,8 +81,16 @@ export const Route = createFileRoute("/qc")({
     ],
     links: [{ rel: "canonical", href: clientAppPublicPath("/qc") }],
   }),
-  component: QcPage,
+  component: QcPageGate,
 });
+
+function QcPageGate() {
+  return (
+    <EmployeeDeptGate dept="qc">
+      <QcPage />
+    </EmployeeDeptGate>
+  );
+}
 
 function QcPage() {
   const [authed, setAuthed] = useState(false);

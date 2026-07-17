@@ -9,10 +9,19 @@ import { toast } from "sonner";
 import { whGetAuthConfig, whIssueSession } from "@/lib/features/warehouse-settings.functions";
 import { setWarehouseToken, isWarehouseSession } from "@/lib/auth/warehouse-session";
 import { WarehouseEmployeeProvider } from "@/components/warehouse/warehouse-employee-context";
+import { EmployeeDeptGate } from "@/components/EmployeeDeptGate";
 
 export const Route = createFileRoute("/warehouse")({
-  component: WarehouseLayout,
+  component: WarehousePageGate,
 });
+
+function WarehousePageGate() {
+  return (
+    <EmployeeDeptGate dept="warehouse">
+      <WarehouseLayout />
+    </EmployeeDeptGate>
+  );
+}
 
 function WarehouseLayout() {
   const [ready, setReady] = useState(false);

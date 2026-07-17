@@ -45,8 +45,14 @@ import {
 } from "@/lib/auth/maintenance-session";
 import { compressMedia } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { normalizeVideoFileAsync, MAX_VIDEO_BYTES, formatVideoMaxSizeError, VIDEO_FILE_ACCEPT } from "@/lib/utils/media-limits";
+import {
+  normalizeVideoFileAsync,
+  MAX_VIDEO_BYTES,
+  formatVideoMaxSizeError,
+  VIDEO_FILE_ACCEPT,
+} from "@/lib/utils/media-limits";
 import { warnIfMovFiles } from "@/components/MediaLightbox";
+import { EmployeeSessionGate } from "@/components/EmployeeDeptGate";
 
 export const Route = createFileRoute("/maintenance")({
   head: () => ({
@@ -55,10 +61,18 @@ export const Route = createFileRoute("/maintenance")({
       { name: "description", content: "ระบบแจ้งซ่อมเครื่องจักรและจัดการสต๊อกอะไหล่" },
     ],
   }),
-  component: MaintenancePage,
+  component: MaintenanceRoute,
 });
 
 type MediaItem = { url: string; type: "image" | "video" };
+
+function MaintenanceRoute() {
+  return (
+    <EmployeeSessionGate>
+      <MaintenancePage />
+    </EmployeeSessionGate>
+  );
+}
 
 function MaintenancePage() {
   const [token, setToken] = useState<string | null>(null);

@@ -49,6 +49,7 @@ import {
   packingCreateVideoUploadUrl,
   packingListEmployees,
 } from "@/lib/features/packing.functions";
+import { EmployeeDeptGate } from "@/components/EmployeeDeptGate";
 import {
   isPackingSession,
   setPackingToken,
@@ -72,8 +73,16 @@ export const Route = createFileRoute("/packing")({
       { name: "description", content: "หน้าแพ็คของพร้อมเช็คลิสต์และแนบรูป/วิดีโอเป็นหลักฐาน" },
     ],
   }),
-  component: PackingPage,
+  component: PackingPageGate,
 });
+
+function PackingPageGate() {
+  return (
+    <EmployeeDeptGate dept="packing">
+      <PackingPage />
+    </EmployeeDeptGate>
+  );
+}
 
 function PackingPage() {
   const verify = useServerFn(verifyPackingPassword);
