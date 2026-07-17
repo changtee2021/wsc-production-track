@@ -1,14 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { adminFetchLogs } from "@/lib/features/admin.functions";
 
 import { getAdminToken } from "@/lib/auth/admin-session";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
+import {
+  bangkokDateKey,
+  bangkokMonthKey,
+  latestFinishDayBangkok,
+  monthBangkok,
+  shiftBangkokDateKey,
+  todayBangkok,
+} from "@/lib/utils/bangkok-date";
 import { AdminAiAssistant } from "@/components/AdminAiAssistant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -186,9 +195,12 @@ function Section({ icon, title, description, defaultOpen = true, children }: Sec
 function Dashboard() {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadPct, setLoadPct] = useState(12);
   const [scope, setScope] = useState<"day" | "month">("day");
-  const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10));
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [day, setDay] = useState(() => todayBangkok());
+  const [month, setMonth] = useState(() => monthBangkok());
+  const [autoDayHint, setAutoDayHint] = useState(false);
+  const didAutoDay = useRef(false);
 
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -198,6 +210,18 @@ function Dashboard() {
   const [stepFilter, setStepFilter] = useState<string>("all");
 
   const fetchLogs = useServerFn(adminFetchLogs);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadPct(100);
+      return;
+    }
+    setLoadPct(18);
+    const t = window.setInterval(() => {
+      setLoadPct((p) => Math.min(p + 7, 92));
+    }, 220);
+    return () => window.clearInterval(t);
+  }, [loading]);
 
   useEffect(() => {
     (async () => {
@@ -238,6 +262,25 @@ function Dashboard() {
     })();
   }, [fetchLogs]);
 
+  // After first load: if Bangkok "today" has no finishes, jump to latest day with data.
+  useEffect(() => {
+    if (loading || didAutoDay.current) return;
+    didAutoDay.current = true;
+    const today = todayBangkok();
+    const hasTodayFinish = logs.some(
+      (l) => l.action === "finish" && bangkokDateKey(l.created_at) === today,
+    );
+    if (!hasTodayFinish) {
+      const latest = latestFinishDayBangkok(logs);
+      setDay(latest);
+      setAutoDayHint(latest !== today);
+    } else {
+      setDay(today);
+      setAutoDayHint(false);
+    }
+    setMonth(monthBangkok());
+  }, [loading, logs]);
+
   const hasFilter = categoryFilter !== "all" || employeeFilter !== "all" || stepFilter !== "all";
 
   // Apply filters globally
@@ -250,12 +293,12 @@ function Dashboard() {
     });
   }, [logs, categoryFilter, employeeFilter, stepFilter]);
 
-  // Filter logs by selected day/month for ranking & report sections
+  // Filter logs by selected day/month for ranking & report sections (Asia/Bangkok)
   const filtered = useMemo(() => {
     if (scope === "day") {
-      return scopedLogs.filter((l) => l.created_at.slice(0, 10) === day);
+      return scopedLogs.filter((l) => bangkokDateKey(l.created_at) === day);
     }
-    return scopedLogs.filter((l) => l.created_at.slice(0, 7) === month);
+    return scopedLogs.filter((l) => bangkokMonthKey(l.created_at) === month);
   }, [scopedLogs, scope, day, month]);
 
   // Build sessions: pair start/finish per (employee, step, job)
@@ -305,18 +348,17 @@ function Dashboard() {
     return out;
   }, [scopedLogs]);
 
-  // Stats for top cards
+  // Stats for top cards (Asia/Bangkok calendar)
   const stats = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const todayKey = todayBangkok();
+    const monthKey = monthBangkok();
     const finishedToday = new Set<string>();
     const finishedMonth = new Set<string>();
     for (const l of scopedLogs) {
       if (l.action !== "finish") continue;
-      const d = new Date(l.created_at);
-      if (d >= today) finishedToday.add(l.job_id);
-      if (d >= monthStart) finishedMonth.add(l.job_id);
+      const key = bangkokDateKey(l.created_at);
+      if (key === todayKey) finishedToday.add(l.job_id);
+      if (bangkokMonthKey(l.created_at) === monthKey) finishedMonth.add(l.job_id);
     }
     return {
       todayCount: finishedToday.size,
@@ -325,22 +367,24 @@ function Dashboard() {
     };
   }, [scopedLogs]);
 
-  // 14-day chart
+  // 14-day chart (Asia/Bangkok calendar days)
   const days14 = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayKey = todayBangkok();
     const arr: { day: string; finishes: number; starts: number }[] = [];
     for (let i = 13; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+      const key = shiftBangkokDateKey(todayKey, -i);
+      const labelDate = new Date(`${key}T12:00:00+07:00`);
       const item = {
-        day: d.toLocaleDateString("th-TH", { month: "short", day: "numeric" }),
+        day: labelDate.toLocaleDateString("th-TH", {
+          timeZone: "Asia/Bangkok",
+          month: "short",
+          day: "numeric",
+        }),
         finishes: 0,
         starts: 0,
       };
       for (const l of scopedLogs) {
-        if (l.created_at.slice(0, 10) === key) {
+        if (bangkokDateKey(l.created_at) === key) {
           if (l.action === "finish") item.finishes += 1;
           else if (l.action === "start") item.starts += 1;
         }
@@ -384,22 +428,18 @@ function Dashboard() {
     return Array.from(map.values()).sort((a, b) => b.jobs - a.jobs);
   }, [filtered]);
 
-  // MoM: compare current month vs previous month per employee
+  // MoM: compare current month vs previous month per employee (Asia/Bangkok months)
   // Two metrics: jobs finished count, avg duration (minutes)
   const mom = useMemo(() => {
-    const now = new Date();
-    const curStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevEnd = curStart;
+    const curMonth = monthBangkok();
+    const prevMonth = shiftBangkokDateKey(`${curMonth}-01`, -1).slice(0, 7);
 
-    const stat = (from: Date, to: Date | null) => {
+    const stat = (monthKey: string) => {
       const jobsByEmp = new Map<string, { name: string; jobs: Set<string>; durations: number[] }>();
       // jobs finished
       for (const l of scopedLogs) {
         if (l.action !== "finish") continue;
-        const d = new Date(l.created_at);
-        if (d < from) continue;
-        if (to && d >= to) continue;
+        if (bangkokMonthKey(l.created_at) !== monthKey) continue;
         const cur = jobsByEmp.get(l.employee_id) ?? {
           name: l.employees?.name ?? "(ลบแล้ว)",
           jobs: new Set<string>(),
@@ -410,8 +450,7 @@ function Dashboard() {
       }
       // durations from sessions
       for (const s of sessions) {
-        if (s.finish < from) continue;
-        if (to && s.finish >= to) continue;
+        if (bangkokMonthKey(s.finish) !== monthKey) continue;
         const cur = jobsByEmp.get(s.employee_id) ?? {
           name: s.employee_name,
           jobs: new Set<string>(),
@@ -423,8 +462,8 @@ function Dashboard() {
       return jobsByEmp;
     };
 
-    const cur = stat(curStart, null);
-    const prev = stat(prevStart, prevEnd);
+    const cur = stat(curMonth);
+    const prev = stat(prevMonth);
 
     const allIds = new Set<string>([...cur.keys(), ...prev.keys()]);
     return Array.from(allIds)
@@ -457,9 +496,9 @@ function Dashboard() {
       .filter((s) => {
         if (s.std == null) return false;
         if (scope === "day") {
-          return s.finish.toISOString().slice(0, 10) === day;
+          return bangkokDateKey(s.finish) === day;
         }
-        return s.finish.toISOString().slice(0, 7) === month;
+        return bangkokMonthKey(s.finish) === month;
       })
       .map((s) => ({ ...s, over: s.durationMin - (s.std ?? 0) }))
       .sort((a, b) => b.over - a.over);
@@ -468,8 +507,8 @@ function Dashboard() {
   // Sessions in current scope (for avg duration per employee × step)
   const scopedSessions = useMemo(() => {
     return sessions.filter((s) => {
-      if (scope === "day") return s.finish.toISOString().slice(0, 10) === day;
-      return s.finish.toISOString().slice(0, 7) === month;
+      if (scope === "day") return bangkokDateKey(s.finish) === day;
+      return bangkokMonthKey(s.finish) === month;
     });
   }, [sessions, scope, day, month]);
 
@@ -1162,8 +1201,8 @@ function Dashboard() {
   };
   const [exportOpen, setExportOpen] = useState(false);
   const [exRange, setExRange] = useState<"current" | "custom" | "all">("current");
-  const [exFrom, setExFrom] = useState(() => new Date().toISOString().slice(0, 10));
-  const [exTo, setExTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [exFrom, setExFrom] = useState(() => todayBangkok());
+  const [exTo, setExTo] = useState(() => todayBangkok());
   const [exEmpIds, setExEmpIds] = useState<Set<string>>(new Set());
   const [exStepIds, setExStepIds] = useState<Set<string>>(new Set());
   const [exCatIds, setExCatIds] = useState<Set<string>>(new Set());
@@ -1208,10 +1247,21 @@ function Dashboard() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
       <Toaster richColors position="top-center" />
+      {(loading || loadPct < 100) && (
+        <div className="mb-4 space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{loading ? "กำลังโหลดข้อมูลแดชบอร์ด…" : "โหลดเสร็จแล้ว"}</span>
+            <span>{Math.round(loadPct)}%</span>
+          </div>
+          <Progress value={loadPct} className="h-2.5" />
+        </div>
+      )}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">แดชบอร์ดการผลิต</h1>
-          <p className="text-sm text-muted-foreground">ภาพรวมงาน ขั้นตอน และประสิทธิภาพพนักงาน</p>
+          <p className="text-sm text-muted-foreground">
+            ภาพรวมงาน ขั้นตอน และประสิทธิภาพพนักงาน · วันตามเวลาไทย (Asia/Bangkok)
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -1325,7 +1375,10 @@ function Dashboard() {
               <Input
                 type="date"
                 value={day}
-                onChange={(e) => setDay(e.target.value)}
+                onChange={(e) => {
+                  setAutoDayHint(false);
+                  setDay(e.target.value);
+                }}
                 className="max-w-[180px]"
               />
             ) : (
@@ -1335,6 +1388,11 @@ function Dashboard() {
                 onChange={(e) => setMonth(e.target.value)}
                 className="max-w-[180px]"
               />
+            )}
+            {scope === "day" && autoDayHint && (
+              <span className="text-xs text-muted-foreground">
+                แสดงวันล่าสุดที่มีงานเสร็จ (วันนี้ยังไม่มีข้อมูล)
+              </span>
             )}
           </div>
         </div>
