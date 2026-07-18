@@ -48,11 +48,16 @@ import {
   qcSubmitReport,
   qcUploadMedia,
   qcCreateVideoUploadUrl,
+  qcCreateVideoReplaceUploadUrl,
   qcListEmployees,
 } from "@/lib/features/qc.functions";
 import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
-import { compressMedia } from "@/lib/utils/media-compress";
+import { compressMedia, videoNeedsWebSafeTranscode } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
+import {
+  enqueueBackgroundWebSafeConvert,
+  type PlaybackStatus,
+} from "@/lib/utils/video-background-convert";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
 import { getReportSubmitBlockReason } from "@/lib/utils/report-media-validation";
 import { clientAppPublicPath } from "@/lib/app-public-url";
@@ -207,6 +212,8 @@ interface MediaItem {
   // Short-lived signed URL used only for in-session preview before submit.
   previewUrl?: string;
   type: "image" | "video";
+  /** Background H.264 convert status (session-only; not persisted). */
+  playback?: PlaybackStatus;
 }
 
 interface CategoryRow {
@@ -262,8 +269,34 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const fetchChecklist = useServerFn(qcFetchChecklist);
   const uploadMedia = useServerFn(qcUploadMedia);
   const prepareVideoUpload = useServerFn(qcCreateVideoUploadUrl);
+  const prepareVideoReplace = useServerFn(qcCreateVideoReplaceUploadUrl);
   const listQcEmployees = useServerFn(qcListEmployees);
   const submitReport = useServerFn(qcSubmitReport);
+
+  const patchMediaPlayback = (
+    path: string,
+    status: PlaybackStatus,
+    previewUrl?: string,
+    target: "overall" | string = "overall",
+  ) => {
+    const patch = (list: MediaItem[]) =>
+      list.map((m) =>
+        m.url === path
+          ? { ...m, playback: status, ...(previewUrl ? { previewUrl } : {}) }
+          : m,
+      );
+    if (target === "overall") {
+      setMedia((prev) => patch(prev));
+    } else {
+      setItemStates((prev) => ({
+        ...prev,
+        [target]: {
+          ...(prev[target] ?? EMPTY_ITEM_STATE),
+          media: patch(prev[target]?.media ?? []),
+        },
+      }));
+    }
+  };
 
   // Load QC employees (token-gated) and categories (public)
   useEffect(() => {
@@ -377,6 +410,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     setUploadStatus({ phase: "uploading" });
     try {
       const items: MediaItem[] = [];
+      const convertJobs: { file: File; path: string }[] = [];
       for (const original of Array.from(files)) {
         let file = original;
         if (kind === "image") {
@@ -420,7 +454,14 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
               deptToken: token,
               prepareUpload: prepareVideoUpload,
             });
-            items.push({ url: res.path, previewUrl: res.previewUrl, type: kind });
+            const needsConvert = await videoNeedsWebSafeTranscode(f);
+            items.push({
+              url: res.path,
+              previewUrl: res.previewUrl,
+              type: kind,
+              playback: needsConvert ? "pending" : "ready",
+            });
+            if (needsConvert) convertJobs.push({ file: f, path: res.path });
             continue;
           }
           // Images: small enough for base64 via server function (with compression).
@@ -453,6 +494,23 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
             },
           }));
         }
+      }
+      // Start H.264 convert after media is in state — does not block submit
+      for (const job of convertJobs) {
+        enqueueBackgroundWebSafeConvert({
+          file: job.file,
+          path: job.path,
+          bucket: "qc-media",
+          deptToken: token,
+          prepareReplace: prepareVideoReplace,
+          onUpdate: (status, previewUrl) =>
+            patchMediaPlayback(job.path, status, previewUrl, target),
+        });
+      }
+      if (convertJobs.length) {
+        toast.info("อัปโหลดแล้ว — ระบบจะแปลงวิดีโอให้เล่นบนเว็บเบื้องหลัง", {
+          duration: 4000,
+        });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
@@ -861,6 +919,12 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
                         playsInline
                       />
                     )}
+                    {m.type === "video" &&
+                      (m.playback === "pending" || m.playback === "converting") && (
+                        <div className="absolute inset-x-0 bottom-0 bg-black/65 px-1 py-0.5 text-[10px] font-medium text-white">
+                          {m.playback === "converting" ? "กำลังแปลง…" : "รอแปลงเว็บ…"}
+                        </div>
+                      )}
 
                     <button
                       type="button"

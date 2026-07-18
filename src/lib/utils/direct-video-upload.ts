@@ -16,6 +16,14 @@ type PrepareVideoUpload = (args: {
   };
 }) => Promise<{ path: string; token: string }>;
 
+export type PrepareVideoReplace = (args: {
+  data: {
+    token: string;
+    path: string;
+    sizeBytes: number;
+  };
+}) => Promise<{ path: string; token: string }>;
+
 export async function uploadVideoViaSignedUrl(opts: {
   bucket: DeptMediaBucket;
   file: File;
@@ -50,4 +58,29 @@ export async function uploadVideoViaSignedUrl(opts: {
   if (error) throw new Error(error.message);
 
   return { path: prepared.path, previewUrl: URL.createObjectURL(body) };
+}
+
+/** Upsert converted H.264 bytes onto an existing storage path. */
+export async function replaceVideoViaSignedUrl(opts: {
+  bucket: DeptMediaBucket;
+  path: string;
+  file: File;
+  deptToken: string;
+  prepareReplace: PrepareVideoReplace;
+}): Promise<void> {
+  if (opts.file.size > MAX_VIDEO_BYTES) {
+    throw new Error(formatVideoMaxSizeError());
+  }
+  const mime = opts.file.type || "video/mp4";
+  const prepared = await opts.prepareReplace({
+    data: { token: opts.deptToken, path: opts.path, sizeBytes: opts.file.size },
+  });
+  const { error } = await supabase.storage
+    .from(opts.bucket)
+    .uploadToSignedUrl(prepared.path, prepared.token, opts.file, {
+      contentType: mime,
+      cacheControl: "3600",
+      upsert: true,
+    });
+  if (error) throw new Error(error.message);
 }

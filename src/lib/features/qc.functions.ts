@@ -265,6 +265,11 @@ export const qcUploadMedia = createServerFn({ method: "POST" })
   });
 
 const videoUploadExt = z.enum(["mp4", "webm", "mov", "m4v"]);
+const videoStoragePath = z
+  .string()
+  .min(8)
+  .max(240)
+  .regex(/^video\/[A-Za-z0-9._-]+$/);
 
 /** Issue a signed upload URL so the client can PUT video bytes directly to Storage. */
 export const qcCreateVideoUploadUrl = createServerFn({ method: "POST" })
@@ -285,6 +290,28 @@ export const qcCreateVideoUploadUrl = createServerFn({ method: "POST" })
       .createSignedUploadUrl(path);
     if (error || !signed) {
       throw new Error(error?.message ?? "สร้างลิงก์อัปโหลดไม่สำเร็จ");
+    }
+    return { path: signed.path, token: signed.token };
+  });
+
+/** Signed upsert URL to replace an existing video after background H.264 convert. */
+export const qcCreateVideoReplaceUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        path: videoStoragePath,
+        sizeBytes: z.number().int().min(1).max(MAX_VIDEO_BYTES),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertQc(data.token);
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("qc-media")
+      .createSignedUploadUrl(data.path, { upsert: true });
+    if (error || !signed) {
+      throw new Error(error?.message ?? "สร้างลิงก์แทนที่วิดีโอไม่สำเร็จ");
     }
     return { path: signed.path, token: signed.token };
   });

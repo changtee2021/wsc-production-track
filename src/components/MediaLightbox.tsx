@@ -103,9 +103,11 @@ function VideoView({ src, originalRef }: { src: string; originalRef: string }) {
           }
         }
         if (cancelled) return;
-        const blob = new Blob(chunks as BlobPart[], {
-          type: res.headers.get("content-type") || guessMime(ext),
-        });
+        const mime =
+          res.headers.get("content-type") ||
+          sniffMimeFromChunks(chunks) ||
+          guessMime(ext);
+        const blob = new Blob(chunks as BlobPart[], { type: mime });
         objectUrl = URL.createObjectURL(blob);
         setProgress(100);
         setPlaySrc(objectUrl);
@@ -212,15 +214,27 @@ function guessMime(ext: string | null): string {
   return "video/mp4";
 }
 
+/** Prefer real container MIME after backfill may replace .mov bytes with H.264 MP4. */
+function sniffMimeFromChunks(chunks: Uint8Array[]): string | null {
+  if (!chunks.length) return null;
+  const first = chunks[0]!;
+  if (first.length >= 4 && first[0] === 0x1a && first[1] === 0x45 && first[2] === 0xdf && first[3] === 0xa3) {
+    return "video/webm";
+  }
+  if (first.length >= 8 && first[4] === 0x66 && first[5] === 0x74 && first[6] === 0x79 && first[7] === 0x70) {
+    return "video/mp4";
+  }
+  return null;
+}
+
 export function warnIfMovFiles(files: FileList | File[]): void {
   const arr = Array.from(files as ArrayLike<File>);
   const hasMov = arr.some((f) => f.type === "video/quicktime" || /\.mov$/i.test(f.name));
   if (hasMov) {
     import("sonner").then(({ toast }) =>
-      toast.warning("ไฟล์ .mov อาจเปิดดูในเว็บไม่ได้", {
-        description:
-          "ผู้ดูบน Windows/Chrome อาจต้องกด 'ดาวน์โหลด' เพื่อเล่น แนะนำตั้งค่า iPhone: กล้อง → รูปแบบ → เข้ากันได้สูงสุด เพื่อให้ได้ไฟล์ MP4",
-        duration: 7000,
+      toast.info("อัปได้เลย — ระบบจะแปลงวิดีโอเบื้องหลัง", {
+        description: "ไฟล์จาก iPhone/LINE จะถูกแปลงเป็น MP4 (H.264) หลังอัป ไม่ต้องรอก่อนส่งงาน",
+        duration: 5000,
       }),
     );
   }

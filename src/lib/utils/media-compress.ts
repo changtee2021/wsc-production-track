@@ -1,6 +1,11 @@
-// วิดีโอ: อัปต้นฉบับตรง (ซ่อม header MP4 เร็ว ๆ เท่านั้น) — ไม่บีบอัด MediaRecorder
+// Images: compress to JPEG. Videos: fast header repair only — H.264 convert runs in background after upload.
 import { MAX_VIDEO_BYTES, formatVideoMaxSizeError } from "@/lib/utils/media-limits";
-import { repairMp4IfNeeded } from "@/lib/utils/mp4-repair";
+import {
+  canHtmlVideoPlay,
+  inspectMp4,
+  needsWebSafeRemux,
+  repairMp4IfNeeded,
+} from "@/lib/utils/mp4-repair";
 
 const MAX_IMAGE_DIMENSION = 1920;
 const JPEG_QUALITY = 0.82;
@@ -26,9 +31,9 @@ export function isAppleMobile(): boolean {
   );
 }
 
-/** Always false — video compression disabled; upload original immediately. */
+/** Client can run ffmpeg.wasm background convert. */
 export function canBrowserCompressVideo(): boolean {
-  return false;
+  return typeof window !== "undefined" && typeof WebAssembly !== "undefined";
 }
 
 async function loadImage(file: File): Promise<HTMLImageElement> {
@@ -73,20 +78,56 @@ export async function compressImage(file: File): Promise<File> {
   }
 }
 
-/** Video: fast MP4 header repair only — no MediaRecorder compress. */
+function isWebmFile(file: File): boolean {
+  return file.type === "video/webm" || /\.webm$/i.test(file.name);
+}
+
+function sniffNeedsTranscode(bytes: Uint8Array): boolean {
+  const health = inspectMp4(bytes);
+  if (!health.isMp4) return false;
+  if (health.hasHevc) return true;
+  if (!health.hasMoov) return true;
+  return false;
+}
+
+/** Decide whether this video should be converted to H.264 MP4 in the background. */
+export async function videoNeedsWebSafeTranscode(file: File): Promise<boolean> {
+  // Fast path: Apple container → almost always needs convert for Chrome/Edge
+  if (/\.(mov|m4v)$/i.test(file.name) || file.type === "video/quicktime" || file.type === "video/x-m4v") {
+    return true;
+  }
+  if (isWebmFile(file)) return true;
+
+  const looksMp4Family = file.type === "video/mp4" || /\.mp4$/i.test(file.name);
+
+  if (looksMp4Family) {
+    if (file.size <= 12 * 1024 * 1024) {
+      const all = new Uint8Array(await file.arrayBuffer());
+      if (needsWebSafeRemux(inspectMp4(all))) return true;
+    } else {
+      const wider = new Uint8Array(await file.slice(0, 2 * 1024 * 1024).arrayBuffer());
+      if (sniffNeedsTranscode(wider)) return true;
+    }
+  }
+
+  if (!(await canHtmlVideoPlay(file))) return true;
+  return false;
+}
+
 export async function compressVideo(file: File, options?: CompressVideoOptions): Promise<File> {
   return prepareVideoForUpload(file, options);
 }
 
 /**
  * Prepare video for upload: fast MP4 header repair only.
- * Staff upload the original immediately (up to MAX_VIDEO_BYTES / 1 GB).
+ * H.264 transcode runs in the background after upload (see video-background-convert).
  */
 export async function prepareVideoForUpload(
   file: File,
   options?: CompressMediaOptions,
 ): Promise<File> {
   if (file.size > MAX_VIDEO_BYTES) throw new Error(formatVideoMaxSizeError());
+  options?.onProgress?.(30);
   const { file: repaired } = await repairMp4IfNeeded(file);
   options?.onProgress?.(100);
   return repaired;

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Plus, Wrench, ImagePlus, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ import {
   listSpareParts,
   maintenanceUploadMedia,
   maintenanceCreateVideoUploadUrl,
+  maintenanceCreateVideoReplaceUploadUrl,
   listMaintenanceEmployees,
 } from "@/lib/features/maintenance.functions";
 import {
@@ -43,8 +44,9 @@ import {
   getMaintenanceToken,
   clearMaintenanceSession,
 } from "@/lib/auth/maintenance-session";
-import { compressMedia } from "@/lib/utils/media-compress";
+import { compressMedia, videoNeedsWebSafeTranscode } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
+import { enqueueBackgroundWebSafeConvert, type PlaybackStatus } from "@/lib/utils/video-background-convert";
 import {
   normalizeVideoFileAsync,
   MAX_VIDEO_BYTES,
@@ -64,7 +66,7 @@ export const Route = createFileRoute("/maintenance")({
   component: MaintenanceRoute,
 });
 
-type MediaItem = { url: string; type: "image" | "video" };
+type MediaItem = { url: string; type: "image" | "video"; playback?: PlaybackStatus };
 
 function MaintenanceRoute() {
   return (
@@ -687,7 +689,10 @@ function MediaUploader({
 }) {
   const upload = useServerFn(maintenanceUploadMedia);
   const prepareVideoUpload = useServerFn(maintenanceCreateVideoUploadUrl);
+  const prepareVideoReplace = useServerFn(maintenanceCreateVideoReplaceUploadUrl);
   const [busy, setBusy] = useState(false);
+  const mediaRef = useRef(media);
+  mediaRef.current = media;
 
   const handleFile = async (file: File, kind: "image" | "video") => {
     setBusy(true);
@@ -713,7 +718,34 @@ function MediaUploader({
           deptToken: token,
           prepareUpload: prepareVideoUpload,
         });
-        onChange([...media, { url: r.path, type: kind }]);
+        const needsConvert = await videoNeedsWebSafeTranscode(compressed);
+        const next: MediaItem = {
+          url: r.path,
+          type: kind,
+          playback: needsConvert ? "pending" : "ready",
+        };
+        const updated = [...mediaRef.current, next];
+        mediaRef.current = updated;
+        onChange(updated);
+        if (needsConvert) {
+          toast.info("อัปโหลดแล้ว — ระบบจะแปลงวิดีโอให้เล่นบนเว็บเบื้องหลัง", {
+            duration: 4000,
+          });
+          enqueueBackgroundWebSafeConvert({
+            file: compressed,
+            path: r.path,
+            bucket: "maintenance-media",
+            deptToken: token,
+            prepareReplace: prepareVideoReplace,
+            onUpdate: (status) => {
+              const patched = mediaRef.current.map((m) =>
+                m.url === r.path ? { ...m, playback: status } : m,
+              );
+              mediaRef.current = patched;
+              onChange(patched);
+            },
+          });
+        }
         return;
       }
       const buf = await compressed.arrayBuffer();

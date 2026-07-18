@@ -226,7 +226,8 @@ export function canHtmlVideoPlay(file: File): Promise<boolean> {
     const timer = window.setTimeout(() => done(false), 8_000);
     video.onloadedmetadata = () => {
       window.clearTimeout(timer);
-      done(Number.isFinite(video.duration) && video.videoWidth > 0);
+      // duration is enough — some containers report width=0 until first frame
+      done(Number.isFinite(video.duration) && video.duration > 0);
     };
     video.onerror = () => {
       window.clearTimeout(timer);

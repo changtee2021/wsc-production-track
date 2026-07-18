@@ -10,7 +10,7 @@ export function MediaUploadStatusLine({ status }: { status: MediaUploadStatus })
 
   const label =
     status.phase === "compressing"
-      ? `กำลังบีบอัดวิดีโอ ${status.percent}%`
+      ? `กำลังเตรียมวิดีโอ ${status.percent}%`
       : "กำลังอัปโหลด...";
 
   const barPercent = status.phase === "compressing" ? status.percent : undefined;

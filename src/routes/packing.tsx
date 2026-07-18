@@ -47,6 +47,7 @@ import {
   packingSubmitReport,
   packingUploadMedia,
   packingCreateVideoUploadUrl,
+  packingCreateVideoReplaceUploadUrl,
   packingListEmployees,
 } from "@/lib/features/packing.functions";
 import { EmployeeDeptGate } from "@/components/EmployeeDeptGate";
@@ -56,8 +57,12 @@ import {
   getPackingToken,
   clearPackingSession,
 } from "@/lib/auth/packing-session";
-import { compressMedia } from "@/lib/utils/media-compress";
+import { compressMedia, videoNeedsWebSafeTranscode } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
+import {
+  enqueueBackgroundWebSafeConvert,
+  type PlaybackStatus,
+} from "@/lib/utils/video-background-convert";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
 import { getReportSubmitBlockReason } from "@/lib/utils/report-media-validation";
 
@@ -141,6 +146,7 @@ interface MediaItem {
   url: string;
   previewUrl?: string;
   type: "image" | "video";
+  playback?: PlaybackStatus;
 }
 interface CategoryRow {
   id: string;
@@ -190,6 +196,30 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
   const fetchChecklist = useServerFn(packingFetchChecklist);
   const uploadMedia = useServerFn(packingUploadMedia);
   const prepareVideoUpload = useServerFn(packingCreateVideoUploadUrl);
+  const prepareVideoReplace = useServerFn(packingCreateVideoReplaceUploadUrl);
+
+  const patchMediaPlayback = (
+    path: string,
+    status: PlaybackStatus,
+    previewUrl?: string,
+    target: "overall" | string = "overall",
+  ) => {
+    const patch = (list: MediaItem[]) =>
+      list.map((m) =>
+        m.url === path
+          ? { ...m, playback: status, ...(previewUrl ? { previewUrl } : {}) }
+          : m,
+      );
+    if (target === "overall") setMedia((prev) => patch(prev));
+    else
+      setItemStates((prev) => ({
+        ...prev,
+        [target]: {
+          ...(prev[target] ?? EMPTY),
+          media: patch(prev[target]?.media ?? []),
+        },
+      }));
+  };
   const listEmps = useServerFn(packingListEmployees);
   const submitReport = useServerFn(packingSubmitReport);
 
@@ -295,6 +325,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
     setUploadStatus({ phase: "uploading" });
     try {
       const items: MediaItem[] = [];
+      const convertJobs: { file: File; path: string }[] = [];
       for (const original of Array.from(files)) {
         let file = original;
         if (kind === "image") {
@@ -338,7 +369,14 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
               deptToken: token,
               prepareUpload: prepareVideoUpload,
             });
-            items.push({ url: res.path, previewUrl: res.previewUrl, type: kind });
+            const needsConvert = await videoNeedsWebSafeTranscode(f);
+            items.push({
+              url: res.path,
+              previewUrl: res.previewUrl,
+              type: kind,
+              playback: needsConvert ? "pending" : "ready",
+            });
+            if (needsConvert) convertJobs.push({ file: f, path: res.path });
             continue;
           }
           const buf = await f.arrayBuffer();
@@ -365,6 +403,22 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
               media: [...(prev[target]?.media ?? []), ...items],
             },
           }));
+      }
+      for (const job of convertJobs) {
+        enqueueBackgroundWebSafeConvert({
+          file: job.file,
+          path: job.path,
+          bucket: "packing-media",
+          deptToken: token,
+          prepareReplace: prepareVideoReplace,
+          onUpdate: (status, previewUrl) =>
+            patchMediaPlayback(job.path, status, previewUrl, target),
+        });
+      }
+      if (convertJobs.length) {
+        toast.info("อัปโหลดแล้ว — ระบบจะแปลงวิดีโอให้เล่นบนเว็บเบื้องหลัง", {
+          duration: 4000,
+        });
       }
     } finally {
       setUploading(false);
@@ -682,6 +736,12 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
                         playsInline
                       />
                     )}
+                    {m.type === "video" &&
+                      (m.playback === "pending" || m.playback === "converting") && (
+                        <div className="absolute inset-x-0 bottom-0 bg-black/65 px-1 py-0.5 text-[10px] font-medium text-white">
+                          {m.playback === "converting" ? "กำลังแปลง…" : "รอแปลงเว็บ…"}
+                        </div>
+                      )}
                     <button
                       type="button"
                       onClick={() => setMedia((prev) => prev.filter((_, j) => j !== i))}

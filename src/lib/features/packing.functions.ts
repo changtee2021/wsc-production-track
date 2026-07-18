@@ -258,6 +258,11 @@ export const packingUploadMedia = createServerFn({ method: "POST" })
   });
 
 const videoUploadExt = z.enum(["mp4", "webm", "mov", "m4v"]);
+const videoStoragePath = z
+  .string()
+  .min(8)
+  .max(240)
+  .regex(/^video\/[A-Za-z0-9._-]+$/);
 
 export const packingCreateVideoUploadUrl = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -277,6 +282,27 @@ export const packingCreateVideoUploadUrl = createServerFn({ method: "POST" })
       .createSignedUploadUrl(path);
     if (error || !signed) {
       throw new Error(error?.message ?? "สร้างลิงก์อัปโหลดไม่สำเร็จ");
+    }
+    return { path: signed.path, token: signed.token };
+  });
+
+export const packingCreateVideoReplaceUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        token: tokenStr,
+        path: videoStoragePath,
+        sizeBytes: z.number().int().min(1).max(MAX_VIDEO_BYTES),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    assertPacking(data.token);
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("packing-media")
+      .createSignedUploadUrl(data.path, { upsert: true });
+    if (error || !signed) {
+      throw new Error(error?.message ?? "สร้างลิงก์แทนที่วิดีโอไม่สำเร็จ");
     }
     return { path: signed.path, token: signed.token };
   });
