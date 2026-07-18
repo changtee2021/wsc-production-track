@@ -19,10 +19,7 @@ import {
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { MediaAttachButtons } from "@/components/MediaAttachButtons";
-import {
-  MediaUploadStatusLine,
-  type MediaUploadStatus,
-} from "@/components/MediaUploadStatus";
+import { MediaUploadStatusLine, type MediaUploadStatus } from "@/components/MediaUploadStatus";
 import {
   ScanLine,
   QrCode,
@@ -58,7 +55,12 @@ import {
   enqueueBackgroundWebSafeConvert,
   type PlaybackStatus,
 } from "@/lib/utils/video-background-convert";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
+import {
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
+  formatVideoMaxSizeError,
+  normalizeVideoFileAsync,
+} from "@/lib/utils/media-limits";
 import { getReportSubmitBlockReason } from "@/lib/utils/report-media-validation";
 import { clientAppPublicPath } from "@/lib/app-public-url";
 import { EmployeeDeptGate } from "@/components/EmployeeDeptGate";
@@ -281,9 +283,7 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   ) => {
     const patch = (list: MediaItem[]) =>
       list.map((m) =>
-        m.url === path
-          ? { ...m, playback: status, ...(previewUrl ? { previewUrl } : {}) }
-          : m,
+        m.url === path ? { ...m, playback: status, ...(previewUrl ? { previewUrl } : {}) } : m,
       );
     if (target === "overall") {
       setMedia((prev) => patch(prev));
@@ -389,7 +389,9 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
       const url = new URL(text);
       const fromQ = url.searchParams.get("job_id");
       if (fromQ) v = fromQ;
-    } catch {}
+    } catch {
+      /* plain job id text */
+    }
     setManualJob(v);
     navigate({ search: { job_id: v } });
     toast.success("สแกนแล้ว: " + v);
@@ -441,7 +443,11 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
 
         const max = kind === "image" ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
         if (f.size > max) {
-          toast.error(kind === "video" ? formatVideoMaxSizeError() : `ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
+          toast.error(
+            kind === "video"
+              ? formatVideoMaxSizeError()
+              : `ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`,
+          );
           continue;
         }
 

@@ -30,7 +30,10 @@ export async function uploadVideoViaSignedUrl(opts: {
   deptToken: string;
   prepareUpload: PrepareVideoUpload;
 }): Promise<{ path: string; previewUrl: string }> {
-  const mime = opts.file.type && VIDEO_EXT_BY_MIME[opts.file.type] ? opts.file.type : inferVideoMime(opts.file);
+  const mime =
+    opts.file.type && VIDEO_EXT_BY_MIME[opts.file.type]
+      ? opts.file.type
+      : inferVideoMime(opts.file);
   const ext = mime ? VIDEO_EXT_BY_MIME[mime] : undefined;
   if (!ext || !mime) {
     throw new Error("รองรับเฉพาะ MP4, WEBM, MOV, M4V");

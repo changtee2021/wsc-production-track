@@ -53,10 +53,7 @@ function inputNameFor(file: File): string {
  * Transcode any common phone/LINE video to H.264 + AAC MP4 (faststart).
  * Throws on failure — caller decides fallback.
  */
-export async function transcodeToWebMp4(
-  file: File,
-  onProgress?: TranscodeProgress,
-): Promise<File> {
+export async function transcodeToWebMp4(file: File, onProgress?: TranscodeProgress): Promise<File> {
   if (typeof window === "undefined") {
     throw new Error("แปลงวิดีโอได้เฉพาะในเบราว์เซอร์");
   }
@@ -115,8 +112,7 @@ export async function transcodeToWebMp4(
     /* ignore */
   }
 
-  const bytes =
-    data instanceof Uint8Array ? data : new TextEncoder().encode(String(data));
+  const bytes = data instanceof Uint8Array ? data : new TextEncoder().encode(String(data));
   const blob = new Blob([bytes], { type: "video/mp4" });
   const base = file.name.replace(/\.[^.]+$/, "") || "video";
   onProgress?.(100);

@@ -57,11 +57,23 @@ function hasHevc(bytes) {
 }
 
 function isWebm(bytes) {
-  return bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
+  return (
+    bytes.length >= 4 &&
+    bytes[0] === 0x1a &&
+    bytes[1] === 0x45 &&
+    bytes[2] === 0xdf &&
+    bytes[3] === 0xa3
+  );
 }
 
 function isMp4Family(bytes) {
-  return bytes.length >= 8 && bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70;
+  return (
+    bytes.length >= 8 &&
+    bytes[4] === 0x66 &&
+    bytes[5] === 0x74 &&
+    bytes[6] === 0x79 &&
+    bytes[7] === 0x70
+  );
 }
 
 function needsConvert(path, bytes) {
@@ -204,7 +216,9 @@ async function main() {
         continue;
       }
 
-      console.log(`CONVERT ${opts.apply ? "" : "(dry) "}${bucket}/${file.path} (${buf.length} bytes)`);
+      console.log(
+        `CONVERT ${opts.apply ? "" : "(dry) "}${bucket}/${file.path} (${buf.length} bytes)`,
+      );
       if (!opts.apply) {
         converted++;
         continue;
@@ -248,7 +262,9 @@ async function main() {
     }
   }
 
-  console.log(`\nDone. examined=${examined} convert=${converted} skipped=${skipped} failed=${failed}`);
+  console.log(
+    `\nDone. examined=${examined} convert=${converted} skipped=${skipped} failed=${failed}`,
+  );
   if (!opts.apply) console.log("Re-run with --apply to write converted files.");
 }
 

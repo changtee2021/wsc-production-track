@@ -56,7 +56,7 @@ export function inspectMp4(bytes: Uint8Array): Mp4Health {
   let guard = 0;
 
   while (pos + 8 <= bytes.length && guard++ < 10_000) {
-    let size = readU32(bytes, pos);
+    const size = readU32(bytes, pos);
     const type = readFourCC(bytes, pos + 4);
     let header = 8;
 
@@ -187,7 +187,10 @@ export async function repairMp4IfNeeded(file: File): Promise<{ file: File; repai
 
   if (!repaired) return { file, repaired: false };
 
-  const out = new File([buf], file.name, { type: mime === "video/quicktime" ? "video/mp4" : mime, lastModified: file.lastModified });
+  const out = new File([buf], file.name, {
+    type: mime === "video/quicktime" ? "video/mp4" : mime,
+    lastModified: file.lastModified,
+  });
   // Prefer .mp4 extension after repair for web playback hints
   if (/\.(mov|m4v)$/i.test(out.name)) {
     const renamed = out.name.replace(/\.(mov|m4v)$/i, ".mp4");

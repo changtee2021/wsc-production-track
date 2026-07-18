@@ -9,9 +9,7 @@ export function MediaUploadStatusLine({ status }: { status: MediaUploadStatus })
   if (status.phase === "idle") return null;
 
   const label =
-    status.phase === "compressing"
-      ? `กำลังเตรียมวิดีโอ ${status.percent}%`
-      : "กำลังอัปโหลด...";
+    status.phase === "compressing" ? `กำลังเตรียมวิดีโอ ${status.percent}%` : "กำลังอัปโหลด...";
 
   const barPercent = status.phase === "compressing" ? status.percent : undefined;
 

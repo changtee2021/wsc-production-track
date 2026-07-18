@@ -7,10 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import { MediaAttachButtons } from "@/components/MediaAttachButtons";
-import {
-  MediaUploadStatusLine,
-  type MediaUploadStatus,
-} from "@/components/MediaUploadStatus";
+import { MediaUploadStatusLine, type MediaUploadStatus } from "@/components/MediaUploadStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +60,12 @@ import {
   enqueueBackgroundWebSafeConvert,
   type PlaybackStatus,
 } from "@/lib/utils/video-background-convert";
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, formatVideoMaxSizeError, normalizeVideoFileAsync } from "@/lib/utils/media-limits";
+import {
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
+  formatVideoMaxSizeError,
+  normalizeVideoFileAsync,
+} from "@/lib/utils/media-limits";
 import { getReportSubmitBlockReason } from "@/lib/utils/report-media-validation";
 
 const packingSearch = z.object({
@@ -206,9 +208,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
   ) => {
     const patch = (list: MediaItem[]) =>
       list.map((m) =>
-        m.url === path
-          ? { ...m, playback: status, ...(previewUrl ? { previewUrl } : {}) }
-          : m,
+        m.url === path ? { ...m, playback: status, ...(previewUrl ? { previewUrl } : {}) } : m,
       );
     if (target === "overall") setMedia((prev) => patch(prev));
     else
@@ -305,7 +305,9 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
       const url = new URL(text);
       const f = url.searchParams.get("job_id");
       if (f) v = f;
-    } catch {}
+    } catch {
+      /* plain job id text */
+    }
     setManualJob(v);
     navigate({ search: { job_id: v } });
     toast.success("สแกนแล้ว: " + v);
@@ -356,7 +358,11 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
 
         const max = kind === "image" ? MAX_IMG : MAX_VID;
         if (f.size > max) {
-          toast.error(kind === "video" ? formatVideoMaxSizeError() : `ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`);
+          toast.error(
+            kind === "video"
+              ? formatVideoMaxSizeError()
+              : `ไฟล์ใหญ่เกิน ${Math.round(max / (1024 * 1024))}MB`,
+          );
           continue;
         }
 

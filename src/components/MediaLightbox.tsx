@@ -104,9 +104,7 @@ function VideoView({ src, originalRef }: { src: string; originalRef: string }) {
         }
         if (cancelled) return;
         const mime =
-          res.headers.get("content-type") ||
-          sniffMimeFromChunks(chunks) ||
-          guessMime(ext);
+          res.headers.get("content-type") || sniffMimeFromChunks(chunks) || guessMime(ext);
         const blob = new Blob(chunks as BlobPart[], { type: mime });
         objectUrl = URL.createObjectURL(blob);
         setProgress(100);
@@ -218,10 +216,22 @@ function guessMime(ext: string | null): string {
 function sniffMimeFromChunks(chunks: Uint8Array[]): string | null {
   if (!chunks.length) return null;
   const first = chunks[0]!;
-  if (first.length >= 4 && first[0] === 0x1a && first[1] === 0x45 && first[2] === 0xdf && first[3] === 0xa3) {
+  if (
+    first.length >= 4 &&
+    first[0] === 0x1a &&
+    first[1] === 0x45 &&
+    first[2] === 0xdf &&
+    first[3] === 0xa3
+  ) {
     return "video/webm";
   }
-  if (first.length >= 8 && first[4] === 0x66 && first[5] === 0x74 && first[6] === 0x79 && first[7] === 0x70) {
+  if (
+    first.length >= 8 &&
+    first[4] === 0x66 &&
+    first[5] === 0x74 &&
+    first[6] === 0x79 &&
+    first[7] === 0x70
+  ) {
     return "video/mp4";
   }
   return null;

@@ -46,7 +46,10 @@ import {
 } from "@/lib/auth/maintenance-session";
 import { compressMedia, videoNeedsWebSafeTranscode } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
-import { enqueueBackgroundWebSafeConvert, type PlaybackStatus } from "@/lib/utils/video-background-convert";
+import {
+  enqueueBackgroundWebSafeConvert,
+  type PlaybackStatus,
+} from "@/lib/utils/video-background-convert";
 import {
   normalizeVideoFileAsync,
   MAX_VIDEO_BYTES,

@@ -93,7 +93,11 @@ function sniffNeedsTranscode(bytes: Uint8Array): boolean {
 /** Decide whether this video should be converted to H.264 MP4 in the background. */
 export async function videoNeedsWebSafeTranscode(file: File): Promise<boolean> {
   // Fast path: Apple container → almost always needs convert for Chrome/Edge
-  if (/\.(mov|m4v)$/i.test(file.name) || file.type === "video/quicktime" || file.type === "video/x-m4v") {
+  if (
+    /\.(mov|m4v)$/i.test(file.name) ||
+    file.type === "video/quicktime" ||
+    file.type === "video/x-m4v"
+  ) {
     return true;
   }
   if (isWebmFile(file)) return true;

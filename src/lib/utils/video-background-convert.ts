@@ -2,11 +2,11 @@
  * After a fast original upload, convert HEVC/LINE/MOV → H.264 MP4 in a background queue
  * and upsert over the same Storage path so reports keep working without DB path changes.
  */
-import { replaceVideoViaSignedUrl, type PrepareVideoReplace } from "@/lib/utils/direct-video-upload";
 import {
-  canBrowserCompressVideo,
-  videoNeedsWebSafeTranscode,
-} from "@/lib/utils/media-compress";
+  replaceVideoViaSignedUrl,
+  type PrepareVideoReplace,
+} from "@/lib/utils/direct-video-upload";
+import { canBrowserCompressVideo, videoNeedsWebSafeTranscode } from "@/lib/utils/media-compress";
 import type { DeptMediaBucket } from "@/lib/utils/media-limits";
 import { CLIENT_TRANSCODE_MAX_BYTES, transcodeToWebMp4 } from "@/lib/utils/video-transcode";
 
