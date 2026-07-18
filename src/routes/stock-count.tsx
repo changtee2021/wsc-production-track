@@ -58,7 +58,6 @@ import {
 } from "@/lib/features/stock-count.functions";
 import { isStockSession, setStockToken, getStockToken } from "@/lib/auth/stock-session";
 import { loadStoredStockEmployee, saveStoredStockEmployee } from "@/lib/stock-employee-persistence";
-import { EmployeeDeptGate } from "@/components/EmployeeDeptGate";
 
 const UNLOCK_KEY = "wsc_stock_unlocked";
 const PASSCODE = import.meta.env.VITE_STOCK_PASSCODE || "wscstock123";
@@ -71,16 +70,8 @@ export const Route = createFileRoute("/stock-count")({
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
-  component: StockCountPageGate,
+  component: StockCountPasscodeGate,
 });
-
-function StockCountPageGate() {
-  return (
-    <EmployeeDeptGate dept="stock">
-      <StockCountPasscodeGate />
-    </EmployeeDeptGate>
-  );
-}
 
 function StockCountPasscodeGate() {
   const [unlocked, setUnlocked] = useState(false);
@@ -90,14 +81,6 @@ function StockCountPasscodeGate() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (sessionStorage.getItem(UNLOCK_KEY) === "1" || localStorage.getItem(UNLOCK_KEY) === "1") {
-      setUnlocked(true);
-      return;
-    }
-    // Employee floor login already authorized stock (or office) — skip shared passcode.
-    try {
-      localStorage.setItem(UNLOCK_KEY, "1");
-      setUnlocked(true);
-    } catch {
       setUnlocked(true);
     }
   }, []);

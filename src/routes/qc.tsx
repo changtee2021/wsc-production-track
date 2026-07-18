@@ -63,7 +63,6 @@ import {
 } from "@/lib/utils/media-limits";
 import { getReportSubmitBlockReason } from "@/lib/utils/report-media-validation";
 import { clientAppPublicPath } from "@/lib/app-public-url";
-import { EmployeeDeptGate } from "@/components/EmployeeDeptGate";
 
 const qcSearch = z.object({
   job_id: fallback(z.string(), "").default(""),
@@ -88,16 +87,8 @@ export const Route = createFileRoute("/qc")({
     ],
     links: [{ rel: "canonical", href: clientAppPublicPath("/qc") }],
   }),
-  component: QcPageGate,
+  component: QcPage,
 });
-
-function QcPageGate() {
-  return (
-    <EmployeeDeptGate dept="qc">
-      <QcPage />
-    </EmployeeDeptGate>
-  );
-}
 
 function QcPage() {
   const [authed, setAuthed] = useState(false);

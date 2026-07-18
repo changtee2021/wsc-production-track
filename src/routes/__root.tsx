@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppVersion } from "@/components/AppVersion";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { FeedbackFab } from "@/components/FeedbackFab";
 
 import appCss from "../styles.css?url";
 
@@ -129,6 +130,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider isAdmin={isAdmin}>
         <Outlet />
+        <FeedbackFab />
         {!isAdmin && (
           <footer className="flex items-center justify-center py-2">
             <AppVersion />
