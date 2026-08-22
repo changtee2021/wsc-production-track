@@ -8,14 +8,8 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 
-import { hrFloorStaffUrl } from "@/lib/hr-app-url";
-
 function assertAdmin(token: string | undefined) {
   if (!verifyAdminToken(token)) throw new Error("Unauthorized");
-}
-
-function rejectStaffWrites() {
-  throw new Error(`จัดการพนักงานย้ายไป HR: ${hrFloorStaffUrl("WSC")}`);
 }
 
 const tokenStr = z.string().min(1);
@@ -53,7 +47,7 @@ type Row = {
 };
 
 type StaffEntry = {
-  key: string; // `${name}|${emp_code ?? ""}`
+  key: string;
   name: string;
   emp_code: string | null;
   avatar_url: string | null;
@@ -63,26 +57,36 @@ type StaffEntry = {
   active: Partial<Record<Department, boolean>>;
 };
 
+type EmpTable = {
+  select: (s: string) => {
+    order: (c: string) => Promise<{ data: Row[] | null; error: { message: string } | null }>;
+  };
+  insert: (row: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  update: (row: Record<string, unknown>) => {
+    eq: (a: string, b: string) => Promise<{ error: { message: string } | null }>;
+  };
+  delete: () => {
+    eq: (a: string, b: string) => Promise<{ error: { message: string } | null }>;
+  };
+};
+
+function deptTbl(dept: Department): EmpTable {
+  return supabaseAdmin.from(DEPT_TABLE[dept] as never) as unknown as EmpTable;
+}
+
 async function fetchDept(dept: Department): Promise<Row[]> {
-  const table = DEPT_TABLE[dept];
   const select =
     dept === "production"
       ? "id, name, emp_code, avatar_url, active, nationality"
       : dept === "warehouse"
         ? "id, name, emp_code, active"
         : "id, name, emp_code, avatar_url, active";
-  // Cast for tables not yet present in generated types.
-  const { data, error } = await (
-    supabaseAdmin.from(table as never) as unknown as {
-      select: (s: string) => {
-        order: (c: string) => Promise<{ data: Row[] | null; error: { message: string } | null }>;
-      };
-    }
-  )
-    .select(select)
-    .order("name");
+  const { data, error } = await deptTbl(dept).select(select).order("name");
   if (error) throw new Error(`${dept}: ${error.message}`);
-  return data ?? [];
+  return (data ?? []).map((r) => ({
+    ...r,
+    avatar_url: r.avatar_url ?? null,
+  }));
 }
 
 export const adminListAllStaff = createServerFn({ method: "POST" })
@@ -140,6 +144,19 @@ export const adminListAllStaff = createServerFn({ method: "POST" })
 
 const deptEnum = z.enum(DEPARTMENTS);
 
+/** Accept https URLs; coerce blank/invalid legacy values to null so toggles don't 400. */
+const optionalAvatarUrl = z.preprocess((v) => {
+  if (v == null || v === "") return null;
+  if (typeof v !== "string") return null;
+  try {
+    const u = new URL(v);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return v.slice(0, 2000);
+  } catch {
+    return null;
+  }
+}, z.string().url().max(2000).nullable());
+
 export const adminToggleStaffDepartment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
@@ -147,7 +164,7 @@ export const adminToggleStaffDepartment = createServerFn({ method: "POST" })
         token: tokenStr,
         name: z.string().trim().min(1).max(100),
         emp_code: z.string().trim().max(50).nullable().optional(),
-        avatar_url: z.string().url().max(2000).nullable().optional(),
+        avatar_url: optionalAvatarUrl.optional(),
         nationality: z.string().trim().max(50).nullable().optional(),
         department: deptEnum,
         enabled: z.boolean(),
@@ -157,7 +174,30 @@ export const adminToggleStaffDepartment = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    rejectStaffWrites();
+    const tbl = deptTbl(data.department);
+
+    if (data.enabled) {
+      if (data.existingId) return { ok: true };
+      const row: Record<string, unknown> = {
+        name: data.name,
+        emp_code: data.emp_code ?? null,
+        active: true,
+      };
+      if (data.department !== "warehouse") {
+        row.avatar_url = data.avatar_url ?? null;
+      }
+      if (data.department === "production") {
+        row.nationality = data.nationality ?? "Thai";
+      }
+      const { error } = await tbl.insert(row);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+
+    if (!data.existingId) return { ok: true };
+    const { error } = await tbl.delete().eq("id", data.existingId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const adminUpdateStaffMeta = createServerFn({ method: "POST" })
@@ -165,19 +205,32 @@ export const adminUpdateStaffMeta = createServerFn({ method: "POST" })
     z
       .object({
         token: tokenStr,
-        // Pairs of (department, id) to update with the new meta
         targets: z
           .array(z.object({ department: deptEnum, id: z.string().uuid() }))
           .min(1)
           .max(10),
         name: z.string().trim().min(1).max(100),
         emp_code: z.string().trim().max(50).nullable().optional(),
-        avatar_url: z.string().url().max(2000).nullable().optional(),
+        avatar_url: optionalAvatarUrl.optional(),
         nationality: z.string().trim().max(50).nullable().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
-    rejectStaffWrites();
+    for (const t of data.targets) {
+      const patch: Record<string, unknown> = {
+        name: data.name,
+        emp_code: data.emp_code ?? null,
+      };
+      if (t.department !== "warehouse") {
+        patch.avatar_url = data.avatar_url ?? null;
+      }
+      if (t.department === "production" && data.nationality) {
+        patch.nationality = data.nationality;
+      }
+      const { error } = await deptTbl(t.department).update(patch).eq("id", t.id);
+      if (error) throw new Error(`${t.department}: ${error.message}`);
+    }
+    return { ok: true };
   });

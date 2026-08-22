@@ -17,7 +17,6 @@ import {
   SlidersHorizontal,
   Receipt,
   Layers,
-  Truck,
   ListChecks,
   Activity,
   Timer,
@@ -42,7 +41,6 @@ import { adminOfficeBadgeCounts } from "@/lib/features/office-requests.functions
 import { adminExpenseBadgeCounts } from "@/lib/features/expenses-admin.functions";
 import { getAdminToken } from "@/lib/auth/admin-session";
 import { hasUnseen } from "@/lib/utils/log-seen";
-import { hrFloorStaffUrl } from "@/lib/hr-app-url";
 import { AppVersion } from "@/components/AppVersion";
 
 const NAV_GROUPS: Array<{
@@ -103,17 +101,7 @@ const NAV_GROUPS: Array<{
       { title: "รายงานค่าเสื่อม", url: "/supplies-reports", icon: BarChart3 },
     ],
   },
-  {
-    label: "คลังสินค้า (WH)",
-    items: [
-      { title: "Dashboard", url: "/warehouse-dashboard", icon: LayoutDashboard },
-      { title: "รายการรับของ", url: "/warehouse/receipts", icon: Package },
-      { title: "สถานะ Pallet", url: "/warehouse/pallets", icon: Layers },
-      { title: "โหลดตู้ส่งออก", url: "/warehouse/export", icon: Truck },
-      { title: "รายงาน", url: "/warehouse/reports", icon: BarChart3 },
-      { title: "ตั้งค่าคลัง", url: "/warehouse/settings", icon: SlidersHorizontal },
-    ],
-  },
+  // Warehouse (WH) nav hidden for now — module not in active use.
   {
     label: "นับสต๊อก (WSC)",
     items: [
@@ -130,7 +118,7 @@ const NAV_GROUPS: Array<{
   },
   {
     label: "ระบบ",
-    items: [{ title: "พนักงาน (HR)", url: hrFloorStaffUrl("WSC"), icon: Users, external: true }],
+    items: [{ title: "พนักงาน", url: "/manage", icon: Users }],
   },
   {
     label: "อัพเดต",

@@ -47,6 +47,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/warehouse/export": "โหลดตู้ส่งออก",
   "/warehouse/reports": "รายงานคลัง",
   "/warehouse/settings": "ตั้งค่าคลังสินค้า",
+  "/manage": "จัดการพนักงาน",
 };
 
 function AdminLayout() {

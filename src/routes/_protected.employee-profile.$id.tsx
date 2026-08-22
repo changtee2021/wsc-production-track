@@ -1,7 +1,6 @@
 // Aggregated employee profile across all 5 departments.
 // Route param `id` is a base64url-encoded "name|emp_code" staff key.
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { hrFloorStaffUrl } from "@/lib/hr-app-url";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminGetEmployeeAggregateProfile } from "@/lib/features/employee-profile.functions";
@@ -111,9 +110,7 @@ function EmployeeProfilePage() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => {
-          window.open(hrFloorStaffUrl("WSC"), "_blank", "noopener,noreferrer");
-        }}
+        onClick={() => navigate({ to: "/manage" })}
         className="mb-3 gap-1"
       >
         <ArrowLeft className="h-4 w-4" /> กลับไปหน้าพนักงาน

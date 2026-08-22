@@ -3,7 +3,6 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 import { verifyWarehouseToken } from "@/lib/auth/warehouse-token.server";
-import { hrFloorStaffUrl } from "@/lib/hr-app-url";
 import { WH_SETTINGS_DEFAULTS, type WhSettingsKey } from "@/lib/warehouse/types";
 
 const SETTINGS_KEYS = Object.keys(WH_SETTINGS_DEFAULTS) as WhSettingsKey[];
@@ -482,7 +481,29 @@ export const adminWhUpsertEmployee = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     requireAdmin(data.token);
-    throw new Error(`จัดการพนักงานคลังย้ายไป HR: ${hrFloorStaffUrl("WSC")}`);
+    const row = {
+      name: data.name.trim(),
+      emp_code: data.emp_code.trim(),
+      active: data.active,
+      sort_order: data.sort_order,
+    };
+    if (data.id) {
+      const { data: updated, error } = await supabaseAdmin
+        .from("wh_employees")
+        .update(row)
+        .eq("id", data.id)
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      return updated;
+    }
+    const { data: created, error } = await supabaseAdmin
+      .from("wh_employees")
+      .insert(row)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return created;
   });
 
 export const adminWhListVisionItems = createServerFn({ method: "GET" })
