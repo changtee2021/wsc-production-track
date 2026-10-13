@@ -20,8 +20,19 @@ function assertAdmin(token: string | undefined) {
 // ---- Auth ----------------------------------------------------------------
 
 export const verifyAdminPassword = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ password: z.string().min(1).max(200) }).parse(data))
+  .inputValidator((data: unknown) => z.object({ password: z.string().max(200) }).parse(data))
   .handler(async ({ data }) => {
+    // Local `vite dev` only: sign in without a password. `import.meta.env.DEV` is
+    // statically false in production builds, so this branch never ships.
+    if (import.meta.env.DEV && process.env.NODE_ENV !== "production") {
+      if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 6) {
+        process.env.ADMIN_PASSWORD = "local-dev-admin-secret";
+      }
+      return { ok: true as const, token: issueAdminToken() };
+    }
+    if (data.password.length < 1) {
+      return { ok: false as const, error: "รหัสผ่านไม่ถูกต้อง" };
+    }
     const expected = process.env.ADMIN_PASSWORD;
     if (!expected) {
       return { ok: false as const, error: "Admin password not configured" };

@@ -96,7 +96,8 @@ function AdminLogin() {
             onChange={(e) => setPassword(e.target.value)}
             className="mt-2 h-12 text-base"
             autoFocus
-            required
+            required={!import.meta.env.DEV}
+            placeholder={import.meta.env.DEV ? "Local dev: leave blank" : undefined}
           />
           <Button
             type="submit"

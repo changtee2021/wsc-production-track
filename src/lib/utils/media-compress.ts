@@ -82,14 +82,6 @@ function isWebmFile(file: File): boolean {
   return file.type === "video/webm" || /\.webm$/i.test(file.name);
 }
 
-function sniffNeedsTranscode(bytes: Uint8Array): boolean {
-  const health = inspectMp4(bytes);
-  if (!health.isMp4) return false;
-  if (health.hasHevc) return true;
-  if (!health.hasMoov) return true;
-  return false;
-}
-
 /** Decide whether this video should be converted to H.264 MP4 in the background. */
 export async function videoNeedsWebSafeTranscode(file: File): Promise<boolean> {
   // Fast path: Apple container → almost always needs convert for Chrome/Edge
@@ -105,12 +97,66 @@ export async function videoNeedsWebSafeTranscode(file: File): Promise<boolean> {
   const looksMp4Family = file.type === "video/mp4" || /\.mp4$/i.test(file.name);
 
   if (looksMp4Family) {
-    if (file.size <= 12 * 1024 * 1024) {
+    // Full read for smaller files; head+tail for large (moov/HEVC often at EOF)
+    if (file.size <= 16 * 1024 * 1024) {
       const all = new Uint8Array(await file.arrayBuffer());
       if (needsWebSafeRemux(inspectMp4(all))) return true;
     } else {
-      const wider = new Uint8Array(await file.slice(0, 2 * 1024 * 1024).arrayBuffer());
-      if (sniffNeedsTranscode(wider)) return true;
+      // Large files: don't run inspectMp4 on a truncated head (false "broken mdat").
+      // Use ftyp + declared mdat size + tail codec/moov signals instead.
+      const head = new Uint8Array(await file.slice(0, Math.min(file.size, 64)).arrayBuffer());
+      const tailLen = Math.min(file.size, 2 * 1024 * 1024);
+      const tail = new Uint8Array(await file.slice(file.size - tailLen).arrayBuffer());
+      const isFtyp =
+        head.length >= 8 &&
+        head[4] === 0x66 &&
+        head[5] === 0x74 &&
+        head[6] === 0x79 &&
+        head[7] === 0x70;
+      if (!isFtyp) return true;
+
+      const tailAscii = Array.from(tail, (c) =>
+        c >= 32 && c <= 126 ? String.fromCharCode(c) : ".",
+      ).join("");
+      if (tailAscii.includes("hvc1") || tailAscii.includes("hev1") || tailAscii.includes("hevC")) {
+        return true;
+      }
+
+      const ftypSize = ((head[0]! << 24) | (head[1]! << 16) | (head[2]! << 8) | head[3]!) >>> 0;
+      if (
+        ftypSize >= 8 &&
+        ftypSize + 8 <= head.length &&
+        head[ftypSize + 4] === 0x6d &&
+        head[ftypSize + 5] === 0x64 &&
+        head[ftypSize + 6] === 0x61 &&
+        head[ftypSize + 7] === 0x74
+      ) {
+        const mdatOffset = ftypSize;
+        const declared =
+          ((head[mdatOffset]! << 24) |
+            (head[mdatOffset + 1]! << 16) |
+            (head[mdatOffset + 2]! << 8) |
+            head[mdatOffset + 3]!) >>>
+          0;
+        if (declared === 0 || mdatOffset + declared === file.size) {
+          for (let i = tail.length - 8; i >= 0; i--) {
+            if (
+              tail[i + 4] === 0x6d &&
+              tail[i + 5] === 0x6f &&
+              tail[i + 6] === 0x6f &&
+              tail[i + 7] === 0x76
+            ) {
+              const sz =
+                ((tail[i]! << 24) | (tail[i + 1]! << 16) | (tail[i + 2]! << 8) | tail[i + 3]!) >>>
+                0;
+              const absMoov = file.size - tailLen + i;
+              if (sz >= 8 && absMoov + sz === file.size && mdatOffset + declared > absMoov) {
+                return true; // mdat swallowed trailing moov
+              }
+            }
+          }
+        }
+      }
     }
   }
 

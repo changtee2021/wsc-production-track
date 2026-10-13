@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Download, AlertTriangle, Loader2 } from "lucide-react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VideoDownloadRepairDialog } from "@/components/VideoDownloadRepairDialog";
 
 export type LightboxItem = { type: "image" | "video"; url: string };
 
@@ -21,31 +22,58 @@ function detectExt(ref: string): string | null {
 const BLOB_PLAY_MAX_BYTES = 80 * 1024 * 1024;
 
 export function MediaLightbox({ item, signedSrc, onClose }: Props) {
+  const [dlOpen, setDlOpen] = useState(false);
+  const videoSrc = item?.type === "video" ? signedSrc(item.url) : "";
+  const videoRef = item?.type === "video" ? item.url : "";
+
   return (
-    <Dialog open={!!item} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl border-0 bg-black/95 p-2 sm:p-4">
-        <VisuallyHidden>
-          <DialogTitle>แสดงสื่อ</DialogTitle>
-          <DialogDescription>รูปภาพหรือวิดีโอประกอบรายงาน</DialogDescription>
-        </VisuallyHidden>
-        {item &&
-          (item.type === "image" ? (
-            <img
-              src={signedSrc(item.url)}
-              alt=""
-              className="mx-auto max-h-[85vh] w-auto object-contain"
-            />
-          ) : (
-            <VideoView src={signedSrc(item.url)} originalRef={item.url} />
-          ))}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={!!item} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-4xl border-0 bg-black/95 p-2 sm:p-4">
+          <VisuallyHidden>
+            <DialogTitle>แสดงสื่อ</DialogTitle>
+            <DialogDescription>รูปภาพหรือวิดีโอประกอบรายงาน</DialogDescription>
+          </VisuallyHidden>
+          {item &&
+            (item.type === "image" ? (
+              <img
+                src={signedSrc(item.url)}
+                alt=""
+                className="mx-auto max-h-[85vh] w-auto object-contain"
+              />
+            ) : (
+              <VideoView
+                src={signedSrc(item.url)}
+                originalRef={item.url}
+                onDownloadClick={() => setDlOpen(true)}
+              />
+            ))}
+        </DialogContent>
+      </Dialog>
+
+      {item?.type === "video" && (
+        <VideoDownloadRepairDialog
+          open={dlOpen}
+          onOpenChange={setDlOpen}
+          src={videoSrc}
+          originalRef={videoRef}
+        />
+      )}
+    </>
   );
 }
 
 type PlayState = "loading" | "ready" | "failed";
 
-function VideoView({ src, originalRef }: { src: string; originalRef: string }) {
+function VideoView({
+  src,
+  originalRef,
+  onDownloadClick,
+}: {
+  src: string;
+  originalRef: string;
+  onDownloadClick: () => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playSrc, setPlaySrc] = useState<string | null>(null);
   const [state, setState] = useState<PlayState>("loading");
@@ -142,8 +170,8 @@ function VideoView({ src, originalRef }: { src: string; originalRef: string }) {
       : isWebm
         ? "ไฟล์ WebM อาจเปิดใน Safari ไม่ได้ — ลองเปิดใน Chrome หรือกดดาวน์โหลด"
         : isMov || isM4v || failReason === "codec"
-          ? "เบราว์เซอร์นี้เล่นไฟล์นี้ไม่ได้ (มักเป็น HEVC จาก iPhone หรือไฟล์จาก LINE) — กดดาวน์โหลดแล้วเปิดด้วย VLC"
-          : "เล่นวิดีโอไม่สำเร็จ — ลองเปิดในแท็บใหม่หรือดาวน์โหลด";
+          ? "เบราว์เซอร์นี้เล่นไฟล์นี้ไม่ได้ (มักเป็น HEVC จาก iPhone หรือไฟล์จาก LINE) — กดดาวน์โหลด ระบบจะตรวจ/ซ่อมให้ก่อนบันทึก"
+          : "เล่นวิดีโอไม่สำเร็จ — ลองเปิดในแท็บใหม่ หรือกดดาวน์โหลดเพื่อตรวจและซ่อมอัตโนมัติ";
 
   return (
     <div className="flex flex-col gap-3">
@@ -195,10 +223,8 @@ function VideoView({ src, originalRef }: { src: string; originalRef: string }) {
             <ExternalLink className="mr-1 h-4 w-4" /> เปิดในแท็บใหม่
           </a>
         </Button>
-        <Button asChild variant="secondary" size="sm">
-          <a href={src} download>
-            <Download className="mr-1 h-4 w-4" /> ดาวน์โหลด
-          </a>
+        <Button type="button" variant="secondary" size="sm" onClick={onDownloadClick}>
+          <Download className="mr-1 h-4 w-4" /> ดาวน์โหลด
         </Button>
       </div>
     </div>

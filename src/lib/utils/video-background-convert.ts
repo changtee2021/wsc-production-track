@@ -8,6 +8,7 @@ import {
 } from "@/lib/utils/direct-video-upload";
 import { canBrowserCompressVideo, videoNeedsWebSafeTranscode } from "@/lib/utils/media-compress";
 import type { DeptMediaBucket } from "@/lib/utils/media-limits";
+import { repairMp4IfNeeded } from "@/lib/utils/mp4-repair";
 import { CLIENT_TRANSCODE_MAX_BYTES, transcodeToWebMp4 } from "@/lib/utils/video-transcode";
 
 export type PlaybackStatus = "ready" | "pending" | "converting" | "failed";
@@ -46,13 +47,42 @@ async function pumpQueue(): Promise<void> {
 
 async function runJob(job: BackgroundConvertJob): Promise<void> {
   try {
-    const needs = await videoNeedsWebSafeTranscode(job.file);
+    // Fix mdat/moov layout before probing or ffmpeg — otherwise convert fails silently.
+    const { file: repaired, repaired: didRepair } = await repairMp4IfNeeded(job.file);
+    const working = repaired;
+
+    const needs = await videoNeedsWebSafeTranscode(working);
     if (!needs) {
+      if (didRepair) {
+        await replaceVideoViaSignedUrl({
+          bucket: job.bucket,
+          path: job.path,
+          file: working,
+          deptToken: job.deptToken,
+          prepareReplace: job.prepareReplace,
+        });
+        job.onUpdate("ready", URL.createObjectURL(working));
+        return;
+      }
       job.onUpdate("ready");
       return;
     }
 
-    if (job.file.size > CLIENT_TRANSCODE_MAX_BYTES) {
+    if (working.size > CLIENT_TRANSCODE_MAX_BYTES) {
+      // Still persist container repair so native/HEVC players can open the file.
+      if (didRepair) {
+        try {
+          await replaceVideoViaSignedUrl({
+            bucket: job.bucket,
+            path: job.path,
+            file: working,
+            deptToken: job.deptToken,
+            prepareReplace: job.prepareReplace,
+          });
+        } catch {
+          /* ignore */
+        }
+      }
       job.onUpdate("failed");
       return;
     }
@@ -62,15 +92,34 @@ async function runJob(job: BackgroundConvertJob): Promise<void> {
     }
 
     job.onUpdate("converting");
-    const out = await transcodeToWebMp4(job.file);
-    await replaceVideoViaSignedUrl({
-      bucket: job.bucket,
-      path: job.path,
-      file: out,
-      deptToken: job.deptToken,
-      prepareReplace: job.prepareReplace,
-    });
-    job.onUpdate("ready", URL.createObjectURL(out));
+    try {
+      const out = await transcodeToWebMp4(working);
+      await replaceVideoViaSignedUrl({
+        bucket: job.bucket,
+        path: job.path,
+        file: out,
+        deptToken: job.deptToken,
+        prepareReplace: job.prepareReplace,
+      });
+      job.onUpdate("ready", URL.createObjectURL(out));
+    } catch (e) {
+      // If H.264 convert fails, at least upsert the repaired container when we fixed moov.
+      if (didRepair) {
+        try {
+          await replaceVideoViaSignedUrl({
+            bucket: job.bucket,
+            path: job.path,
+            file: working,
+            deptToken: job.deptToken,
+            prepareReplace: job.prepareReplace,
+          });
+        } catch {
+          /* ignore */
+        }
+      }
+      console.warn("[video-background-convert]", job.path, e);
+      job.onUpdate("failed");
+    }
   } catch (e) {
     console.warn("[video-background-convert]", job.path, e);
     job.onUpdate("failed");
