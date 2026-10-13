@@ -1,17 +1,26 @@
 /** Thailand (Asia/Bangkok, UTC+7) date helpers for production dashboards. */
 
-const BANGKOK = "Asia/Bangkok";
+// Thailand has no DST, so a fixed offset is exact. Called millions of times per
+// dashboard render — constructing Intl.DateTimeFormat per call froze the page.
+const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
+const STRING_KEY_CACHE_MAX = 200_000;
+const stringKeyCache = new Map<string, string>();
+
+function computeDateKey(input?: Date | string | number): string {
+  const d = input === undefined ? new Date() : new Date(input);
+  if (Number.isNaN(d.getTime())) return computeDateKey();
+  return new Date(d.getTime() + BANGKOK_OFFSET_MS).toISOString().slice(0, 10);
+}
 
 /** Calendar date key YYYY-MM-DD in Bangkok. */
 export function bangkokDateKey(input?: Date | string | number): string {
-  const d = input === undefined ? new Date() : new Date(input);
-  if (Number.isNaN(d.getTime())) return bangkokDateKey();
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: BANGKOK,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
+  if (typeof input !== "string") return computeDateKey(input);
+  const cached = stringKeyCache.get(input);
+  if (cached !== undefined) return cached;
+  const key = computeDateKey(input);
+  if (stringKeyCache.size >= STRING_KEY_CACHE_MAX) stringKeyCache.clear();
+  stringKeyCache.set(input, key);
+  return key;
 }
 
 /** Calendar month key YYYY-MM in Bangkok. */
@@ -41,9 +50,7 @@ export function shiftBangkokDateKey(key: string, deltaDays: number): string {
  * Latest Bangkok calendar day that has at least one `finish` log.
  * Falls back to `todayBangkok()` when none found.
  */
-export function latestFinishDayBangkok(
-  logs: { action: string; created_at: string }[],
-): string {
+export function latestFinishDayBangkok(logs: { action: string; created_at: string }[]): string {
   let best: string | null = null;
   for (const l of logs) {
     if (l.action !== "finish") continue;
