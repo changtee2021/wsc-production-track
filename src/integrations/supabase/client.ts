@@ -2,6 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_SCHEMA } from "@/lib/erp-config";
 import type { Database } from "./types";
+import { brokeredPreviewStorage } from "./previewAuthStorage";
 
 function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
@@ -18,7 +19,7 @@ function createSupabaseClient() {
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
-      storage: typeof window !== "undefined" ? localStorage : undefined,
+      storage: brokeredPreviewStorage(),
       persistSession: true,
       autoRefreshToken: true,
     },
