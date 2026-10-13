@@ -9,135 +9,79 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WarehouseRouteImport } from './routes/warehouse'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SuppliesRequestRouteImport } from './routes/supplies-request'
-import { Route as SuppliesRouteImport } from './routes/supplies'
-import { Route as StockCountRouteImport } from './routes/stock-count'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as ScanRouteImport } from './routes/scan'
-import { Route as QcRouteImport } from './routes/qc'
-import { Route as PackingRouteImport } from './routes/packing'
-import { Route as MaintenanceRouteImport } from './routes/maintenance'
-import { Route as FeedbackRouteImport } from './routes/feedback'
-import { Route as ExpenseScanRouteImport } from './routes/expense-scan'
-import { Route as ExpenseMineRouteImport } from './routes/expense-mine'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as ProtectedRouteImport } from './routes/_protected'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WarehouseIndexRouteImport } from './routes/warehouse.index'
-import { Route as WarehouseReceivingRouteImport } from './routes/warehouse.receiving'
-import { Route as WarehousePalletizingRouteImport } from './routes/warehouse.palletizing'
-import { Route as WarehouseLookupRouteImport } from './routes/warehouse.lookup'
-import { Route as ProtectedWiRouteImport } from './routes/_protected.wi'
-import { Route as ProtectedWarehouseDashboardRouteImport } from './routes/_protected.warehouse-dashboard'
-import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protected.supplies-reports'
-import { Route as ProtectedSuppliesDashboardRouteImport } from './routes/_protected.supplies-dashboard'
-import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
-import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
-import { Route as ProtectedStockCountReportsRouteImport } from './routes/_protected.stock-count-reports'
-import { Route as ProtectedStockCountInventoryRouteImport } from './routes/_protected.stock-count-inventory'
-import { Route as ProtectedServerLogsRouteImport } from './routes/_protected.server-logs'
-import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
-import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
-import { Route as ProtectedProductionStandardsRouteImport } from './routes/_protected.production-standards'
-import { Route as ProtectedProductionSetupRouteImport } from './routes/_protected.production-setup'
-import { Route as ProtectedProductionQueueRouteImport } from './routes/_protected.production-queue'
-import { Route as ProtectedProductionExcelRouteImport } from './routes/_protected.production-excel'
-import { Route as ProtectedProductionDashboardRouteImport } from './routes/_protected.production-dashboard'
-import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
-import { Route as ProtectedPackingReportsRouteImport } from './routes/_protected.packing-reports'
-import { Route as ProtectedManagePoliciesRouteImport } from './routes/_protected.manage-policies'
-import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
-import { Route as ProtectedMaintenanceMasterRouteImport } from './routes/_protected.maintenance-master'
-import { Route as ProtectedMaintenanceAdminRouteImport } from './routes/_protected.maintenance-admin'
-import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
-import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
-import { Route as ProtectedJobLookupRouteImport } from './routes/_protected.job-lookup'
-import { Route as ProtectedFeedbackAdminRouteImport } from './routes/_protected.feedback-admin'
-import { Route as ProtectedExpensesReportsRouteImport } from './routes/_protected.expenses-reports'
-import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protected.expenses-dashboard'
-import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
-import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
+import { Route as ProtectedRouteImport } from './routes/_protected'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ExpenseMineRouteImport } from './routes/expense-mine'
+import { Route as ExpenseScanRouteImport } from './routes/expense-scan'
+import { Route as FeedbackRouteImport } from './routes/feedback'
+import { Route as MaintenanceRouteImport } from './routes/maintenance'
+import { Route as PackingRouteImport } from './routes/packing'
+import { Route as QcRouteImport } from './routes/qc'
+import { Route as ScanRouteImport } from './routes/scan'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as StockCountRouteImport } from './routes/stock-count'
+import { Route as SuppliesRouteImport } from './routes/supplies'
+import { Route as SuppliesRequestRouteImport } from './routes/supplies-request'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as WarehouseRouteImport } from './routes/warehouse'
 import { Route as ProtectedAdminPolicyRouteImport } from './routes/_protected.admin-policy'
-import { Route as ApiPublicProductionIntakeRouteImport } from './routes/api/public/production-intake'
-import { Route as ApiPublicMigrationExportRouteImport } from './routes/api/public/migration-export'
-import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
-import { Route as ProtectedWarehouseSettingsRouteImport } from './routes/_protected.warehouse.settings'
-import { Route as ProtectedWarehouseReportsRouteImport } from './routes/_protected.warehouse.reports'
-import { Route as ProtectedWarehouseReceiptsRouteImport } from './routes/_protected.warehouse.receipts'
-import { Route as ProtectedWarehousePalletsRouteImport } from './routes/_protected.warehouse.pallets'
-import { Route as ProtectedWarehouseExportRouteImport } from './routes/_protected.warehouse.export'
-import { Route as ProtectedPrintLabelJobNoRouteImport } from './routes/_protected.print-label.$jobNo'
+import { Route as ProtectedControlRouteImport } from './routes/_protected.control'
+import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dashboard'
+import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protected.expenses-dashboard'
+import { Route as ProtectedExpensesReportsRouteImport } from './routes/_protected.expenses-reports'
+import { Route as ProtectedFeedbackAdminRouteImport } from './routes/_protected.feedback-admin'
+import { Route as ProtectedJobLookupRouteImport } from './routes/_protected.job-lookup'
+import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
+import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
+import { Route as ProtectedMaintenanceAdminRouteImport } from './routes/_protected.maintenance-admin'
+import { Route as ProtectedMaintenanceMasterRouteImport } from './routes/_protected.maintenance-master'
+import { Route as ProtectedManageRouteImport } from './routes/_protected.manage'
+import { Route as ProtectedManagePoliciesRouteImport } from './routes/_protected.manage-policies'
+import { Route as ProtectedPackingReportsRouteImport } from './routes/_protected.packing-reports'
+import { Route as ProtectedPackingSummaryRouteImport } from './routes/_protected.packing-summary'
+import { Route as ProtectedProductionDashboardRouteImport } from './routes/_protected.production-dashboard'
+import { Route as ProtectedProductionExcelRouteImport } from './routes/_protected.production-excel'
+import { Route as ProtectedProductionQueueRouteImport } from './routes/_protected.production-queue'
+import { Route as ProtectedProductionSetupRouteImport } from './routes/_protected.production-setup'
+import { Route as ProtectedProductionStandardsRouteImport } from './routes/_protected.production-standards'
+import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
+import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
+import { Route as ProtectedServerLogsRouteImport } from './routes/_protected.server-logs'
+import { Route as ProtectedStockCountInventoryRouteImport } from './routes/_protected.stock-count-inventory'
+import { Route as ProtectedStockCountReportsRouteImport } from './routes/_protected.stock-count-reports'
+import { Route as ProtectedStorageRouteImport } from './routes/_protected.storage'
+import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
+import { Route as ProtectedSuppliesDashboardRouteImport } from './routes/_protected.supplies-dashboard'
+import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protected.supplies-reports'
+import { Route as ProtectedWarehouseDashboardRouteImport } from './routes/_protected.warehouse-dashboard'
+import { Route as ProtectedWiRouteImport } from './routes/_protected.wi'
+import { Route as WarehouseIndexRouteImport } from './routes/warehouse.index'
+import { Route as WarehouseLookupRouteImport } from './routes/warehouse.lookup'
+import { Route as WarehousePalletizingRouteImport } from './routes/warehouse.palletizing'
+import { Route as WarehouseReceivingRouteImport } from './routes/warehouse.receiving'
 import { Route as ProtectedEmployeeProfileIdRouteImport } from './routes/_protected.employee-profile.$id'
-import { Route as WarehousePalletPalletIdScanRouteImport } from './routes/warehouse.pallet.$palletId.scan'
-import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/public/stock-count.reports'
-import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
+import { Route as ProtectedPrintLabelJobNoRouteImport } from './routes/_protected.print-label.$jobNo'
+import { Route as ProtectedWarehouseExportRouteImport } from './routes/_protected.warehouse.export'
+import { Route as ProtectedWarehousePalletsRouteImport } from './routes/_protected.warehouse.pallets'
+import { Route as ProtectedWarehouseReceiptsRouteImport } from './routes/_protected.warehouse.receipts'
+import { Route as ProtectedWarehouseReportsRouteImport } from './routes/_protected.warehouse.reports'
+import { Route as ProtectedWarehouseSettingsRouteImport } from './routes/_protected.warehouse.settings'
+import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
+import { Route as ApiPublicMigrationExportRouteImport } from './routes/api/public/migration-export'
+import { Route as ApiPublicProductionIntakeRouteImport } from './routes/api/public/production-intake'
 import { Route as ApiPublicCurtainFlowJobsRouteImport } from './routes/api/public/curtain-flow/jobs'
+import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
+import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/public/stock-count.reports'
+import { Route as WarehousePalletPalletIdScanRouteImport } from './routes/warehouse.pallet.$palletId.scan'
 
-const WarehouseRoute = WarehouseRouteImport.update({
-  id: '/warehouse',
-  path: '/warehouse',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SuppliesRequestRoute = SuppliesRequestRouteImport.update({
-  id: '/supplies-request',
-  path: '/supplies-request',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SuppliesRoute = SuppliesRouteImport.update({
-  id: '/supplies',
-  path: '/supplies',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StockCountRoute = StockCountRouteImport.update({
-  id: '/stock-count',
-  path: '/stock-count',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScanRoute = ScanRouteImport.update({
-  id: '/scan',
-  path: '/scan',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const QcRoute = QcRouteImport.update({
-  id: '/qc',
-  path: '/qc',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PackingRoute = PackingRouteImport.update({
-  id: '/packing',
-  path: '/packing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MaintenanceRoute = MaintenanceRouteImport.update({
-  id: '/maintenance',
-  path: '/maintenance',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FeedbackRoute = FeedbackRouteImport.update({
-  id: '/feedback',
-  path: '/feedback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExpenseScanRoute = ExpenseScanRouteImport.update({
-  id: '/expense-scan',
-  path: '/expense-scan',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExpenseMineRoute = ExpenseMineRouteImport.update({
-  id: '/expense-mine',
-  path: '/expense-mine',
+const ProtectedRoute = ProtectedRouteImport.update({
+  id: '/_protected',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -145,111 +89,154 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProtectedRoute = ProtectedRouteImport.update({
-  id: '/_protected',
+const ExpenseMineRoute = ExpenseMineRouteImport.update({
+  id: '/expense-mine',
+  path: '/expense-mine',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ExpenseScanRoute = ExpenseScanRouteImport.update({
+  id: '/expense-scan',
+  path: '/expense-scan',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WarehouseIndexRoute = WarehouseIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => WarehouseRoute,
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const WarehouseReceivingRoute = WarehouseReceivingRouteImport.update({
-  id: '/receiving',
-  path: '/receiving',
-  getParentRoute: () => WarehouseRoute,
+const MaintenanceRoute = MaintenanceRouteImport.update({
+  id: '/maintenance',
+  path: '/maintenance',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const WarehousePalletizingRoute = WarehousePalletizingRouteImport.update({
-  id: '/palletizing',
-  path: '/palletizing',
-  getParentRoute: () => WarehouseRoute,
+const PackingRoute = PackingRouteImport.update({
+  id: '/packing',
+  path: '/packing',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const WarehouseLookupRoute = WarehouseLookupRouteImport.update({
-  id: '/lookup',
-  path: '/lookup',
-  getParentRoute: () => WarehouseRoute,
+const QcRoute = QcRouteImport.update({
+  id: '/qc',
+  path: '/qc',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ProtectedWiRoute = ProtectedWiRouteImport.update({
-  id: '/wi',
-  path: '/wi',
+const ScanRoute = ScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StockCountRoute = StockCountRouteImport.update({
+  id: '/stock-count',
+  path: '/stock-count',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuppliesRoute = SuppliesRouteImport.update({
+  id: '/supplies',
+  path: '/supplies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuppliesRequestRoute = SuppliesRequestRouteImport.update({
+  id: '/supplies-request',
+  path: '/supplies-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WarehouseRoute = WarehouseRouteImport.update({
+  id: '/warehouse',
+  path: '/warehouse',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtectedAdminPolicyRoute = ProtectedAdminPolicyRouteImport.update({
+  id: '/admin-policy',
+  path: '/admin-policy',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedWarehouseDashboardRoute =
-  ProtectedWarehouseDashboardRouteImport.update({
-    id: '/warehouse-dashboard',
-    path: '/warehouse-dashboard',
-    getParentRoute: () => ProtectedRoute,
-  } as any)
-const ProtectedSuppliesReportsRoute =
-  ProtectedSuppliesReportsRouteImport.update({
-    id: '/supplies-reports',
-    path: '/supplies-reports',
-    getParentRoute: () => ProtectedRoute,
-  } as any)
-const ProtectedSuppliesDashboardRoute =
-  ProtectedSuppliesDashboardRouteImport.update({
-    id: '/supplies-dashboard',
-    path: '/supplies-dashboard',
-    getParentRoute: () => ProtectedRoute,
-  } as any)
-const ProtectedSuppliesAdminRoute = ProtectedSuppliesAdminRouteImport.update({
-  id: '/supplies-admin',
-  path: '/supplies-admin',
+const ProtectedControlRoute = ProtectedControlRouteImport.update({
+  id: '/control',
+  path: '/control',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedStorageRoute = ProtectedStorageRouteImport.update({
-  id: '/storage',
-  path: '/storage',
+const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedStockCountReportsRoute =
-  ProtectedStockCountReportsRouteImport.update({
-    id: '/stock-count-reports',
-    path: '/stock-count-reports',
+const ProtectedExpensesDashboardRoute =
+  ProtectedExpensesDashboardRouteImport.update({
+    id: '/expenses-dashboard',
+    path: '/expenses-dashboard',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedStockCountInventoryRoute =
-  ProtectedStockCountInventoryRouteImport.update({
-    id: '/stock-count-inventory',
-    path: '/stock-count-inventory',
+const ProtectedExpensesReportsRoute =
+  ProtectedExpensesReportsRouteImport.update({
+    id: '/expenses-reports',
+    path: '/expenses-reports',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedServerLogsRoute = ProtectedServerLogsRouteImport.update({
-  id: '/server-logs',
-  path: '/server-logs',
+const ProtectedFeedbackAdminRoute = ProtectedFeedbackAdminRouteImport.update({
+  id: '/feedback-admin',
+  path: '/feedback-admin',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedQcSummaryRoute = ProtectedQcSummaryRouteImport.update({
-  id: '/qc-summary',
-  path: '/qc-summary',
+const ProtectedJobLookupRoute = ProtectedJobLookupRouteImport.update({
+  id: '/job-lookup',
+  path: '/job-lookup',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedQcReportsRoute = ProtectedQcReportsRouteImport.update({
-  id: '/qc-reports',
-  path: '/qc-reports',
+const ProtectedLogsRoute = ProtectedLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedProductionStandardsRoute =
-  ProtectedProductionStandardsRouteImport.update({
-    id: '/production-standards',
-    path: '/production-standards',
+const ProtectedLogsUpdateRoute = ProtectedLogsUpdateRouteImport.update({
+  id: '/logs-update',
+  path: '/logs-update',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedMaintenanceAdminRoute =
+  ProtectedMaintenanceAdminRouteImport.update({
+    id: '/maintenance-admin',
+    path: '/maintenance-admin',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedProductionSetupRoute =
-  ProtectedProductionSetupRouteImport.update({
-    id: '/production-setup',
-    path: '/production-setup',
+const ProtectedMaintenanceMasterRoute =
+  ProtectedMaintenanceMasterRouteImport.update({
+    id: '/maintenance-master',
+    path: '/maintenance-master',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedProductionQueueRoute =
-  ProtectedProductionQueueRouteImport.update({
-    id: '/production-queue',
-    path: '/production-queue',
+const ProtectedManageRoute = ProtectedManageRouteImport.update({
+  id: '/manage',
+  path: '/manage',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedManagePoliciesRoute = ProtectedManagePoliciesRouteImport.update({
+  id: '/manage-policies',
+  path: '/manage-policies',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedPackingReportsRoute = ProtectedPackingReportsRouteImport.update({
+  id: '/packing-reports',
+  path: '/packing-reports',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedPackingSummaryRoute = ProtectedPackingSummaryRouteImport.update({
+  id: '/packing-summary',
+  path: '/packing-summary',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedProductionDashboardRoute =
+  ProtectedProductionDashboardRouteImport.update({
+    id: '/production-dashboard',
+    path: '/production-dashboard',
     getParentRoute: () => ProtectedRoute,
   } as any)
 const ProtectedProductionExcelRoute =
@@ -258,136 +245,108 @@ const ProtectedProductionExcelRoute =
     path: '/production-excel',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedProductionDashboardRoute =
-  ProtectedProductionDashboardRouteImport.update({
-    id: '/production-dashboard',
-    path: '/production-dashboard',
+const ProtectedProductionQueueRoute =
+  ProtectedProductionQueueRouteImport.update({
+    id: '/production-queue',
+    path: '/production-queue',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedPackingSummaryRoute = ProtectedPackingSummaryRouteImport.update({
-  id: '/packing-summary',
-  path: '/packing-summary',
-  getParentRoute: () => ProtectedRoute,
-} as any)
-const ProtectedPackingReportsRoute = ProtectedPackingReportsRouteImport.update({
-  id: '/packing-reports',
-  path: '/packing-reports',
-  getParentRoute: () => ProtectedRoute,
-} as any)
-const ProtectedManagePoliciesRoute = ProtectedManagePoliciesRouteImport.update({
-  id: '/manage-policies',
-  path: '/manage-policies',
-  getParentRoute: () => ProtectedRoute,
-} as any)
-const ProtectedManageRoute = ProtectedManageRouteImport.update({
-  id: '/manage',
-  path: '/manage',
-  getParentRoute: () => ProtectedRoute,
-} as any)
-const ProtectedMaintenanceMasterRoute =
-  ProtectedMaintenanceMasterRouteImport.update({
-    id: '/maintenance-master',
-    path: '/maintenance-master',
+const ProtectedProductionSetupRoute =
+  ProtectedProductionSetupRouteImport.update({
+    id: '/production-setup',
+    path: '/production-setup',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedMaintenanceAdminRoute =
-  ProtectedMaintenanceAdminRouteImport.update({
-    id: '/maintenance-admin',
-    path: '/maintenance-admin',
+const ProtectedProductionStandardsRoute =
+  ProtectedProductionStandardsRouteImport.update({
+    id: '/production-standards',
+    path: '/production-standards',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedLogsUpdateRoute = ProtectedLogsUpdateRouteImport.update({
-  id: '/logs-update',
-  path: '/logs-update',
+const ProtectedQcReportsRoute = ProtectedQcReportsRouteImport.update({
+  id: '/qc-reports',
+  path: '/qc-reports',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedLogsRoute = ProtectedLogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
+const ProtectedQcSummaryRoute = ProtectedQcSummaryRouteImport.update({
+  id: '/qc-summary',
+  path: '/qc-summary',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedJobLookupRoute = ProtectedJobLookupRouteImport.update({
-  id: '/job-lookup',
-  path: '/job-lookup',
+const ProtectedServerLogsRoute = ProtectedServerLogsRouteImport.update({
+  id: '/server-logs',
+  path: '/server-logs',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedFeedbackAdminRoute = ProtectedFeedbackAdminRouteImport.update({
-  id: '/feedback-admin',
-  path: '/feedback-admin',
-  getParentRoute: () => ProtectedRoute,
-} as any)
-const ProtectedExpensesReportsRoute =
-  ProtectedExpensesReportsRouteImport.update({
-    id: '/expenses-reports',
-    path: '/expenses-reports',
+const ProtectedStockCountInventoryRoute =
+  ProtectedStockCountInventoryRouteImport.update({
+    id: '/stock-count-inventory',
+    path: '/stock-count-inventory',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedExpensesDashboardRoute =
-  ProtectedExpensesDashboardRouteImport.update({
-    id: '/expenses-dashboard',
-    path: '/expenses-dashboard',
+const ProtectedStockCountReportsRoute =
+  ProtectedStockCountReportsRouteImport.update({
+    id: '/stock-count-reports',
+    path: '/stock-count-reports',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const ProtectedStorageRoute = ProtectedStorageRouteImport.update({
+  id: '/storage',
+  path: '/storage',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedControlRoute = ProtectedControlRouteImport.update({
-  id: '/control',
-  path: '/control',
+const ProtectedSuppliesAdminRoute = ProtectedSuppliesAdminRouteImport.update({
+  id: '/supplies-admin',
+  path: '/supplies-admin',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ProtectedAdminPolicyRoute = ProtectedAdminPolicyRouteImport.update({
-  id: '/admin-policy',
-  path: '/admin-policy',
+const ProtectedSuppliesDashboardRoute =
+  ProtectedSuppliesDashboardRouteImport.update({
+    id: '/supplies-dashboard',
+    path: '/supplies-dashboard',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedSuppliesReportsRoute =
+  ProtectedSuppliesReportsRouteImport.update({
+    id: '/supplies-reports',
+    path: '/supplies-reports',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedWarehouseDashboardRoute =
+  ProtectedWarehouseDashboardRouteImport.update({
+    id: '/warehouse-dashboard',
+    path: '/warehouse-dashboard',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedWiRoute = ProtectedWiRouteImport.update({
+  id: '/wi',
+  path: '/wi',
   getParentRoute: () => ProtectedRoute,
 } as any)
-const ApiPublicProductionIntakeRoute =
-  ApiPublicProductionIntakeRouteImport.update({
-    id: '/api/public/production-intake',
-    path: '/api/public/production-intake',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicMigrationExportRoute =
-  ApiPublicMigrationExportRouteImport.update({
-    id: '/api/public/migration-export',
-    path: '/api/public/migration-export',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
-  id: '/api/public/health',
-  path: '/api/public/health',
-  getParentRoute: () => rootRouteImport,
+const WarehouseIndexRoute = WarehouseIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WarehouseRoute,
 } as any)
-const ProtectedWarehouseSettingsRoute =
-  ProtectedWarehouseSettingsRouteImport.update({
-    id: '/warehouse/settings',
-    path: '/warehouse/settings',
-    getParentRoute: () => ProtectedRoute,
-  } as any)
-const ProtectedWarehouseReportsRoute =
-  ProtectedWarehouseReportsRouteImport.update({
-    id: '/warehouse/reports',
-    path: '/warehouse/reports',
-    getParentRoute: () => ProtectedRoute,
-  } as any)
-const ProtectedWarehouseReceiptsRoute =
-  ProtectedWarehouseReceiptsRouteImport.update({
-    id: '/warehouse/receipts',
-    path: '/warehouse/receipts',
-    getParentRoute: () => ProtectedRoute,
-  } as any)
-const ProtectedWarehousePalletsRoute =
-  ProtectedWarehousePalletsRouteImport.update({
-    id: '/warehouse/pallets',
-    path: '/warehouse/pallets',
-    getParentRoute: () => ProtectedRoute,
-  } as any)
-const ProtectedWarehouseExportRoute =
-  ProtectedWarehouseExportRouteImport.update({
-    id: '/warehouse/export',
-    path: '/warehouse/export',
+const WarehouseLookupRoute = WarehouseLookupRouteImport.update({
+  id: '/lookup',
+  path: '/lookup',
+  getParentRoute: () => WarehouseRoute,
+} as any)
+const WarehousePalletizingRoute = WarehousePalletizingRouteImport.update({
+  id: '/palletizing',
+  path: '/palletizing',
+  getParentRoute: () => WarehouseRoute,
+} as any)
+const WarehouseReceivingRoute = WarehouseReceivingRouteImport.update({
+  id: '/receiving',
+  path: '/receiving',
+  getParentRoute: () => WarehouseRoute,
+} as any)
+const ProtectedEmployeeProfileIdRoute =
+  ProtectedEmployeeProfileIdRouteImport.update({
+    id: '/employee-profile/$id',
+    path: '/employee-profile/$id',
     getParentRoute: () => ProtectedRoute,
   } as any)
 const ProtectedPrintLabelJobNoRoute =
@@ -396,22 +355,57 @@ const ProtectedPrintLabelJobNoRoute =
     path: '/print-label/$jobNo',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const ProtectedEmployeeProfileIdRoute =
-  ProtectedEmployeeProfileIdRouteImport.update({
-    id: '/employee-profile/$id',
-    path: '/employee-profile/$id',
+const ProtectedWarehouseExportRoute =
+  ProtectedWarehouseExportRouteImport.update({
+    id: '/warehouse/export',
+    path: '/warehouse/export',
     getParentRoute: () => ProtectedRoute,
   } as any)
-const WarehousePalletPalletIdScanRoute =
-  WarehousePalletPalletIdScanRouteImport.update({
-    id: '/pallet/$palletId/scan',
-    path: '/pallet/$palletId/scan',
-    getParentRoute: () => WarehouseRoute,
+const ProtectedWarehousePalletsRoute =
+  ProtectedWarehousePalletsRouteImport.update({
+    id: '/warehouse/pallets',
+    path: '/warehouse/pallets',
+    getParentRoute: () => ProtectedRoute,
   } as any)
-const ApiPublicStockCountReportsRoute =
-  ApiPublicStockCountReportsRouteImport.update({
-    id: '/api/public/stock-count/reports',
-    path: '/api/public/stock-count/reports',
+const ProtectedWarehouseReceiptsRoute =
+  ProtectedWarehouseReceiptsRouteImport.update({
+    id: '/warehouse/receipts',
+    path: '/warehouse/receipts',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedWarehouseReportsRoute =
+  ProtectedWarehouseReportsRouteImport.update({
+    id: '/warehouse/reports',
+    path: '/warehouse/reports',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ProtectedWarehouseSettingsRoute =
+  ProtectedWarehouseSettingsRouteImport.update({
+    id: '/warehouse/settings',
+    path: '/warehouse/settings',
+    getParentRoute: () => ProtectedRoute,
+  } as any)
+const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
+  id: '/api/public/health',
+  path: '/api/public/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMigrationExportRoute =
+  ApiPublicMigrationExportRouteImport.update({
+    id: '/api/public/migration-export',
+    path: '/api/public/migration-export',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicProductionIntakeRoute =
+  ApiPublicProductionIntakeRouteImport.update({
+    id: '/api/public/production-intake',
+    path: '/api/public/production-intake',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicCurtainFlowJobsRoute =
+  ApiPublicCurtainFlowJobsRouteImport.update({
+    id: '/api/public/curtain-flow/jobs',
+    path: '/api/public/curtain-flow/jobs',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksLineDailySendRoute =
@@ -420,11 +414,17 @@ const ApiPublicHooksLineDailySendRoute =
     path: '/api/public/hooks/line-daily-send',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicCurtainFlowJobsRoute =
-  ApiPublicCurtainFlowJobsRouteImport.update({
-    id: '/api/public/curtain-flow/jobs',
-    path: '/api/public/curtain-flow/jobs',
+const ApiPublicStockCountReportsRoute =
+  ApiPublicStockCountReportsRouteImport.update({
+    id: '/api/public/stock-count/reports',
+    path: '/api/public/stock-count/reports',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const WarehousePalletPalletIdScanRoute =
+  WarehousePalletPalletIdScanRouteImport.update({
+    id: '/pallet/$palletId/scan',
+    path: '/pallet/$palletId/scan',
+    getParentRoute: () => WarehouseRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -854,102 +854,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/warehouse': {
-      id: '/warehouse'
-      path: '/warehouse'
-      fullPath: '/warehouse'
-      preLoaderRoute: typeof WarehouseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/supplies-request': {
-      id: '/supplies-request'
-      path: '/supplies-request'
-      fullPath: '/supplies-request'
-      preLoaderRoute: typeof SuppliesRequestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/supplies': {
-      id: '/supplies'
-      path: '/supplies'
-      fullPath: '/supplies'
-      preLoaderRoute: typeof SuppliesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stock-count': {
-      id: '/stock-count'
-      path: '/stock-count'
-      fullPath: '/stock-count'
-      preLoaderRoute: typeof StockCountRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scan': {
-      id: '/scan'
-      path: '/scan'
-      fullPath: '/scan'
-      preLoaderRoute: typeof ScanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/qc': {
-      id: '/qc'
-      path: '/qc'
-      fullPath: '/qc'
-      preLoaderRoute: typeof QcRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/packing': {
-      id: '/packing'
-      path: '/packing'
-      fullPath: '/packing'
-      preLoaderRoute: typeof PackingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/maintenance': {
-      id: '/maintenance'
-      path: '/maintenance'
-      fullPath: '/maintenance'
-      preLoaderRoute: typeof MaintenanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/feedback': {
-      id: '/feedback'
-      path: '/feedback'
-      fullPath: '/feedback'
-      preLoaderRoute: typeof FeedbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/expense-scan': {
-      id: '/expense-scan'
-      path: '/expense-scan'
-      fullPath: '/expense-scan'
-      preLoaderRoute: typeof ExpenseScanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/expense-mine': {
-      id: '/expense-mine'
-      path: '/expense-mine'
-      fullPath: '/expense-mine'
-      preLoaderRoute: typeof ExpenseMineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_protected': {
@@ -959,242 +868,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/warehouse/': {
-      id: '/warehouse/'
-      path: '/'
-      fullPath: '/warehouse/'
-      preLoaderRoute: typeof WarehouseIndexRouteImport
-      parentRoute: typeof WarehouseRoute
+    '/expense-mine': {
+      id: '/expense-mine'
+      path: '/expense-mine'
+      fullPath: '/expense-mine'
+      preLoaderRoute: typeof ExpenseMineRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/warehouse/receiving': {
-      id: '/warehouse/receiving'
-      path: '/receiving'
-      fullPath: '/warehouse/receiving'
-      preLoaderRoute: typeof WarehouseReceivingRouteImport
-      parentRoute: typeof WarehouseRoute
+    '/expense-scan': {
+      id: '/expense-scan'
+      path: '/expense-scan'
+      fullPath: '/expense-scan'
+      preLoaderRoute: typeof ExpenseScanRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/warehouse/palletizing': {
-      id: '/warehouse/palletizing'
-      path: '/palletizing'
-      fullPath: '/warehouse/palletizing'
-      preLoaderRoute: typeof WarehousePalletizingRouteImport
-      parentRoute: typeof WarehouseRoute
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/warehouse/lookup': {
-      id: '/warehouse/lookup'
-      path: '/lookup'
-      fullPath: '/warehouse/lookup'
-      preLoaderRoute: typeof WarehouseLookupRouteImport
-      parentRoute: typeof WarehouseRoute
+    '/maintenance': {
+      id: '/maintenance'
+      path: '/maintenance'
+      fullPath: '/maintenance'
+      preLoaderRoute: typeof MaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/wi': {
-      id: '/_protected/wi'
-      path: '/wi'
-      fullPath: '/wi'
-      preLoaderRoute: typeof ProtectedWiRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/packing': {
+      id: '/packing'
+      path: '/packing'
+      fullPath: '/packing'
+      preLoaderRoute: typeof PackingRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/warehouse-dashboard': {
-      id: '/_protected/warehouse-dashboard'
-      path: '/warehouse-dashboard'
-      fullPath: '/warehouse-dashboard'
-      preLoaderRoute: typeof ProtectedWarehouseDashboardRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/qc': {
+      id: '/qc'
+      path: '/qc'
+      fullPath: '/qc'
+      preLoaderRoute: typeof QcRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/supplies-reports': {
-      id: '/_protected/supplies-reports'
-      path: '/supplies-reports'
-      fullPath: '/supplies-reports'
-      preLoaderRoute: typeof ProtectedSuppliesReportsRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/scan': {
+      id: '/scan'
+      path: '/scan'
+      fullPath: '/scan'
+      preLoaderRoute: typeof ScanRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/supplies-dashboard': {
-      id: '/_protected/supplies-dashboard'
-      path: '/supplies-dashboard'
-      fullPath: '/supplies-dashboard'
-      preLoaderRoute: typeof ProtectedSuppliesDashboardRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/supplies-admin': {
-      id: '/_protected/supplies-admin'
-      path: '/supplies-admin'
-      fullPath: '/supplies-admin'
-      preLoaderRoute: typeof ProtectedSuppliesAdminRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/stock-count': {
+      id: '/stock-count'
+      path: '/stock-count'
+      fullPath: '/stock-count'
+      preLoaderRoute: typeof StockCountRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/storage': {
-      id: '/_protected/storage'
-      path: '/storage'
-      fullPath: '/storage'
-      preLoaderRoute: typeof ProtectedStorageRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/supplies': {
+      id: '/supplies'
+      path: '/supplies'
+      fullPath: '/supplies'
+      preLoaderRoute: typeof SuppliesRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/stock-count-reports': {
-      id: '/_protected/stock-count-reports'
-      path: '/stock-count-reports'
-      fullPath: '/stock-count-reports'
-      preLoaderRoute: typeof ProtectedStockCountReportsRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/supplies-request': {
+      id: '/supplies-request'
+      path: '/supplies-request'
+      fullPath: '/supplies-request'
+      preLoaderRoute: typeof SuppliesRequestRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/stock-count-inventory': {
-      id: '/_protected/stock-count-inventory'
-      path: '/stock-count-inventory'
-      fullPath: '/stock-count-inventory'
-      preLoaderRoute: typeof ProtectedStockCountInventoryRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/server-logs': {
-      id: '/_protected/server-logs'
-      path: '/server-logs'
-      fullPath: '/server-logs'
-      preLoaderRoute: typeof ProtectedServerLogsRouteImport
-      parentRoute: typeof ProtectedRoute
+    '/warehouse': {
+      id: '/warehouse'
+      path: '/warehouse'
+      fullPath: '/warehouse'
+      preLoaderRoute: typeof WarehouseRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_protected/qc-summary': {
-      id: '/_protected/qc-summary'
-      path: '/qc-summary'
-      fullPath: '/qc-summary'
-      preLoaderRoute: typeof ProtectedQcSummaryRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/qc-reports': {
-      id: '/_protected/qc-reports'
-      path: '/qc-reports'
-      fullPath: '/qc-reports'
-      preLoaderRoute: typeof ProtectedQcReportsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/production-standards': {
-      id: '/_protected/production-standards'
-      path: '/production-standards'
-      fullPath: '/production-standards'
-      preLoaderRoute: typeof ProtectedProductionStandardsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/production-setup': {
-      id: '/_protected/production-setup'
-      path: '/production-setup'
-      fullPath: '/production-setup'
-      preLoaderRoute: typeof ProtectedProductionSetupRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/production-queue': {
-      id: '/_protected/production-queue'
-      path: '/production-queue'
-      fullPath: '/production-queue'
-      preLoaderRoute: typeof ProtectedProductionQueueRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/production-excel': {
-      id: '/_protected/production-excel'
-      path: '/production-excel'
-      fullPath: '/production-excel'
-      preLoaderRoute: typeof ProtectedProductionExcelRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/production-dashboard': {
-      id: '/_protected/production-dashboard'
-      path: '/production-dashboard'
-      fullPath: '/production-dashboard'
-      preLoaderRoute: typeof ProtectedProductionDashboardRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/packing-summary': {
-      id: '/_protected/packing-summary'
-      path: '/packing-summary'
-      fullPath: '/packing-summary'
-      preLoaderRoute: typeof ProtectedPackingSummaryRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/packing-reports': {
-      id: '/_protected/packing-reports'
-      path: '/packing-reports'
-      fullPath: '/packing-reports'
-      preLoaderRoute: typeof ProtectedPackingReportsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/manage-policies': {
-      id: '/_protected/manage-policies'
-      path: '/manage-policies'
-      fullPath: '/manage-policies'
-      preLoaderRoute: typeof ProtectedManagePoliciesRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/manage': {
-      id: '/_protected/manage'
-      path: '/manage'
-      fullPath: '/manage'
-      preLoaderRoute: typeof ProtectedManageRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/maintenance-master': {
-      id: '/_protected/maintenance-master'
-      path: '/maintenance-master'
-      fullPath: '/maintenance-master'
-      preLoaderRoute: typeof ProtectedMaintenanceMasterRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/maintenance-admin': {
-      id: '/_protected/maintenance-admin'
-      path: '/maintenance-admin'
-      fullPath: '/maintenance-admin'
-      preLoaderRoute: typeof ProtectedMaintenanceAdminRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/logs-update': {
-      id: '/_protected/logs-update'
-      path: '/logs-update'
-      fullPath: '/logs-update'
-      preLoaderRoute: typeof ProtectedLogsUpdateRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/logs': {
-      id: '/_protected/logs'
-      path: '/logs'
-      fullPath: '/logs'
-      preLoaderRoute: typeof ProtectedLogsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/job-lookup': {
-      id: '/_protected/job-lookup'
-      path: '/job-lookup'
-      fullPath: '/job-lookup'
-      preLoaderRoute: typeof ProtectedJobLookupRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/feedback-admin': {
-      id: '/_protected/feedback-admin'
-      path: '/feedback-admin'
-      fullPath: '/feedback-admin'
-      preLoaderRoute: typeof ProtectedFeedbackAdminRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/expenses-reports': {
-      id: '/_protected/expenses-reports'
-      path: '/expenses-reports'
-      fullPath: '/expenses-reports'
-      preLoaderRoute: typeof ProtectedExpensesReportsRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/expenses-dashboard': {
-      id: '/_protected/expenses-dashboard'
-      path: '/expenses-dashboard'
-      fullPath: '/expenses-dashboard'
-      preLoaderRoute: typeof ProtectedExpensesDashboardRouteImport
-      parentRoute: typeof ProtectedRoute
-    }
-    '/_protected/dashboard': {
-      id: '/_protected/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof ProtectedDashboardRouteImport
+    '/_protected/admin-policy': {
+      id: '/_protected/admin-policy'
+      path: '/admin-policy'
+      fullPath: '/admin-policy'
+      preLoaderRoute: typeof ProtectedAdminPolicyRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/control': {
@@ -1204,67 +980,242 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedControlRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/admin-policy': {
-      id: '/_protected/admin-policy'
-      path: '/admin-policy'
-      fullPath: '/admin-policy'
-      preLoaderRoute: typeof ProtectedAdminPolicyRouteImport
+    '/_protected/dashboard': {
+      id: '/_protected/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof ProtectedDashboardRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/api/public/production-intake': {
-      id: '/api/public/production-intake'
-      path: '/api/public/production-intake'
-      fullPath: '/api/public/production-intake'
-      preLoaderRoute: typeof ApiPublicProductionIntakeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/migration-export': {
-      id: '/api/public/migration-export'
-      path: '/api/public/migration-export'
-      fullPath: '/api/public/migration-export'
-      preLoaderRoute: typeof ApiPublicMigrationExportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/health': {
-      id: '/api/public/health'
-      path: '/api/public/health'
-      fullPath: '/api/public/health'
-      preLoaderRoute: typeof ApiPublicHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_protected/warehouse/settings': {
-      id: '/_protected/warehouse/settings'
-      path: '/warehouse/settings'
-      fullPath: '/warehouse/settings'
-      preLoaderRoute: typeof ProtectedWarehouseSettingsRouteImport
+    '/_protected/expenses-dashboard': {
+      id: '/_protected/expenses-dashboard'
+      path: '/expenses-dashboard'
+      fullPath: '/expenses-dashboard'
+      preLoaderRoute: typeof ProtectedExpensesDashboardRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/warehouse/reports': {
-      id: '/_protected/warehouse/reports'
-      path: '/warehouse/reports'
-      fullPath: '/warehouse/reports'
-      preLoaderRoute: typeof ProtectedWarehouseReportsRouteImport
+    '/_protected/expenses-reports': {
+      id: '/_protected/expenses-reports'
+      path: '/expenses-reports'
+      fullPath: '/expenses-reports'
+      preLoaderRoute: typeof ProtectedExpensesReportsRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/warehouse/receipts': {
-      id: '/_protected/warehouse/receipts'
-      path: '/warehouse/receipts'
-      fullPath: '/warehouse/receipts'
-      preLoaderRoute: typeof ProtectedWarehouseReceiptsRouteImport
+    '/_protected/feedback-admin': {
+      id: '/_protected/feedback-admin'
+      path: '/feedback-admin'
+      fullPath: '/feedback-admin'
+      preLoaderRoute: typeof ProtectedFeedbackAdminRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/warehouse/pallets': {
-      id: '/_protected/warehouse/pallets'
-      path: '/warehouse/pallets'
-      fullPath: '/warehouse/pallets'
-      preLoaderRoute: typeof ProtectedWarehousePalletsRouteImport
+    '/_protected/job-lookup': {
+      id: '/_protected/job-lookup'
+      path: '/job-lookup'
+      fullPath: '/job-lookup'
+      preLoaderRoute: typeof ProtectedJobLookupRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/warehouse/export': {
-      id: '/_protected/warehouse/export'
-      path: '/warehouse/export'
-      fullPath: '/warehouse/export'
-      preLoaderRoute: typeof ProtectedWarehouseExportRouteImport
+    '/_protected/logs': {
+      id: '/_protected/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof ProtectedLogsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/logs-update': {
+      id: '/_protected/logs-update'
+      path: '/logs-update'
+      fullPath: '/logs-update'
+      preLoaderRoute: typeof ProtectedLogsUpdateRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/maintenance-admin': {
+      id: '/_protected/maintenance-admin'
+      path: '/maintenance-admin'
+      fullPath: '/maintenance-admin'
+      preLoaderRoute: typeof ProtectedMaintenanceAdminRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/maintenance-master': {
+      id: '/_protected/maintenance-master'
+      path: '/maintenance-master'
+      fullPath: '/maintenance-master'
+      preLoaderRoute: typeof ProtectedMaintenanceMasterRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/manage': {
+      id: '/_protected/manage'
+      path: '/manage'
+      fullPath: '/manage'
+      preLoaderRoute: typeof ProtectedManageRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/manage-policies': {
+      id: '/_protected/manage-policies'
+      path: '/manage-policies'
+      fullPath: '/manage-policies'
+      preLoaderRoute: typeof ProtectedManagePoliciesRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/packing-reports': {
+      id: '/_protected/packing-reports'
+      path: '/packing-reports'
+      fullPath: '/packing-reports'
+      preLoaderRoute: typeof ProtectedPackingReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/packing-summary': {
+      id: '/_protected/packing-summary'
+      path: '/packing-summary'
+      fullPath: '/packing-summary'
+      preLoaderRoute: typeof ProtectedPackingSummaryRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/production-dashboard': {
+      id: '/_protected/production-dashboard'
+      path: '/production-dashboard'
+      fullPath: '/production-dashboard'
+      preLoaderRoute: typeof ProtectedProductionDashboardRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/production-excel': {
+      id: '/_protected/production-excel'
+      path: '/production-excel'
+      fullPath: '/production-excel'
+      preLoaderRoute: typeof ProtectedProductionExcelRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/production-queue': {
+      id: '/_protected/production-queue'
+      path: '/production-queue'
+      fullPath: '/production-queue'
+      preLoaderRoute: typeof ProtectedProductionQueueRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/production-setup': {
+      id: '/_protected/production-setup'
+      path: '/production-setup'
+      fullPath: '/production-setup'
+      preLoaderRoute: typeof ProtectedProductionSetupRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/production-standards': {
+      id: '/_protected/production-standards'
+      path: '/production-standards'
+      fullPath: '/production-standards'
+      preLoaderRoute: typeof ProtectedProductionStandardsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/qc-reports': {
+      id: '/_protected/qc-reports'
+      path: '/qc-reports'
+      fullPath: '/qc-reports'
+      preLoaderRoute: typeof ProtectedQcReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/qc-summary': {
+      id: '/_protected/qc-summary'
+      path: '/qc-summary'
+      fullPath: '/qc-summary'
+      preLoaderRoute: typeof ProtectedQcSummaryRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/server-logs': {
+      id: '/_protected/server-logs'
+      path: '/server-logs'
+      fullPath: '/server-logs'
+      preLoaderRoute: typeof ProtectedServerLogsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/stock-count-inventory': {
+      id: '/_protected/stock-count-inventory'
+      path: '/stock-count-inventory'
+      fullPath: '/stock-count-inventory'
+      preLoaderRoute: typeof ProtectedStockCountInventoryRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/stock-count-reports': {
+      id: '/_protected/stock-count-reports'
+      path: '/stock-count-reports'
+      fullPath: '/stock-count-reports'
+      preLoaderRoute: typeof ProtectedStockCountReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/storage': {
+      id: '/_protected/storage'
+      path: '/storage'
+      fullPath: '/storage'
+      preLoaderRoute: typeof ProtectedStorageRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/supplies-admin': {
+      id: '/_protected/supplies-admin'
+      path: '/supplies-admin'
+      fullPath: '/supplies-admin'
+      preLoaderRoute: typeof ProtectedSuppliesAdminRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/supplies-dashboard': {
+      id: '/_protected/supplies-dashboard'
+      path: '/supplies-dashboard'
+      fullPath: '/supplies-dashboard'
+      preLoaderRoute: typeof ProtectedSuppliesDashboardRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/supplies-reports': {
+      id: '/_protected/supplies-reports'
+      path: '/supplies-reports'
+      fullPath: '/supplies-reports'
+      preLoaderRoute: typeof ProtectedSuppliesReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/warehouse-dashboard': {
+      id: '/_protected/warehouse-dashboard'
+      path: '/warehouse-dashboard'
+      fullPath: '/warehouse-dashboard'
+      preLoaderRoute: typeof ProtectedWarehouseDashboardRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/wi': {
+      id: '/_protected/wi'
+      path: '/wi'
+      fullPath: '/wi'
+      preLoaderRoute: typeof ProtectedWiRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/warehouse/': {
+      id: '/warehouse/'
+      path: '/'
+      fullPath: '/warehouse/'
+      preLoaderRoute: typeof WarehouseIndexRouteImport
+      parentRoute: typeof WarehouseRoute
+    }
+    '/warehouse/lookup': {
+      id: '/warehouse/lookup'
+      path: '/lookup'
+      fullPath: '/warehouse/lookup'
+      preLoaderRoute: typeof WarehouseLookupRouteImport
+      parentRoute: typeof WarehouseRoute
+    }
+    '/warehouse/palletizing': {
+      id: '/warehouse/palletizing'
+      path: '/palletizing'
+      fullPath: '/warehouse/palletizing'
+      preLoaderRoute: typeof WarehousePalletizingRouteImport
+      parentRoute: typeof WarehouseRoute
+    }
+    '/warehouse/receiving': {
+      id: '/warehouse/receiving'
+      path: '/receiving'
+      fullPath: '/warehouse/receiving'
+      preLoaderRoute: typeof WarehouseReceivingRouteImport
+      parentRoute: typeof WarehouseRoute
+    }
+    '/_protected/employee-profile/$id': {
+      id: '/_protected/employee-profile/$id'
+      path: '/employee-profile/$id'
+      fullPath: '/employee-profile/$id'
+      preLoaderRoute: typeof ProtectedEmployeeProfileIdRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/print-label/$jobNo': {
@@ -1274,25 +1225,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedPrintLabelJobNoRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/_protected/employee-profile/$id': {
-      id: '/_protected/employee-profile/$id'
-      path: '/employee-profile/$id'
-      fullPath: '/employee-profile/$id'
-      preLoaderRoute: typeof ProtectedEmployeeProfileIdRouteImport
+    '/_protected/warehouse/export': {
+      id: '/_protected/warehouse/export'
+      path: '/warehouse/export'
+      fullPath: '/warehouse/export'
+      preLoaderRoute: typeof ProtectedWarehouseExportRouteImport
       parentRoute: typeof ProtectedRoute
     }
-    '/warehouse/pallet/$palletId/scan': {
-      id: '/warehouse/pallet/$palletId/scan'
-      path: '/pallet/$palletId/scan'
-      fullPath: '/warehouse/pallet/$palletId/scan'
-      preLoaderRoute: typeof WarehousePalletPalletIdScanRouteImport
-      parentRoute: typeof WarehouseRoute
+    '/_protected/warehouse/pallets': {
+      id: '/_protected/warehouse/pallets'
+      path: '/warehouse/pallets'
+      fullPath: '/warehouse/pallets'
+      preLoaderRoute: typeof ProtectedWarehousePalletsRouteImport
+      parentRoute: typeof ProtectedRoute
     }
-    '/api/public/stock-count/reports': {
-      id: '/api/public/stock-count/reports'
-      path: '/api/public/stock-count/reports'
-      fullPath: '/api/public/stock-count/reports'
-      preLoaderRoute: typeof ApiPublicStockCountReportsRouteImport
+    '/_protected/warehouse/receipts': {
+      id: '/_protected/warehouse/receipts'
+      path: '/warehouse/receipts'
+      fullPath: '/warehouse/receipts'
+      preLoaderRoute: typeof ProtectedWarehouseReceiptsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/warehouse/reports': {
+      id: '/_protected/warehouse/reports'
+      path: '/warehouse/reports'
+      fullPath: '/warehouse/reports'
+      preLoaderRoute: typeof ProtectedWarehouseReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/warehouse/settings': {
+      id: '/_protected/warehouse/settings'
+      path: '/warehouse/settings'
+      fullPath: '/warehouse/settings'
+      preLoaderRoute: typeof ProtectedWarehouseSettingsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/api/public/health': {
+      id: '/api/public/health'
+      path: '/api/public/health'
+      fullPath: '/api/public/health'
+      preLoaderRoute: typeof ApiPublicHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/migration-export': {
+      id: '/api/public/migration-export'
+      path: '/api/public/migration-export'
+      fullPath: '/api/public/migration-export'
+      preLoaderRoute: typeof ApiPublicMigrationExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/production-intake': {
+      id: '/api/public/production-intake'
+      path: '/api/public/production-intake'
+      fullPath: '/api/public/production-intake'
+      preLoaderRoute: typeof ApiPublicProductionIntakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/curtain-flow/jobs': {
+      id: '/api/public/curtain-flow/jobs'
+      path: '/api/public/curtain-flow/jobs'
+      fullPath: '/api/public/curtain-flow/jobs'
+      preLoaderRoute: typeof ApiPublicCurtainFlowJobsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/line-daily-send': {
@@ -1302,12 +1295,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksLineDailySendRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/curtain-flow/jobs': {
-      id: '/api/public/curtain-flow/jobs'
-      path: '/api/public/curtain-flow/jobs'
-      fullPath: '/api/public/curtain-flow/jobs'
-      preLoaderRoute: typeof ApiPublicCurtainFlowJobsRouteImport
+    '/api/public/stock-count/reports': {
+      id: '/api/public/stock-count/reports'
+      path: '/api/public/stock-count/reports'
+      fullPath: '/api/public/stock-count/reports'
+      preLoaderRoute: typeof ApiPublicStockCountReportsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/warehouse/pallet/$palletId/scan': {
+      id: '/warehouse/pallet/$palletId/scan'
+      path: '/pallet/$palletId/scan'
+      fullPath: '/warehouse/pallet/$palletId/scan'
+      preLoaderRoute: typeof WarehousePalletPalletIdScanRouteImport
+      parentRoute: typeof WarehouseRoute
     }
   }
 }
