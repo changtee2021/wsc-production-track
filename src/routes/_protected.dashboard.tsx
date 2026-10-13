@@ -432,6 +432,7 @@ function Dashboard() {
   const days14 = useMemo(() => {
     const todayKey = todayBangkok();
     const arr: { day: string; finishes: number; starts: number }[] = [];
+    const byKey = new Map<string, { day: string; finishes: number; starts: number }>();
     for (let i = 13; i >= 0; i--) {
       const key = shiftBangkokDateKey(todayKey, -i);
       const labelDate = new Date(`${key}T12:00:00+07:00`);
@@ -444,13 +445,14 @@ function Dashboard() {
         finishes: 0,
         starts: 0,
       };
-      for (const l of scopedLogs) {
-        if (bangkokDateKey(l.created_at) === key) {
-          if (l.action === "finish") item.finishes += 1;
-          else if (l.action === "start") item.starts += 1;
-        }
-      }
+      byKey.set(key, item);
       arr.push(item);
+    }
+    for (const l of scopedLogs) {
+      const item = byKey.get(bangkokDateKey(l.created_at));
+      if (!item) continue;
+      if (l.action === "finish") item.finishes += 1;
+      else if (l.action === "start") item.starts += 1;
     }
     return arr;
   }, [scopedLogs]);
