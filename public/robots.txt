@@ -7,4 +7,4 @@ Disallow: /manage
 Disallow: /qc-reports
 Disallow: /storage
 
-Sitemap: https://wsc-production-track.lovable.app/sitemap.xml
+Sitemap: https://wsc-production-track.vercel.app/sitemap.xml

@@ -14,6 +14,11 @@ import { FeedbackFab } from "@/components/FeedbackFab";
 
 import appCss from "../styles.css?url";
 
+const PRODUCTION_ORIGIN = "https://wsc-production-track.vercel.app";
+
+// Lovable hosts the retired archive on the legacy database; staff must land on the live ERP app.
+const LOVABLE_REDIRECT_SCRIPT = `(function(){var h=location.hostname;if(h==="lovable.app"||h.slice(-12)===".lovable.app"){location.replace(${JSON.stringify(PRODUCTION_ORIGIN)}+location.pathname+location.search+location.hash);}})();`;
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -111,6 +116,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: LOVABLE_REDIRECT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
