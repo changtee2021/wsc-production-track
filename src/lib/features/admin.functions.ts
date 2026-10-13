@@ -250,11 +250,29 @@ export const adminFetchLogs = createServerFn({ method: "POST" })
         select: z.string().min(1).max(500),
         limit: z.number().int().min(1).max(1000).optional(),
         paginate: z.boolean().optional(),
+        // Single-page mode: returns exactly one page of 1000 rows so the client can
+        // load history in small, parallel requests (a full scan of ~80k rows in one
+        // request exceeds serverless time limits and leaves the dashboard stuck).
+        page: z.number().int().min(0).max(500).optional(),
+        since: z.string().datetime({ offset: true }).optional(),
+        before: z.string().datetime({ offset: true }).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     assertAdmin(data.token);
+    if (data.page !== undefined) {
+      const PAGE = 1000;
+      let q = supabaseAdmin.from("production_logs").select(data.select);
+      if (data.since) q = q.gte("created_at", data.since);
+      if (data.before) q = q.lt("created_at", data.before);
+      const { data: rows, error } = await q
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(data.page * PAGE, data.page * PAGE + PAGE - 1);
+      if (error) throw new Error(error.message);
+      return { rows: (rows ?? []) as unknown as Array<Record<string, any>> };
+    }
     if (data.paginate) {
       const PAGE = 1000;
       const all: Record<string, any>[] = [];

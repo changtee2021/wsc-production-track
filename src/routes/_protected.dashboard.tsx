@@ -192,9 +192,39 @@ function Section({ icon, title, description, defaultOpen = true, children }: Sec
   );
 }
 
+const DASHBOARD_LOG_SELECT =
+  "id, job_id, action, created_at, employee_id, step_id, category_id, employees(id,name), steps(id,step_name,std_duration_minutes), categories(id,name)";
+const LOG_PAGE_SIZE = 1000;
+const LOG_PARALLEL_PAGES = 4;
+// Logs newer than this load first (covers today, this month and the MoM comparison).
+const RECENT_LOG_DAYS = 65;
+
+type LogWindow = { since?: string; before?: string };
+
+/** Loads one time window page-by-page, several pages in parallel; stops at the first short page. */
+async function fetchLogWindow(
+  fetchPage: (page: number, win: LogWindow) => Promise<LogRow[]>,
+  win: LogWindow,
+): Promise<LogRow[]> {
+  const out: LogRow[] = [];
+  for (let start = 0; start < 500; start += LOG_PARALLEL_PAGES) {
+    const pages = await Promise.all(
+      Array.from({ length: LOG_PARALLEL_PAGES }, (_, i) => fetchPage(start + i, win)),
+    );
+    let reachedEnd = false;
+    for (const rows of pages) {
+      out.push(...rows);
+      if (rows.length < LOG_PAGE_SIZE) reachedEnd = true;
+    }
+    if (reachedEnd) break;
+  }
+  return out;
+}
+
 function Dashboard() {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [loadPct, setLoadPct] = useState(12);
   const [scope, setScope] = useState<"day" | "month">("day");
   const [day, setDay] = useState(() => todayBangkok());
@@ -224,29 +254,40 @@ function Dashboard() {
   }, [loading]);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       const token = getAdminToken();
       if (!token) {
         setLoading(false);
         return;
       }
+      const callPage = async (page: number, win: { since?: string; before?: string }) => {
+        // One retry: a single flaky request must not leave the dashboard stuck.
+        for (let attempt = 0; ; attempt++) {
+          try {
+            const resp = await fetchLogs({
+              data: { token, select: DASHBOARD_LOG_SELECT, page, ...win },
+            });
+            return (resp.rows as unknown as LogRow[]) ?? [];
+          } catch (err) {
+            if (attempt >= 1) throw err;
+          }
+        }
+      };
       try {
-        const logResp = await fetchLogs({
-          data: {
-            token,
-            select:
-              "id, job_id, action, created_at, employee_id, step_id, category_id, employees(id,name), steps(id,step_name,std_duration_minutes), categories(id,name)",
-            paginate: true,
-          },
-        });
-        const all = (logResp.rows as unknown as LogRow[]) ?? [];
-
-        const [{ data: catData }, { data: empData }, { data: stepData }] = await Promise.all([
-          supabase.from("categories").select("id,name").eq("active", true).order("name"),
-          supabase.from("employees").select("id,name").eq("active", true).order("name"),
-          supabase.from("steps").select("id,step_name").eq("active", true).order("step_name"),
-        ]);
-        setLogs(all);
+        // Phase 1: recent window (today / this month / MoM) — shows the dashboard fast.
+        const sinceIso = new Date(Date.now() - RECENT_LOG_DAYS * 86_400_000).toISOString();
+        const [recent, [{ data: catData }, { data: empData }, { data: stepData }]] =
+          await Promise.all([
+            fetchLogWindow(callPage, { since: sinceIso }),
+            Promise.all([
+              supabase.from("categories").select("id,name").eq("active", true).order("name"),
+              supabase.from("employees").select("id,name").eq("active", true).order("name"),
+              supabase.from("steps").select("id,step_name").eq("active", true).order("step_name"),
+            ]),
+          ]);
+        if (cancelled) return;
+        setLogs(recent);
         setCategories((catData as CategoryRow[]) ?? []);
         setEmployees((empData as NamedRow[]) ?? []);
         setSteps(
@@ -255,11 +296,31 @@ function Dashboard() {
             name: s.step_name,
           })),
         );
+        setLoading(false);
+
+        // Phase 2: older history in the background (parallel pages, never blocks the UI).
+        setLoadingOlder(true);
+        try {
+          const older = await fetchLogWindow(callPage, { before: sinceIso });
+          if (!cancelled) setLogs((prev) => [...prev, ...older]);
+        } catch (e) {
+          if (!cancelled) {
+            toast.error(
+              `โหลดประวัติเก่าไม่ครบ: ${e instanceof Error ? e.message : "ไม่ทราบสาเหตุ"}`,
+            );
+          }
+        } finally {
+          if (!cancelled) setLoadingOlder(false);
+        }
+        return;
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "โหลดข้อมูลไม่สำเร็จ");
+        if (!cancelled) toast.error(e instanceof Error ? e.message : "โหลดข้อมูลไม่สำเร็จ");
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [fetchLogs]);
 
   // After first load: if Bangkok "today" has no finishes, jump to latest day with data.
@@ -1256,6 +1317,11 @@ function Dashboard() {
           <Progress value={loadPct} className="h-2.5" />
         </div>
       )}
+      {!loading && loadingOlder && (
+        <p className="mb-3 text-xs text-muted-foreground">
+          กำลังโหลดประวัติย้อนหลังเบื้องหลัง (ข้อมูล {RECENT_LOG_DAYS} วันล่าสุดใช้งานได้แล้ว)
+        </p>
+      )}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">แดชบอร์ดการผลิต</h1>
@@ -1318,6 +1384,8 @@ function Dashboard() {
           )}
           <Button
             onClick={() => setExportOpen(true)}
+            disabled={loadingOlder}
+            title={loadingOlder ? "รอโหลดประวัติเก่าให้เสร็จก่อน" : undefined}
             size="sm"
             className="gap-2 bg-secondary hover:bg-secondary/90"
           >
