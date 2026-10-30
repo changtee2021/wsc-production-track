@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "backfill:videos": "node scripts/backfill-web-safe-videos.mjs",
-    "backfill:videos:apply": "node scripts/backfill-web-safe-videos.mjs --apply"
+    "backfill:videos:apply": "node scripts/backfill-web-safe-videos.mjs --apply",
+    "videos:convert": "node scripts/server-convert-videos.mjs",
+    "videos:convert:apply": "node scripts/server-convert-videos.mjs --apply"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.82",
