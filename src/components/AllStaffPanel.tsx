@@ -41,7 +41,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmployeeIdCard } from "@/components/EmployeeIdCard";
-import { BADGE_CSS, openBadgePrint, toBadgePerson, type BadgeSource } from "@/lib/employee-badge";
+import {
+  BADGE_CSS,
+  openBadgeA4Print,
+  openBadgePrint,
+  toBadgePerson,
+  type BadgeSource,
+} from "@/lib/employee-badge";
 
 type StaffEntry = {
   key: string;
@@ -348,6 +354,7 @@ export function AllStaffPanel() {
     return r.name.toLowerCase().includes(q) || (r.emp_code ?? "").toLowerCase().includes(q);
   });
 
+  const withPhoto = rows.filter((r) => !!r.avatar_url);
   const regular = filtered.filter((r) => !r.is_sub);
   const subs = filtered.filter((r) => r.is_sub);
   const listed: Array<
@@ -387,6 +394,22 @@ export function AllStaffPanel() {
           >
             <Printer className="h-4 w-4" />
             พิมพ์บัตร ({filtered.length})
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 gap-1 sm:h-9"
+            disabled={withPhoto.length === 0}
+            onClick={() => {
+              try {
+                openBadgeA4Print(withPhoto.map((r) => toBadgePerson(r as BadgeSource)));
+              } catch (err) {
+                showError(err);
+              }
+            }}
+          >
+            <Printer className="h-4 w-4" />
+            PDF A4 ที่มีรูป ({withPhoto.length})
           </Button>
           <Input
             value={query}
