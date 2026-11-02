@@ -118,8 +118,10 @@ function EmployeeProfilePage() {
 
       <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <div className="flex flex-wrap items-center gap-4">
-          <Avatar className="h-16 w-16 border border-border">
-            {emp?.avatar_url && <AvatarImage src={emp.avatar_url} />}
+          <Avatar className="h-16 w-16 shrink-0 border border-border">
+            {emp?.avatar_url && (
+              <AvatarImage src={emp.avatar_url} className="object-cover object-[center_18%]" />
+            )}
             <AvatarFallback className="bg-muted">{emp ? initialsOf(emp.name) : "?"}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-[200px]">
@@ -277,7 +279,11 @@ function EmployeeProfilePage() {
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             — ยังไม่ตั้งค่ามาตรฐาน —{" "}
-                            <Link to="/production-setup" search={{ tab: undefined }} className="underline">
+                            <Link
+                              to="/production-setup"
+                              search={{ tab: undefined }}
+                              className="underline"
+                            >
                               ตั้งค่า
                             </Link>
                           </span>
