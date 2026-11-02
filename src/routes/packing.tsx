@@ -511,7 +511,7 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/40">
       <Toaster richColors position="top-center" />
-      <AppHeader>
+      <AppHeader mark="white">
         <Link to="/">
           <Button
             variant="ghost"
