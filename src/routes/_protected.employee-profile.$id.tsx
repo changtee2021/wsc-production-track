@@ -277,7 +277,7 @@ function EmployeeProfilePage() {
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             — ยังไม่ตั้งค่ามาตรฐาน —{" "}
-                            <Link to="/production-setup" search={{}} className="underline">
+                            <Link to="/production-setup" search={{ tab: undefined }} className="underline">
                               ตั้งค่า
                             </Link>
                           </span>

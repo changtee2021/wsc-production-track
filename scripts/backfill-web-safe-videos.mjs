@@ -46,14 +46,58 @@ function parseArgs(argv) {
   return opts;
 }
 
-function hasHevc(bytes) {
-  const n = Math.min(bytes.length, 2 * 1024 * 1024);
-  let ascii = "";
-  for (let i = 0; i < n; i++) {
+function asciiWindow(bytes, start, end) {
+  const from = Math.max(0, start);
+  const to = Math.min(bytes.length, end);
+  let s = "";
+  for (let i = from; i < to; i++) {
     const c = bytes[i];
-    ascii += c >= 32 && c <= 126 ? String.fromCharCode(c) : ".";
+    s += c >= 32 && c <= 126 ? String.fromCharCode(c) : ".";
   }
-  return ascii.includes("hvc1") || ascii.includes("hev1") || ascii.includes("hevC");
+  return s;
+}
+
+function hasHevc(bytes) {
+  const s =
+    asciiWindow(bytes, 0, 256 * 1024) + asciiWindow(bytes, bytes.length - 512 * 1024, bytes.length);
+  return s.includes("hvc1") || s.includes("hev1") || s.includes("hevC");
+}
+
+function findTerminalMoov(buf) {
+  const scanFrom = Math.max(0, buf.length - 4 * 1024 * 1024);
+  for (let i = buf.length - 8; i >= scanFrom; i--) {
+    if (buf.toString("ascii", i + 4, i + 8) !== "moov") continue;
+    const size = buf.readUInt32BE(i);
+    if (size >= 8 && i + size === buf.length) return { offset: i, size };
+  }
+  return null;
+}
+
+/** Shrink mdat when it incorrectly includes a trailing moov (phone camera bug). */
+function repairMdatSwallow(buf) {
+  if (buf.length < 32 || buf.toString("ascii", 4, 8) !== "ftyp") return buf;
+  const moov = findTerminalMoov(buf);
+  if (!moov) return buf;
+  let pos = 0;
+  let mdatPos = -1;
+  while (pos + 8 <= buf.length) {
+    const size = buf.readUInt32BE(pos);
+    const type = buf.toString("ascii", pos + 4, pos + 8);
+    if (type === "mdat") {
+      mdatPos = pos;
+      break;
+    }
+    if (size < 8) break;
+    pos += size;
+  }
+  if (mdatPos < 0 || mdatPos >= moov.offset) return buf;
+  const current = buf.readUInt32BE(mdatPos);
+  const correct = moov.offset - mdatPos;
+  if (correct < 8) return buf;
+  if (!(current === 0 || current === 1 || mdatPos + current > moov.offset)) return buf;
+  const out = Buffer.from(buf);
+  out.writeUInt32BE(correct >>> 0, mdatPos);
+  return out;
 }
 
 function isWebm(bytes) {
@@ -80,7 +124,25 @@ function needsConvert(path, bytes) {
   if (VIDEO_RE.test(path) === false && !isMp4Family(bytes) && !isWebm(bytes)) return false;
   if (isWebm(bytes) || /\.webm$/i.test(path)) return true;
   if (/\.(mov|m4v)$/i.test(path)) return true;
-  if (isMp4Family(bytes) && hasHevc(bytes)) return true;
+  if (isMp4Family(bytes)) {
+    const moov = findTerminalMoov(bytes);
+    if (moov) {
+      // mdat claiming EOF while moov sits inside → unreadable without patch
+      let pos = 0;
+      while (pos + 8 <= bytes.length) {
+        const size = bytes.readUInt32BE(pos);
+        const type = bytes.toString("ascii", pos + 4, pos + 8);
+        if (type === "mdat") {
+          const declared = size;
+          if (declared === 0 || pos + declared > moov.offset) return true;
+          break;
+        }
+        if (size < 8) break;
+        pos += size;
+      }
+    }
+    if (hasHevc(bytes)) return true;
+  }
   return false;
 }
 
@@ -228,7 +290,7 @@ async function main() {
       const inPath = join(dir, "in.bin");
       const outPath = join(dir, "out.mp4");
       try {
-        writeFileSync(inPath, buf);
+        writeFileSync(inPath, repairMdatSwallow(buf));
         transcodeFile(inPath, outPath);
         const out = readFileSync(outPath);
         const { error: upErr } = await supabase.storage.from(bucket).upload(file.path, out, {

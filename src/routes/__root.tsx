@@ -136,11 +136,13 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider isAdmin={isAdmin}>
         <Outlet />
-        <FeedbackFab />
         {!isAdmin && (
-          <footer className="flex items-center justify-center py-2">
-            <AppVersion />
-          </footer>
+          <>
+            <FeedbackFab />
+            <footer className="flex items-center justify-center py-2">
+              <AppVersion />
+            </footer>
+          </>
         )}
       </ThemeProvider>
     </QueryClientProvider>

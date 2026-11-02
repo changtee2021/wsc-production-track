@@ -2,11 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
 import {
-  Factory,
+  BookOpenCheck,
   ShieldCheck,
   ScanLine,
   ClipboardCheck,
-  MessageCircle,
+  MessageSquarePlus,
   Package,
   Wrench,
   ShoppingCart,
@@ -25,6 +25,7 @@ import heroImage from "@/assets/welcome-hero.png";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { AppVersion } from "@/components/AppVersion";
 import { clientAppPublicPath } from "@/lib/app-public-url";
+import { WscMark } from "@/components/WscMark";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -120,24 +121,24 @@ function WelcomePage() {
 
         {/* Floating header */}
         <header
-          className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-5 pt-6"
+          className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] sm:items-center sm:px-5"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-2 text-primary-foreground">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.07] backdrop-blur-md ring-1 ring-white/20">
-              <Factory className="h-5 w-5" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="font-bold tracking-tight drop-shadow">WSC ProductionTrack</span>
+          <div className="flex min-w-0 items-center gap-2 text-primary-foreground">
+            <WscMark tone="white" className="h-9 w-9 shrink-0 object-contain" />
+            <div className="flex min-w-0 flex-col leading-tight">
+              <span className="truncate font-bold tracking-tight drop-shadow">
+                WSC ProductionTrack
+              </span>
               <AppVersion className="text-white/70 drop-shadow" />
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
             <Link to="/expense-scan" aria-label="เบิกค่าใช้จ่าย (AI สแกน)">
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-1 rounded-full bg-emerald-600 text-white ring-1 ring-white/30 hover:bg-emerald-700 hover:text-white"
+                className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-emerald-600 text-white ring-1 ring-white/30 hover:bg-emerald-700 hover:text-white"
               >
                 <ScanLine className="h-4 w-4" />
                 <span className="hidden sm:inline">สแกนบิล</span>
@@ -147,7 +148,7 @@ function WelcomePage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-1 rounded-full bg-indigo-600 text-white ring-1 ring-white/30 hover:bg-indigo-700 hover:text-white"
+                className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-indigo-600 text-white ring-1 ring-white/30 hover:bg-indigo-700 hover:text-white"
               >
                 <ShoppingCart className="h-4 w-4" />
                 <span className="hidden sm:inline">เบิกของ</span>
@@ -157,32 +158,37 @@ function WelcomePage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-1 rounded-full bg-orange-600 text-white ring-1 ring-white/30 hover:bg-orange-700 hover:text-white"
+                className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-orange-600 text-white ring-1 ring-white/30 hover:bg-orange-700 hover:text-white"
               >
                 <Wrench className="h-4 w-4" />
                 <span className="hidden sm:inline">แจ้งซ่อม</span>
               </Button>
             </Link>
-            <a
-              href="https://lin.ee/P94KTyM"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="เพิ่มเพื่อนทาง LINE — ดูยอดการผลิต/ประชาสัมพันธ์ภายใน"
-            >
+            <Link to="/feedback" aria-label="ส่งความคิดเห็น/แจ้งปัญหา">
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-1 rounded-full bg-[#06C755] text-white ring-1 ring-white/30 hover:bg-[#05b34c] hover:text-white"
+                className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-sky-600 text-white ring-1 ring-white/30 hover:bg-sky-700 hover:text-white"
               >
-                <MessageCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">LINE WSC</span>
+                <MessageSquarePlus className="h-4 w-4" />
+                <span className="hidden sm:inline">แจ้งปัญหา</span>
               </Button>
-            </a>
+            </Link>
+            <Link to="/manual" search={{ category: "" }} aria-label="ดูคู่มือ WI">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-violet-600 text-white ring-1 ring-white/30 hover:bg-violet-700 hover:text-white"
+              >
+                <BookOpenCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">คู่มือ WI</span>
+              </Button>
+            </Link>
             <Link to="/admin">
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-1 rounded-full bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
+                className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
               >
                 <ShieldCheck className="h-4 w-4" />
                 <span className="hidden sm:inline">แอดมิน</span>
@@ -192,7 +198,7 @@ function WelcomePage() {
         </header>
 
         {/* Dots + Slide to scan */}
-        <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 px-5 pb-6">
+        <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-5">
           {slides.length > 1 && (
             <div className="flex justify-center gap-1.5">
               {slides.map((_, i) => (
@@ -215,8 +221,8 @@ function WelcomePage() {
               <ScanLine className="mr-2 h-5 w-5" />
               สแกน
             </Button>
-            <div className="flex gap-2">
-              <Link to="/warehouse" className="flex-1">
+            <div className="grid grid-cols-2 gap-2 sm:flex">
+              <Link to="/warehouse" className="sm:flex-1">
                 <Button
                   variant="ghost"
                   aria-label="คลังสินค้า"
@@ -226,7 +232,7 @@ function WelcomePage() {
                   คลัง
                 </Button>
               </Link>
-              <Link to="/qc" search={{ job_id: "" }} className="flex-1">
+              <Link to="/qc" search={{ job_id: "" }} className="sm:flex-1">
                 <Button
                   variant="ghost"
                   className="h-12 w-full rounded-2xl bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
@@ -235,7 +241,7 @@ function WelcomePage() {
                   QC
                 </Button>
               </Link>
-              <Link to="/packing" search={{ job_id: "" }} className="flex-[2]">
+              <Link to="/packing" search={{ job_id: "" }} className="sm:flex-[2]">
                 <Button
                   variant="ghost"
                   aria-label="แพ็คของ"
@@ -245,7 +251,7 @@ function WelcomePage() {
                   แพ็คของ
                 </Button>
               </Link>
-              <Link to="/stock-count" className="flex-1">
+              <Link to="/stock-count" className="sm:flex-1">
                 <Button
                   variant="ghost"
                   aria-label="นับสต๊อก"

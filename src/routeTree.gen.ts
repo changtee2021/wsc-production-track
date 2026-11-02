@@ -47,6 +47,7 @@ import { Route as ProtectedProductionSetupRouteImport } from './routes/_protecte
 import { Route as ProtectedProductionStandardsRouteImport } from './routes/_protected.production-standards'
 import { Route as ProtectedQcReportsRouteImport } from './routes/_protected.qc-reports'
 import { Route as ProtectedQcSummaryRouteImport } from './routes/_protected.qc-summary'
+import { Route as ProtectedScanFlowRouteImport } from './routes/_protected.scan-flow'
 import { Route as ProtectedServerLogsRouteImport } from './routes/_protected.server-logs'
 import { Route as ProtectedStockCountInventoryRouteImport } from './routes/_protected.stock-count-inventory'
 import { Route as ProtectedStockCountReportsRouteImport } from './routes/_protected.stock-count-reports'
@@ -56,6 +57,9 @@ import { Route as ProtectedSuppliesDashboardRouteImport } from './routes/_protec
 import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protected.supplies-reports'
 import { Route as ProtectedWarehouseDashboardRouteImport } from './routes/_protected.warehouse-dashboard'
 import { Route as ProtectedWiRouteImport } from './routes/_protected.wi'
+import { Route as ManualIndexRouteImport } from './routes/manual.index'
+import { Route as ManualCodeRouteImport } from './routes/manual.$code'
+import { Route as MonitorTokenRouteImport } from './routes/monitor.$token'
 import { Route as WarehouseIndexRouteImport } from './routes/warehouse.index'
 import { Route as WarehouseLookupRouteImport } from './routes/warehouse.lookup'
 import { Route as WarehousePalletizingRouteImport } from './routes/warehouse.palletizing'
@@ -67,9 +71,19 @@ import { Route as ProtectedWarehousePalletsRouteImport } from './routes/_protect
 import { Route as ProtectedWarehouseReceiptsRouteImport } from './routes/_protected.warehouse.receipts'
 import { Route as ProtectedWarehouseReportsRouteImport } from './routes/_protected.warehouse.reports'
 import { Route as ProtectedWarehouseSettingsRouteImport } from './routes/_protected.warehouse.settings'
+import { Route as ProtectedWiIndexRouteImport } from './routes/_protected.wi.index'
+import { Route as ProtectedWiCategoriesRouteImport } from './routes/_protected.wi.categories'
+import { Route as ProtectedWiFlowRouteImport } from './routes/_protected.wi.flow'
+import { Route as ProtectedWiLibraryRouteImport } from './routes/_protected.wi.library'
+import { Route as ProtectedWiNewRouteImport } from './routes/_protected.wi.new'
+import { Route as ProtectedWiReviewRouteImport } from './routes/_protected.wi.review'
+import { Route as ProtectedWiVersionsRouteImport } from './routes/_protected.wi.versions'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ApiPublicMigrationExportRouteImport } from './routes/api/public/migration-export'
 import { Route as ApiPublicProductionIntakeRouteImport } from './routes/api/public/production-intake'
+import { Route as ManualCodePrintRouteImport } from './routes/manual.$code_.print'
+import { Route as ProtectedWiWiIdIndexRouteImport } from './routes/_protected.wi.$wiId.index'
+import { Route as ProtectedWiWiIdEditRouteImport } from './routes/_protected.wi.$wiId.edit'
 import { Route as ApiPublicCurtainFlowJobsRouteImport } from './routes/api/public/curtain-flow/jobs'
 import { Route as ApiPublicHooksLineDailySendRouteImport } from './routes/api/public/hooks/line-daily-send'
 import { Route as ApiPublicStockCountReportsRouteImport } from './routes/api/public/stock-count.reports'
@@ -273,6 +287,11 @@ const ProtectedQcSummaryRoute = ProtectedQcSummaryRouteImport.update({
   path: '/qc-summary',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedScanFlowRoute = ProtectedScanFlowRouteImport.update({
+  id: '/scan-flow',
+  path: '/scan-flow',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedServerLogsRoute = ProtectedServerLogsRouteImport.update({
   id: '/server-logs',
   path: '/server-logs',
@@ -322,6 +341,21 @@ const ProtectedWiRoute = ProtectedWiRouteImport.update({
   id: '/wi',
   path: '/wi',
   getParentRoute: () => ProtectedRoute,
+} as any)
+const ManualIndexRoute = ManualIndexRouteImport.update({
+  id: '/manual/',
+  path: '/manual/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManualCodeRoute = ManualCodeRouteImport.update({
+  id: '/manual/$code',
+  path: '/manual/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonitorTokenRoute = MonitorTokenRouteImport.update({
+  id: '/monitor/$token',
+  path: '/monitor/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const WarehouseIndexRoute = WarehouseIndexRouteImport.update({
   id: '/',
@@ -385,6 +419,41 @@ const ProtectedWarehouseSettingsRoute =
     path: '/warehouse/settings',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ProtectedWiIndexRoute = ProtectedWiIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProtectedWiRoute,
+} as any)
+const ProtectedWiCategoriesRoute = ProtectedWiCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => ProtectedWiRoute,
+} as any)
+const ProtectedWiFlowRoute = ProtectedWiFlowRouteImport.update({
+  id: '/flow',
+  path: '/flow',
+  getParentRoute: () => ProtectedWiRoute,
+} as any)
+const ProtectedWiLibraryRoute = ProtectedWiLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => ProtectedWiRoute,
+} as any)
+const ProtectedWiNewRoute = ProtectedWiNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => ProtectedWiRoute,
+} as any)
+const ProtectedWiReviewRoute = ProtectedWiReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => ProtectedWiRoute,
+} as any)
+const ProtectedWiVersionsRoute = ProtectedWiVersionsRouteImport.update({
+  id: '/versions',
+  path: '/versions',
+  getParentRoute: () => ProtectedWiRoute,
+} as any)
 const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
   id: '/api/public/health',
   path: '/api/public/health',
@@ -402,6 +471,21 @@ const ApiPublicProductionIntakeRoute =
     path: '/api/public/production-intake',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ManualCodePrintRoute = ManualCodePrintRouteImport.update({
+  id: '/manual/$code_/print',
+  path: '/manual/$code/print',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtectedWiWiIdIndexRoute = ProtectedWiWiIdIndexRouteImport.update({
+  id: '/$wiId/',
+  path: '/$wiId/',
+  getParentRoute: () => ProtectedWiRoute,
+} as any)
+const ProtectedWiWiIdEditRoute = ProtectedWiWiIdEditRouteImport.update({
+  id: '/$wiId/edit',
+  path: '/$wiId/edit',
+  getParentRoute: () => ProtectedWiRoute,
+} as any)
 const ApiPublicCurtainFlowJobsRoute =
   ApiPublicCurtainFlowJobsRouteImport.update({
     id: '/api/public/curtain-flow/jobs',
@@ -465,6 +549,7 @@ export interface FileRoutesByFullPath {
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/scan-flow': typeof ProtectedScanFlowRoute
   '/server-logs': typeof ProtectedServerLogsRoute
   '/stock-count-inventory': typeof ProtectedStockCountInventoryRoute
   '/stock-count-reports': typeof ProtectedStockCountReportsRoute
@@ -473,10 +558,13 @@ export interface FileRoutesByFullPath {
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/warehouse-dashboard': typeof ProtectedWarehouseDashboardRoute
-  '/wi': typeof ProtectedWiRoute
+  '/wi': typeof ProtectedWiRouteWithChildren
+  '/manual/$code': typeof ManualCodeRoute
+  '/monitor/$token': typeof MonitorTokenRoute
   '/warehouse/lookup': typeof WarehouseLookupRoute
   '/warehouse/palletizing': typeof WarehousePalletizingRoute
   '/warehouse/receiving': typeof WarehouseReceivingRoute
+  '/manual/': typeof ManualIndexRoute
   '/warehouse/': typeof WarehouseIndexRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
@@ -485,13 +573,23 @@ export interface FileRoutesByFullPath {
   '/warehouse/receipts': typeof ProtectedWarehouseReceiptsRoute
   '/warehouse/reports': typeof ProtectedWarehouseReportsRoute
   '/warehouse/settings': typeof ProtectedWarehouseSettingsRoute
+  '/wi/categories': typeof ProtectedWiCategoriesRoute
+  '/wi/flow': typeof ProtectedWiFlowRoute
+  '/wi/library': typeof ProtectedWiLibraryRoute
+  '/wi/new': typeof ProtectedWiNewRoute
+  '/wi/review': typeof ProtectedWiReviewRoute
+  '/wi/versions': typeof ProtectedWiVersionsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/migration-export': typeof ApiPublicMigrationExportRoute
   '/api/public/production-intake': typeof ApiPublicProductionIntakeRoute
+  '/manual/$code/print': typeof ManualCodePrintRoute
+  '/wi/': typeof ProtectedWiIndexRoute
+  '/wi/$wiId/edit': typeof ProtectedWiWiIdEditRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
   '/warehouse/pallet/$palletId/scan': typeof WarehousePalletPalletIdScanRoute
+  '/wi/$wiId/': typeof ProtectedWiWiIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -530,6 +628,7 @@ export interface FileRoutesByTo {
   '/production-standards': typeof ProtectedProductionStandardsRoute
   '/qc-reports': typeof ProtectedQcReportsRoute
   '/qc-summary': typeof ProtectedQcSummaryRoute
+  '/scan-flow': typeof ProtectedScanFlowRoute
   '/server-logs': typeof ProtectedServerLogsRoute
   '/stock-count-inventory': typeof ProtectedStockCountInventoryRoute
   '/stock-count-reports': typeof ProtectedStockCountReportsRoute
@@ -538,10 +637,12 @@ export interface FileRoutesByTo {
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/warehouse-dashboard': typeof ProtectedWarehouseDashboardRoute
-  '/wi': typeof ProtectedWiRoute
+  '/manual/$code': typeof ManualCodeRoute
+  '/monitor/$token': typeof MonitorTokenRoute
   '/warehouse/lookup': typeof WarehouseLookupRoute
   '/warehouse/palletizing': typeof WarehousePalletizingRoute
   '/warehouse/receiving': typeof WarehouseReceivingRoute
+  '/manual': typeof ManualIndexRoute
   '/warehouse': typeof WarehouseIndexRoute
   '/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
@@ -550,13 +651,23 @@ export interface FileRoutesByTo {
   '/warehouse/receipts': typeof ProtectedWarehouseReceiptsRoute
   '/warehouse/reports': typeof ProtectedWarehouseReportsRoute
   '/warehouse/settings': typeof ProtectedWarehouseSettingsRoute
+  '/wi/categories': typeof ProtectedWiCategoriesRoute
+  '/wi/flow': typeof ProtectedWiFlowRoute
+  '/wi/library': typeof ProtectedWiLibraryRoute
+  '/wi/new': typeof ProtectedWiNewRoute
+  '/wi/review': typeof ProtectedWiReviewRoute
+  '/wi/versions': typeof ProtectedWiVersionsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/migration-export': typeof ApiPublicMigrationExportRoute
   '/api/public/production-intake': typeof ApiPublicProductionIntakeRoute
+  '/manual/$code/print': typeof ManualCodePrintRoute
+  '/wi': typeof ProtectedWiIndexRoute
+  '/wi/$wiId/edit': typeof ProtectedWiWiIdEditRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
   '/warehouse/pallet/$palletId/scan': typeof WarehousePalletPalletIdScanRoute
+  '/wi/$wiId': typeof ProtectedWiWiIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -598,6 +709,7 @@ export interface FileRoutesById {
   '/_protected/production-standards': typeof ProtectedProductionStandardsRoute
   '/_protected/qc-reports': typeof ProtectedQcReportsRoute
   '/_protected/qc-summary': typeof ProtectedQcSummaryRoute
+  '/_protected/scan-flow': typeof ProtectedScanFlowRoute
   '/_protected/server-logs': typeof ProtectedServerLogsRoute
   '/_protected/stock-count-inventory': typeof ProtectedStockCountInventoryRoute
   '/_protected/stock-count-reports': typeof ProtectedStockCountReportsRoute
@@ -606,10 +718,13 @@ export interface FileRoutesById {
   '/_protected/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
   '/_protected/warehouse-dashboard': typeof ProtectedWarehouseDashboardRoute
-  '/_protected/wi': typeof ProtectedWiRoute
+  '/_protected/wi': typeof ProtectedWiRouteWithChildren
+  '/manual/$code': typeof ManualCodeRoute
+  '/monitor/$token': typeof MonitorTokenRoute
   '/warehouse/lookup': typeof WarehouseLookupRoute
   '/warehouse/palletizing': typeof WarehousePalletizingRoute
   '/warehouse/receiving': typeof WarehouseReceivingRoute
+  '/manual/': typeof ManualIndexRoute
   '/warehouse/': typeof WarehouseIndexRoute
   '/_protected/employee-profile/$id': typeof ProtectedEmployeeProfileIdRoute
   '/_protected/print-label/$jobNo': typeof ProtectedPrintLabelJobNoRoute
@@ -618,13 +733,23 @@ export interface FileRoutesById {
   '/_protected/warehouse/receipts': typeof ProtectedWarehouseReceiptsRoute
   '/_protected/warehouse/reports': typeof ProtectedWarehouseReportsRoute
   '/_protected/warehouse/settings': typeof ProtectedWarehouseSettingsRoute
+  '/_protected/wi/categories': typeof ProtectedWiCategoriesRoute
+  '/_protected/wi/flow': typeof ProtectedWiFlowRoute
+  '/_protected/wi/library': typeof ProtectedWiLibraryRoute
+  '/_protected/wi/new': typeof ProtectedWiNewRoute
+  '/_protected/wi/review': typeof ProtectedWiReviewRoute
+  '/_protected/wi/versions': typeof ProtectedWiVersionsRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/migration-export': typeof ApiPublicMigrationExportRoute
   '/api/public/production-intake': typeof ApiPublicProductionIntakeRoute
+  '/manual/$code_/print': typeof ManualCodePrintRoute
+  '/_protected/wi/': typeof ProtectedWiIndexRoute
+  '/_protected/wi/$wiId/edit': typeof ProtectedWiWiIdEditRoute
   '/api/public/curtain-flow/jobs': typeof ApiPublicCurtainFlowJobsRoute
   '/api/public/hooks/line-daily-send': typeof ApiPublicHooksLineDailySendRoute
   '/api/public/stock-count/reports': typeof ApiPublicStockCountReportsRoute
   '/warehouse/pallet/$palletId/scan': typeof WarehousePalletPalletIdScanRoute
+  '/_protected/wi/$wiId/': typeof ProtectedWiWiIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -666,6 +791,7 @@ export interface FileRouteTypes {
     | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
+    | '/scan-flow'
     | '/server-logs'
     | '/stock-count-inventory'
     | '/stock-count-reports'
@@ -675,9 +801,12 @@ export interface FileRouteTypes {
     | '/supplies-reports'
     | '/warehouse-dashboard'
     | '/wi'
+    | '/manual/$code'
+    | '/monitor/$token'
     | '/warehouse/lookup'
     | '/warehouse/palletizing'
     | '/warehouse/receiving'
+    | '/manual/'
     | '/warehouse/'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
@@ -686,13 +815,23 @@ export interface FileRouteTypes {
     | '/warehouse/receipts'
     | '/warehouse/reports'
     | '/warehouse/settings'
+    | '/wi/categories'
+    | '/wi/flow'
+    | '/wi/library'
+    | '/wi/new'
+    | '/wi/review'
+    | '/wi/versions'
     | '/api/public/health'
     | '/api/public/migration-export'
     | '/api/public/production-intake'
+    | '/manual/$code/print'
+    | '/wi/'
+    | '/wi/$wiId/edit'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
     | '/warehouse/pallet/$palletId/scan'
+    | '/wi/$wiId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -731,6 +870,7 @@ export interface FileRouteTypes {
     | '/production-standards'
     | '/qc-reports'
     | '/qc-summary'
+    | '/scan-flow'
     | '/server-logs'
     | '/stock-count-inventory'
     | '/stock-count-reports'
@@ -739,10 +879,12 @@ export interface FileRouteTypes {
     | '/supplies-dashboard'
     | '/supplies-reports'
     | '/warehouse-dashboard'
-    | '/wi'
+    | '/manual/$code'
+    | '/monitor/$token'
     | '/warehouse/lookup'
     | '/warehouse/palletizing'
     | '/warehouse/receiving'
+    | '/manual'
     | '/warehouse'
     | '/employee-profile/$id'
     | '/print-label/$jobNo'
@@ -751,13 +893,23 @@ export interface FileRouteTypes {
     | '/warehouse/receipts'
     | '/warehouse/reports'
     | '/warehouse/settings'
+    | '/wi/categories'
+    | '/wi/flow'
+    | '/wi/library'
+    | '/wi/new'
+    | '/wi/review'
+    | '/wi/versions'
     | '/api/public/health'
     | '/api/public/migration-export'
     | '/api/public/production-intake'
+    | '/manual/$code/print'
+    | '/wi'
+    | '/wi/$wiId/edit'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
     | '/warehouse/pallet/$palletId/scan'
+    | '/wi/$wiId'
   id:
     | '__root__'
     | '/'
@@ -798,6 +950,7 @@ export interface FileRouteTypes {
     | '/_protected/production-standards'
     | '/_protected/qc-reports'
     | '/_protected/qc-summary'
+    | '/_protected/scan-flow'
     | '/_protected/server-logs'
     | '/_protected/stock-count-inventory'
     | '/_protected/stock-count-reports'
@@ -807,9 +960,12 @@ export interface FileRouteTypes {
     | '/_protected/supplies-reports'
     | '/_protected/warehouse-dashboard'
     | '/_protected/wi'
+    | '/manual/$code'
+    | '/monitor/$token'
     | '/warehouse/lookup'
     | '/warehouse/palletizing'
     | '/warehouse/receiving'
+    | '/manual/'
     | '/warehouse/'
     | '/_protected/employee-profile/$id'
     | '/_protected/print-label/$jobNo'
@@ -818,13 +974,23 @@ export interface FileRouteTypes {
     | '/_protected/warehouse/receipts'
     | '/_protected/warehouse/reports'
     | '/_protected/warehouse/settings'
+    | '/_protected/wi/categories'
+    | '/_protected/wi/flow'
+    | '/_protected/wi/library'
+    | '/_protected/wi/new'
+    | '/_protected/wi/review'
+    | '/_protected/wi/versions'
     | '/api/public/health'
     | '/api/public/migration-export'
     | '/api/public/production-intake'
+    | '/manual/$code_/print'
+    | '/_protected/wi/'
+    | '/_protected/wi/$wiId/edit'
     | '/api/public/curtain-flow/jobs'
     | '/api/public/hooks/line-daily-send'
     | '/api/public/stock-count/reports'
     | '/warehouse/pallet/$palletId/scan'
+    | '/_protected/wi/$wiId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -844,9 +1010,13 @@ export interface RootRouteChildren {
   SuppliesRequestRoute: typeof SuppliesRequestRoute
   TermsRoute: typeof TermsRoute
   WarehouseRoute: typeof WarehouseRouteWithChildren
+  ManualCodeRoute: typeof ManualCodeRoute
+  MonitorTokenRoute: typeof MonitorTokenRoute
+  ManualIndexRoute: typeof ManualIndexRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicMigrationExportRoute: typeof ApiPublicMigrationExportRoute
   ApiPublicProductionIntakeRoute: typeof ApiPublicProductionIntakeRoute
+  ManualCodePrintRoute: typeof ManualCodePrintRoute
   ApiPublicCurtainFlowJobsRoute: typeof ApiPublicCurtainFlowJobsRoute
   ApiPublicHooksLineDailySendRoute: typeof ApiPublicHooksLineDailySendRoute
   ApiPublicStockCountReportsRoute: typeof ApiPublicStockCountReportsRoute
@@ -1120,6 +1290,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedQcSummaryRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/scan-flow': {
+      id: '/_protected/scan-flow'
+      path: '/scan-flow'
+      fullPath: '/scan-flow'
+      preLoaderRoute: typeof ProtectedScanFlowRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/server-logs': {
       id: '/_protected/server-logs'
       path: '/server-logs'
@@ -1182,6 +1359,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/wi'
       preLoaderRoute: typeof ProtectedWiRouteImport
       parentRoute: typeof ProtectedRoute
+    }
+    '/manual/': {
+      id: '/manual/'
+      path: '/manual'
+      fullPath: '/manual/'
+      preLoaderRoute: typeof ManualIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manual/$code': {
+      id: '/manual/$code'
+      path: '/manual/$code'
+      fullPath: '/manual/$code'
+      preLoaderRoute: typeof ManualCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/monitor/$token': {
+      id: '/monitor/$token'
+      path: '/monitor/$token'
+      fullPath: '/monitor/$token'
+      preLoaderRoute: typeof MonitorTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/warehouse/': {
       id: '/warehouse/'
@@ -1260,6 +1458,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedWarehouseSettingsRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/wi/': {
+      id: '/_protected/wi/'
+      path: '/'
+      fullPath: '/wi/'
+      preLoaderRoute: typeof ProtectedWiIndexRouteImport
+      parentRoute: typeof ProtectedWiRoute
+    }
+    '/_protected/wi/categories': {
+      id: '/_protected/wi/categories'
+      path: '/categories'
+      fullPath: '/wi/categories'
+      preLoaderRoute: typeof ProtectedWiCategoriesRouteImport
+      parentRoute: typeof ProtectedWiRoute
+    }
+    '/_protected/wi/flow': {
+      id: '/_protected/wi/flow'
+      path: '/flow'
+      fullPath: '/wi/flow'
+      preLoaderRoute: typeof ProtectedWiFlowRouteImport
+      parentRoute: typeof ProtectedWiRoute
+    }
+    '/_protected/wi/library': {
+      id: '/_protected/wi/library'
+      path: '/library'
+      fullPath: '/wi/library'
+      preLoaderRoute: typeof ProtectedWiLibraryRouteImport
+      parentRoute: typeof ProtectedWiRoute
+    }
+    '/_protected/wi/new': {
+      id: '/_protected/wi/new'
+      path: '/new'
+      fullPath: '/wi/new'
+      preLoaderRoute: typeof ProtectedWiNewRouteImport
+      parentRoute: typeof ProtectedWiRoute
+    }
+    '/_protected/wi/review': {
+      id: '/_protected/wi/review'
+      path: '/review'
+      fullPath: '/wi/review'
+      preLoaderRoute: typeof ProtectedWiReviewRouteImport
+      parentRoute: typeof ProtectedWiRoute
+    }
+    '/_protected/wi/versions': {
+      id: '/_protected/wi/versions'
+      path: '/versions'
+      fullPath: '/wi/versions'
+      preLoaderRoute: typeof ProtectedWiVersionsRouteImport
+      parentRoute: typeof ProtectedWiRoute
+    }
     '/api/public/health': {
       id: '/api/public/health'
       path: '/api/public/health'
@@ -1280,6 +1527,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/production-intake'
       preLoaderRoute: typeof ApiPublicProductionIntakeRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/manual/$code_/print': {
+      id: '/manual/$code_/print'
+      path: '/manual/$code/print'
+      fullPath: '/manual/$code/print'
+      preLoaderRoute: typeof ManualCodePrintRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_protected/wi/$wiId/': {
+      id: '/_protected/wi/$wiId/'
+      path: '/$wiId'
+      fullPath: '/wi/$wiId/'
+      preLoaderRoute: typeof ProtectedWiWiIdIndexRouteImport
+      parentRoute: typeof ProtectedWiRoute
+    }
+    '/_protected/wi/$wiId/edit': {
+      id: '/_protected/wi/$wiId/edit'
+      path: '/$wiId/edit'
+      fullPath: '/wi/$wiId/edit'
+      preLoaderRoute: typeof ProtectedWiWiIdEditRouteImport
+      parentRoute: typeof ProtectedWiRoute
     }
     '/api/public/curtain-flow/jobs': {
       id: '/api/public/curtain-flow/jobs'
@@ -1312,6 +1580,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ProtectedWiRouteChildren {
+  ProtectedWiCategoriesRoute: typeof ProtectedWiCategoriesRoute
+  ProtectedWiFlowRoute: typeof ProtectedWiFlowRoute
+  ProtectedWiLibraryRoute: typeof ProtectedWiLibraryRoute
+  ProtectedWiNewRoute: typeof ProtectedWiNewRoute
+  ProtectedWiReviewRoute: typeof ProtectedWiReviewRoute
+  ProtectedWiVersionsRoute: typeof ProtectedWiVersionsRoute
+  ProtectedWiIndexRoute: typeof ProtectedWiIndexRoute
+  ProtectedWiWiIdEditRoute: typeof ProtectedWiWiIdEditRoute
+  ProtectedWiWiIdIndexRoute: typeof ProtectedWiWiIdIndexRoute
+}
+
+const ProtectedWiRouteChildren: ProtectedWiRouteChildren = {
+  ProtectedWiCategoriesRoute: ProtectedWiCategoriesRoute,
+  ProtectedWiFlowRoute: ProtectedWiFlowRoute,
+  ProtectedWiLibraryRoute: ProtectedWiLibraryRoute,
+  ProtectedWiNewRoute: ProtectedWiNewRoute,
+  ProtectedWiReviewRoute: ProtectedWiReviewRoute,
+  ProtectedWiVersionsRoute: ProtectedWiVersionsRoute,
+  ProtectedWiIndexRoute: ProtectedWiIndexRoute,
+  ProtectedWiWiIdEditRoute: ProtectedWiWiIdEditRoute,
+  ProtectedWiWiIdIndexRoute: ProtectedWiWiIdIndexRoute,
+}
+
+const ProtectedWiRouteWithChildren = ProtectedWiRoute._addFileChildren(
+  ProtectedWiRouteChildren,
+)
+
 interface ProtectedRouteChildren {
   ProtectedAdminPolicyRoute: typeof ProtectedAdminPolicyRoute
   ProtectedControlRoute: typeof ProtectedControlRoute
@@ -1335,6 +1631,7 @@ interface ProtectedRouteChildren {
   ProtectedProductionStandardsRoute: typeof ProtectedProductionStandardsRoute
   ProtectedQcReportsRoute: typeof ProtectedQcReportsRoute
   ProtectedQcSummaryRoute: typeof ProtectedQcSummaryRoute
+  ProtectedScanFlowRoute: typeof ProtectedScanFlowRoute
   ProtectedServerLogsRoute: typeof ProtectedServerLogsRoute
   ProtectedStockCountInventoryRoute: typeof ProtectedStockCountInventoryRoute
   ProtectedStockCountReportsRoute: typeof ProtectedStockCountReportsRoute
@@ -1343,7 +1640,7 @@ interface ProtectedRouteChildren {
   ProtectedSuppliesDashboardRoute: typeof ProtectedSuppliesDashboardRoute
   ProtectedSuppliesReportsRoute: typeof ProtectedSuppliesReportsRoute
   ProtectedWarehouseDashboardRoute: typeof ProtectedWarehouseDashboardRoute
-  ProtectedWiRoute: typeof ProtectedWiRoute
+  ProtectedWiRoute: typeof ProtectedWiRouteWithChildren
   ProtectedEmployeeProfileIdRoute: typeof ProtectedEmployeeProfileIdRoute
   ProtectedPrintLabelJobNoRoute: typeof ProtectedPrintLabelJobNoRoute
   ProtectedWarehouseExportRoute: typeof ProtectedWarehouseExportRoute
@@ -1376,6 +1673,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedProductionStandardsRoute: ProtectedProductionStandardsRoute,
   ProtectedQcReportsRoute: ProtectedQcReportsRoute,
   ProtectedQcSummaryRoute: ProtectedQcSummaryRoute,
+  ProtectedScanFlowRoute: ProtectedScanFlowRoute,
   ProtectedServerLogsRoute: ProtectedServerLogsRoute,
   ProtectedStockCountInventoryRoute: ProtectedStockCountInventoryRoute,
   ProtectedStockCountReportsRoute: ProtectedStockCountReportsRoute,
@@ -1384,7 +1682,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedSuppliesDashboardRoute: ProtectedSuppliesDashboardRoute,
   ProtectedSuppliesReportsRoute: ProtectedSuppliesReportsRoute,
   ProtectedWarehouseDashboardRoute: ProtectedWarehouseDashboardRoute,
-  ProtectedWiRoute: ProtectedWiRoute,
+  ProtectedWiRoute: ProtectedWiRouteWithChildren,
   ProtectedEmployeeProfileIdRoute: ProtectedEmployeeProfileIdRoute,
   ProtectedPrintLabelJobNoRoute: ProtectedPrintLabelJobNoRoute,
   ProtectedWarehouseExportRoute: ProtectedWarehouseExportRoute,
@@ -1435,9 +1733,13 @@ const rootRouteChildren: RootRouteChildren = {
   SuppliesRequestRoute: SuppliesRequestRoute,
   TermsRoute: TermsRoute,
   WarehouseRoute: WarehouseRouteWithChildren,
+  ManualCodeRoute: ManualCodeRoute,
+  MonitorTokenRoute: MonitorTokenRoute,
+  ManualIndexRoute: ManualIndexRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicMigrationExportRoute: ApiPublicMigrationExportRoute,
   ApiPublicProductionIntakeRoute: ApiPublicProductionIntakeRoute,
+  ManualCodePrintRoute: ManualCodePrintRoute,
   ApiPublicCurtainFlowJobsRoute: ApiPublicCurtainFlowJobsRoute,
   ApiPublicHooksLineDailySendRoute: ApiPublicHooksLineDailySendRoute,
   ApiPublicStockCountReportsRoute: ApiPublicStockCountReportsRoute,

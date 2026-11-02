@@ -1,75 +1,96 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
-import { z } from "zod";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
-import { BookOpenCheck } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { WiFlowChart, WiOverviewStrip } from "@/components/wi/WiFlowChart";
-import { WORK_INSTRUCTIONS, getWorkInstruction } from "@/lib/data/work-instructions";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Pencil, UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { ACTOR_NEEDED_EVENT, WI_ACCENT_BTN, useWiActor } from "@/lib/wi/wi-client";
 
 export const Route = createFileRoute("/_protected/wi")({
-  validateSearch: zodValidator(
-    z.object({
-      id: fallback(z.string(), "pvc-room-divider").default("pvc-room-divider"),
-    }),
-  ),
   head: () => ({
-    meta: [
-      { title: "Work Instruction (WI) — WSC ProductionTrack" },
-      {
-        name: "description",
-        content: "คู่มือปฏิบัติงาน (WI) แสดง flow chart กระบวนการผลิตแยกหมวดหมู่",
-      },
-    ],
+    meta: [{ title: "Work Instructions — WSC ProductionTrack" }],
   }),
-  component: WiPage,
+  component: WiLayout,
 });
 
-function WiPage() {
-  const { id } = Route.useSearch();
-  const navigate = Route.useNavigate();
+function WiLayout() {
+  const [actor, setActor] = useWiActor();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(actor);
+  useEffect(() => setValue(actor), [actor]);
 
-  const wi = useMemo(() => getWorkInstruction(id) ?? WORK_INSTRUCTIONS[0], [id]);
+  useEffect(() => {
+    const onNeeded = () => setOpen(true);
+    window.addEventListener(ACTOR_NEEDED_EVENT, onNeeded);
+    return () => window.removeEventListener(ACTOR_NEEDED_EVENT, onNeeded);
+  }, []);
+
+  const commit = () => {
+    if (!value.trim()) return;
+    if (value.trim() !== actor) setActor(value);
+    setOpen(false);
+  };
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 pb-12">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-primary">
-            <BookOpenCheck className="h-5 w-5" />
-            <span className="text-sm font-medium">คู่มือปฏิบัติงาน</span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">{wi.title}</h1>
-          <p className="text-sm text-muted-foreground">
-            สายผลิต: {wi.productLine} · {wi.steps.length} ขั้นตอน · {wi.categories.length} หมวดหมู่
-          </p>
-        </div>
-
-        {WORK_INSTRUCTIONS.length > 1 && (
-          <Select value={wi.id} onValueChange={(v) => navigate({ search: { id: v } })}>
-            <SelectTrigger className="w-full sm:w-[260px]">
-              <SelectValue placeholder="เลือก WI" />
-            </SelectTrigger>
-            <SelectContent>
-              {WORK_INSTRUCTIONS.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div>
+      <div className="mx-auto flex min-h-[3.25rem] max-w-7xl justify-end px-4 pt-3">
+        {mounted && (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors",
+                  actor
+                    ? "border-border bg-card text-muted-foreground hover:text-foreground"
+                    : "border-amber-300 bg-amber-50 font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200",
+                )}
+              >
+                <UserRound className="h-4 w-4" />
+                {actor ? (
+                  <>
+                    ทำในนาม <span className="font-semibold text-foreground">{actor}</span>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </>
+                ) : (
+                  "ใส่ชื่อผู้ทำรายการ"
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 space-y-3">
+              <div>
+                <label htmlFor="wi-actor" className="text-sm font-semibold">
+                  ชื่อผู้ทำรายการ
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  บันทึกในประวัติทุกครั้งที่สร้าง แก้ไข หรืออนุมัติ WI
+                </p>
+              </div>
+              <Input
+                id="wi-actor"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && commit()}
+                placeholder="พิมพ์ชื่อของคุณ"
+                maxLength={120}
+                autoFocus
+                className="h-10"
+              />
+              <Button
+                className={cn("h-10 w-full", WI_ACCENT_BTN)}
+                disabled={!value.trim()}
+                onClick={commit}
+              >
+                บันทึกชื่อ
+              </Button>
+            </PopoverContent>
+          </Popover>
         )}
       </div>
-
-      <WiOverviewStrip wi={wi} />
-
-      <WiFlowChart wi={wi} />
-    </main>
+      <Outlet />
+    </div>
   );
 }

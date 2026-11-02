@@ -428,7 +428,12 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         try {
           f = await compressMedia(file, kind);
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "เตรียมไฟล์ไม่สำเร็จ");
+          const msg = e instanceof Error ? e.message : "เตรียมไฟล์ไม่สำเร็จ";
+          toast.error(
+            /load failed|networkerror|failed to fetch/i.test(msg)
+              ? "เตรียมไฟล์ไม่สำเร็จ — ลองถ่ายคลิปสั้นลง หรือปิดแอปอื่นแล้วลองใหม่"
+              : msg,
+          );
           continue;
         }
 
@@ -475,7 +480,12 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           });
           items.push({ url: res.path, previewUrl: res.previewUrl, type: kind });
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
+          const msg = e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ";
+          toast.error(
+            /load failed|networkerror|failed to fetch/i.test(msg)
+              ? "อัปโหลดไม่สำเร็จ — เน็ตหลุดหรือไฟล์ใหญ่เกินไป ลองอีกครั้ง"
+              : msg,
+          );
           continue;
         }
       }
@@ -510,7 +520,12 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
         });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+      const msg = err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ";
+      toast.error(
+        /load failed|networkerror|failed to fetch/i.test(msg)
+          ? "อัปโหลดไม่สำเร็จ — เน็ตหลุดหรือไฟล์ใหญ่เกินไป ลองอีกครั้ง"
+          : msg,
+      );
     } finally {
       setUploading(false);
       setUploadStatus({ phase: "idle" });

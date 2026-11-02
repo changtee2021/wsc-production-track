@@ -64,7 +64,7 @@ function AdminLogin() {
   return (
     <div className="min-h-screen bg-background">
       <Toaster richColors position="top-center" />
-      <AppHeader>
+      <AppHeader mark="color">
         <Link to="/">
           <Button variant="secondary" size="sm">
             Home
@@ -96,7 +96,8 @@ function AdminLogin() {
             onChange={(e) => setPassword(e.target.value)}
             className="mt-2 h-12 text-base"
             autoFocus
-            required
+            required={!import.meta.env.DEV}
+            placeholder={import.meta.env.DEV ? "Local dev: leave blank" : undefined}
           />
           <Button
             type="submit"
