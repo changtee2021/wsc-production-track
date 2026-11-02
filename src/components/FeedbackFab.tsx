@@ -165,6 +165,10 @@ export function FeedbackFab() {
     }
   };
 
+  if (path === "/" || path === "/manual" || path.startsWith("/manual/")) {
+    return <Toaster richColors position="top-center" />;
+  }
+
   return (
     <>
       <Toaster richColors position="top-center" />
@@ -172,7 +176,7 @@ export function FeedbackFab() {
         type="button"
         onClick={() => setOpen(true)}
         size="icon"
-        className="fixed bottom-4 right-4 z-[60] h-11 w-11 rounded-full shadow-lg shadow-primary/30"
+        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-[60] h-11 w-11 rounded-full shadow-lg shadow-primary/30"
         aria-label="ส่งความคิดเห็น/แจ้งปัญหา"
         title="ส่งความคิดเห็น/แจ้งปัญหา"
       >

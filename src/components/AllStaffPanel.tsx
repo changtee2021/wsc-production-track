@@ -2,6 +2,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  adminBulkEditStaff,
+  adminDeleteStaffMany,
   adminListAllStaff,
   adminToggleStaffDepartment,
   adminUpdateStaffMeta,
@@ -15,10 +17,31 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Users, Pencil, Save, X, Upload, Loader2, Eye, Plus } from "lucide-react";
+import {
+  Users,
+  Pencil,
+  Save,
+  X,
+  Upload,
+  Loader2,
+  Eye,
+  Plus,
+  Printer,
+  Trash2,
+  MoreHorizontal,
+} from "lucide-react";
 import { useOpenEmployeeProfile } from "@/components/EmployeeProfileProvider";
 import { toast } from "sonner";
 import { initialsOf } from "@/lib/utils/i18n";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EmployeeIdCard } from "@/components/EmployeeIdCard";
+import { BADGE_CSS, openBadgePrint, toBadgePerson, type BadgeSource } from "@/lib/employee-badge";
 
 type StaffEntry = {
   key: string;
@@ -26,6 +49,7 @@ type StaffEntry = {
   emp_code: string | null;
   avatar_url: string | null;
   nationality: string | null;
+  is_sub: boolean;
   departments: Department[];
   ids: Partial<Record<Department, string>>;
   active: Partial<Record<Department, boolean>>;
@@ -76,6 +100,8 @@ export function AllStaffPanel() {
   const listFn = useServerFn(adminListAllStaff);
   const toggleFn = useServerFn(adminToggleStaffDepartment);
   const updateFn = useServerFn(adminUpdateStaffMeta);
+  const deleteFn = useServerFn(adminDeleteStaffMany);
+  const bulkFn = useServerFn(adminBulkEditStaff);
   const createUrl = useServerFn(adminCreateUploadUrl);
 
   const [rows, setRows] = useState<StaffEntry[]>([]);
@@ -97,6 +123,13 @@ export function AllStaffPanel() {
   const [newNat, setNewNat] = useState("Thai");
   const [newDept, setNewDept] = useState<Department>("production");
   const [adding, setAdding] = useState(false);
+  const [badgeRows, setBadgeRows] = useState<StaffEntry[] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkNat, setBulkNat] = useState("");
+  const [bulkDept, setBulkDept] = useState<Department | "">("");
+  const [bulkDeptOn, setBulkDeptOn] = useState(true);
 
   const load = async () => {
     setLoading(true);
@@ -191,9 +224,7 @@ export function AllStaffPanel() {
         },
       });
       toast.success(
-        enabled
-          ? `เพิ่มเข้าแผนก${DEPT_LABEL[dept]}แล้ว`
-          : `ลบออกจากแผนก${DEPT_LABEL[dept]}แล้ว`,
+        enabled ? `เพิ่มเข้าแผนก${DEPT_LABEL[dept]}แล้ว` : `ลบออกจากแผนก${DEPT_LABEL[dept]}แล้ว`,
       );
       await load();
     } catch (err) {
@@ -234,12 +265,107 @@ export function AllStaffPanel() {
     }
   };
 
+  const toPerson = (r: StaffEntry) => ({
+    targets: r.departments.map((d) => ({ department: d, id: r.ids[d]! })).filter((t) => !!t.id),
+    name: r.name,
+    emp_code: r.emp_code,
+    avatar_url: r.avatar_url,
+    nationality: r.nationality,
+    is_sub: r.is_sub,
+  });
+
+  const deletePeople = async (people: StaffEntry[]) => {
+    const ready = people.filter((r) => r.departments.length > 0);
+    if (ready.length === 0) return;
+    const label =
+      ready.length === 1
+        ? `ลบ ${ready[0].name} ออกจากทุกแผนก?\nประวัติงานเก่ายังอยู่ แต่จะไม่ผูกชื่อคนนี้แล้ว`
+        : `ลบพนักงาน ${ready.length} คนออกจากทุกแผนก?\nประวัติงานเก่ายังอยู่ แต่จะไม่ผูกชื่อแล้ว`;
+    if (!confirm(label)) return;
+    setBulkBusy(true);
+    try {
+      for (let i = 0; i < ready.length; i += 100) {
+        await deleteFn({
+          data: { token: requireToken(), people: ready.slice(i, i + 100).map(toPerson) },
+        });
+      }
+      toast.success(ready.length === 1 ? "ลบพนักงานแล้ว" : `ลบพนักงาน ${ready.length} คนแล้ว`);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (const r of ready) next.delete(r.key);
+        return next;
+      });
+      if (editKey && ready.some((r) => r.key === editKey)) cancelEdit();
+      await load();
+    } catch (err) {
+      showError(err);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const applyBulkEdit = async () => {
+    const people = rows.filter((r) => selected.has(r.key));
+    if (people.length === 0) return;
+    if (!bulkNat && !bulkDept) {
+      toast.error("เลือกสัญชาติหรือแผนกที่ต้องการแก้");
+      return;
+    }
+    setBulkBusy(true);
+    try {
+      let skipped = 0;
+      for (let i = 0; i < people.length; i += 100) {
+        const res = await bulkFn({
+          data: {
+            token: requireToken(),
+            people: people.slice(i, i + 100).map(toPerson),
+            nationality: bulkNat || undefined,
+            department: bulkDept || undefined,
+            departmentEnabled: bulkDept ? bulkDeptOn : undefined,
+          },
+        });
+        skipped += res.nationalitySkipped ?? 0;
+      }
+      toast.success(
+        skipped > 0
+          ? `แก้แล้ว · สัญชาติข้าม ${skipped} คนที่ไม่อยู่แผนกผลิต`
+          : `แก้พนักงาน ${people.length} คนแล้ว`,
+      );
+      setBulkOpen(false);
+      setSelected(new Set());
+      await load();
+    } catch (err) {
+      showError(err);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const filtered = rows.filter((r) => {
     if (deptFilter !== "all" && !r.departments.includes(deptFilter)) return false;
     if (!query.trim()) return true;
     const q = query.trim().toLowerCase();
     return r.name.toLowerCase().includes(q) || (r.emp_code ?? "").toLowerCase().includes(q);
   });
+
+  const regular = filtered.filter((r) => !r.is_sub);
+  const subs = filtered.filter((r) => r.is_sub);
+  const listed: Array<
+    { kind: "head"; key: string; title: string } | { kind: "row"; r: StaffEntry }
+  > = [
+    ...(regular.length
+      ? [{ kind: "head" as const, key: "head-regular", title: `พนักงานประจำ ${regular.length} คน` }]
+      : []),
+    ...regular.map((r) => ({ kind: "row" as const, r })),
+    ...(subs.length
+      ? [{ kind: "head" as const, key: "head-sub", title: `พนักงาน Sub ${subs.length} คน` }]
+      : []),
+    ...subs.map((r) => ({ kind: "row" as const, r })),
+  ];
+
+  const selectedRows = rows.filter((r) => selected.has(r.key));
+  const selectedInView = filtered.filter((r) => selected.has(r.key)).length;
+  const allFilteredSelected = filtered.length > 0 && selectedInView === filtered.length;
 
   return (
     <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -252,6 +378,16 @@ export function AllStaffPanel() {
           </Badge>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 gap-1"
+            disabled={filtered.length === 0}
+            onClick={() => setBadgeRows(filtered)}
+          >
+            <Printer className="h-4 w-4" />
+            พิมพ์บัตร ({filtered.length})
+          </Button>
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -323,11 +459,60 @@ export function AllStaffPanel() {
             </option>
           ))}
         </select>
-        <Button type="button" className="h-9 gap-1" onClick={() => void addStaff()} disabled={adding}>
+        <Button
+          type="button"
+          className="h-9 gap-1"
+          onClick={() => void addStaff()}
+          disabled={adding}
+        >
           {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           เพิ่ม
         </Button>
       </div>
+
+      {selectedRows.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2">
+          <span className="text-sm font-semibold">เลือกแล้ว {selectedRows.length} คน</span>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 gap-1 sm:min-h-9"
+            disabled={bulkBusy}
+            onClick={() => {
+              setBulkNat("");
+              setBulkDept("");
+              setBulkDeptOn(true);
+              setBulkOpen(true);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+            แก้ไขชุด
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 gap-1 border-red-200 bg-red-50/60 text-red-700 hover:bg-red-100 sm:min-h-9"
+            disabled={bulkBusy}
+            onClick={() => void deletePeople(selectedRows)}
+          >
+            {bulkBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            ลบที่เลือก
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="min-h-11 sm:min-h-9"
+            disabled={bulkBusy}
+            onClick={() => setSelected(new Set())}
+          >
+            ยกเลิกการเลือก
+          </Button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-8 text-muted-foreground">
@@ -342,6 +527,29 @@ export function AllStaffPanel() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
+                <th className="sticky top-0 z-20 w-12 bg-card px-2 py-2 shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
+                  <label className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center">
+                    <Checkbox
+                      className="h-5 w-5"
+                      checked={
+                        allFilteredSelected ? true : selectedInView > 0 ? "indeterminate" : false
+                      }
+                      disabled={bulkBusy || filtered.length === 0}
+                      onCheckedChange={() => {
+                        const on = !allFilteredSelected;
+                        setSelected((prev) => {
+                          const next = new Set(prev);
+                          for (const r of filtered) {
+                            if (on) next.add(r.key);
+                            else next.delete(r.key);
+                          }
+                          return next;
+                        });
+                      }}
+                      aria-label="เลือกพนักงานที่แสดงทั้งหมด"
+                    />
+                  </label>
+                </th>
                 <th className="sticky top-0 z-20 bg-card py-2 pr-3 shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
                   พนักงาน
                 </th>
@@ -367,11 +575,43 @@ export function AllStaffPanel() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => {
+              {listed.map((item) => {
+                if (item.kind === "head") {
+                  return (
+                    <tr key={item.key} className="border-b border-sky-200 bg-sky-50">
+                      <td
+                        colSpan={4 + DEPARTMENTS.length + 1}
+                        className="px-3 py-2 text-sm font-semibold text-sky-900"
+                      >
+                        {item.title}
+                      </td>
+                    </tr>
+                  );
+                }
+                const r = item.r;
                 const editing = editKey === r.key;
                 const previewUrl = editing ? editForm.avatar_url : r.avatar_url;
                 return (
                   <tr key={r.key} className="border-b border-border/60 align-middle">
+                    <td className="px-2 py-2">
+                      <label className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center">
+                        <Checkbox
+                          className="h-5 w-5"
+                          checked={selected.has(r.key)}
+                          disabled={bulkBusy}
+                          onCheckedChange={(v) => {
+                            const on = v === true;
+                            setSelected((prev) => {
+                              const next = new Set(prev);
+                              if (on) next.add(r.key);
+                              else next.delete(r.key);
+                              return next;
+                            });
+                          }}
+                          aria-label={`เลือก ${r.name}`}
+                        />
+                      </label>
+                    </td>
                     <td className="py-2 pr-3">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 border border-border">
@@ -385,7 +625,9 @@ export function AllStaffPanel() {
                             <div className="space-y-1">
                               <Input
                                 value={editForm.name}
-                                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                                onChange={(e) =>
+                                  setEditForm((f) => ({ ...f, name: e.target.value }))
+                                }
                                 className="h-8"
                                 placeholder="ชื่อ"
                               />
@@ -423,6 +665,11 @@ export function AllStaffPanel() {
                               {r.name}
                             </button>
                           )}
+                          {r.is_sub && (
+                            <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-800">
+                              Sub
+                            </span>
+                          )}
                           {!editing && (
                             <div className="mt-0.5 flex flex-wrap gap-1">
                               {r.departments.map((d) => (
@@ -454,7 +701,9 @@ export function AllStaffPanel() {
                       {editing ? (
                         <select
                           value={editForm.nationality}
-                          onChange={(e) => setEditForm((f) => ({ ...f, nationality: e.target.value }))}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, nationality: e.target.value }))
+                          }
                           className="h-8 rounded-md border border-border bg-background px-2 text-xs"
                         >
                           {NATIONALITIES.map((n) => (
@@ -492,29 +741,62 @@ export function AllStaffPanel() {
                           >
                             <Save className="h-3 w-3" /> บันทึก
                           </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEdit} className="h-8 gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEdit}
+                            className="h-8 gap-1"
+                          >
                             <X className="h-3 w-3" />
                           </Button>
                         </div>
                       ) : (
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-0.5">
                           <Button
                             size="sm"
                             variant="ghost"
+                            className="min-h-11 min-w-11 px-2 sm:min-h-9 sm:min-w-9"
+                            aria-label={`ดูโปรไฟล์ของ ${r.name}`}
+                            title="ดูโปรไฟล์พนักงาน"
                             onClick={() => openProfile({ name: r.name, emp_code: r.emp_code })}
-                            className="h-8 px-2"
-                            title="ดูโปรไฟล์"
                           >
-                            <Eye className="h-3.5 w-3.5" />
+                            <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => startEdit(r)}
-                            className="h-8 gap-1"
-                          >
-                            <Pencil className="h-3 w-3" /> แก้ไข
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="min-h-11 min-w-11 px-2 sm:min-h-9 sm:min-w-9"
+                                aria-label={`ตัวเลือกของ ${r.name}`}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem
+                                className="min-h-11 gap-2"
+                                onSelect={() => startEdit(r)}
+                              >
+                                <Pencil className="h-4 w-4" /> แก้ไข
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="min-h-11 gap-2"
+                                onSelect={() => setBadgeRows([r])}
+                              >
+                                <Printer className="h-4 w-4" /> พิมพ์บัตร
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="min-h-11 gap-2 text-red-700 focus:text-red-700"
+                                disabled={bulkBusy}
+                                onSelect={() => {
+                                  window.setTimeout(() => void deletePeople([r]), 0);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" /> ลบ
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       )}
                     </td>
@@ -527,9 +809,139 @@ export function AllStaffPanel() {
       )}
 
       <p className="mt-3 text-xs text-muted-foreground">
-        เคล็ดลับ: ติ๊ก checkbox เพื่อเพิ่ม/ลบแผนกของพนักงานคนนั้น · กด "แก้ไข" เพื่อแก้ชื่อ รหัส รูป
-        และสัญชาติ (จะ sync ทุกแผนกของพนักงานคนนี้)
+        ช่องติ๊กหน้าชื่อใช้เลือกหลายคน เพื่อลบหรือแก้สัญชาติกับแผนกพร้อมกัน ·
+        ติ๊กในคอลัมน์แผนกยังใช้ เพิ่มหรือเอาออกทีละแผนก · กดรูปตาเพื่อดูโปรไฟล์ · กด ... เพื่อแก้ไข
+        พิมพ์บัตร หรือลบคนนั้น · รายชื่อที่คลุมสีฟ้าอยู่กลุ่ม Sub · บัตรสร้างจากข้อมูลนี้ทันที
       </p>
+
+      <Dialog open={bulkOpen} onOpenChange={(open) => !bulkBusy && setBulkOpen(open)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>แก้ไขพนักงานที่เลือก {selectedRows.length} คน</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              เปลี่ยนเฉพาะช่องที่เลือก สัญชาติบันทึกได้กับคนที่อยู่แผนกผลิต ถ้าเอาออกจากแผนกสุดท้าย
+              คนนั้นจะหายจากรายการ
+            </p>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="block text-sm font-medium">
+              สัญชาติ
+              <select
+                value={bulkNat}
+                onChange={(e) => setBulkNat(e.target.value)}
+                className="mt-1 h-11 w-full rounded-md border border-border bg-background px-2 text-sm"
+              >
+                <option value="">ไม่เปลี่ยน</option>
+                {NATIONALITIES.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium">
+              แผนก
+              <select
+                value={bulkDept}
+                onChange={(e) => setBulkDept(e.target.value as Department | "")}
+                className="mt-1 h-11 w-full rounded-md border border-border bg-background px-2 text-sm"
+              >
+                <option value="">ไม่เปลี่ยน</option>
+                {DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>
+                    {DEPT_LABEL[d]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {bulkDept && (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={bulkDeptOn ? "default" : "outline"}
+                  className="min-h-11 flex-1"
+                  onClick={() => setBulkDeptOn(true)}
+                >
+                  เพิ่มเข้าแผนก
+                </Button>
+                <Button
+                  type="button"
+                  variant={!bulkDeptOn ? "default" : "outline"}
+                  className="min-h-11 flex-1"
+                  onClick={() => setBulkDeptOn(false)}
+                >
+                  เอาออกจากแผนก
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              disabled={bulkBusy}
+              onClick={() => setBulkOpen(false)}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              type="button"
+              className="min-h-11 gap-1"
+              disabled={bulkBusy || (!bulkNat && !bulkDept)}
+              onClick={() => void applyBulkEdit()}
+            >
+              {bulkBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              บันทึกชุดนี้
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={badgeRows !== null} onOpenChange={(open) => !open && setBadgeRows(null)}>
+        <DialogContent className="flex max-h-[90vh] max-w-5xl flex-col">
+          <DialogHeader>
+            <DialogTitle>บัตรพนักงาน {badgeRows?.length ?? 0} ใบ</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              ขนาดพิมพ์ 54×86 มม. บัตรแนวตั้งมาตรฐาน ใบละ 1 หน้า ตอนพิมพ์เลือกบันทึกเป็น PDF
+              หรือกระดาษขนาดนี้ ถ้าไม่มีรูปจะใช้ไอคอนคนแทน
+            </p>
+          </DialogHeader>
+          <style>{BADGE_CSS}</style>
+          <div className="min-h-0 flex-1 overflow-auto">
+            <div className="flex flex-wrap gap-4">
+              {(badgeRows ?? []).map((r) => (
+                <div key={r.key} className="h-[116mm] w-[73mm] overflow-hidden">
+                  <div className="origin-top-left scale-[1.35]">
+                    <EmployeeIdCard person={toBadgePerson(r as BadgeSource)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              className="h-11 gap-2"
+              onClick={() => {
+                if (!badgeRows?.length) return;
+                try {
+                  openBadgePrint(badgeRows.map((r) => toBadgePerson(r)));
+                } catch (err) {
+                  showError(err);
+                }
+              }}
+            >
+              <Printer className="h-4 w-4" />
+              พิมพ์ / บันทึก PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

@@ -192,10 +192,10 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
 
 // ---------- Live Production Dashboard ----------
 
-export const adminGetProductionDashboard = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
-  .handler(async ({ data }) => {
-    assertAdmin(data.token);
+// Shared by the admin dashboard and the public share-link monitor (single source of truth
+// for "active" work and red-alert thresholds). Callers are responsible for authorization.
+export async function loadLiveDashboard() {
+  {
     const today = new Date();
     const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     const lookbackStart = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
@@ -286,6 +286,14 @@ export const adminGetProductionDashboard = createServerFn({ method: "POST" })
       steps: stepsRes.data ?? [],
       active,
     };
+  }
+}
+
+export const adminGetProductionDashboard = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    return loadLiveDashboard();
   });
 
 // ---------- Historical Production Dashboard (range) ----------

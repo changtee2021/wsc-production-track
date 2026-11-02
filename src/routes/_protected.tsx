@@ -40,7 +40,13 @@ const PAGE_TITLES: Record<string, string> = {
   "/supplies-reports": "รายงานค่าเสื่อมสินทรัพย์",
   "/expenses-dashboard": "เบิกค่าใช้จ่าย (AI Scan)",
   "/expenses-reports": "รายงานค่าใช้จ่ายรายเดือน",
-  "/wi": "WI คู่มือปฏิบัติงาน",
+  "/wi": "Work Instructions",
+  "/wi/library": "คลัง WI",
+  "/wi/new": "สร้าง WI",
+  "/wi/categories": "หมวดหมู่ WI",
+  "/wi/review": "ตรวจ & อนุมัติ WI",
+  "/wi/versions": "ประวัติเวอร์ชัน WI",
+  "/wi/flow": "WI Flow chart",
   "/warehouse-dashboard": "คลังสินค้า Dashboard",
   "/warehouse/receipts": "รายการรับของ",
   "/warehouse/pallets": "สถานะ Pallet",
@@ -53,15 +59,16 @@ const PAGE_TITLES: Record<string, string> = {
 function AdminLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const title = PAGE_TITLES[pathname] ?? "แอดมิน";
+  const title =
+    PAGE_TITLES[pathname] ?? (pathname.startsWith("/wi/") ? "Work Instructions" : "แอดมิน");
 
   return (
     <SidebarProvider>
       <EmployeeProfileProvider>
-        <div className="flex min-h-screen w-full bg-muted/30">
+        <div className="flex min-h-screen w-full bg-gradient-to-br from-stone-100 via-amber-50/60 to-stone-200 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
           <AdminSidebar />
-          <SidebarInset>
-            <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <SidebarInset className="bg-white/85 ring-1 ring-black/5 backdrop-blur-xl md:!my-3 md:!mr-3 md:!ml-0 md:!rounded-[28px] md:!shadow-[0_20px_60px_-15px_rgba(0,0,0,0.28)] dark:bg-zinc-900/85 dark:ring-white/10">
+            <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 bg-white/70 px-4 backdrop-blur-xl md:rounded-t-[28px] dark:bg-zinc-900/70">
               <div className="flex items-center gap-2 min-w-0">
                 <SidebarTrigger />
                 <h1 className="truncate text-sm font-semibold text-foreground sm:text-base">
