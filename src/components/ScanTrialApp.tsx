@@ -60,6 +60,7 @@ export function ScanTrialApp() {
   const [runs, setRuns] = useState<TrialRun[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [note, setNote] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<string[]>([]);
   const [scanTarget, setScanTarget] = useState<ScanTarget | null>(null);
   const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
 
@@ -149,6 +150,7 @@ export function ScanTrialApp() {
     setJobId(match.jobId);
     setJobInput(match.jobId);
     setStep("");
+    setBlocked([]);
     setNote(null);
   }
 
@@ -195,8 +197,10 @@ export function ScanTrialApp() {
     });
     if (!gate.ok) {
       setNote(gate.message);
+      setBlocked(gate.blocked);
       return;
     }
+    setBlocked([]);
     persist([
       ...runs,
       {
@@ -220,6 +224,7 @@ export function ScanTrialApp() {
       runs.map((run) => (run === mine ? { ...run, status: "done", finishedAt: Date.now() } : run)),
     );
     setStep("");
+    setBlocked([]);
     setNote(null);
   }
 
@@ -353,6 +358,7 @@ export function ScanTrialApp() {
                         disabled={running}
                         onChange={(event) => {
                           setStep(event.target.value);
+                          setBlocked([]);
                           setNote(null);
                         }}
                         className="h-12 w-full rounded-xl border bg-card px-3 text-sm font-semibold disabled:opacity-60"
@@ -408,19 +414,24 @@ export function ScanTrialApp() {
                     <ul className="space-y-1 text-[11px]">
                       {steps.map((name) => {
                         const row = jobRuns.find((run) => run.step === name);
-                        const label =
-                          row?.status === "done"
-                            ? "จบ"
-                            : row?.status === "running"
-                              ? "กำลังทำ"
-                              : "รอ";
+                        const done = row?.status === "done";
+                        const held = blocked.includes(name);
+                        const label = done ? "จบ" : row?.status === "running" ? "กำลังทำ" : "รอ";
+                        const tone = done
+                          ? "border-emerald-300 bg-emerald-100 text-emerald-800"
+                          : held
+                            ? "border-red-300 bg-red-100 text-red-800"
+                            : "border-transparent bg-muted/50";
                         return (
                           <li
                             key={name}
-                            className="flex justify-between gap-2 rounded-lg bg-muted/50 px-2 py-1"
+                            className={`flex min-h-9 items-center justify-between gap-2 rounded-lg border px-2 py-1 ${tone}`}
                           >
                             <span className="truncate">{name}</span>
-                            <span className="shrink-0 font-semibold">{label}</span>
+                            <span className="flex shrink-0 items-center gap-1 font-semibold">
+                              {done && <Check className="h-3.5 w-3.5" aria-hidden />}
+                              {label}
+                            </span>
                           </li>
                         );
                       })}

@@ -96,21 +96,24 @@ export function canStartTrial(input: {
   flow: TrialFlow;
   step: string;
   employeeId: string;
-}): { ok: true } | { ok: false; message: string } {
+}): { ok: true } | { ok: false; message: string; blocked: string[] } {
+  const job = input.runs.filter((run) => run.jobId === input.jobId && run.flow === input.flow.id);
+  const unfinished = (name: string) => job.find((run) => run.step === name)?.status !== "done";
+  const deny = (message: string, blocked: string[]) => ({ ok: false as const, message, blocked });
+
   const open = input.runs.find(
     (run) => run.employeeId === input.employeeId && run.status === "running",
   );
   if (open) {
-    return { ok: false, message: "เครื่องนี้ยังไม่กดเสร็จงาน ไปขั้นต่อไปไม่ได้" };
+    return deny("เครื่องนี้ยังไม่กดเสร็จงาน ไปขั้นต่อไปไม่ได้", [open.step]);
   }
 
-  const job = input.runs.filter((run) => run.jobId === input.jobId && run.flow === input.flow.id);
   const same = job.find((run) => run.step === input.step);
   if (same?.status === "running") {
-    return { ok: false, message: "คนก่อนหน้ายังไม่กดจบงาน" };
+    return deny("คนก่อนหน้ายังไม่กดจบงาน", [input.step]);
   }
   if (same?.status === "done") {
-    return { ok: false, message: "ขั้นนี้จบแล้ว" };
+    return deny("ขั้นนี้จบแล้ว", []);
   }
 
   for (const lane of input.flow.lanes) {
@@ -120,44 +123,41 @@ export function canStartTrial(input: {
     const previous = lane[index - 1];
     const previousRun = job.find((run) => run.step === previous);
     if (!previousRun || previousRun.status !== "done") {
-      return {
-        ok: false,
-        message:
-          previousRun?.status === "running"
-            ? "คนก่อนหน้ายังไม่กดจบงาน"
-            : `ขั้น ${previous} ยังไม่จบ ไปต่อไม่ได้`,
-      };
+      return deny(
+        previousRun?.status === "running"
+          ? "คนก่อนหน้ายังไม่กดจบงาน"
+          : `ขั้น ${previous} ยังไม่จบ ไปต่อไม่ได้`,
+        [previous],
+      );
     }
     return { ok: true };
   }
 
   const afterIndex = input.flow.after.indexOf(input.step);
-  if (afterIndex < 0) return { ok: false, message: "ขั้นตอนนี้ไม่อยู่ในโฟลของหมวดนี้" };
+  if (afterIndex < 0) return deny("ขั้นตอนนี้ไม่อยู่ในโฟลของหมวดนี้", []);
 
-  for (const name of input.flow.lanes.flat()) {
-    const run = job.find((row) => row.step === name);
-    if (!run || run.status !== "done") {
-      return {
-        ok: false,
-        message:
-          run?.status === "running"
-            ? "คนก่อนหน้ายังไม่กดจบงาน"
-            : `ขั้น ${name} ยังไม่จบ ไปต่อไม่ได้`,
-      };
-    }
+  const waitingLanes = input.flow.lanes.flat().filter(unfinished);
+  if (waitingLanes.length > 0) {
+    const first = waitingLanes[0];
+    const firstRun = job.find((run) => run.step === first);
+    return deny(
+      firstRun?.status === "running"
+        ? "คนก่อนหน้ายังไม่กดจบงาน"
+        : `ขั้น ${first} ยังไม่จบ ไปต่อไม่ได้`,
+      waitingLanes,
+    );
   }
 
   if (afterIndex > 0) {
     const previous = input.flow.after[afterIndex - 1];
     const previousRun = job.find((run) => run.step === previous);
     if (!previousRun || previousRun.status !== "done") {
-      return {
-        ok: false,
-        message:
-          previousRun?.status === "running"
-            ? "คนก่อนหน้ายังไม่กดจบงาน"
-            : `ขั้น ${previous} ยังไม่จบ ไปต่อไม่ได้`,
-      };
+      return deny(
+        previousRun?.status === "running"
+          ? "คนก่อนหน้ายังไม่กดจบงาน"
+          : `ขั้น ${previous} ยังไม่จบ ไปต่อไม่ได้`,
+        [previous],
+      );
     }
   }
 
