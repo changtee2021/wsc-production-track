@@ -98,6 +98,17 @@ export function flowSteps(flow: TrialFlow): string[] {
   return [...flow.lanes.flat(), ...flow.after];
 }
 
+/** The steps a worker should see while the list is folded: the next unfinished step of each lane, then the join steps. */
+export function nextTrialSteps(flow: TrialFlow, runs: TrialRun[], jobId: string): string[] {
+  const job = runs.filter((run) => run.jobId === jobId && run.flow === flow.id);
+  const done = (name: string) => job.find((run) => run.step === name)?.status === "done";
+  const laneNow = flow.lanes
+    .map((lane) => lane.find((name) => !done(name)))
+    .filter((name): name is string => Boolean(name));
+  if (laneNow.length > 0) return laneNow.slice(0, 3);
+  return flow.after.filter((name) => !done(name)).slice(0, 3);
+}
+
 export function loadTrialRuns(): TrialRun[] {
   if (typeof window === "undefined") return [];
   try {
