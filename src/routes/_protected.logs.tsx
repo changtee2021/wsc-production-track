@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { adminFetchLogs } from "@/lib/features/admin.functions";
+import { adminListTrialReleases } from "@/lib/scan-trial.functions";
+import { trialProductLabel } from "@/lib/scan-trial";
 import { adminSignMediaUrls } from "@/lib/integrations/media.functions";
 import { getAdminToken } from "@/lib/auth/admin-session";
 
@@ -64,6 +66,7 @@ function LogsPage() {
   const [signedMap, setSignedMap] = useState<Record<string, string>>({});
 
   const fetchLogs = useServerFn(adminFetchLogs);
+  const listReleases = useServerFn(adminListTrialReleases);
   const signUrls = useServerFn(adminSignMediaUrls);
 
   useEffect(() => {
@@ -74,7 +77,7 @@ function LogsPage() {
         return;
       }
       try {
-        const [logResp, { data: catData }] = await Promise.all([
+        const [logResp, releaseResp, { data: catData }] = await Promise.all([
           fetchLogs({
             data: {
               token,
@@ -83,9 +86,23 @@ function LogsPage() {
               limit: 1000,
             },
           }),
+          listReleases({ data: { token } }).catch(() => ({ rows: [] })),
           supabase.from("categories").select("id,name").eq("active", true).order("name"),
         ]);
-        const rows = (logResp.rows as unknown as LogRow[]) ?? [];
+        const production = (logResp.rows as unknown as LogRow[]) ?? [];
+        const keyed: LogRow[] = (releaseResp.rows ?? []).map((row) => ({
+          id: `release:${row.job_id}`,
+          job_id: row.job_id,
+          action: "intake",
+          created_at: row.created_at,
+          note: null,
+          note_image_url: null,
+          category_id: null,
+          employees: { id: "office", name: row.sent_by_name || "พนักงานออฟฟิศ" },
+          steps: { id: "intake", step_name: trialProductLabel(row.product) },
+          categories: null,
+        }));
+        const rows = [...keyed, ...production];
         setLogs(rows);
         setCategories((catData as Category[]) ?? []);
         const refs = Array.from(
@@ -106,7 +123,7 @@ function LogsPage() {
       }
       setLoading(false);
     })();
-  }, [fetchLogs, signUrls]);
+  }, [fetchLogs, listReleases, signUrls]);
 
   const signedSrc = (ref: string) => signedMap[ref] ?? ref;
 
@@ -114,7 +131,7 @@ function LogsPage() {
     const q = search.trim().toLowerCase();
     const fromTs = appliedFrom ? new Date(appliedFrom).setHours(0, 0, 0, 0) : null;
     const toTs = appliedTo ? new Date(appliedTo).setHours(23, 59, 59, 999) : null;
-    return logs.filter((l) => {
+    const rows = logs.filter((l) => {
       if (categoryFilter !== "all" && l.category_id !== categoryFilter) return false;
       if (actionFilter !== "all" && l.action !== actionFilter) return false;
       if (onlyNotes && !l.note && !l.note_image_url) return false;
@@ -130,6 +147,9 @@ function LogsPage() {
       }
       return true;
     });
+    const byTime = (a: LogRow, b: LogRow) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    return q ? [...rows].sort(byTime) : [...rows].sort((a, b) => byTime(b, a));
   }, [logs, search, categoryFilter, actionFilter, onlyNotes, appliedFrom, appliedTo]);
 
   const notesCount = useMemo(() => logs.filter((l) => l.note || l.note_image_url).length, [logs]);
@@ -178,6 +198,7 @@ function LogsPage() {
             <SelectItem value="all">ทั้งหมด</SelectItem>
             <SelectItem value="start">เริ่ม</SelectItem>
             <SelectItem value="finish">เสร็จ</SelectItem>
+            <SelectItem value="intake">คีย์ออเดอร์</SelectItem>
           </SelectContent>
         </Select>
         <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-3 text-sm">
@@ -361,10 +382,16 @@ function LogsPage() {
                           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
                             l.action === "finish"
                               ? "bg-primary/10 text-primary"
-                              : "bg-secondary/15 text-secondary"
+                              : l.action === "intake"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-secondary/15 text-secondary"
                           }`}
                         >
-                          {l.action === "finish" ? "เสร็จ" : "เริ่ม"}
+                          {l.action === "finish"
+                            ? "เสร็จ"
+                            : l.action === "intake"
+                              ? "คีย์ออเดอร์"
+                              : "เริ่ม"}
                         </span>
                       </td>
                       <td className="px-4 py-2">

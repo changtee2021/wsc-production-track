@@ -16,8 +16,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { wiPublicCatalog, type WiReadStatus } from "@/lib/features/wi.functions";
+import {
+  wiPublicCatalog,
+  type WiCatalogFlow,
+  type WiCatalogStep,
+  type WiReadStatus,
+} from "@/lib/features/wi.functions";
 import { WiManualHeader, WiReaderGate } from "@/components/wi/WiReaderControls";
+import { stepLabel } from "@/lib/scan-trial";
 import { bilingualName, useWiLang, useWiReader, type WiT } from "@/lib/wi/wi-i18n";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -55,6 +61,103 @@ function ReadBadge({ status, t }: { status: WiReadStatus; t: WiT }) {
     <span className="inline-flex items-center gap-1 rounded-full bg-[#E32D24]/10 px-2 py-0.5 text-xs font-semibold text-[#b3221b] dark:text-[#ff8a84]">
       <Circle className="h-2.5 w-2.5 fill-current" /> {t("unread")}
     </span>
+  );
+}
+
+function FlowChip({
+  step,
+  lang,
+  empty,
+}: {
+  step: WiCatalogStep;
+  lang: ReturnType<typeof useWiLang>[0];
+  empty: string;
+}) {
+  const label = lang === "my" ? stepLabel(step.step_name) : bilingualName(step.step_name, lang);
+  if (step.items.length === 0) {
+    return (
+      <span className="inline-flex min-h-11 items-center rounded-full border border-dashed border-border px-3 text-sm font-semibold text-muted-foreground">
+        {label}
+        <span className="ml-1 text-[10px] font-normal">{empty}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex flex-wrap gap-1">
+      {step.items.map((item) => (
+        <Link
+          key={item.code}
+          to="/manual/$code"
+          params={{ code: item.code }}
+          className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-3 text-sm font-semibold"
+        >
+          {step.items.length > 1 ? item.title : label}
+        </Link>
+      ))}
+    </span>
+  );
+}
+
+function FlowBoard({
+  flow,
+  lang,
+  t,
+}: {
+  flow: WiCatalogFlow;
+  lang: ReturnType<typeof useWiLang>[0];
+  t: WiT;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">{t("flowParallelHint")}</p>
+      <div className="rounded-3xl border border-dashed border-sky-300 bg-sky-50/70 p-3 dark:border-sky-800 dark:bg-sky-950/30">
+        <p className="mb-2 text-xs font-semibold text-sky-800 dark:text-sky-200">
+          1 · {t("flowParallel")}
+        </p>
+        <div className="space-y-2">
+          {flow.lanes.map((lane, index) => (
+            <div key={index} className="flex flex-wrap items-center gap-1.5">
+              {lane.map((step, stepIndex) => (
+                <span key={step.step_id} className="inline-flex items-center gap-1.5">
+                  {stepIndex > 0 && <span className="text-muted-foreground">→</span>}
+                  <FlowChip step={step} lang={lang} empty={t("noStepManual")} />
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {flow.after.map((step, index) => (
+          <span key={step.step_id} className="inline-flex items-center gap-1.5">
+            <span className="text-muted-foreground">{index === 0 ? "→" : "→"}</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+              {index + 2}
+            </span>
+            <FlowChip step={step} lang={lang} empty={t("noStepManual")} />
+          </span>
+        ))}
+      </div>
+      {flow.extra.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground">{t("extraManuals")}</p>
+          <div className="flex flex-wrap gap-2">
+            {flow.extra.flatMap((step) =>
+              step.items.map((item) => (
+                <Link
+                  key={item.code}
+                  to="/manual/$code"
+                  params={{ code: item.code }}
+                  className="inline-flex min-h-11 items-center rounded-full border bg-card px-3 text-sm font-semibold"
+                >
+                  {item.title}
+                </Link>
+              )),
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -189,6 +292,8 @@ function ManualCatalogPage() {
                   </li>
                 ))}
               </ul>
+            ) : data.flow ? (
+              <FlowBoard flow={data.flow} lang={lang} t={t} />
             ) : loading && data.steps.length === 0 ? (
               <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" /> {t("loading")}

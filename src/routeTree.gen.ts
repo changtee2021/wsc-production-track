@@ -32,6 +32,7 @@ import { Route as ProtectedDashboardRouteImport } from './routes/_protected.dash
 import { Route as ProtectedExpensesDashboardRouteImport } from './routes/_protected.expenses-dashboard'
 import { Route as ProtectedExpensesReportsRouteImport } from './routes/_protected.expenses-reports'
 import { Route as ProtectedFeedbackAdminRouteImport } from './routes/_protected.feedback-admin'
+import { Route as ProtectedIso29110RouteImport } from './routes/_protected.iso-29110'
 import { Route as ProtectedJobLookupRouteImport } from './routes/_protected.job-lookup'
 import { Route as ProtectedLogsRouteImport } from './routes/_protected.logs'
 import { Route as ProtectedLogsUpdateRouteImport } from './routes/_protected.logs-update'
@@ -56,6 +57,7 @@ import { Route as ProtectedStorageRouteImport } from './routes/_protected.storag
 import { Route as ProtectedSuppliesAdminRouteImport } from './routes/_protected.supplies-admin'
 import { Route as ProtectedSuppliesDashboardRouteImport } from './routes/_protected.supplies-dashboard'
 import { Route as ProtectedSuppliesReportsRouteImport } from './routes/_protected.supplies-reports'
+import { Route as ProtectedTrialReleasesRouteImport } from './routes/_protected.trial-releases'
 import { Route as ProtectedWarehouseDashboardRouteImport } from './routes/_protected.warehouse-dashboard'
 import { Route as ProtectedWiRouteImport } from './routes/_protected.wi'
 import { Route as ManualIndexRouteImport } from './routes/manual.index'
@@ -206,6 +208,11 @@ const ProtectedFeedbackAdminRoute = ProtectedFeedbackAdminRouteImport.update({
   path: '/feedback-admin',
   getParentRoute: () => ProtectedRoute,
 } as any)
+const ProtectedIso29110Route = ProtectedIso29110RouteImport.update({
+  id: '/iso-29110',
+  path: '/iso-29110',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedJobLookupRoute = ProtectedJobLookupRouteImport.update({
   id: '/job-lookup',
   path: '/job-lookup',
@@ -337,6 +344,11 @@ const ProtectedSuppliesReportsRoute =
     path: '/supplies-reports',
     getParentRoute: () => ProtectedRoute,
   } as any)
+const ProtectedTrialReleasesRoute = ProtectedTrialReleasesRouteImport.update({
+  id: '/trial-releases',
+  path: '/trial-releases',
+  getParentRoute: () => ProtectedRoute,
+} as any)
 const ProtectedWarehouseDashboardRoute =
   ProtectedWarehouseDashboardRouteImport.update({
     id: '/warehouse-dashboard',
@@ -540,6 +552,7 @@ export interface FileRoutesByFullPath {
   '/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
   '/expenses-reports': typeof ProtectedExpensesReportsRoute
   '/feedback-admin': typeof ProtectedFeedbackAdminRoute
+  '/iso-29110': typeof ProtectedIso29110Route
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
@@ -564,6 +577,7 @@ export interface FileRoutesByFullPath {
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/trial-releases': typeof ProtectedTrialReleasesRoute
   '/warehouse-dashboard': typeof ProtectedWarehouseDashboardRoute
   '/wi': typeof ProtectedWiRouteWithChildren
   '/manual/$code': typeof ManualCodeRoute
@@ -620,6 +634,7 @@ export interface FileRoutesByTo {
   '/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
   '/expenses-reports': typeof ProtectedExpensesReportsRoute
   '/feedback-admin': typeof ProtectedFeedbackAdminRoute
+  '/iso-29110': typeof ProtectedIso29110Route
   '/job-lookup': typeof ProtectedJobLookupRoute
   '/logs': typeof ProtectedLogsRoute
   '/logs-update': typeof ProtectedLogsUpdateRoute
@@ -644,6 +659,7 @@ export interface FileRoutesByTo {
   '/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/trial-releases': typeof ProtectedTrialReleasesRoute
   '/warehouse-dashboard': typeof ProtectedWarehouseDashboardRoute
   '/manual/$code': typeof ManualCodeRoute
   '/monitor/$token': typeof MonitorTokenRoute
@@ -702,6 +718,7 @@ export interface FileRoutesById {
   '/_protected/expenses-dashboard': typeof ProtectedExpensesDashboardRoute
   '/_protected/expenses-reports': typeof ProtectedExpensesReportsRoute
   '/_protected/feedback-admin': typeof ProtectedFeedbackAdminRoute
+  '/_protected/iso-29110': typeof ProtectedIso29110Route
   '/_protected/job-lookup': typeof ProtectedJobLookupRoute
   '/_protected/logs': typeof ProtectedLogsRoute
   '/_protected/logs-update': typeof ProtectedLogsUpdateRoute
@@ -726,6 +743,7 @@ export interface FileRoutesById {
   '/_protected/supplies-admin': typeof ProtectedSuppliesAdminRoute
   '/_protected/supplies-dashboard': typeof ProtectedSuppliesDashboardRoute
   '/_protected/supplies-reports': typeof ProtectedSuppliesReportsRoute
+  '/_protected/trial-releases': typeof ProtectedTrialReleasesRoute
   '/_protected/warehouse-dashboard': typeof ProtectedWarehouseDashboardRoute
   '/_protected/wi': typeof ProtectedWiRouteWithChildren
   '/manual/$code': typeof ManualCodeRoute
@@ -785,6 +803,7 @@ export interface FileRouteTypes {
     | '/expenses-dashboard'
     | '/expenses-reports'
     | '/feedback-admin'
+    | '/iso-29110'
     | '/job-lookup'
     | '/logs'
     | '/logs-update'
@@ -809,6 +828,7 @@ export interface FileRouteTypes {
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
+    | '/trial-releases'
     | '/warehouse-dashboard'
     | '/wi'
     | '/manual/$code'
@@ -865,6 +885,7 @@ export interface FileRouteTypes {
     | '/expenses-dashboard'
     | '/expenses-reports'
     | '/feedback-admin'
+    | '/iso-29110'
     | '/job-lookup'
     | '/logs'
     | '/logs-update'
@@ -889,6 +910,7 @@ export interface FileRouteTypes {
     | '/supplies-admin'
     | '/supplies-dashboard'
     | '/supplies-reports'
+    | '/trial-releases'
     | '/warehouse-dashboard'
     | '/manual/$code'
     | '/monitor/$token'
@@ -946,6 +968,7 @@ export interface FileRouteTypes {
     | '/_protected/expenses-dashboard'
     | '/_protected/expenses-reports'
     | '/_protected/feedback-admin'
+    | '/_protected/iso-29110'
     | '/_protected/job-lookup'
     | '/_protected/logs'
     | '/_protected/logs-update'
@@ -970,6 +993,7 @@ export interface FileRouteTypes {
     | '/_protected/supplies-admin'
     | '/_protected/supplies-dashboard'
     | '/_protected/supplies-reports'
+    | '/_protected/trial-releases'
     | '/_protected/warehouse-dashboard'
     | '/_protected/wi'
     | '/manual/$code'
@@ -1198,6 +1222,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedFeedbackAdminRouteImport
       parentRoute: typeof ProtectedRoute
     }
+    '/_protected/iso-29110': {
+      id: '/_protected/iso-29110'
+      path: '/iso-29110'
+      fullPath: '/iso-29110'
+      preLoaderRoute: typeof ProtectedIso29110RouteImport
+      parentRoute: typeof ProtectedRoute
+    }
     '/_protected/job-lookup': {
       id: '/_protected/job-lookup'
       path: '/job-lookup'
@@ -1364,6 +1395,13 @@ declare module '@tanstack/react-router' {
       path: '/supplies-reports'
       fullPath: '/supplies-reports'
       preLoaderRoute: typeof ProtectedSuppliesReportsRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/trial-releases': {
+      id: '/_protected/trial-releases'
+      path: '/trial-releases'
+      fullPath: '/trial-releases'
+      preLoaderRoute: typeof ProtectedTrialReleasesRouteImport
       parentRoute: typeof ProtectedRoute
     }
     '/_protected/warehouse-dashboard': {
@@ -1635,6 +1673,7 @@ interface ProtectedRouteChildren {
   ProtectedExpensesDashboardRoute: typeof ProtectedExpensesDashboardRoute
   ProtectedExpensesReportsRoute: typeof ProtectedExpensesReportsRoute
   ProtectedFeedbackAdminRoute: typeof ProtectedFeedbackAdminRoute
+  ProtectedIso29110Route: typeof ProtectedIso29110Route
   ProtectedJobLookupRoute: typeof ProtectedJobLookupRoute
   ProtectedLogsRoute: typeof ProtectedLogsRoute
   ProtectedLogsUpdateRoute: typeof ProtectedLogsUpdateRoute
@@ -1659,6 +1698,7 @@ interface ProtectedRouteChildren {
   ProtectedSuppliesAdminRoute: typeof ProtectedSuppliesAdminRoute
   ProtectedSuppliesDashboardRoute: typeof ProtectedSuppliesDashboardRoute
   ProtectedSuppliesReportsRoute: typeof ProtectedSuppliesReportsRoute
+  ProtectedTrialReleasesRoute: typeof ProtectedTrialReleasesRoute
   ProtectedWarehouseDashboardRoute: typeof ProtectedWarehouseDashboardRoute
   ProtectedWiRoute: typeof ProtectedWiRouteWithChildren
   ProtectedEmployeeProfileIdRoute: typeof ProtectedEmployeeProfileIdRoute
@@ -1677,6 +1717,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedExpensesDashboardRoute: ProtectedExpensesDashboardRoute,
   ProtectedExpensesReportsRoute: ProtectedExpensesReportsRoute,
   ProtectedFeedbackAdminRoute: ProtectedFeedbackAdminRoute,
+  ProtectedIso29110Route: ProtectedIso29110Route,
   ProtectedJobLookupRoute: ProtectedJobLookupRoute,
   ProtectedLogsRoute: ProtectedLogsRoute,
   ProtectedLogsUpdateRoute: ProtectedLogsUpdateRoute,
@@ -1701,6 +1742,7 @@ const ProtectedRouteChildren: ProtectedRouteChildren = {
   ProtectedSuppliesAdminRoute: ProtectedSuppliesAdminRoute,
   ProtectedSuppliesDashboardRoute: ProtectedSuppliesDashboardRoute,
   ProtectedSuppliesReportsRoute: ProtectedSuppliesReportsRoute,
+  ProtectedTrialReleasesRoute: ProtectedTrialReleasesRoute,
   ProtectedWarehouseDashboardRoute: ProtectedWarehouseDashboardRoute,
   ProtectedWiRoute: ProtectedWiRouteWithChildren,
   ProtectedEmployeeProfileIdRoute: ProtectedEmployeeProfileIdRoute,

@@ -16,7 +16,7 @@ import { WORK_INSTRUCTIONS, getWorkInstruction } from "@/lib/data/work-instructi
 export const Route = createFileRoute("/_protected/wi/flow")({
   validateSearch: zodValidator(
     z.object({
-      id: fallback(z.string(), "pvc-room-divider").default("pvc-room-divider"),
+      id: fallback(z.string(), "roller").default("roller"),
     }),
   ),
   head: () => ({

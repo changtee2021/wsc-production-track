@@ -14,11 +14,8 @@ import {
   type TrialFlowId,
   type TrialRun,
 } from "@/lib/scan-trial";
-import {
-  lookupTrialRelease,
-  releaseTrialJobs,
-  withdrawTrialJobs,
-} from "@/lib/scan-trial.functions";
+import { lookupTrialRelease, releaseTrialJobs } from "@/lib/scan-trial.functions";
+import { AppVersion } from "@/components/AppVersion";
 import {
   Check,
   ChevronDown,
@@ -64,6 +61,7 @@ type IntakeSet = {
   product: TrialFlowId | null;
   codes: string[];
   sent: boolean;
+  sentAt: string | null;
 };
 
 function productLabel(id: TrialFlowId | null): string {
@@ -71,9 +69,41 @@ function productLabel(id: TrialFlowId | null): string {
   return TRIAL_FLOWS.find((flow) => flow.id === id)?.label ?? id;
 }
 
+function bangkokDay(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function sentStillToday(sentAt: string | null, now = new Date()): boolean {
+  if (!sentAt) return false;
+  const sent = new Date(sentAt);
+  if (Number.isNaN(sent.getTime())) return false;
+  return bangkokDay(sent) === bangkokDay(now);
+}
+
+function formatSentAt(sentAt: string): string {
+  return new Date(sentAt).toLocaleString("th-TH", {
+    timeZone: "Asia/Bangkok",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function asIntakeSet(value: unknown): IntakeSet | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as { id?: unknown; product?: unknown; codes?: unknown; sent?: unknown };
+  const row = value as {
+    id?: unknown;
+    product?: unknown;
+    codes?: unknown;
+    sent?: unknown;
+    sentAt?: unknown;
+  };
   if (typeof row.id !== "string") return null;
   const codes = Array.isArray(row.codes)
     ? row.codes.filter((code): code is string => typeof code === "string" && code.trim() !== "")
@@ -83,7 +113,10 @@ function asIntakeSet(value: unknown): IntakeSet | null {
     typeof row.product === "string" && FLOW_IDS.has(row.product as TrialFlowId)
       ? (row.product as TrialFlowId)
       : null;
-  return { id: row.id, product, codes, sent: row.sent === true };
+  const sentAt = typeof row.sentAt === "string" ? row.sentAt : null;
+  const sent = row.sent === true;
+  if (sent && !sentStillToday(sentAt)) return null;
+  return { id: row.id, product, codes, sent, sentAt };
 }
 
 function loadIntake(): { batch: string[]; sets: IntakeSet[] } {
@@ -107,7 +140,7 @@ function loadIntake(): { batch: string[]; sets: IntakeSet[] } {
       : [];
     return {
       batch,
-      sets: saved.length ? [{ id: "legacy-saved", product: null, codes: saved, sent: true }] : [],
+      sets: [],
     };
   } catch {
     return { batch: [], sets: [] };
@@ -164,7 +197,6 @@ export function ScanTrialApp() {
   const setRefs = useRef(new Map<string, HTMLLIElement>());
   const lookupRelease = useServerFn(lookupTrialRelease);
   const releaseJobs = useServerFn(releaseTrialJobs);
-  const withdrawJobs = useServerFn(withdrawTrialJobs);
 
   const flow = jobFlow ? flowById(jobFlow) : null;
   const selected = jobId && flow ? { jobId, flow } : null;
@@ -178,12 +210,25 @@ export function ScanTrialApp() {
     const intake = loadIntake();
     setBatch(intake.batch);
     setSets(intake.sets);
+    saveIntake(intake.batch, intake.sets);
     setRuns(loadTrialRuns());
     const onStorage = (event: StorageEvent) => {
       if (event.key === "wsc:scan-trial:v1") setRuns(loadTrialRuns());
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    const tick = window.setInterval(() => {
+      setSets((current) => {
+        const next = current.filter((row) => !row.sent || sentStillToday(row.sentAt));
+        if (next.length === current.length) return current;
+        const stored = loadIntake();
+        saveIntake(stored.batch, next);
+        return next;
+      });
+    }, 60_000);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.clearInterval(tick);
+    };
   }, []);
 
   useEffect(() => {
@@ -355,7 +400,7 @@ export function ScanTrialApp() {
     }
     const nextSets = [
       ...sets,
-      { id: crypto.randomUUID(), product, codes: [...batch], sent: false },
+      { id: crypto.randomUUID(), product, codes: [...batch], sent: false, sentAt: null },
     ];
     setSets(nextSets);
     setBatch([]);
@@ -378,12 +423,8 @@ export function ScanTrialApp() {
     const target = sets.find((row) => row.id === id);
     if (!target) return;
     if (target.sent) {
-      try {
-        await withdrawJobs({ data: { jobIds: target.codes } });
-      } catch (error) {
-        setNote(error instanceof Error ? error.message : "ถอนงานออกจากไลน์ผลิตไม่สำเร็จ");
-        return;
-      }
+      setNote("รายการที่ส่งแล้ว แก้ได้ที่หลังบ้านแอดมิน");
+      return;
     }
     const nextSets = sets.filter((row) => row.id !== id);
     setSets(nextSets);
@@ -408,12 +449,8 @@ export function ScanTrialApp() {
     const ok = window.confirm(`ลบชุด${productLabel(target.product)} ${target.codes.length} ใบ?`);
     if (!ok) return;
     if (target.sent) {
-      try {
-        await withdrawJobs({ data: { jobIds: target.codes } });
-      } catch (error) {
-        setNote(error instanceof Error ? error.message : "ถอนงานออกจากไลน์ผลิตไม่สำเร็จ");
-        return;
-      }
+      setNote("รายการที่ส่งแล้ว ลบได้ที่หลังบ้านแอดมิน");
+      return;
     }
     const nextSets = sets.filter((row) => row.id !== id);
     setSets(nextSets);
@@ -437,17 +474,17 @@ export function ScanTrialApp() {
     );
     setSending(true);
     try {
-      await releaseJobs({ data: { jobs, sentByName: worker?.name ?? null } });
+      const released = await releaseJobs({ data: { jobs, sentByName: worker?.name ?? null } });
+      const sentAt = released.sentAt;
+      const nextSets = sets.map((row) => (row.sent ? row : { ...row, sent: true, sentAt }));
+      setSets(nextSets);
+      saveIntake(batch, nextSets);
+      setSending(false);
+      setNote(`ส่งเข้าไลน์ผลิตแล้ว ${waiting.length} ชุด`);
     } catch (error) {
       setNote(error instanceof Error ? error.message : "ส่งเข้าไลน์ผลิตไม่สำเร็จ");
       setSending(false);
-      return;
     }
-    const nextSets = sets.map((row) => (row.sent ? row : { ...row, sent: true }));
-    setSets(nextSets);
-    saveIntake(batch, nextSets);
-    setSending(false);
-    setNote(`ส่งเข้าไลน์ผลิตแล้ว ${waiting.length} ชุด`);
   }
 
   function handleScanned(text: string) {
@@ -522,9 +559,13 @@ export function ScanTrialApp() {
               <>
                 <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-muted/40 px-4 py-8 text-center">
                   <CreditCard className="h-10 w-10 text-primary" />
-                  <p className="text-sm font-semibold">สแกนบัตรพนักงาน</p>
+                  <p className="text-sm font-semibold leading-snug">สแกนบัตรพนักงาน</p>
+                  <p className="text-sm font-semibold leading-snug">ဝန်ထမ်းကတ် ဖတ်ပါ</p>
                   <p className="text-[11px] text-muted-foreground">
                     สแกนเลขบนบัตร แล้วชื่อจะขึ้นเอง
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    ကတ်ပေါ်ကနံပါတ်ကို ဖတ်ရင် နာမည်ပေါ်လာမယ်
                   </p>
                 </div>
                 <button
@@ -534,7 +575,13 @@ export function ScanTrialApp() {
                   className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-sky-500 text-base font-bold text-white shadow disabled:opacity-50"
                 >
                   <ScanLine className="h-5 w-5" />
-                  {loadState === "loading" ? "กำลังโหลดรายชื่อ" : "สแกนบัตร"}
+                  {loadState === "loading" ? (
+                    "กำลังโหลดรายชื่อ"
+                  ) : (
+                    <span className="leading-tight">
+                      สแกนบัตร <span className="font-semibold">ကတ်ဖတ်</span>
+                    </span>
+                  )}
                 </button>
                 <div className="flex gap-1.5">
                   <input
@@ -543,9 +590,9 @@ export function ScanTrialApp() {
                     onKeyDown={(event) => {
                       if (event.key === "Enter") applyBadgeCode(codeInput);
                     }}
-                    placeholder="หรือพิมพ์เลขพนักงาน"
+                    placeholder="หรือพิมพ์เลขพนักงาน သို့မဟုတ် ဝန်ထမ်းနံပါတ် ရိုက်ပါ"
                     inputMode="numeric"
-                    className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-sm"
+                    className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-sm placeholder:text-[10px]"
                   />
                   <button
                     type="button"
@@ -582,15 +629,30 @@ export function ScanTrialApp() {
                   </div>
                   <button
                     type="button"
+                    aria-label="เปลี่ยนคน"
                     onClick={() => {
                       setWorker(null);
                       setJobInput("");
                       setNote(null);
                     }}
                     disabled={running}
-                    className="min-h-11 shrink-0 px-1 text-xs font-semibold underline disabled:no-underline disabled:opacity-40"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40"
                   >
-                    เปลี่ยนคน
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-6 w-6 text-neutral-500"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 8h13" />
+                      <path d="M14 4.5 17.5 8 14 11.5" />
+                      <path d="M20 16H7" />
+                      <path d="M10 12.5 6.5 16 10 19.5" />
+                    </svg>
                   </button>
                 </div>
 
@@ -726,22 +788,29 @@ export function ScanTrialApp() {
                                 <p className="mt-1 text-xs text-muted-foreground">
                                   {row.codes.join(", ")}
                                 </p>
-                                <div className="mt-2 flex gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => editSet(row.id)}
-                                    className="min-h-11 flex-1 rounded-xl border bg-background text-sm font-semibold"
-                                  >
-                                    แก้ไข
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => deleteSet(row.id)}
-                                    className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-700"
-                                  >
-                                    ลบ
-                                  </button>
-                                </div>
+                                {row.sent && row.sentAt && (
+                                  <p className="mt-1 text-xs font-medium text-emerald-800">
+                                    ส่งเมื่อ {formatSentAt(row.sentAt)}
+                                  </p>
+                                )}
+                                {!row.sent && (
+                                  <div className="mt-2 flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => editSet(row.id)}
+                                      className="min-h-11 flex-1 rounded-xl border bg-background text-sm font-semibold"
+                                    >
+                                      แก้ไข
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteSet(row.id)}
+                                      className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-700"
+                                    >
+                                      ลบ
+                                    </button>
+                                  </div>
+                                )}
                               </li>
                             );
                           })}
@@ -755,6 +824,9 @@ export function ScanTrialApp() {
                       >
                         <Send className="h-5 w-5" /> ส่งออเดอร์เข้าไลน์ผลิต
                       </button>
+                      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                        รายการที่ส่งแล้วอยู่ถึงเที่ยงคืน ดูย้อนหลังหรือแก้ไขได้ที่หลังบ้านแอดมิน
+                      </p>
                     </div>
                   </>
                 ) : (
@@ -765,14 +837,26 @@ export function ScanTrialApp() {
                       </p>
                       {jobId ? (
                         <>
-                          <p className="mt-1.5 text-lg font-bold text-primary">{jobId}</p>
-                          {flow ? (
-                            <p className="text-[11px] font-semibold">{flow.label}</p>
-                          ) : (
-                            <p className="text-[11px] font-medium text-destructive">
-                              ยังไม่ส่งเข้าไลน์ผลิต
-                            </p>
-                          )}
+                          <div className="mt-1.5 flex items-center gap-1">
+                            <p className="text-lg font-bold text-primary">{jobId}</p>
+                            <button
+                              type="button"
+                              aria-label="ล้างรหัสงาน"
+                              disabled={running}
+                              onClick={() => {
+                                setJobId("");
+                                setJobInput("");
+                                setJobFlow(null);
+                                setStep("");
+                                setBlocked([]);
+                                setNote(null);
+                              }}
+                              className="flex h-11 w-11 items-center justify-center rounded-full text-red-600 disabled:opacity-40"
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+                          {flow && <p className="text-[11px] font-semibold">{flow.label}</p>}
                         </>
                       ) : (
                         <p className="mt-1.5 text-[11px] font-medium leading-snug text-destructive">
@@ -943,7 +1027,14 @@ export function ScanTrialApp() {
                       : "text-destructive"
                 }`}
               >
-                {note}
+                {note === "ยังไม่ส่งเข้าไลน์ผลิต" ? (
+                  <>
+                    <span className="block">ยังไม่ส่งเข้าไลน์ผลิต</span>
+                    <span className="block">ထုတ်လုပ်ရေးလိုင်းကို မပို့ရသေးပါ</span>
+                  </>
+                ) : (
+                  note
+                )}
               </p>
             )}
             {loadState === "error" && (
@@ -952,6 +1043,15 @@ export function ScanTrialApp() {
               </p>
             )}
           </div>
+          {!worker && (
+            <div className="flex shrink-0 flex-col items-center gap-1 px-4 pb-3 text-center">
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                <span className="block">หากพบปัญหาเข้าแจ้งหัวหน้างานทันที</span>
+                <span className="block">ပြဿနာတွေ့ရင် အကြီးအကဲကို ချက်ချင်းပြောပါ</span>
+              </p>
+              <AppVersion className="rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-sky-800" />
+            </div>
+          )}
         </div>
       </div>
       <QrScannerDialog

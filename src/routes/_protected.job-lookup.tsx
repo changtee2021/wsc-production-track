@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminFetchJobDetail } from "@/lib/features/admin.functions";
+import { trialProductLabel } from "@/lib/scan-trial";
 import { adminSignMediaUrls } from "@/lib/integrations/media.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
@@ -36,6 +37,7 @@ import {
   Image as ImageIcon,
   Video as VideoIcon,
   ClipboardCheck,
+  PenLine,
   PlayCircle,
   StopCircle,
   Wrench,
@@ -111,6 +113,12 @@ interface JobDetailFound {
   logs: LogRow[];
   reports: ReportRow[];
   packing_reports: ReportRow[];
+  intake: {
+    job_id: string;
+    product: string;
+    sent_by_name: string | null;
+    created_at: string;
+  } | null;
 }
 type JobDetail = JobDetailFound | { found: false };
 
@@ -443,13 +451,39 @@ function JobLookupPage() {
           {/* Timeline */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">ไทม์ไลน์การผลิต ({detail.logs.length})</CardTitle>
+              <CardTitle className="text-base">
+                ไทม์ไลน์การผลิต ({detail.logs.length + (detail.intake ? 1 : 0)})
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {detail.logs.length === 0 ? (
+              {detail.logs.length === 0 && !detail.intake ? (
                 <p className="text-sm text-muted-foreground">ยังไม่มีบันทึกการผลิตของ Job นี้</p>
               ) : (
                 <ol className="relative space-y-3 border-l border-border pl-4">
+                  {detail.intake && (
+                    <li className="relative">
+                      <span className="absolute -left-[22px] top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-50 text-amber-700 ring-2 ring-background">
+                        <PenLine className="h-3 w-3" />
+                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                          คีย์ออเดอร์
+                        </span>
+                        <span className="text-sm font-medium">
+                          {trialProductLabel(detail.intake.product)}
+                        </span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {fmtDateTime(detail.intake.created_at)}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-sm">
+                        <span className="font-medium">
+                          {detail.intake.sent_by_name ?? "พนักงานออฟฟิศ"}
+                        </span>
+                        <span className="ml-2 text-xs text-muted-foreground">ออฟฟิศ</span>
+                      </div>
+                    </li>
+                  )}
                   {detail.logs.map((l) => {
                     const a = actionMeta(l.action);
                     return (

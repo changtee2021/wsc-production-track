@@ -701,7 +701,7 @@ export const adminFetchJobDetail = createServerFn({ method: "POST" })
     assertAdmin(data.token);
     const jobId = data.job_id.trim();
 
-    const [logsRes, reportsRes, packingRes] = await Promise.all([
+    const [logsRes, reportsRes, packingRes, releaseRes] = await Promise.all([
       supabaseAdmin
         .from("production_logs")
         .select(
@@ -723,6 +723,11 @@ export const adminFetchJobDetail = createServerFn({ method: "POST" })
         )
         .eq("job_id", jobId)
         .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("scan_trial_releases")
+        .select("job_id, product, sent_by_name, created_at")
+        .eq("job_id", jobId)
+        .maybeSingle(),
     ]);
 
     if (logsRes.error) throw new Error(logsRes.error.message);
@@ -732,8 +737,17 @@ export const adminFetchJobDetail = createServerFn({ method: "POST" })
     const logs = (logsRes.data ?? []) as unknown as Array<Record<string, any>>;
     const reports = (reportsRes.data ?? []) as unknown as Array<Record<string, any>>;
     const packingReports = (packingRes.data ?? []) as unknown as Array<Record<string, any>>;
+    const release = releaseRes.error ? null : (releaseRes.data ?? null);
+    const intake = release
+      ? {
+          job_id: release.job_id as string,
+          product: release.product as string,
+          sent_by_name: (release.sent_by_name as string | null) ?? null,
+          created_at: release.created_at as string,
+        }
+      : null;
 
-    if (logs.length === 0 && reports.length === 0 && packingReports.length === 0) {
+    if (logs.length === 0 && reports.length === 0 && packingReports.length === 0 && !intake) {
       return { found: false as const };
     }
 
@@ -793,6 +807,7 @@ export const adminFetchJobDetail = createServerFn({ method: "POST" })
       logs,
       reports,
       packing_reports: packingReports,
+      intake,
     };
   });
 

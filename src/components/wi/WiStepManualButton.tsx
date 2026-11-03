@@ -132,12 +132,7 @@ export function WiStepManualButton({
           </div>
         </SheetContent>
       </Sheet>
-      <WiEmployeePicker
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        onPick={setReader}
-        selectedId={reader?.id}
-      />
+      <WiEmployeePicker open={pickerOpen} onOpenChange={setPickerOpen} onPick={setReader} />
     </>
   );
 }

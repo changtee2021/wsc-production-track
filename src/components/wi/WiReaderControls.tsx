@@ -1,14 +1,15 @@
 // Employee-side controls for WI pages: language switch and "who is reading".
 // Both are per-device preferences (localStorage) — no login on the shop floor.
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { BookOpenCheck, Check, Loader2, Search, UserRound } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { BookOpenCheck, Loader2, ScanLine, UserRound } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import { cn } from "@/lib/utils";
-import { flagFor, initialsOf } from "@/lib/utils/i18n";
+import { flagFor } from "@/lib/utils/i18n";
 import { WI_LANGS } from "@/lib/wi/wi-schema";
 import { WI_LANG_LABEL, useWiLang, useWiReader, type WiReader } from "@/lib/wi/wi-i18n";
 
@@ -59,20 +60,22 @@ export function WiEmployeePicker({
   open,
   onOpenChange,
   onPick,
-  selectedId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onPick: (reader: WiReader) => void;
-  selectedId?: string | null;
 }) {
   const [, , t] = useWiLang();
   const [rows, setRows] = useState<EmployeeRow[] | null>(employeeCache);
   const [failed, setFailed] = useState(false);
-  const [query, setQuery] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
-    if (!open || employeeCache) return;
+    if (!open) return;
+    if (employeeCache) return;
     let alive = true;
     setFailed(false);
     supabase
@@ -80,9 +83,9 @@ export function WiEmployeePicker({
       .select("id,name,emp_code,nationality,avatar_url")
       .eq("active", true)
       .order("name")
-      .then(({ data, error }) => {
+      .then(({ data, error: loadError }) => {
         if (!alive) return;
-        if (error) {
+        if (loadError) {
           setFailed(true);
           return;
         }
@@ -94,81 +97,96 @@ export function WiEmployeePicker({
     };
   }, [open]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!rows) return [];
-    if (!q) return rows;
-    return rows.filter(
-      (r) => r.name.toLowerCase().includes(q) || (r.emp_code ?? "").toLowerCase().includes(q),
-    );
-  }, [rows, query]);
+  function applyCode(raw: string) {
+    const next = raw.trim();
+    if (!next) {
+      setError(t("enterCode"));
+      return;
+    }
+    if (failed) {
+      setError(t("retry"));
+      return;
+    }
+    const list = employeeCache ?? rows;
+    if (!list) {
+      setError(t("loading"));
+      return;
+    }
+    const person = list.find((row) => (row.emp_code ?? "").trim() === next);
+    if (!person) {
+      setError(t("noEmployee"));
+      return;
+    }
+    onPick({ id: person.id, name: person.name, nationality: person.nationality });
+    setCode("");
+    setError(null);
+    onOpenChange(false);
+  }
+
+  async function openScanner() {
+    const got = await acquireCameraStream();
+    if ("errorInfo" in got) {
+      toast.error(t("cameraFailed"));
+      return;
+    }
+    setScannerStream(got.stream);
+    setScanning(true);
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[88dvh] flex-col gap-3 rounded-3xl p-4 sm:max-w-md">
-        <div>
-          <DialogTitle className="text-xl">{t("pickName")}</DialogTitle>
-          <DialogDescription>{t("pickNameHint")}</DialogDescription>
-        </div>
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("searchName")}
-            className="h-12 rounded-xl pl-9 text-base"
-          />
-        </div>
-        <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
-          {failed ? (
-            <p className="py-8 text-center text-sm text-destructive">{t("retry")}</p>
-          ) : !rows ? (
-            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" /> {t("loading")}
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t("noEmployee")}</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {filtered.map((e) => (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onPick({ id: e.id, name: e.name, nationality: e.nationality });
-                      onOpenChange(false);
-                    }}
-                    className={cn(
-                      "flex min-h-14 w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left",
-                      selectedId === e.id
-                        ? "border-[#E32D24] bg-[#E32D24]/5"
-                        : "border-border hover:bg-muted",
-                    )}
-                  >
-                    <Avatar className="h-10 w-10">
-                      {e.avatar_url ? <AvatarImage src={e.avatar_url} alt={e.name} /> : null}
-                      <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
-                        {initialsOf(e.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-lg">{flagFor(e.nationality)}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">{e.name}</span>
-                      {e.emp_code && (
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {e.emp_code}
-                        </span>
-                      )}
-                    </span>
-                    {selectedId === e.id && <Check className="h-5 w-5 text-[#E32D24]" />}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="flex max-h-[88dvh] flex-col gap-3 rounded-3xl p-4 sm:max-w-md">
+          <div>
+            <DialogTitle className="text-xl">{t("pickName")}</DialogTitle>
+            <DialogDescription>{t("pickNameHint")}</DialogDescription>
+          </div>
+          <Button
+            type="button"
+            className="h-12 gap-2 rounded-xl bg-[#E32D24] text-base text-white hover:bg-[#c9261e]"
+            onClick={() => void openScanner()}
+          >
+            <ScanLine className="h-5 w-5" /> {t("pickName")}
+          </Button>
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              applyCode(code);
+            }}
+          >
+            <Input
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value);
+                setError(null);
+              }}
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder={t("searchName")}
+              className="h-12 min-w-0 flex-1 rounded-xl text-base"
+            />
+            <Button type="submit" variant="outline" className="h-12 rounded-xl px-4">
+              {rows ? t("confirmCode") : <Loader2 className="h-5 w-5 animate-spin" />}
+            </Button>
+          </form>
+          {error ? <p className="text-center text-sm text-destructive">{error}</p> : null}
+        </DialogContent>
+      </Dialog>
+      <QrScannerDialog
+        open={scanning}
+        initialStream={scannerStream}
+        onOpenChange={(next) => {
+          setScanning(next);
+          if (!next) setScannerStream(null);
+        }}
+        onScanned={(text) => {
+          setScanning(false);
+          setScannerStream(null);
+          applyCode(text);
+        }}
+      />
+    </>
   );
 }
 
@@ -232,12 +250,7 @@ export function WiReaderChip({
           <span>{t("whoAreYou")}</span>
         )}
       </button>
-      <WiEmployeePicker
-        open={isOpen}
-        onOpenChange={setOpen}
-        onPick={setReader}
-        selectedId={reader?.id}
-      />
+      <WiEmployeePicker open={isOpen} onOpenChange={setOpen} onPick={setReader} />
     </>
   );
 }
