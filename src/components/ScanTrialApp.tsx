@@ -10,19 +10,15 @@ import {
   trialJob,
   type TrialRun,
 } from "@/lib/scan-trial";
-import {
-  Check,
-  Clock,
-  CreditCard,
-  ListChecks,
-  Play,
-  QrCode,
-  ScanLine,
-  Square,
-  UserRound,
-} from "lucide-react";
+import { Check, Clock, CreditCard, ListChecks, Play, QrCode, ScanLine, Square } from "lucide-react";
 
-type Employee = { id: string; name: string; emp_code: string | null; avatar_url: string | null };
+type Employee = {
+  id: string;
+  name: string;
+  emp_code: string | null;
+  avatar_url: string | null;
+  department: "production" | "office";
+};
 type ScanTarget = "badge" | "job";
 
 function splitName(full: string): { name: string; nickname: string | null } {
@@ -30,6 +26,12 @@ function splitName(full: string): { name: string; nickname: string | null } {
   return match
     ? { name: match[1].trim(), nickname: match[2].trim() }
     : { name: full.trim(), nickname: null };
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  return name.trim().slice(0, 2).toUpperCase();
 }
 
 function clockLabel(startedAt: number, now: number): string {
@@ -84,17 +86,27 @@ export function ScanTrialApp() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("employees")
-        .select("id,name,emp_code,avatar_url")
-        .eq("active", true)
-        .order("name");
+      const [production, office] = await Promise.all([
+        supabase
+          .from("employees")
+          .select("id,name,emp_code,avatar_url")
+          .eq("active", true)
+          .order("name"),
+        supabase
+          .from("office_employees")
+          .select("id,name,emp_code,avatar_url")
+          .eq("active", true)
+          .order("name"),
+      ]);
       if (cancelled) return;
-      if (error) {
+      if (production.error || office.error) {
         setLoadState("error");
         return;
       }
-      setEmployees(data ?? []);
+      setEmployees([
+        ...(production.data ?? []).map((row) => ({ ...row, department: "production" as const })),
+        ...(office.data ?? []).map((row) => ({ ...row, department: "office" as const })),
+      ]);
       setLoadState("ready");
     })();
     return () => {
@@ -293,13 +305,18 @@ export function ScanTrialApp() {
                       className="h-12 w-12 shrink-0 rounded-full object-cover object-top"
                     />
                   ) : (
-                    <UserRound className="h-4 w-4 shrink-0" />
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-200 text-sm font-bold">
+                      {initials(worker.name)}
+                    </span>
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-semibold">
                       {shown?.nickname ?? shown?.name}
                     </p>
-                    <p className="truncate text-[11px] opacity-80">{worker.emp_code}</p>
+                    <p className="truncate text-[11px] opacity-80">
+                      {worker.emp_code}
+                      {worker.department === "office" ? " · ออฟฟิศ" : ""}
+                    </p>
                   </div>
                   <button
                     type="button"
