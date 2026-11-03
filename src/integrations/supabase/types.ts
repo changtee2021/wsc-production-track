@@ -1997,6 +1997,30 @@ export type Database = {
           },
         ]
       }
+      scan_trial_releases: {
+        Row: {
+          created_at: string
+          job_id: string
+          product: string
+          sent_by_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          job_id: string
+          product: string
+          sent_by_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          job_id?: string
+          product?: string
+          sent_by_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
