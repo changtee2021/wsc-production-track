@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import {
@@ -10,10 +11,14 @@ import {
   saveTrialRuns,
   stepLabel,
   TRIAL_FLOWS,
-  trialJob,
   type TrialFlowId,
   type TrialRun,
 } from "@/lib/scan-trial";
+import {
+  lookupTrialRelease,
+  releaseTrialJobs,
+  withdrawTrialJobs,
+} from "@/lib/scan-trial.functions";
 import {
   Check,
   ChevronDown,
@@ -149,12 +154,17 @@ export function ScanTrialApp() {
   const [batch, setBatch] = useState<string[]>([]);
   const [sets, setSets] = useState<IntakeSet[]>([]);
   const [flashId, setFlashId] = useState<string | null>(null);
+  const [flashMessage, setFlashMessage] = useState("สแกนแล้ว");
+  const [sending, setSending] = useState(false);
   const [choosingProduct, setChoosingProduct] = useState(false);
   const [batchProduct, setBatchProduct] = useState<TrialFlowId | null>(null);
   const [stepsOpen, setStepsOpen] = useState(false);
   const flashTimer = useRef<number | null>(null);
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
   const setRefs = useRef(new Map<string, HTMLLIElement>());
+  const lookupRelease = useServerFn(lookupTrialRelease);
+  const releaseJobs = useServerFn(releaseTrialJobs);
+  const withdrawJobs = useServerFn(withdrawTrialJobs);
 
   const flow = jobFlow ? flowById(jobFlow) : null;
   const selected = jobId && flow ? { jobId, flow } : null;
@@ -243,20 +253,24 @@ export function ScanTrialApp() {
     assignWorker(person);
   }
 
-  function applyJobCode(raw: string) {
+  async function applyJobCode(raw: string) {
     if (running) return;
     const code = readJobCode(raw);
     if (!code) {
       setNote("สแกนหรือพิมพ์รหัสงานก่อน");
       return;
     }
-    const known = trialJob(code);
-    setJobId(code);
-    setJobInput(code);
-    setJobFlow(known?.flow.id ?? null);
-    setStep("");
-    setBlocked([]);
-    setNote(null);
+    try {
+      const known = await lookupRelease({ data: { jobId: code } });
+      setJobId(code);
+      setJobInput(code);
+      setJobFlow(known.product);
+      setStep("");
+      setBlocked([]);
+      setNote(known.product ? null : "ยังไม่ส่งเข้าไลน์ผลิต");
+    } catch (error) {
+      setNote(error instanceof Error ? error.message : "ตรวจรหัสงานไม่สำเร็จ");
+    }
   }
 
   async function openScanner(target: ScanTarget) {
@@ -281,8 +295,9 @@ export function ScanTrialApp() {
     setScanTarget(null);
   }
 
-  function markDuplicate(code: string) {
-    setNote("สแกนแล้ว");
+  function markDuplicate(code: string, message: string) {
+    setNote(message);
+    setFlashMessage(message);
     setFlashId(code);
     if (flashTimer.current) window.clearTimeout(flashTimer.current);
     flashTimer.current = window.setTimeout(() => {
@@ -295,18 +310,28 @@ export function ScanTrialApp() {
     });
   }
 
-  function knownCodes(): string[] {
-    return sets.flatMap((row) => row.codes);
-  }
-
-  function addIntake(raw: string) {
+  async function addIntake(raw: string) {
     const code = readJobCode(raw);
     if (!code) {
       setNote("สแกนหรือพิมพ์รหัสงานก่อน");
       return;
     }
-    if (batch.includes(code) || knownCodes().includes(code)) {
-      markDuplicate(code);
+    if (batch.includes(code) || sets.some((row) => !row.sent && row.codes.includes(code))) {
+      markDuplicate(code, "สแกนแล้ว");
+      return;
+    }
+    if (sets.some((row) => row.sent && row.codes.includes(code))) {
+      markDuplicate(code, "ส่งไลน์ผลิตแล้ว");
+      return;
+    }
+    try {
+      const known = await lookupRelease({ data: { jobId: code } });
+      if (known.product) {
+        markDuplicate(code, "ส่งไลน์ผลิตแล้ว");
+        return;
+      }
+    } catch (error) {
+      setNote(error instanceof Error ? error.message : "ตรวจรหัสงานไม่สำเร็จ");
       return;
     }
     const next = [...batch, code];
@@ -345,13 +370,21 @@ export function ScanTrialApp() {
     });
   }
 
-  function editSet(id: string) {
+  async function editSet(id: string) {
     if (batch.length) {
       setNote("ชุดที่กำลังสแกนยังไม่เสร็จ เลือกสินค้าหรือเอาออกก่อน");
       return;
     }
     const target = sets.find((row) => row.id === id);
     if (!target) return;
+    if (target.sent) {
+      try {
+        await withdrawJobs({ data: { jobIds: target.codes } });
+      } catch (error) {
+        setNote(error instanceof Error ? error.message : "ถอนงานออกจากไลน์ผลิตไม่สำเร็จ");
+        return;
+      }
+    }
     const nextSets = sets.filter((row) => row.id !== id);
     setSets(nextSets);
     setBatch(target.codes);
@@ -369,26 +402,51 @@ export function ScanTrialApp() {
     parkBatch(batchProduct);
   }
 
-  function deleteSet(id: string) {
+  async function deleteSet(id: string) {
     const target = sets.find((row) => row.id === id);
     if (!target) return;
     const ok = window.confirm(`ลบชุด${productLabel(target.product)} ${target.codes.length} ใบ?`);
     if (!ok) return;
+    if (target.sent) {
+      try {
+        await withdrawJobs({ data: { jobIds: target.codes } });
+      } catch (error) {
+        setNote(error instanceof Error ? error.message : "ถอนงานออกจากไลน์ผลิตไม่สำเร็จ");
+        return;
+      }
+    }
     const nextSets = sets.filter((row) => row.id !== id);
     setSets(nextSets);
     saveIntake(batch, nextSets);
     setNote(null);
   }
 
-  function sendSets() {
+  async function sendSets() {
+    if (sending) return;
     const waiting = sets.filter((row) => !row.sent);
     if (!waiting.length) {
       setNote("ยังไม่มีชุดที่จะส่ง");
       return;
     }
+    if (waiting.some((row) => !row.product)) {
+      setNote("เลือกสินค้าของชุดนี้ก่อน");
+      return;
+    }
+    const jobs = waiting.flatMap((row) =>
+      row.codes.map((jobId) => ({ jobId, product: row.product as TrialFlowId })),
+    );
+    setSending(true);
+    try {
+      await releaseJobs({ data: { jobs, sentByName: worker?.name ?? null } });
+    } catch (error) {
+      setNote(error instanceof Error ? error.message : "ส่งเข้าไลน์ผลิตไม่สำเร็จ");
+      setSending(false);
+      return;
+    }
     const nextSets = sets.map((row) => (row.sent ? row : { ...row, sent: true }));
     setSets(nextSets);
     saveIntake(batch, nextSets);
+    setSending(false);
     setNote(`ส่งเข้าไลน์ผลิตแล้ว ${waiting.length} ชุด`);
   }
 
@@ -545,7 +603,7 @@ export function ScanTrialApp() {
                     <ul className="max-h-48 space-y-1 overflow-y-auto">
                       {flashId && !batch.includes(flashId) && (
                         <li className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-                          {flashId} · สแกนแล้ว
+                          {flashId} · {flashMessage}
                         </li>
                       )}
                       {batch.map((code) => (
@@ -691,7 +749,7 @@ export function ScanTrialApp() {
                       )}
                       <button
                         type="button"
-                        disabled={!sets.some((row) => !row.sent)}
+                        disabled={sending || !sets.some((row) => !row.sent)}
                         onClick={sendSets}
                         className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-base font-bold text-white disabled:opacity-40"
                       >
@@ -711,8 +769,8 @@ export function ScanTrialApp() {
                           {flow ? (
                             <p className="text-[11px] font-semibold">{flow.label}</p>
                           ) : (
-                            <p className="text-[11px] font-medium text-muted-foreground">
-                              เลือกสินค้าด้านล่าง
+                            <p className="text-[11px] font-medium text-destructive">
+                              ยังไม่ส่งเข้าไลน์ผลิต
                             </p>
                           )}
                         </>
@@ -751,26 +809,6 @@ export function ScanTrialApp() {
                         </button>
                       </div>
                     </div>
-
-                    {jobId && !running && (
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {TRIAL_FLOWS.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              setJobFlow(item.id);
-                              setStep("");
-                              setBlocked([]);
-                              setNote(null);
-                            }}
-                            className={`min-h-11 rounded-xl border px-2 text-sm font-semibold ${jobFlow === item.id ? "border-sky-500 bg-sky-50" : "bg-card"}`}
-                          >
-                            {item.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
 
                     {selected && (
                       <>
