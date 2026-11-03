@@ -20,6 +20,7 @@ import {
   Play,
   QrCode,
   ScanLine,
+  Send,
   Square,
   X,
 } from "lucide-react";
@@ -330,7 +331,7 @@ export function ScanTrialApp() {
     saveIntake([], nextSets);
     setChoosingProduct(false);
     setBatchProduct(null);
-    setNote(`${productLabel(product)} ${batch.length} ใบ อยู่ในรายการแล้ว`);
+    setNote(null);
     window.requestAnimationFrame(() => {
       setRefs.current.get(nextSets[nextSets.length - 1]?.id ?? "")?.scrollIntoView({
         block: "nearest",
@@ -686,9 +687,9 @@ export function ScanTrialApp() {
                         type="button"
                         disabled={!sets.some((row) => !row.sent)}
                         onClick={sendSets}
-                        className="mt-3 flex h-14 w-full items-center justify-center rounded-2xl bg-emerald-600 text-base font-bold text-white disabled:opacity-40"
+                        className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-base font-bold text-white disabled:opacity-40"
                       >
-                        ส่งออเดอร์เข้าไลน์ผลิต
+                        <Send className="h-5 w-5" /> ส่งออเดอร์เข้าไลน์ผลิต
                       </button>
                     </div>
                   </>
@@ -841,7 +842,7 @@ export function ScanTrialApp() {
             {note && (
               <p
                 className={`text-center text-xs font-medium ${
-                  note.startsWith("ส่งเข้าไลน์ผลิตแล้ว") || note.includes("อยู่ในรายการแล้ว")
+                  note.startsWith("ส่งเข้าไลน์ผลิตแล้ว")
                     ? "text-emerald-700"
                     : note.includes("แก้แล้ว")
                       ? "text-foreground"
