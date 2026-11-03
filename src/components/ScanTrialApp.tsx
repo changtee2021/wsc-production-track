@@ -144,6 +144,7 @@ export function ScanTrialApp() {
   const [sets, setSets] = useState<IntakeSet[]>([]);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [choosingProduct, setChoosingProduct] = useState(false);
+  const [batchProduct, setBatchProduct] = useState<TrialFlowId | null>(null);
   const flashTimer = useRef<number | null>(null);
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
   const setRefs = useRef(new Map<string, HTMLLIElement>());
@@ -328,6 +329,7 @@ export function ScanTrialApp() {
     setBatch([]);
     saveIntake([], nextSets);
     setChoosingProduct(false);
+    setBatchProduct(null);
     setNote(`${productLabel(product)} ${batch.length} ใบ อยู่ในรายการแล้ว`);
     window.requestAnimationFrame(() => {
       setRefs.current.get(nextSets[nextSets.length - 1]?.id ?? "")?.scrollIntoView({
@@ -347,8 +349,17 @@ export function ScanTrialApp() {
     setSets(nextSets);
     setBatch(target.codes);
     saveIntake(target.codes, nextSets);
-    setChoosingProduct(false);
-    setNote("ดึงชุดนี้กลับมาแก้แล้ว เลือกสินค้าอีกครั้งเพื่อใส่รายการ");
+    setChoosingProduct(true);
+    setBatchProduct(target.product);
+    setNote("ดึงชุดนี้กลับมาแก้แล้ว สแกนต่อจากปุ่มสแกน QR แล้วกดยืนยัน");
+  }
+
+  function confirmProduct() {
+    if (!batchProduct) {
+      setNote("เลือกสินค้าของชุดนี้ก่อน");
+      return;
+    }
+    parkBatch(batchProduct);
   }
 
   function deleteSet(id: string) {
@@ -597,8 +608,8 @@ export function ScanTrialApp() {
                             <button
                               key={flow.id}
                               type="button"
-                              onClick={() => parkBatch(flow.id)}
-                              className="min-h-11 rounded-xl border bg-card px-2 text-sm font-semibold"
+                              onClick={() => setBatchProduct(flow.id)}
+                              className={`min-h-11 rounded-xl border px-2 text-sm font-semibold ${batchProduct === flow.id ? "border-sky-500 bg-sky-50" : "bg-card"}`}
                             >
                               {flow.label}
                             </button>
@@ -606,10 +617,10 @@ export function ScanTrialApp() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => setChoosingProduct(false)}
-                          className="flex h-11 items-center justify-center rounded-xl border text-sm font-semibold"
+                          onClick={confirmProduct}
+                          className="flex h-14 items-center justify-center rounded-2xl bg-sky-500 text-base font-bold text-white"
                         >
-                          สแกนเพิ่ม
+                          ยืนยัน
                         </button>
                       </>
                     )}
