@@ -47,25 +47,65 @@ function initials(name: string): string {
 }
 
 const INTAKE_KEY = "wsc:scan-trial:intake:v1";
+const FLOW_IDS = new Set(TRIAL_FLOWS.map((flow) => flow.id));
 
-function loadIntake(): { batch: string[]; saved: string[] } {
-  if (typeof window === "undefined") return { batch: [], saved: [] };
+type IntakeSet = {
+  id: string;
+  product: TrialFlowId | null;
+  codes: string[];
+  sent: boolean;
+};
+
+function productLabel(id: TrialFlowId | null): string {
+  if (!id) return "ชุดที่บันทึกไว้";
+  return TRIAL_FLOWS.find((flow) => flow.id === id)?.label ?? id;
+}
+
+function asIntakeSet(value: unknown): IntakeSet | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as { id?: unknown; product?: unknown; codes?: unknown; sent?: unknown };
+  if (typeof row.id !== "string") return null;
+  const codes = Array.isArray(row.codes)
+    ? row.codes.filter((code): code is string => typeof code === "string" && code.trim() !== "")
+    : [];
+  if (!codes.length) return null;
+  const product =
+    typeof row.product === "string" && FLOW_IDS.has(row.product as TrialFlowId)
+      ? (row.product as TrialFlowId)
+      : null;
+  return { id: row.id, product, codes, sent: row.sent === true };
+}
+
+function loadIntake(): { batch: string[]; sets: IntakeSet[] } {
+  if (typeof window === "undefined") return { batch: [], sets: [] };
   try {
     const parsed = JSON.parse(window.localStorage.getItem(INTAKE_KEY) ?? "") as {
       batch?: string[];
       saved?: string[];
+      sets?: unknown[];
     };
+    const batch = Array.isArray(parsed.batch)
+      ? parsed.batch.filter((code): code is string => typeof code === "string")
+      : [];
+    if (Array.isArray(parsed.sets)) {
+      return { batch, sets: parsed.sets.flatMap((row) => asIntakeSet(row) ?? []) };
+    }
+    const saved = Array.isArray(parsed.saved)
+      ? parsed.saved.filter(
+          (code): code is string => typeof code === "string" && code.trim() !== "",
+        )
+      : [];
     return {
-      batch: Array.isArray(parsed.batch) ? parsed.batch : [],
-      saved: Array.isArray(parsed.saved) ? parsed.saved : [],
+      batch,
+      sets: saved.length ? [{ id: "legacy-saved", product: null, codes: saved, sent: true }] : [],
     };
   } catch {
-    return { batch: [], saved: [] };
+    return { batch: [], sets: [] };
   }
 }
 
-function saveIntake(batch: string[], saved: string[]) {
-  window.localStorage.setItem(INTAKE_KEY, JSON.stringify({ batch, saved }));
+function saveIntake(batch: string[], sets: IntakeSet[]) {
+  window.localStorage.setItem(INTAKE_KEY, JSON.stringify({ batch, sets }));
 }
 
 function clockLabel(startedAt: number, now: number): string {
@@ -101,12 +141,12 @@ export function ScanTrialApp() {
   const [scanTarget, setScanTarget] = useState<ScanTarget | null>(null);
   const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
   const [batch, setBatch] = useState<string[]>([]);
-  const [savedJobs, setSavedJobs] = useState<string[]>([]);
+  const [sets, setSets] = useState<IntakeSet[]>([]);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [choosingProduct, setChoosingProduct] = useState(false);
-  const [batchProduct, setBatchProduct] = useState<TrialFlowId | null>(null);
   const flashTimer = useRef<number | null>(null);
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
+  const setRefs = useRef(new Map<string, HTMLLIElement>());
 
   const selected = trialJob(jobId);
   const steps = selected ? flowSteps(selected.flow) : [];
@@ -118,7 +158,7 @@ export function ScanTrialApp() {
   useEffect(() => {
     const intake = loadIntake();
     setBatch(intake.batch);
-    setSavedJobs(intake.saved);
+    setSets(intake.sets);
     setRuns(loadTrialRuns());
     const onStorage = (event: StorageEvent) => {
       if (event.key === "wsc:scan-trial:v1") setRuns(loadTrialRuns());
@@ -240,9 +280,15 @@ export function ScanTrialApp() {
     flashTimer.current = window.setTimeout(() => {
       setFlashId((current) => (current === code ? null : current));
     }, 2000);
+    const owner = sets.find((row) => row.codes.includes(code));
     window.requestAnimationFrame(() => {
-      rowRefs.current.get(code)?.scrollIntoView({ block: "nearest" });
+      if (owner) setRefs.current.get(owner.id)?.scrollIntoView({ block: "nearest" });
+      else rowRefs.current.get(code)?.scrollIntoView({ block: "nearest" });
     });
+  }
+
+  function knownCodes(): string[] {
+    return sets.flatMap((row) => row.codes);
   }
 
   function addIntake(raw: string) {
@@ -251,13 +297,13 @@ export function ScanTrialApp() {
       setNote("สแกนหรือพิมพ์รหัสงานก่อน");
       return;
     }
-    if (batch.includes(code) || savedJobs.includes(code)) {
+    if (batch.includes(code) || knownCodes().includes(code)) {
       markDuplicate(code);
       return;
     }
     const next = [...batch, code];
     setBatch(next);
-    saveIntake(next, savedJobs);
+    saveIntake(next, sets);
     setJobInput("");
     setFlashId(null);
     setNote(null);
@@ -266,21 +312,66 @@ export function ScanTrialApp() {
   function removeIntake(code: string) {
     const next = batch.filter((id) => id !== code);
     setBatch(next);
-    saveIntake(next, savedJobs);
+    saveIntake(next, sets);
   }
 
-  function confirmBatch() {
-    if (!batch.length || !batchProduct) {
-      setNote("เลือกสินค้าของชุดนี้ก่อน");
+  function parkBatch(product: TrialFlowId) {
+    if (!batch.length) {
+      setNote("สแกนรหัสงานก่อน");
       return;
     }
-    const nextSaved = [...savedJobs, ...batch];
-    setSavedJobs(nextSaved);
+    const nextSets = [
+      ...sets,
+      { id: crypto.randomUUID(), product, codes: [...batch], sent: false },
+    ];
+    setSets(nextSets);
     setBatch([]);
-    saveIntake([], nextSaved);
+    saveIntake([], nextSets);
     setChoosingProduct(false);
-    setBatchProduct(null);
-    setNote(`บันทึกแล้ว ${batch.length} ใบ`);
+    setNote(`${productLabel(product)} ${batch.length} ใบ อยู่ในรายการแล้ว`);
+    window.requestAnimationFrame(() => {
+      setRefs.current.get(nextSets[nextSets.length - 1]?.id ?? "")?.scrollIntoView({
+        block: "nearest",
+      });
+    });
+  }
+
+  function editSet(id: string) {
+    if (batch.length) {
+      setNote("ชุดที่กำลังสแกนยังไม่เสร็จ เลือกสินค้าหรือเอาออกก่อน");
+      return;
+    }
+    const target = sets.find((row) => row.id === id);
+    if (!target) return;
+    const nextSets = sets.filter((row) => row.id !== id);
+    setSets(nextSets);
+    setBatch(target.codes);
+    saveIntake(target.codes, nextSets);
+    setChoosingProduct(false);
+    setNote("ดึงชุดนี้กลับมาแก้แล้ว เลือกสินค้าอีกครั้งเพื่อใส่รายการ");
+  }
+
+  function deleteSet(id: string) {
+    const target = sets.find((row) => row.id === id);
+    if (!target) return;
+    const ok = window.confirm(`ลบชุด${productLabel(target.product)} ${target.codes.length} ใบ?`);
+    if (!ok) return;
+    const nextSets = sets.filter((row) => row.id !== id);
+    setSets(nextSets);
+    saveIntake(batch, nextSets);
+    setNote(null);
+  }
+
+  function sendSets() {
+    const waiting = sets.filter((row) => !row.sent);
+    if (!waiting.length) {
+      setNote("ยังไม่มีชุดที่จะส่ง");
+      return;
+    }
+    const nextSets = sets.map((row) => (row.sent ? row : { ...row, sent: true }));
+    setSets(nextSets);
+    saveIntake(batch, nextSets);
+    setNote(`ส่งเข้าไลน์ผลิตแล้ว ${waiting.length} ชุด`);
   }
 
   function handleScanned(text: string) {
@@ -506,20 +597,13 @@ export function ScanTrialApp() {
                             <button
                               key={flow.id}
                               type="button"
-                              onClick={() => setBatchProduct(flow.id)}
-                              className={`min-h-11 rounded-xl border px-2 text-sm font-semibold ${batchProduct === flow.id ? "border-sky-500 bg-sky-50" : "bg-card"}`}
+                              onClick={() => parkBatch(flow.id)}
+                              className="min-h-11 rounded-xl border bg-card px-2 text-sm font-semibold"
                             >
                               {flow.label}
                             </button>
                           ))}
                         </div>
-                        <button
-                          type="button"
-                          onClick={confirmBatch}
-                          className="flex h-14 items-center justify-center rounded-2xl bg-sky-500 text-base font-bold text-white"
-                        >
-                          ยืนยัน
-                        </button>
                         <button
                           type="button"
                           onClick={() => setChoosingProduct(false)}
@@ -529,6 +613,73 @@ export function ScanTrialApp() {
                         </button>
                       </>
                     )}
+                    <div className="border-t pt-3">
+                      <p className="text-sm font-semibold">รายการชุด</p>
+                      {sets.length === 0 ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          เลือกสินค้าแล้ว ชุดจะมาอยู่ตรงนี้ก่อนส่ง
+                        </p>
+                      ) : (
+                        <ul className="mt-2 space-y-2">
+                          {sets.map((row) => {
+                            const flashed = row.codes.includes(flashId ?? "");
+                            const tone = flashed
+                              ? "border-red-500 bg-red-50"
+                              : row.sent
+                                ? "border-emerald-300 bg-emerald-50"
+                                : "border-border bg-card";
+                            return (
+                              <li
+                                key={row.id}
+                                ref={(node) => {
+                                  if (node) setRefs.current.set(row.id, node);
+                                  else setRefs.current.delete(row.id);
+                                }}
+                                className={`rounded-xl border-2 p-2 ${tone}`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-sm font-semibold">
+                                    {productLabel(row.product)} · {row.codes.length} ใบ
+                                  </p>
+                                  <p
+                                    className={`text-xs font-semibold ${row.sent ? "text-emerald-700" : "text-amber-700"}`}
+                                  >
+                                    {row.sent ? "ส่งแล้ว" : "รอส่ง"}
+                                  </p>
+                                </div>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {row.codes.join(", ")}
+                                </p>
+                                <div className="mt-2 flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => editSet(row.id)}
+                                    className="min-h-11 flex-1 rounded-xl border bg-background text-sm font-semibold"
+                                  >
+                                    แก้ไข
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteSet(row.id)}
+                                    className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-700"
+                                  >
+                                    ลบ
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                      <button
+                        type="button"
+                        disabled={!sets.some((row) => !row.sent)}
+                        onClick={sendSets}
+                        className="mt-3 flex h-14 w-full items-center justify-center rounded-2xl bg-emerald-600 text-base font-bold text-white disabled:opacity-40"
+                      >
+                        ส่งออเดอร์เข้าไลน์ผลิต
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -678,7 +829,13 @@ export function ScanTrialApp() {
             )}
             {note && (
               <p
-                className={`text-center text-xs font-medium ${note.startsWith("บันทึกแล้ว") ? "text-emerald-700" : "text-destructive"}`}
+                className={`text-center text-xs font-medium ${
+                  note.startsWith("ส่งเข้าไลน์ผลิตแล้ว") || note.includes("อยู่ในรายการแล้ว")
+                    ? "text-emerald-700"
+                    : note.includes("แก้แล้ว")
+                      ? "text-foreground"
+                      : "text-destructive"
+                }`}
               >
                 {note}
               </p>
