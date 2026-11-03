@@ -19,6 +19,7 @@ import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as PackingRouteImport } from './routes/packing'
 import { Route as QcRouteImport } from './routes/qc'
 import { Route as ScanRouteImport } from './routes/scan'
+import { Route as ScanTrialRouteImport } from './routes/scan-trial'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StockCountRouteImport } from './routes/stock-count'
 import { Route as SuppliesRouteImport } from './routes/supplies'
@@ -136,6 +137,11 @@ const QcRoute = QcRouteImport.update({
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
   path: '/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScanTrialRoute = ScanTrialRouteImport.update({
+  id: '/scan-trial',
+  path: '/scan-trial',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -521,6 +527,7 @@ export interface FileRoutesByFullPath {
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
+  '/scan-trial': typeof ScanTrialRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock-count': typeof StockCountRoute
   '/supplies': typeof SuppliesRoute
@@ -601,6 +608,7 @@ export interface FileRoutesByTo {
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
+  '/scan-trial': typeof ScanTrialRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock-count': typeof StockCountRoute
   '/supplies': typeof SuppliesRoute
@@ -681,6 +689,7 @@ export interface FileRoutesById {
   '/packing': typeof PackingRoute
   '/qc': typeof QcRoute
   '/scan': typeof ScanRoute
+  '/scan-trial': typeof ScanTrialRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stock-count': typeof StockCountRoute
   '/supplies': typeof SuppliesRoute
@@ -763,6 +772,7 @@ export interface FileRouteTypes {
     | '/packing'
     | '/qc'
     | '/scan'
+    | '/scan-trial'
     | '/sitemap.xml'
     | '/stock-count'
     | '/supplies'
@@ -843,6 +853,7 @@ export interface FileRouteTypes {
     | '/packing'
     | '/qc'
     | '/scan'
+    | '/scan-trial'
     | '/sitemap.xml'
     | '/stock-count'
     | '/supplies'
@@ -922,6 +933,7 @@ export interface FileRouteTypes {
     | '/packing'
     | '/qc'
     | '/scan'
+    | '/scan-trial'
     | '/sitemap.xml'
     | '/stock-count'
     | '/supplies'
@@ -1004,6 +1016,7 @@ export interface RootRouteChildren {
   PackingRoute: typeof PackingRoute
   QcRoute: typeof QcRoute
   ScanRoute: typeof ScanRoute
+  ScanTrialRoute: typeof ScanTrialRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StockCountRoute: typeof StockCountRoute
   SuppliesRoute: typeof SuppliesRoute
@@ -1092,6 +1105,13 @@ declare module '@tanstack/react-router' {
       path: '/scan'
       fullPath: '/scan'
       preLoaderRoute: typeof ScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scan-trial': {
+      id: '/scan-trial'
+      path: '/scan-trial'
+      fullPath: '/scan-trial'
+      preLoaderRoute: typeof ScanTrialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -1727,6 +1747,7 @@ const rootRouteChildren: RootRouteChildren = {
   PackingRoute: PackingRoute,
   QcRoute: QcRoute,
   ScanRoute: ScanRoute,
+  ScanTrialRoute: ScanTrialRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StockCountRoute: StockCountRoute,
   SuppliesRoute: SuppliesRoute,
