@@ -21,7 +21,7 @@ import {
   UserRound,
 } from "lucide-react";
 
-type Employee = { id: string; name: string; emp_code: string | null };
+type Employee = { id: string; name: string; emp_code: string | null; avatar_url: string | null };
 type ScanTarget = "badge" | "job";
 
 function splitName(full: string): { name: string; nickname: string | null } {
@@ -85,7 +85,7 @@ export function ScanTrialApp() {
     (async () => {
       const { data, error } = await supabase
         .from("employees")
-        .select("id,name,emp_code")
+        .select("id,name,emp_code,avatar_url")
         .eq("active", true)
         .order("name");
       if (cancelled) return;
@@ -285,7 +285,15 @@ export function ScanTrialApp() {
             ) : (
               <>
                 <div className="flex items-center gap-2 rounded-xl bg-sky-50 px-3 py-2 text-sky-700">
-                  <UserRound className="h-4 w-4 shrink-0" />
+                  {worker.avatar_url ? (
+                    <img
+                      src={worker.avatar_url}
+                      alt={shown?.nickname ?? shown?.name ?? ""}
+                      className="h-12 w-12 shrink-0 rounded-full object-cover object-top"
+                    />
+                  ) : (
+                    <UserRound className="h-4 w-4 shrink-0" />
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-semibold">
                       {shown?.nickname ?? shown?.name}
