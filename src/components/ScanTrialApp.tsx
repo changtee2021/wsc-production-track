@@ -5,6 +5,7 @@ import {
   canStartTrial,
   flowSteps,
   loadTrialRuns,
+  nextTrialSteps,
   saveTrialRuns,
   stepLabel,
   TRIAL_FLOWS,
@@ -14,6 +15,8 @@ import {
 } from "@/lib/scan-trial";
 import {
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock,
   CreditCard,
   ListChecks,
@@ -146,6 +149,7 @@ export function ScanTrialApp() {
   const [flashId, setFlashId] = useState<string | null>(null);
   const [choosingProduct, setChoosingProduct] = useState(false);
   const [batchProduct, setBatchProduct] = useState<TrialFlowId | null>(null);
+  const [stepsOpen, setStepsOpen] = useState(false);
   const flashTimer = useRef<number | null>(null);
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
   const setRefs = useRef(new Map<string, HTMLLIElement>());
@@ -199,6 +203,10 @@ export function ScanTrialApp() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    setStepsOpen(false);
+  }, [jobId]);
 
   useEffect(() => {
     if (!running) return;
@@ -804,35 +812,59 @@ export function ScanTrialApp() {
                           <Square className="h-5 w-5 fill-current" /> เสร็จงาน
                         </button>
 
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] font-semibold text-muted-foreground">
+                            ลำดับงาน
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setStepsOpen((open) => !open)}
+                            className="flex min-h-11 items-center gap-1 px-1 text-xs font-semibold"
+                          >
+                            {stepsOpen ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                            {stepsOpen ? "หุบ" : "ดูกำหนดทั้งหมด"}
+                          </button>
+                        </div>
                         <ul className="space-y-1 text-[11px]">
-                          {steps.map((name) => {
-                            const row = jobRuns.find((run) => run.step === name);
-                            const done = row?.status === "done";
-                            const held = blocked.includes(name);
-                            const label = done
-                              ? "จบ"
-                              : row?.status === "running"
-                                ? "กำลังทำ"
-                                : "รอ";
-                            const tone = done
-                              ? "border-emerald-300 bg-emerald-100 text-emerald-800"
-                              : held
-                                ? "border-red-300 bg-red-100 text-red-800"
-                                : "border-transparent bg-muted/50";
-                            return (
-                              <li
-                                key={name}
-                                className={`flex min-h-9 items-center justify-between gap-2 rounded-lg border px-2 py-1 ${tone}`}
-                              >
-                                <span className="truncate">{stepLabel(name)}</span>
-                                <span className="flex shrink-0 items-center gap-1 font-semibold">
-                                  {done && <Check className="h-3.5 w-3.5" aria-hidden />}
-                                  {label}
-                                </span>
-                              </li>
-                            );
-                          })}
+                          {(stepsOpen ? steps : nextTrialSteps(selected.flow, runs, jobId)).map(
+                            (name) => {
+                              const row = jobRuns.find((run) => run.step === name);
+                              const done = row?.status === "done";
+                              const held = blocked.includes(name);
+                              const label = done
+                                ? "จบ"
+                                : row?.status === "running"
+                                  ? "กำลังทำ"
+                                  : "รอ";
+                              const tone = done
+                                ? "border-emerald-300 bg-emerald-100 text-emerald-800"
+                                : held
+                                  ? "border-red-300 bg-red-100 text-red-800"
+                                  : "border-transparent bg-muted/50";
+                              return (
+                                <li
+                                  key={name}
+                                  className={`flex min-h-9 items-center justify-between gap-2 rounded-lg border px-2 py-1 ${tone}`}
+                                >
+                                  <span className="truncate">{stepLabel(name)}</span>
+                                  <span className="flex shrink-0 items-center gap-1 font-semibold">
+                                    {done && <Check className="h-3.5 w-3.5" aria-hidden />}
+                                    {label}
+                                  </span>
+                                </li>
+                              );
+                            },
+                          )}
                         </ul>
+                        {!stepsOpen && nextTrialSteps(selected.flow, runs, jobId).length === 0 && (
+                          <p className="text-center text-xs font-medium text-emerald-700">
+                            ครบทุกขั้นแล้ว
+                          </p>
+                        )}
                       </>
                     )}
                   </>
