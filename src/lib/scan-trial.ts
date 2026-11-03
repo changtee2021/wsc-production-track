@@ -70,6 +70,30 @@ export function trialJob(jobId: string): { jobId: string; flow: TrialFlow } | nu
   return { jobId: match.jobId, flow: flowById(match.flow) };
 }
 
+const STEP_MY: Record<string, string> = {
+  ตัดผ้า: "အထည်ဖြတ်",
+  เจาะผ้า: "အထည်ဖောက်",
+  ตัดราง: "ရထားဖြတ်",
+  เจาะราง: "ရထားဖောက်",
+  ประกอบราง: "ရထားတပ်",
+  "เตรียมโซ่/หัวเกียร์": "သံကြိုး/ဂီယာပြင်",
+  ประกอบ: "တပ်ဆင်",
+  ประกอบชุด: "အစုံတပ်",
+  หัว: "ခေါင်းတပ်",
+  เปิดไม้: "သစ်ဖွင့်",
+  ตัดใบ: "ရွက်ဖြတ်",
+  เก็บสี: "အရောင်တင်",
+  เจาะใบ: "ရွက်ဖောက်",
+  "ตัดเทป/เตรียมโซ่": "တိပ်ဖြတ်/သံကြိုးပြင်",
+  QC: "စစ်ဆေး",
+  PACK: "ထုပ်ပိုး",
+};
+
+export function stepLabel(name: string): string {
+  const burmese = STEP_MY[name];
+  return burmese ? `${name} I ${burmese}` : name;
+}
+
 export function flowSteps(flow: TrialFlow): string[] {
   return [...flow.lanes.flat(), ...flow.after];
 }
@@ -126,7 +150,7 @@ export function canStartTrial(input: {
       return deny(
         previousRun?.status === "running"
           ? "คนก่อนหน้ายังไม่กดจบงาน"
-          : `ขั้น ${previous} ยังไม่จบ ไปต่อไม่ได้`,
+          : `ขั้น ${stepLabel(previous)} ยังไม่จบ ไปต่อไม่ได้`,
         [previous],
       );
     }
@@ -143,7 +167,7 @@ export function canStartTrial(input: {
     return deny(
       firstRun?.status === "running"
         ? "คนก่อนหน้ายังไม่กดจบงาน"
-        : `ขั้น ${first} ยังไม่จบ ไปต่อไม่ได้`,
+        : `ขั้น ${stepLabel(first)} ยังไม่จบ ไปต่อไม่ได้`,
       waitingLanes,
     );
   }
@@ -155,7 +179,7 @@ export function canStartTrial(input: {
       return deny(
         previousRun?.status === "running"
           ? "คนก่อนหน้ายังไม่กดจบงาน"
-          : `ขั้น ${previous} ยังไม่จบ ไปต่อไม่ได้`,
+          : `ขั้น ${stepLabel(previous)} ยังไม่จบ ไปต่อไม่ได้`,
         [previous],
       );
     }

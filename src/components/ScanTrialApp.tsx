@@ -6,6 +6,7 @@ import {
   flowSteps,
   loadTrialRuns,
   saveTrialRuns,
+  stepLabel,
   trialJob,
   type TrialRun,
 } from "@/lib/scan-trial";
@@ -382,7 +383,7 @@ export function ScanTrialApp() {
                                 : "";
                           return (
                             <option key={name} value={name}>
-                              {name}
+                              {stepLabel(name)}
                               {mark}
                             </option>
                           );
@@ -402,7 +403,7 @@ export function ScanTrialApp() {
                     {running && mine && (
                       <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-700">
                         <span className="flex items-center gap-1.5 text-sm font-semibold">
-                          <Clock className="h-4 w-4" /> {mine.step}
+                          <Clock className="h-4 w-4" /> {stepLabel(mine.step)}
                         </span>
                         <span className="font-mono text-xl font-bold tabular-nums">
                           {clockLabel(mine.startedAt, now)}
@@ -435,7 +436,7 @@ export function ScanTrialApp() {
                             key={name}
                             className={`flex min-h-9 items-center justify-between gap-2 rounded-lg border px-2 py-1 ${tone}`}
                           >
-                            <span className="truncate">{name}</span>
+                            <span className="truncate">{stepLabel(name)}</span>
                             <span className="flex shrink-0 items-center gap-1 font-semibold">
                               {done && <Check className="h-3.5 w-3.5" aria-hidden />}
                               {label}
