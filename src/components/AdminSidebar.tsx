@@ -26,8 +26,7 @@ import {
   ScrollText,
   BookOpenCheck,
   Library,
-  Tags,
-  ClipboardList,
+  Send,
 } from "lucide-react";
 import {
   Sidebar,
@@ -68,6 +67,7 @@ const NAV_GROUPS: Array<{
       { title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search },
       { title: "โฟลว์สแกนโหมดสถานี", url: "/scan-flow", icon: ScanLine },
       { title: "แอปทดลองสแกน", url: "/scan-trial", icon: ScanLine },
+      { title: "ออเดอร์เข้าไลน์", url: "/trial-releases", icon: Send },
     ],
   },
   {
@@ -85,8 +85,6 @@ const NAV_GROUPS: Array<{
     items: [
       { title: "ภาพรวม WI", url: "/wi", icon: BookOpenCheck },
       { title: "คลัง WI", url: "/wi/library", icon: Library },
-      { title: "ตรวจ & อนุมัติ", url: "/wi/review", icon: ClipboardList },
-      { title: "หมวดหมู่ WI", url: "/wi/categories", icon: Tags },
     ],
   },
   {
@@ -145,6 +143,7 @@ const NAV_GROUPS: Array<{
       { title: "พื้นที่จัดเก็บ", url: "/storage", icon: HardDrive },
       { title: "ข้อกำหนดแอดมิน", url: "/admin-policy", icon: ShieldCheck },
       { title: "แก้ไขข้อกำหนด", url: "/manage-policies", icon: FileText },
+      { title: "ISO 29110", url: "/iso-29110", icon: ClipboardCheck },
       { title: "LogUpdate", url: "/logs-update", icon: Sparkles },
       { title: "Server Logs", url: "/server-logs", icon: ScrollText },
     ],
@@ -391,10 +390,8 @@ export function AdminSidebar() {
                     !item.external &&
                     (currentPath === item.url ||
                       (item.url === "/wi/library" &&
-                        (/^\/wi\/[0-9a-f-]{36}/.test(currentPath) ||
-                          currentPath === "/wi/new" ||
-                          currentPath === "/wi/versions" ||
-                          currentPath === "/wi/flow")));
+                        currentPath.startsWith("/wi/") &&
+                        currentPath !== "/wi"));
                   const showNewBadge = item.url === "/logs-update" && hasNew;
                   const isSupply = item.url === "/supplies-dashboard";
                   const supplyCount = isSupply ? pendingReq : 0;

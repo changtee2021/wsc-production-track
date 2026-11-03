@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 import type { TrialFlowId } from "@/lib/scan-trial";
 
 const productSchema = z.enum(["roller", "wood", "aluminum", "shade"]);
@@ -69,7 +70,7 @@ export const releaseTrialJobs = createServerFn({ method: "POST" })
       .from("scan_trial_releases")
       .upsert(rows, { onConflict: "job_id" });
     if (error) throw new Error("ส่งเข้าไลน์ผลิตไม่สำเร็จ");
-    return { ok: true as const };
+    return { ok: true as const, sentAt: now };
   });
 
 export const withdrawTrialJobs = createServerFn({ method: "POST" })
@@ -83,5 +84,50 @@ export const withdrawTrialJobs = createServerFn({ method: "POST" })
       .delete()
       .in("job_id", data.jobIds);
     if (error) throw new Error("ถอนงานออกจากไลน์ผลิตไม่สำเร็จ");
+    return { ok: true as const };
+  });
+
+function assertAdmin(token: string) {
+  if (!verifyAdminToken(token)) throw new Error("ไม่มีสิทธิ์แอดมิน");
+}
+
+const adminToken = z.object({ token: z.string().min(1) });
+
+export const adminListTrialReleases = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => adminToken.parse(input))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("scan_trial_releases")
+      .select("job_id, product, sent_by_name, created_at, updated_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error("โหลดรายการไม่สำเร็จ");
+    return { rows: rows ?? [] };
+  });
+
+export const adminUpdateTrialRelease = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    adminToken.extend({ jobId: jobIdSchema, product: productSchema }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await supabaseAdmin
+      .from("scan_trial_releases")
+      .update({ product: data.product, updated_at: new Date().toISOString() })
+      .eq("job_id", data.jobId);
+    if (error) throw new Error("แก้สินค้าไม่สำเร็จ");
+    return { ok: true as const };
+  });
+
+export const adminDeleteTrialRelease = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => adminToken.extend({ jobId: jobIdSchema }).parse(input))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const { error } = await supabaseAdmin
+      .from("scan_trial_releases")
+      .delete()
+      .eq("job_id", data.jobId);
+    if (error) throw new Error("ลบงานไม่สำเร็จ");
     return { ok: true as const };
   });

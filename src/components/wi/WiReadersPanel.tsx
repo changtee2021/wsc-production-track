@@ -12,7 +12,7 @@ import { formatThaiDateTime } from "@/lib/wi/wi-client";
 import { wiReadersList, type WiReadStatus, type WiReaderRow } from "@/lib/features/wi.functions";
 
 const STATUS_LABEL: Record<WiReadStatus, string> = {
-  read: "ยืนยันอ่านแล้ว",
+  read: "ผ่านการอบรมออนไลน์",
   viewed: "เปิดดูแล้ว ยังไม่ยืนยัน",
   outdated: "อ่านฉบับเก่า",
   none: "ยังไม่เปิด",
@@ -110,7 +110,7 @@ export function WiReadersPanel({
         <div>
           <h2 className="font-semibold">การอ่านฉบับ {liveVersion}</h2>
           <p className="text-xs text-muted-foreground">
-            พนักงานเลือกชื่อตัวเองที่หน้าคู่มือ แล้วกด “อ่านจบแล้ว เข้าใจ” ·
+            พนักงานสแกนบัตรหรือกรอกเลขพนักงานที่หน้าคู่มือ แล้วกด “อ่านจบแล้ว เข้าใจ” ·
             ออกฉบับใหม่ต้องยืนยันใหม่
           </p>
         </div>
@@ -118,7 +118,7 @@ export function WiReadersPanel({
           <div className="text-2xl font-bold">
             {counts.read}/{total}
           </div>
-          <div className="text-xs text-muted-foreground">ยืนยันแล้ว {pct}%</div>
+          <div className="text-xs text-muted-foreground">ผ่านอบรม {pct}%</div>
         </div>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -172,7 +172,7 @@ export function WiReadersPanel({
               {(r.acknowledged_at || r.last_viewed_at) && (
                 <span className="w-full text-xs text-muted-foreground sm:w-auto">
                   {r.acknowledged_at
-                    ? `ยืนยัน ${formatThaiDateTime(r.acknowledged_at)}`
+                    ? `ผ่านเมื่อ ${formatThaiDateTime(r.acknowledged_at)}`
                     : `เปิดล่าสุด ${formatThaiDateTime(r.last_viewed_at!)}`}
                   {r.view_count > 0 ? ` · เปิด ${r.view_count} ครั้ง` : ""}
                   {r.lang ? ` · ${LANG_SHORT[r.lang] ?? r.lang}` : ""}

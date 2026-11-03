@@ -28,6 +28,7 @@ export const Route = createFileRoute("/_protected")({
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/job-lookup": "ค้นหา Job ด่วน",
+  "/trial-releases": "ออเดอร์เข้าไลน์",
   "/logs": "ประวัติงานผลิต",
   "/qc-reports": "รายงาน QC",
   "/qc-summary": "สรุป QC",
@@ -54,6 +55,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/warehouse/reports": "รายงานคลัง",
   "/warehouse/settings": "ตั้งค่าคลังสินค้า",
   "/manage": "จัดการพนักงาน",
+  "/iso-29110": "ISO 29110",
 };
 
 function AdminLayout() {

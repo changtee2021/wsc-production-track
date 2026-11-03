@@ -13,6 +13,7 @@ import {
   verifyWiReviewToken,
 } from "@/lib/auth/wi-review-token.server";
 import { APP_SLUG, SUPABASE_SCHEMA } from "@/lib/erp-config";
+import { bestFlowStep, flowForProductName, type TrialFlow } from "@/lib/scan-trial";
 import { aiChatCompletions, flashModelId } from "@/lib/ai/ai-provider.server";
 import {
   WI_STATUSES,
@@ -1406,6 +1407,252 @@ export const wiReadersList = createServerFn({ method: "POST" })
     return { live_version_id: live, rows };
   });
 
+// ---- Admin: online-training form (who opened which manual, who passed) -----
+
+export type WiTrainingResult = "passed" | "viewed" | "outdated" | "none";
+
+export type WiTrainingManual = {
+  wi_id: string;
+  wi_code: string;
+  title: string;
+  version: string | null;
+  result: WiTrainingResult;
+  view_count: number;
+  first_viewed_at: string | null;
+  last_viewed_at: string | null;
+  acknowledged_at: string | null;
+};
+
+export type WiTrainingEmployee = {
+  employee_id: string;
+  name: string;
+  emp_code: string | null;
+  nationality: string | null;
+  passed: number;
+  manuals: WiTrainingManual[];
+};
+
+export const wiTrainingRecords = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const [empRes, docRes, readRes] = await Promise.all([
+      db()
+        .from("employees")
+        .select("id, name, emp_code, nationality")
+        .eq("active", true)
+        .order("name")
+        .limit(1000),
+      db()
+        .from("wi_documents")
+        .select("id, wi_code, title, current_version_id")
+        .eq("status", "published")
+        .order("wi_code")
+        .limit(200),
+      db()
+        .from("wi_reads")
+        .select(
+          "wi_id, version_id, employee_id, view_count, first_viewed_at, last_viewed_at, acknowledged_at",
+        )
+        .limit(8000),
+    ]);
+    if (empRes.error) fail(empRes.error, "โหลดรายชื่อไม่สำเร็จ");
+    if (docRes.error) fail(docRes.error, "โหลดคู่มือไม่สำเร็จ");
+    if (readRes.error) fail(readRes.error, "โหลดการอบรมไม่สำเร็จ");
+
+    const docs = (docRes.data ?? []) as {
+      id: string;
+      wi_code: string;
+      title: string;
+      current_version_id: string | null;
+    }[];
+    const reads = (readRes.data ?? []) as {
+      wi_id: string;
+      version_id: string;
+      employee_id: string;
+      view_count: number;
+      first_viewed_at: string;
+      last_viewed_at: string;
+      acknowledged_at: string | null;
+    }[];
+    const versionIds = [
+      ...new Set(
+        [
+          ...docs.map((doc) => doc.current_version_id),
+          ...reads.map((row) => row.version_id),
+        ].filter((id): id is string => !!id),
+      ),
+    ];
+    const versionLabel = new Map<string, string>();
+    if (versionIds.length) {
+      const { data: versions, error: vErr } = await db()
+        .from("wi_versions")
+        .select("id, major, minor")
+        .in("id", versionIds);
+      if (vErr) fail(vErr, "โหลดฉบับคู่มือไม่สำเร็จ");
+      for (const version of (versions ?? []) as { id: string; major: number; minor: number }[]) {
+        versionLabel.set(version.id, `v${version.major}.${version.minor}`);
+      }
+    }
+
+    const employees: WiTrainingEmployee[] = (
+      (empRes.data ?? []) as {
+        id: string;
+        name: string;
+        emp_code: string | null;
+        nationality: string | null;
+      }[]
+    ).map((emp) => {
+      const mine = reads.filter((row) => row.employee_id === emp.id);
+      const manuals: WiTrainingManual[] = docs.map((doc) => {
+        const live = doc.current_version_id;
+        const current = live ? mine.find((row) => row.version_id === live) : undefined;
+        const older = mine.find(
+          (row) => row.wi_id === doc.id && row.acknowledged_at && row.version_id !== live,
+        );
+        const result: WiTrainingResult = current?.acknowledged_at
+          ? "passed"
+          : older
+            ? "outdated"
+            : current
+              ? "viewed"
+              : "none";
+        return {
+          wi_id: doc.id,
+          wi_code: doc.wi_code,
+          title: doc.title,
+          version: live ? (versionLabel.get(live) ?? null) : null,
+          result,
+          view_count: current?.view_count ?? 0,
+          first_viewed_at: current?.first_viewed_at ?? null,
+          last_viewed_at: current?.last_viewed_at ?? null,
+          acknowledged_at: current?.acknowledged_at ?? older?.acknowledged_at ?? null,
+        };
+      });
+      return {
+        employee_id: emp.id,
+        name: emp.name,
+        emp_code: emp.emp_code,
+        nationality: emp.nationality,
+        passed: manuals.filter((manual) => manual.result === "passed").length,
+        manuals,
+      };
+    });
+
+    return { manual_count: docs.length, employees };
+  });
+
+export type WiShelfManual = {
+  id: string;
+  wi_code: string;
+  title: string;
+  status: WiStatus;
+};
+
+export type WiShelfStep = {
+  step_id: string;
+  step_name: string;
+  manuals: WiShelfManual[];
+};
+
+export type WiShelfCategory = {
+  id: string;
+  name: string;
+  steps: WiShelfStep[];
+};
+
+export const wiShelf = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: tokenStr }).parse(d))
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    const [catRes, linkRes, docRes] = await Promise.all([
+      db().from("categories").select("id, name").eq("active", true),
+      db().from("wi_production_links").select("wi_id, step_id, category_id").limit(500),
+      db()
+        .from("wi_documents")
+        .select("id, wi_code, title, status")
+        .neq("status", "archived")
+        .order("wi_code")
+        .limit(200),
+    ]);
+    if (catRes.error) fail(catRes.error, "โหลดหมวดไม่สำเร็จ");
+    if (linkRes.error) fail(linkRes.error, "โหลดขั้นตอนไม่สำเร็จ");
+    if (docRes.error) fail(docRes.error, "โหลดคู่มือไม่สำเร็จ");
+
+    const docs = (docRes.data ?? []) as WiShelfManual[];
+    const docById = new Map(docs.map((doc) => [doc.id, doc]));
+    const links = (
+      (linkRes.data ?? []) as { wi_id: string; step_id: string; category_id: string | null }[]
+    ).filter((link) => link.category_id && docById.has(link.wi_id));
+    const stepIds = [...new Set(links.map((link) => link.step_id))];
+    const stepName = new Map<string, string>();
+    if (stepIds.length) {
+      const { data: steps, error } = await db()
+        .from("steps")
+        .select("id, step_name")
+        .in("id", stepIds);
+      if (error) fail(error, "โหลดชื่อขั้นตอนไม่สำเร็จ");
+      for (const step of (steps ?? []) as { id: string; step_name: string }[]) {
+        stepName.set(step.id, step.step_name);
+      }
+    }
+
+    const placedIds = new Set<string>();
+    const categories: WiShelfCategory[] = ((catRes.data ?? []) as { id: string; name: string }[])
+      .map((cat) => {
+        const flow = flowForProductName(cat.name);
+        if (flow) {
+          const names = [...flow.lanes.flat(), ...flow.after];
+          const byName = new Map<string, WiShelfManual[]>();
+          for (const link of links) {
+            if (link.category_id !== cat.id || placedIds.has(link.wi_id)) continue;
+            const manual = docById.get(link.wi_id);
+            if (!manual) continue;
+            const hit = bestFlowStep(flow, `${manual.title} ${stepName.get(link.step_id) ?? ""}`);
+            if (!hit) continue;
+            placedIds.add(link.wi_id);
+            const list = byName.get(hit) ?? [];
+            if (!list.some((row) => row.id === manual.id)) list.push(manual);
+            byName.set(hit, list);
+          }
+          const steps: WiShelfStep[] = names.map((name) => ({
+            step_id: `flow-${flow.id}-${name}`,
+            step_name: name,
+            manuals: (byName.get(name) ?? []).sort((a, b) => a.wi_code.localeCompare(b.wi_code)),
+          }));
+          return { id: cat.id, name: cat.name, steps };
+        }
+        const byStep = new Map<string, WiShelfManual[]>();
+        for (const link of links) {
+          if (link.category_id !== cat.id) continue;
+          const manual = docById.get(link.wi_id);
+          if (!manual) continue;
+          placedIds.add(link.wi_id);
+          const list = byStep.get(link.step_id) ?? [];
+          if (!list.some((row) => row.id === manual.id)) list.push(manual);
+          byStep.set(link.step_id, list);
+        }
+        const steps: WiShelfStep[] = [...byStep.entries()]
+          .map(([step_id, manuals]) => ({
+            step_id,
+            step_name: stepName.get(step_id) ?? "ขั้นตอน",
+            manuals: manuals.sort((a, b) => a.wi_code.localeCompare(b.wi_code)),
+          }))
+          .sort((a, b) => a.step_name.localeCompare(b.step_name, "th"));
+        return { id: cat.id, name: cat.name, steps };
+      })
+      .sort((a, b) => {
+        const na = Number(a.name.match(/^(\d+)/)?.[1] ?? 99);
+        const nb = Number(b.name.match(/^(\d+)/)?.[1] ?? 99);
+        return na - nb || a.name.localeCompare(b.name, "th");
+      });
+
+    return {
+      categories,
+      loose: docs.filter((doc) => !placedIds.has(doc.id)),
+    };
+  });
+
 // ---- Admin: AI draft translation -------------------------------------------
 
 const translateSourceSchema = z.object({
@@ -1549,6 +1796,11 @@ export type WiCatalogItem = {
   read_status: WiReadStatus;
 };
 export type WiCatalogStep = { step_id: string; step_name: string; items: WiCatalogItem[] };
+export type WiCatalogFlow = {
+  lanes: WiCatalogStep[][];
+  after: WiCatalogStep[];
+  extra: WiCatalogStep[];
+};
 
 export const wiPublicCatalog = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -1603,7 +1855,18 @@ export const wiPublicCatalog = createServerFn({ method: "POST" })
       const status = reads.get(wiId)?.status;
       return status !== undefined && status !== "read";
     };
-
+    const linkStepIds = Array.from(new Set(links.map((link) => link.step_id)));
+    const prodStepName = new Map<string, string>();
+    if (linkStepIds.length) {
+      const { data: named, error: nameErr } = await db()
+        .from("steps")
+        .select("id, step_name")
+        .in("id", linkStepIds);
+      if (nameErr) fail(nameErr, "โหลดขั้นตอนไม่สำเร็จ");
+      for (const step of (named ?? []) as { id: string; step_name: string }[]) {
+        prodStepName.set(step.id, step.step_name);
+      }
+    }
     const categories: WiCatalogCategory[] = ((catRes.data ?? []) as { id: string; name: string }[])
       .map((cat) => {
         const ids = Array.from(wiIdsByCategory.get(cat.id) ?? []);
@@ -1611,7 +1874,9 @@ export const wiPublicCatalog = createServerFn({ method: "POST" })
           id: cat.id,
           name: cat.name,
           wi_count: ids.length,
-          unread_count: ids.filter(isUnread).length,
+          unread_count: ids.filter((id) =>
+            data.employee_id ? reads.get(id)?.status !== "read" : isUnread(id),
+          ).length,
         };
       })
       .sort((a, b) => {
@@ -1623,7 +1888,28 @@ export const wiPublicCatalog = createServerFn({ method: "POST" })
     const chosenLinks = data.category_id
       ? links.filter((link) => link.category_id === data.category_id)
       : [];
-    if (chosenLinks.length === 0) return { categories, steps: [] as WiCatalogStep[] };
+    const chosenCat = categories.find((cat) => cat.id === data.category_id);
+    const chosenFlow = chosenCat ? flowForProductName(chosenCat.name) : undefined;
+    const blankFlow = (flow: TrialFlow): WiCatalogFlow => ({
+      lanes: flow.lanes.map((lane) =>
+        lane.map((name) => ({
+          step_id: `flow-${flow.id}-${name}`,
+          step_name: name,
+          items: [],
+        })),
+      ),
+      after: flow.after.map((name) => ({
+        step_id: `flow-${flow.id}-${name}`,
+        step_name: name,
+        items: [],
+      })),
+      extra: [],
+    });
+    if (chosenLinks.length === 0) {
+      const flow = chosenFlow ? blankFlow(chosenFlow) : null;
+      const steps = flow ? [...flow.lanes.flat(), ...flow.after] : [];
+      return { categories, steps, flow };
+    }
 
     const stepIds = Array.from(new Set(chosenLinks.map((link) => link.step_id)));
     const versionIds = Array.from(
@@ -1703,5 +1989,39 @@ export const wiPublicCatalog = createServerFn({ method: "POST" })
           a.step_name.localeCompare(b.step_name, "th"),
       );
 
-    return { categories, steps };
+    if (!chosenFlow) return { categories, steps, flow: null as WiCatalogFlow | null };
+
+    const placed = new Set<string>();
+    const fill = (name: string): WiCatalogStep => {
+      const items: WiCatalogItem[] = [];
+      for (const step of steps) {
+        const prod = step.step_name;
+        for (const item of step.items) {
+          if (placed.has(item.code)) continue;
+          if (bestFlowStep(chosenFlow, `${item.title} ${prod}`) !== name) continue;
+          placed.add(item.code);
+          items.push(item);
+        }
+      }
+      return {
+        step_id: `flow-${chosenFlow.id}-${name}`,
+        step_name: name,
+        items,
+      };
+    };
+    const flow: WiCatalogFlow = {
+      lanes: chosenFlow.lanes.map((lane) => lane.map(fill)),
+      after: chosenFlow.after.map(fill),
+      extra: steps
+        .map((step) => ({
+          ...step,
+          items: step.items.filter((item) => !placed.has(item.code)),
+        }))
+        .filter((step) => step.items.length > 0),
+    };
+    return {
+      categories,
+      steps: [...flow.lanes.flat(), ...flow.after, ...flow.extra],
+      flow,
+    };
   });

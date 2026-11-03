@@ -45,6 +45,29 @@ export const TRIAL_FLOWS: TrialFlow[] = [
   },
 ];
 
+export function trialProductLabel(id: string | null | undefined): string {
+  return TRIAL_FLOWS.find((flow) => flow.id === id)?.label ?? "ไม่ระบุสินค้า";
+}
+
+/** Match a production category name such as "2.ม่านม้วน ကုလားကာ" to a flow. */
+export function flowForProductName(name: string): TrialFlow | undefined {
+  const body = name.replace(/^\d+\.\s*/, "").trim();
+  const thai = body.match(/^[\u0E00-\u0E7F0-9.\s/()-]+/)?.[0]?.trim() ?? body;
+  return TRIAL_FLOWS.find((flow) => thai === flow.label || thai.startsWith(flow.label));
+}
+
+/** A manual belongs on a flow step when its title or production step says that step. */
+export function manualMatchesFlowStep(flowStep: string, text: string): boolean {
+  if (flowStep === "ประกอบ") return /ประกอบ/.test(text) && !/ประกอบราง|ประกอบชุด/.test(text);
+  if (flowStep === "หัว") return /หัว/.test(text) && !/หัวเกียร์/.test(text);
+  return text.includes(flowStep);
+}
+
+export function bestFlowStep(flow: TrialFlow, text: string): string | null {
+  const names = [...flow.lanes.flat(), ...flow.after].sort((a, b) => b.length - a.length);
+  return names.find((name) => manualMatchesFlowStep(name, text)) ?? null;
+}
+
 export type TrialRun = {
   jobId: string;
   flow: TrialFlowId;
