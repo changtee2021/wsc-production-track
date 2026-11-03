@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import {
   canStartTrial,
   flowSteps,
   loadTrialRuns,
   saveTrialRuns,
-  TRIAL_JOBS,
   trialJob,
   type TrialRun,
 } from "@/lib/scan-trial";
@@ -15,13 +15,14 @@ import {
   CreditCard,
   ListChecks,
   Play,
+  QrCode,
   ScanLine,
   Square,
   UserRound,
-  X,
 } from "lucide-react";
 
 type Employee = { id: string; name: string; emp_code: string | null };
+type ScanTarget = "badge" | "job";
 
 function splitName(full: string): { name: string; nickname: string | null } {
   const match = full.trim().match(/^(.*?)\s*\(([^)]+)\)\s*$/);
@@ -37,18 +38,30 @@ function clockLabel(startedAt: number, now: number): string {
   return `${mm}:${ss}`;
 }
 
+function readJobCode(text: string): string {
+  const raw = text.trim();
+  try {
+    const fromQuery = new URL(raw).searchParams.get("job_id");
+    if (fromQuery) return fromQuery.trim();
+  } catch {
+    // The QR is a plain job id, not a link.
+  }
+  return raw;
+}
+
 export function ScanTrialApp() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [worker, setWorker] = useState<Employee | null>(null);
-  const [jobId, setJobId] = useState("123");
+  const [jobId, setJobId] = useState("");
+  const [jobInput, setJobInput] = useState("");
+  const [codeInput, setCodeInput] = useState("");
   const [step, setStep] = useState("");
   const [runs, setRuns] = useState<TrialRun[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [note, setNote] = useState<string | null>(null);
-  const [picking, setPicking] = useState(false);
-  const [query, setQuery] = useState("");
-  const [codeInput, setCodeInput] = useState("");
+  const [scanTarget, setScanTarget] = useState<ScanTarget | null>(null);
+  const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
 
   const selected = trialJob(jobId);
   const steps = selected ? flowSteps(selected.flow) : [];
@@ -93,15 +106,6 @@ export function ScanTrialApp() {
     return () => window.clearInterval(id);
   }, [running]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return employees;
-    return employees.filter(
-      (person) =>
-        person.name.toLowerCase().includes(q) || (person.emp_code ?? "").toLowerCase().includes(q),
-    );
-  }, [employees, query]);
-
   function persist(next: TrialRun[]) {
     saveTrialRuns(next);
     setRuns(next);
@@ -110,14 +114,16 @@ export function ScanTrialApp() {
   function assignWorker(person: Employee) {
     if (running) return;
     setWorker(person);
-    setPicking(false);
-    setQuery("");
     setCodeInput("");
     setNote(null);
   }
 
-  function applyCode() {
-    const code = codeInput.trim();
+  function applyBadgeCode(raw: string) {
+    const code = raw.trim();
+    if (!code) {
+      setNote("สแกนบัตรหรือพิมพ์เลขพนักงานก่อน");
+      return;
+    }
     const person = employees.find((row) => (row.emp_code ?? "").trim() === code);
     if (!person) {
       setNote("ไม่พบเลขพนักงานนี้");
@@ -126,11 +132,52 @@ export function ScanTrialApp() {
     assignWorker(person);
   }
 
-  function pickJob(nextJob: string) {
+  function applyJobCode(raw: string) {
     if (running) return;
-    setJobId(nextJob);
+    const code = readJobCode(raw);
+    if (!code) {
+      setNote("สแกนหรือพิมพ์รหัสงานก่อน");
+      return;
+    }
+    const match = trialJob(code);
+    if (!match) {
+      setJobId("");
+      setStep("");
+      setNote("งานทดลองใช้รหัส 123, 456, 789 หรือ 111");
+      return;
+    }
+    setJobId(match.jobId);
+    setJobInput(match.jobId);
     setStep("");
     setNote(null);
+  }
+
+  async function openScanner(target: ScanTarget) {
+    if (running) return;
+    if (target === "badge" && loadState !== "ready") return;
+    const result = await acquireCameraStream("environment");
+    if ("errorInfo" in result) {
+      setNote(
+        result.errorInfo.hint
+          ? `${result.errorInfo.message} — ${result.errorInfo.hint}`
+          : result.errorInfo.message,
+      );
+      return;
+    }
+    setNote(null);
+    setScanTarget(target);
+    setScannerStream(result.stream);
+  }
+
+  function closeScanner() {
+    setScannerStream(null);
+    setScanTarget(null);
+  }
+
+  function handleScanned(text: string) {
+    if (scanTarget === "badge") applyBadgeCode(text);
+    else applyJobCode(text);
+    closeScanner();
   }
 
   function startWork() {
@@ -150,17 +197,19 @@ export function ScanTrialApp() {
       setNote(gate.message);
       return;
     }
-    const next: TrialRun = {
-      jobId: selected.jobId,
-      flow: selected.flow.id,
-      step,
-      employeeId: worker.id,
-      employeeName: worker.name,
-      status: "running",
-      startedAt: Date.now(),
-      finishedAt: null,
-    };
-    persist([...runs, next]);
+    persist([
+      ...runs,
+      {
+        jobId: selected.jobId,
+        flow: selected.flow.id,
+        step,
+        employeeId: worker.id,
+        employeeName: worker.name,
+        status: "running",
+        startedAt: Date.now(),
+        finishedAt: null,
+      },
+    ]);
     setNote(null);
     setNow(Date.now());
   }
@@ -188,17 +237,19 @@ export function ScanTrialApp() {
             <span>ทดลองสแกน</span>
             <span>ไม่ลงงานจริง</span>
           </div>
-          <div className="flex flex-1 flex-col gap-3 p-4">
+          <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
             {!worker ? (
               <>
-                <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-muted/40 px-4 text-center">
+                <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-muted/40 px-4 py-8 text-center">
                   <CreditCard className="h-10 w-10 text-primary" />
                   <p className="text-sm font-semibold">สแกนบัตรพนักงาน</p>
-                  <p className="text-[11px] text-muted-foreground">ชื่อค้างจนกว่าจะกดเปลี่ยนคน</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    สแกนเลขบนบัตร แล้วชื่อจะขึ้นเอง
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setPicking(true)}
+                  onClick={() => void openScanner("badge")}
                   disabled={loadState !== "ready"}
                   className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-sky-500 text-base font-bold text-white shadow disabled:opacity-50"
                 >
@@ -210,7 +261,7 @@ export function ScanTrialApp() {
                     value={codeInput}
                     onChange={(event) => setCodeInput(event.target.value)}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter") applyCode();
+                      if (event.key === "Enter") applyBadgeCode(codeInput);
                     }}
                     placeholder="หรือพิมพ์เลขพนักงาน"
                     inputMode="numeric"
@@ -218,7 +269,7 @@ export function ScanTrialApp() {
                   />
                   <button
                     type="button"
-                    onClick={applyCode}
+                    onClick={() => applyBadgeCode(codeInput)}
                     aria-label="ยืนยันเลขพนักงาน"
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-background"
                   >
@@ -246,105 +297,136 @@ export function ScanTrialApp() {
                   </button>
                 </div>
 
-                <div>
-                  <p className="mb-1 text-[11px] font-semibold text-muted-foreground">งานทดลอง</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {TRIAL_JOBS.map((job) => {
-                      const flow = trialJob(job.jobId)?.flow;
-                      const active = job.jobId === jobId;
-                      return (
-                        <button
-                          key={job.jobId}
-                          type="button"
-                          disabled={running}
-                          onClick={() => pickJob(job.jobId)}
-                          className={`min-h-11 rounded-xl border px-2 py-1.5 text-left disabled:opacity-60 ${active ? "border-sky-500 bg-sky-50" : "bg-card"}`}
-                        >
-                          <span className="block font-mono text-sm font-bold">{job.jobId}</span>
-                          <span className="block truncate text-[11px]">{flow?.label}</span>
-                        </button>
-                      );
-                    })}
+                <div className="rounded-2xl border bg-card p-3">
+                  <p className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                    <QrCode className="h-3.5 w-3.5" /> รหัสงาน (JOB ID)
+                  </p>
+                  {selected ? (
+                    <>
+                      <p className="mt-1.5 text-lg font-bold text-primary">{selected.jobId}</p>
+                      <p className="text-[11px] font-semibold">{selected.flow.label}</p>
+                    </>
+                  ) : (
+                    <p className="mt-1.5 text-[11px] font-medium leading-snug text-destructive">
+                      ยังไม่มีรหัสงาน — กดปุ่ม &quot;สแกน QR&quot; หรือกรอกด้วยตัวเอง
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void openScanner("job")}
+                    disabled={running}
+                    className="mt-2 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-40"
+                  >
+                    <ScanLine className="h-4 w-4" /> สแกน QR
+                  </button>
+                  <div className="mt-2 flex gap-1.5">
+                    <input
+                      value={jobInput}
+                      disabled={running}
+                      onChange={(event) => setJobInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") applyJobCode(jobInput);
+                      }}
+                      placeholder="หรือพิมพ์รหัสงาน เช่น 123"
+                      className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-[11px] disabled:opacity-40"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => applyJobCode(jobInput)}
+                      disabled={running}
+                      aria-label="ยืนยันรหัสงาน"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-background disabled:opacity-40"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
 
-                <label className="block">
-                  <span className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
-                    <ListChecks className="h-3.5 w-3.5" /> ขั้นตอน {selected?.flow.label}
-                  </span>
-                  <select
-                    value={running ? (mine?.step ?? "") : step}
-                    disabled={running}
-                    onChange={(event) => {
-                      setStep(event.target.value);
-                      setNote(null);
-                    }}
-                    className="h-12 w-full rounded-xl border bg-card px-3 text-sm font-semibold disabled:opacity-60"
-                  >
-                    <option value="">เลือกขั้นตอน</option>
-                    {steps.map((name) => {
-                      const row = jobRuns.find((run) => run.step === name);
-                      const mark =
-                        row?.status === "done"
-                          ? " · จบแล้ว"
-                          : row?.status === "running"
-                            ? " · กำลังทำ"
-                            : "";
-                      return (
-                        <option key={name} value={name}>
-                          {name}
-                          {mark}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </label>
-
-                <button
-                  type="button"
-                  onClick={startWork}
-                  disabled={running}
-                  className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-sky-500 text-base font-bold text-white shadow disabled:opacity-50"
-                >
-                  <Play className="h-5 w-5" /> เริ่มงาน
-                </button>
-
-                {running && mine && (
-                  <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-700">
-                    <span className="flex items-center gap-1.5 text-sm font-semibold">
-                      <Clock className="h-4 w-4" /> {mine.step}
-                    </span>
-                    <span className="font-mono text-xl font-bold tabular-nums">
-                      {clockLabel(mine.startedAt, now)}
-                    </span>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={finishWork}
-                  disabled={!running}
-                  className={`flex h-14 items-center justify-center gap-2 rounded-2xl text-base font-bold text-white ${running ? "bg-slate-900" : "bg-slate-400"}`}
-                >
-                  <Square className="h-5 w-5 fill-current" /> เสร็จงาน
-                </button>
-
-                <ul className="space-y-1 text-[11px]">
-                  {steps.map((name) => {
-                    const row = jobRuns.find((run) => run.step === name);
-                    const label =
-                      row?.status === "done" ? "จบ" : row?.status === "running" ? "กำลังทำ" : "รอ";
-                    return (
-                      <li
-                        key={name}
-                        className="flex justify-between gap-2 rounded-lg bg-muted/50 px-2 py-1"
+                {selected && (
+                  <>
+                    <label className="block">
+                      <span className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                        <ListChecks className="h-3.5 w-3.5" /> ขั้นตอน {selected.flow.label}
+                      </span>
+                      <select
+                        value={running ? (mine?.step ?? "") : step}
+                        disabled={running}
+                        onChange={(event) => {
+                          setStep(event.target.value);
+                          setNote(null);
+                        }}
+                        className="h-12 w-full rounded-xl border bg-card px-3 text-sm font-semibold disabled:opacity-60"
                       >
-                        <span className="truncate">{name}</span>
-                        <span className="shrink-0 font-semibold">{label}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
+                        <option value="">เลือกขั้นตอน</option>
+                        {steps.map((name) => {
+                          const row = jobRuns.find((run) => run.step === name);
+                          const mark =
+                            row?.status === "done"
+                              ? " · จบแล้ว"
+                              : row?.status === "running"
+                                ? " · กำลังทำ"
+                                : "";
+                          return (
+                            <option key={name} value={name}>
+                              {name}
+                              {mark}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={startWork}
+                      disabled={running}
+                      className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-sky-500 text-base font-bold text-white shadow disabled:opacity-50"
+                    >
+                      <Play className="h-5 w-5" /> เริ่มงาน
+                    </button>
+
+                    {running && mine && (
+                      <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-700">
+                        <span className="flex items-center gap-1.5 text-sm font-semibold">
+                          <Clock className="h-4 w-4" /> {mine.step}
+                        </span>
+                        <span className="font-mono text-xl font-bold tabular-nums">
+                          {clockLabel(mine.startedAt, now)}
+                        </span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={finishWork}
+                      disabled={!running}
+                      className={`flex h-14 items-center justify-center gap-2 rounded-2xl text-base font-bold text-white ${running ? "bg-slate-900" : "bg-slate-400"}`}
+                    >
+                      <Square className="h-5 w-5 fill-current" /> เสร็จงาน
+                    </button>
+
+                    <ul className="space-y-1 text-[11px]">
+                      {steps.map((name) => {
+                        const row = jobRuns.find((run) => run.step === name);
+                        const label =
+                          row?.status === "done"
+                            ? "จบ"
+                            : row?.status === "running"
+                              ? "กำลังทำ"
+                              : "รอ";
+                        return (
+                          <li
+                            key={name}
+                            className="flex justify-between gap-2 rounded-lg bg-muted/50 px-2 py-1"
+                          >
+                            <span className="truncate">{name}</span>
+                            <span className="shrink-0 font-semibold">{label}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                )}
               </>
             )}
             {note && <p className="text-center text-xs font-medium text-destructive">{note}</p>}
@@ -354,50 +436,16 @@ export function ScanTrialApp() {
               </p>
             )}
           </div>
-
-          {picking && (
-            <div className="absolute inset-0 z-10 flex flex-col bg-background">
-              <div className="flex items-center justify-between border-b px-3 py-2">
-                <p className="text-sm font-semibold">เลือกพนักงานทดลอง</p>
-                <button
-                  type="button"
-                  onClick={() => setPicking(false)}
-                  aria-label="ปิด"
-                  className="flex h-11 w-11 items-center justify-center"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-3">
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="ค้นชื่อหรือเลขพนักงาน"
-                  className="h-11 w-full rounded-xl border bg-background px-3 text-sm"
-                />
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-                {filtered.map((person) => {
-                  const parts = splitName(person.name);
-                  return (
-                    <button
-                      key={person.id}
-                      type="button"
-                      onClick={() => assignWorker(person)}
-                      className="mb-1.5 flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left"
-                    >
-                      <span className="truncate text-sm font-semibold">
-                        {parts.nickname ?? parts.name}
-                      </span>
-                      <span className="shrink-0 font-mono text-xs">{person.emp_code ?? "—"}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+      <QrScannerDialog
+        open={scannerStream !== null}
+        onOpenChange={(open) => {
+          if (!open) closeScanner();
+        }}
+        onScanned={handleScanned}
+        initialStream={scannerStream}
+      />
     </div>
   );
 }
