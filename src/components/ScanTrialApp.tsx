@@ -4,6 +4,7 @@ import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDial
 import {
   canStartTrial,
   flowSteps,
+  flowById,
   loadTrialRuns,
   nextTrialSteps,
   saveTrialRuns,
@@ -135,6 +136,7 @@ export function ScanTrialApp() {
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [worker, setWorker] = useState<Employee | null>(null);
   const [jobId, setJobId] = useState("");
+  const [jobFlow, setJobFlow] = useState<TrialFlowId | null>(null);
   const [jobInput, setJobInput] = useState("");
   const [codeInput, setCodeInput] = useState("");
   const [step, setStep] = useState("");
@@ -154,7 +156,8 @@ export function ScanTrialApp() {
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
   const setRefs = useRef(new Map<string, HTMLLIElement>());
 
-  const selected = trialJob(jobId);
+  const flow = jobFlow ? flowById(jobFlow) : null;
+  const selected = jobId && flow ? { jobId, flow } : null;
   const steps = selected ? flowSteps(selected.flow) : [];
   const mine = runs.find(
     (run) => run.employeeId === worker?.id && run.jobId === jobId && run.status === "running",
@@ -247,15 +250,10 @@ export function ScanTrialApp() {
       setNote("สแกนหรือพิมพ์รหัสงานก่อน");
       return;
     }
-    const match = trialJob(code);
-    if (!match) {
-      setJobId("");
-      setStep("");
-      setNote("งานทดลองใช้รหัส 123, 456, 789 หรือ 111");
-      return;
-    }
-    setJobId(match.jobId);
-    setJobInput(match.jobId);
+    const known = trialJob(code);
+    setJobId(code);
+    setJobInput(code);
+    setJobFlow(known?.flow.id ?? null);
     setStep("");
     setBlocked([]);
     setNote(null);
@@ -707,10 +705,16 @@ export function ScanTrialApp() {
                       <p className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
                         <QrCode className="h-3.5 w-3.5" /> รหัสงาน (JOB ID)
                       </p>
-                      {selected ? (
+                      {jobId ? (
                         <>
-                          <p className="mt-1.5 text-lg font-bold text-primary">{selected.jobId}</p>
-                          <p className="text-[11px] font-semibold">{selected.flow.label}</p>
+                          <p className="mt-1.5 text-lg font-bold text-primary">{jobId}</p>
+                          {flow ? (
+                            <p className="text-[11px] font-semibold">{flow.label}</p>
+                          ) : (
+                            <p className="text-[11px] font-medium text-muted-foreground">
+                              เลือกสินค้าด้านล่าง
+                            </p>
+                          )}
                         </>
                       ) : (
                         <p className="mt-1.5 text-[11px] font-medium leading-snug text-destructive">
@@ -733,7 +737,7 @@ export function ScanTrialApp() {
                           onKeyDown={(event) => {
                             if (event.key === "Enter") applyJobCode(jobInput);
                           }}
-                          placeholder="หรือพิมพ์รหัสงาน เช่น 123"
+                          placeholder="หรือพิมพ์รหัสงาน"
                           className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-[11px] disabled:opacity-40"
                         />
                         <button
@@ -747,6 +751,26 @@ export function ScanTrialApp() {
                         </button>
                       </div>
                     </div>
+
+                    {jobId && !running && (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {TRIAL_FLOWS.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setJobFlow(item.id);
+                              setStep("");
+                              setBlocked([]);
+                              setNote(null);
+                            }}
+                            className={`min-h-11 rounded-xl border px-2 text-sm font-semibold ${jobFlow === item.id ? "border-sky-500 bg-sky-50" : "bg-card"}`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     {selected && (
                       <>
