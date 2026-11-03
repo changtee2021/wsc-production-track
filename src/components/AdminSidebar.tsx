@@ -67,6 +67,7 @@ const NAV_GROUPS: Array<{
       { title: "Monitor Live", url: "/production-dashboard", icon: Activity },
       { title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search },
       { title: "โฟลว์สแกนโหมดสถานี", url: "/scan-flow", icon: ScanLine },
+      { title: "แอปทดลองสแกน", url: "/scan-trial", icon: ScanLine },
     ],
   },
   {

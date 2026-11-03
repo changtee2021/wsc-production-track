@@ -352,10 +352,28 @@ function StepNo({ n }: { n: number }) {
   );
 }
 
-function manualSteps(names: string[]): ReactNode[] {
+function Parallel({ lanes }: { lanes: string[][] }) {
+  return (
+    <div className="flex shrink-0 flex-col gap-1 rounded-2xl border border-dashed border-sky-400 bg-sky-50 px-2 py-1 dark:border-sky-700 dark:bg-sky-950/40">
+      <span className="text-[10px] font-semibold text-sky-700 dark:text-sky-300">พร้อมกัน</span>
+      {lanes.map((lane) => (
+        <span key={lane.join("→")} className="inline-flex items-center gap-1">
+          {lane.map((name, index) => (
+            <span key={name} className="inline-flex items-center gap-1">
+              {index > 0 && <span className="text-[10px] text-sky-500">→</span>}
+              <StepChip name={name} />
+            </span>
+          ))}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function withGates(steps: ReactNode[]): ReactNode[] {
   return [
-    ...names.map((name) => <StepChip key={name} name={name} />),
-    <StepChip key="qc" name="QCตรวจ" hint="ขั้นก่อนต้องจบ" />,
+    ...steps,
+    <StepChip key="qc" name="QC" hint="ขั้นก่อนต้องจบ" />,
     <StepChip key="pack" name="PACK" hint="รอ QC" last />,
   ];
 }
@@ -385,52 +403,59 @@ function CategoryOrder() {
   }[] = [
     {
       name: "ม่านม้วน",
-      count: "ตามคู่มือ",
-      fact: "7 ขั้น จบที่แพ็ค",
+      count: "ตามโน้ต",
+      fact: "3 สาย แล้วประกอบ",
       tone: "sky",
-      steps: manualSteps([
-        "เตรียมชุดผ้า",
-        "เตรียมโซ่/หัวเกียร์",
-        "ตัดราง/ถ่วงล่าง",
-        "ประกอบ",
-        "ตั้งชื่อ",
+      steps: withGates([
+        <Parallel
+          key="lanes"
+          lanes={[["ตัดผ้า"], ["ตัดราง", "ประกอบราง"], ["เตรียมโซ่/หัวเกียร์"]]}
+        />,
+        <StepChip key="build" name="ประกอบ" hint="รอครบ 3 สาย" />,
+        <StepChip key="head" name="หัว" />,
       ]),
     },
     {
       name: "มู่ลี่ไม้",
-      count: "ตามคู่มือ",
-      fact: "7 ขั้น จบที่แพ็ค",
+      count: "ตามโน้ต",
+      fact: "3 สาย แล้วประกอบชุด",
       tone: "violet",
-      steps: manualSteps(["เตรียมไม้", "เตรียมเทปผ้า/โซ่", "เตรียมราง", "ประกอบ", "ตั้งชื่อ"]),
-      note: "กรณีติดบังราง ทำเพิ่มตอนประกอบ",
+      steps: withGates([
+        <Parallel
+          key="lanes"
+          lanes={[
+            ["เปิดไม้", "ตัดใบ", "เก็บสี", "เจาะใบ"],
+            ["ตัดราง", "เจาะราง", "ประกอบราง"],
+            ["ตัดเทป/เตรียมโซ่"],
+          ]}
+        />,
+        <StepChip key="build" name="ประกอบชุด" hint="รอครบ 3 สาย" />,
+        <StepChip key="head" name="หัว" />,
+      ]),
+      note: "ประกอบรางต้องรอรางและอุปกรณ์",
     },
     {
       name: "มู่ลี่อลูมิเนียม",
-      count: "ตามคู่มือ",
-      fact: "7 ขั้น จบที่แพ็ค",
+      count: "ตามโน้ต",
+      fact: "ใบคู่กับราง",
       tone: "blue",
-      steps: manualSteps([
-        "เตรียมชุดอลูมิเนียม",
-        "เตรียมเทปผ้า/โซ่",
-        "เตรียมราง",
-        "ประกอบ",
-        "ตั้งชื่อ",
+      steps: withGates([
+        <Parallel key="lanes" lanes={[["ตัดใบ"], ["ตัดราง", "ประกอบราง"]]} />,
+        <StepChip key="build" name="ประกอบชุด" hint="รอครบ 2 สาย" />,
+        <StepChip key="head" name="หัว" />,
       ]),
-      note: "กรณีติดบังราง ทำเพิ่มตอนประกอบ",
     },
     {
       name: "ม่านปรับแสง",
-      count: "ตามคู่มือ",
-      fact: "หน้าละเอียด แล้ว QC",
+      count: "ตามโน้ต",
+      fact: "3 สาย แล้วหัว",
       tone: "amber",
-      steps: manualSteps([
-        "ติดลูกกลิ้งกับราง",
-        "ตั้งเครื่องตัดผ้า",
-        "ตัดผ้า",
-        "เจาะรู",
-        "ติดเทปที่ไม้",
-        "ซีลผ้า",
-        "ติดผ้ากับตัวล็อค",
+      steps: withGates([
+        <Parallel
+          key="lanes"
+          lanes={[["ตัดผ้า", "เจาะผ้า"], ["ตัดราง", "ประกอบราง"], ["เตรียมโซ่/หัวเกียร์"]]}
+        />,
+        <StepChip key="head" name="หัว" hint="รอครบ 3 สาย" />,
       ]),
     },
   ];
@@ -440,7 +465,7 @@ function CategoryOrder() {
       <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-3 w-6 rounded-full border bg-card" />
-          เรียงตามคู่มือ ขั้นก่อนไม่จบไปต่อไม่ได้
+          ในสายเดียวกันต้องเรียง สายที่อยู่กรอบเดียวกันทำพร้อมกันได้
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-3 w-6 rounded-full bg-slate-900" />
@@ -474,6 +499,166 @@ function CategoryOrder() {
   );
 }
 
+const WOOD_OK = [
+  [
+    "1",
+    "คนสายใบ",
+    "เปิดไม้",
+    "สแกนบัตร เลือกมู่ลี่ไม้ เลือกขั้นนี้ สแกน JOB-WOOD-OK กดเริ่ม แล้วกดเสร็จ",
+    "นาฬิกาหาย รหัสงานว่าง ชื่อตัวเองยังอยู่",
+  ],
+  ["2", "คนสายใบ", "ตัดใบ", "รอเปิดไม้กดเสร็จ แล้วทำให้จบ", "กดเสร็จแล้ว"],
+  ["3", "คนสายใบ", "เก็บสี", "รอตัดใบกดเสร็จ แล้วทำให้จบ", "กดเสร็จแล้ว"],
+  ["4", "คนสายใบ", "เจาะใบ", "รอเก็บสีกดเสร็จ แล้วทำให้จบ", "กดเสร็จแล้ว"],
+  ["5", "คนสายราง", "ตัดราง", "เริ่มพร้อมกับสายใบได้ แล้วกดเสร็จ", "กดเสร็จแล้ว"],
+  ["6", "คนสายราง", "เจาะราง", "รอตัดรางกดเสร็จ แล้วทำให้จบ", "กดเสร็จแล้ว"],
+  ["7", "คนสายราง", "ประกอบราง", "รอเจาะรางและอุปกรณ์ครบ แล้วทำให้จบ", "กดเสร็จแล้ว"],
+  ["8", "คนสายเทป", "ตัดเทป/เตรียมโซ่", "เริ่มพร้อมกับสายอื่นได้ แล้วกดเสร็จ", "กดเสร็จแล้ว"],
+  ["9", "คนประกอบ", "ประกอบชุด", "เริ่มได้เมื่อครบ 3 สาย แล้วกดเสร็จ", "กดเสร็จแล้ว"],
+  ["10", "คนหัว", "หัว", "รอประกอบชุดกดเสร็จ แล้วทำให้จบ", "กดเสร็จแล้ว"],
+  ["11", "คน QC", "QC", "เริ่มได้เมื่อหัวกดเสร็จแล้ว", "กดเสร็จแล้ว"],
+  ["12", "คนแพ็ค", "PACK", "เริ่มได้เมื่อ QC กดเสร็จแล้ว", "กดเสร็จแล้ว เป็นขั้นสุดท้าย"],
+];
+
+const ROLLER_OK = [
+  [
+    "1",
+    "คนตัดผ้า",
+    "ตัดผ้า",
+    "สแกนบัตร เลือกม่านม้วน เลือกขั้นนี้ สแกน JOB-ROLLER-OK กดเริ่ม แล้วกดเสร็จ",
+    "นาฬิกาหาย รหัสงานว่าง",
+  ],
+  ["2", "คนราง", "ตัดราง", "เริ่มพร้อมกับตัดผ้าได้ แล้วกดเสร็จ", "กดเสร็จแล้ว"],
+  ["3", "คนราง", "ประกอบราง", "รอตัดรางกดเสร็จ แล้วทำให้จบ", "กดเสร็จแล้ว"],
+  ["4", "คนโซ่", "เตรียมโซ่/หัวเกียร์", "เริ่มพร้อมกับสายอื่นได้ แล้วกดเสร็จ", "กดเสร็จแล้ว"],
+  ["5", "คนประกอบ", "ประกอบ", "เริ่มได้เมื่อครบ 3 สาย แล้วกดเสร็จ", "กดเสร็จแล้ว"],
+  ["6", "คนหัว", "หัว", "รอประกอบกดเสร็จ แล้วทำให้จบ", "กดเสร็จแล้ว"],
+  ["7", "คน QC", "QC", "เริ่มได้เมื่อหัวกดเสร็จแล้ว", "กดเสร็จแล้ว"],
+  ["8", "คนแพ็ค", "PACK", "เริ่มได้เมื่อ QC กดเสร็จแล้ว", "กดเสร็จแล้ว เป็นขั้นสุดท้าย"],
+];
+
+const WOOD_BLOCK = [
+  ["1", "คนสายใบ", "เลือกเปิดไม้ สแกน JOB-WOOD-BLOCK กดเริ่ม แล้วไม่กดเสร็จ", "นาฬิกายังเดินอยู่"],
+  [
+    "2",
+    "คนถัดไปในสายใบ",
+    "สแกนรหัสเดียวกัน เลือกตัดใบ แล้วกดเริ่ม",
+    "กดเริ่มไม่ได้ และขึ้นว่าคนก่อนหน้ายังไม่กดจบงาน",
+  ],
+  ["3", "คนสายราง", "เลือกตัดราง แล้วกดเริ่ม", "กดเริ่มได้ เพราะคนละสาย"],
+  ["4", "คนประกอบ", "ลองประกอบชุดทั้งที่สายใบยังไม่จบ", "ประกอบชุดไม่ได้"],
+  ["5", "คน QC", "ลองเข้า QC ทั้งที่หัวยังไม่เกิด", "QC ต่อไม่ได้"],
+  ["6", "คนแพ็ค", "ลองแพ็คทั้งที่ QC ยังไม่เสร็จ", "แพ็คไม่ได้"],
+];
+
+const ROLLER_BLOCK = [
+  [
+    "1",
+    "คนตัดผ้า",
+    "เลือกตัดผ้า สแกน JOB-ROLLER-BLOCK กดเริ่ม แล้วไม่กดเสร็จ",
+    "นาฬิกายังเดินอยู่",
+  ],
+  ["2", "คนราง", "เลือกตัดราง แล้วกดเริ่ม", "กดเริ่มได้ เพราะคนละสาย"],
+  ["3", "คนประกอบ", "ลองประกอบทั้งที่ตัดผ้ายังไม่จบ", "ประกอบไม่ได้"],
+  ["4", "คน QC", "ลองเข้า QC ทั้งที่หัวยังไม่เกิด", "QC ต่อไม่ได้"],
+  ["5", "คนแพ็ค", "ลองแพ็คทั้งที่ QC ยังไม่เสร็จ", "แพ็คไม่ได้"],
+];
+
+function PassSheet({
+  title,
+  job,
+  note,
+  tone,
+  rows,
+}: {
+  title: string;
+  job: string;
+  note: string;
+  tone: Tone;
+  rows: string[][];
+}) {
+  return (
+    <article className="min-w-0 rounded-2xl border bg-card">
+      <div className={`rounded-t-2xl px-4 py-3 ${TONE[tone].box}`}>
+        <p className={`text-base font-bold ${TONE[tone].text}`}>{title}</p>
+        <p className="mt-1 font-mono text-sm font-semibold">{job}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[40rem] text-left text-sm">
+          <thead className="text-xs text-muted-foreground">
+            <tr className="border-b">
+              <th className="px-3 py-2 font-medium">ลำดับ</th>
+              <th className="px-3 py-2 font-medium">ผู้ทดสอบ</th>
+              <th className="px-3 py-2 font-medium">ขั้น</th>
+              <th className="px-3 py-2 font-medium">ทำ</th>
+              <th className="px-3 py-2 font-medium">ผ่านเมื่อ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row[0]} className="border-b last:border-0">
+                {row.map((cell, index) => (
+                  <td key={index} className="px-3 py-2 align-top">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  );
+}
+
+function BlockSheet({
+  title,
+  job,
+  tone,
+  rows,
+}: {
+  title: string;
+  job: string;
+  tone: Tone;
+  rows: string[][];
+}) {
+  return (
+    <article className="min-w-0 rounded-2xl border bg-card">
+      <div className={`rounded-t-2xl px-4 py-3 ${TONE[tone].box}`}>
+        <p className={`text-base font-bold ${TONE[tone].text}`}>{title}</p>
+        <p className="mt-1 font-mono text-sm font-semibold">{job}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          จบเทสต์แล้วให้คนที่ 1 กดเสร็จ เพื่อปลดงานค้างบนเครื่องตัวเอง
+        </p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[36rem] text-left text-sm">
+          <thead className="text-xs text-muted-foreground">
+            <tr className="border-b">
+              <th className="px-3 py-2 font-medium">ลำดับ</th>
+              <th className="px-3 py-2 font-medium">ผู้ทดสอบ</th>
+              <th className="px-3 py-2 font-medium">ทำ</th>
+              <th className="px-3 py-2 font-medium">ผลที่ต้องเห็น</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row[0]} className="border-b last:border-0">
+                {row.map((cell, index) => (
+                  <td key={index} className="px-3 py-2 align-top">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  );
+}
+
 function ScanFlowPage() {
   return (
     <main className="mx-auto min-w-0 w-full max-w-7xl px-4 py-6">
@@ -486,6 +671,18 @@ function ScanFlowPage() {
           กดเริ่มงานแล้วอยู่หน้าเดิม นาฬิกาขึ้น และกดเสร็จงานก่อนถึงสแกนงานต่อไปได้
         </p>
       </header>
+
+      <Section title="แอปทดลอง" sub="คนละลิงก์กับหน้าสแกนที่ใช้อยู่ งานทดลองไม่ถูกบันทึกลงระบบ">
+        <a
+          href="/scan-trial"
+          className="inline-flex min-h-11 items-center rounded-2xl bg-sky-600 px-4 text-sm font-bold text-white"
+        >
+          เปิดแอปทดลอง
+        </a>
+        <p className="mt-2 text-sm text-muted-foreground">
+          123 ม่านม้วน · 456 มู่ลี่ไม้ · 789 มู่ลี่อลูมิเนียม · 111 ม่านปรับแสง
+        </p>
+      </Section>
 
       <Section title="ลองกดเล่น" sub="หน้าจอใหม่บนมือถือ กดสแกนบัตร เลือกหมวด แล้วเริ่มงานได้เลย">
         <ScanFlowPrototype />
@@ -532,7 +729,7 @@ function ScanFlowPage() {
             {
               i: <ListChecks className="h-5 w-5" />,
               t: "ขั้นที่ต้องรอ",
-              a: "เรียงตามคู่มือ ขั้นก่อนไม่จบไปต่อไม่ได้ ขั้นตอนไม่จบ QC ต่อไม่ได้ QC ไม่เสร็จ แพ็คไม่ได้",
+              a: "สายที่เขียนคู่กันทำพร้อมกันได้ ในสายเดียวกันขั้นก่อนไม่จบไปต่อไม่ได้ ประกอบหรือหัวรอครบสาย ขั้นตอนไม่จบ QC ต่อไม่ได้ QC ไม่เสร็จ แพ็คไม่ได้",
               tone: "violet" as Tone,
             },
             {
@@ -559,6 +756,40 @@ function ScanFlowPage() {
               </div>
             </div>
           ))}
+        </div>
+      </Section>
+
+      <Section
+        title="ลิสต์ทดสอบ"
+        sub="กระดาษแจกผู้ทดสอบ แยกจากหน้าสแกนที่ใช้อยู่ ไม่บันทึกงาน และไม่ล็อกงานจริง"
+      >
+        <div className="space-y-4">
+          <PassSheet
+            title="มู่ลี่ไม้ โฟลถูก 100%"
+            job="JOB-WOOD-OK"
+            note="3 สายทำพร้อมกันได้ ในสายเดียวกันต้องเรียง ประกอบชุดรอครบทั้ง 3 สาย"
+            tone="violet"
+            rows={WOOD_OK}
+          />
+          <BlockSheet
+            title="มู่ลี่ไม้ โฟลผิด คนต่อไปไปต่อไม่ได้"
+            job="JOB-WOOD-BLOCK"
+            tone="amber"
+            rows={WOOD_BLOCK}
+          />
+          <PassSheet
+            title="ม่านม้วน โฟลถูก 100%"
+            job="JOB-ROLLER-OK"
+            note="3 สายทำพร้อมกันได้ ในสายรางต้องเรียง ประกอบรอครบทั้ง 3 สาย"
+            tone="sky"
+            rows={ROLLER_OK}
+          />
+          <BlockSheet
+            title="ม่านม้วน โฟลผิด คนต่อไปไปต่อไม่ได้"
+            job="JOB-ROLLER-BLOCK"
+            tone="amber"
+            rows={ROLLER_BLOCK}
+          />
         </div>
       </Section>
     </main>

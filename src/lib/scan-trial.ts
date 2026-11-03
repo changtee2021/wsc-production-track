@@ -1,0 +1,165 @@
+export type TrialFlowId = "roller" | "wood" | "aluminum" | "shade";
+
+export type TrialFlow = {
+  id: TrialFlowId;
+  label: string;
+  lanes: string[][];
+  after: string[];
+};
+
+export const TRIAL_JOBS: { jobId: string; flow: TrialFlowId }[] = [
+  { jobId: "123", flow: "roller" },
+  { jobId: "456", flow: "wood" },
+  { jobId: "789", flow: "aluminum" },
+  { jobId: "111", flow: "shade" },
+];
+
+export const TRIAL_FLOWS: TrialFlow[] = [
+  {
+    id: "roller",
+    label: "ม่านม้วน",
+    lanes: [["ตัดผ้า"], ["ตัดราง", "ประกอบราง"], ["เตรียมโซ่/หัวเกียร์"]],
+    after: ["ประกอบ", "หัว", "QC", "PACK"],
+  },
+  {
+    id: "wood",
+    label: "มู่ลี่ไม้",
+    lanes: [
+      ["เปิดไม้", "ตัดใบ", "เก็บสี", "เจาะใบ"],
+      ["ตัดราง", "เจาะราง", "ประกอบราง"],
+      ["ตัดเทป/เตรียมโซ่"],
+    ],
+    after: ["ประกอบชุด", "หัว", "QC", "PACK"],
+  },
+  {
+    id: "aluminum",
+    label: "มู่ลี่อลูมิเนียม",
+    lanes: [["ตัดใบ"], ["ตัดราง", "ประกอบราง"]],
+    after: ["ประกอบชุด", "หัว", "QC", "PACK"],
+  },
+  {
+    id: "shade",
+    label: "ม่านปรับแสง",
+    lanes: [["ตัดผ้า", "เจาะผ้า"], ["ตัดราง", "ประกอบราง"], ["เตรียมโซ่/หัวเกียร์"]],
+    after: ["หัว", "QC", "PACK"],
+  },
+];
+
+export type TrialRun = {
+  jobId: string;
+  flow: TrialFlowId;
+  step: string;
+  employeeId: string;
+  employeeName: string;
+  status: "running" | "done";
+  startedAt: number;
+  finishedAt: number | null;
+};
+
+const STORAGE_KEY = "wsc:scan-trial:v1";
+
+export function flowById(id: TrialFlowId): TrialFlow {
+  const flow = TRIAL_FLOWS.find((row) => row.id === id);
+  if (!flow) throw new Error(`Unknown trial flow: ${id}`);
+  return flow;
+}
+
+export function trialJob(jobId: string): { jobId: string; flow: TrialFlow } | null {
+  const match = TRIAL_JOBS.find((row) => row.jobId === jobId.trim());
+  if (!match) return null;
+  return { jobId: match.jobId, flow: flowById(match.flow) };
+}
+
+export function flowSteps(flow: TrialFlow): string[] {
+  return [...flow.lanes.flat(), ...flow.after];
+}
+
+export function loadTrialRuns(): TrialRun[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as TrialRun[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveTrialRuns(runs: TrialRun[]) {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(runs));
+}
+
+export function canStartTrial(input: {
+  runs: TrialRun[];
+  jobId: string;
+  flow: TrialFlow;
+  step: string;
+  employeeId: string;
+}): { ok: true } | { ok: false; message: string } {
+  const open = input.runs.find(
+    (run) => run.employeeId === input.employeeId && run.status === "running",
+  );
+  if (open) {
+    return { ok: false, message: "เครื่องนี้ยังไม่กดเสร็จงาน ไปขั้นต่อไปไม่ได้" };
+  }
+
+  const job = input.runs.filter((run) => run.jobId === input.jobId && run.flow === input.flow.id);
+  const same = job.find((run) => run.step === input.step);
+  if (same?.status === "running") {
+    return { ok: false, message: "คนก่อนหน้ายังไม่กดจบงาน" };
+  }
+  if (same?.status === "done") {
+    return { ok: false, message: "ขั้นนี้จบแล้ว" };
+  }
+
+  for (const lane of input.flow.lanes) {
+    const index = lane.indexOf(input.step);
+    if (index < 0) continue;
+    if (index === 0) return { ok: true };
+    const previous = lane[index - 1];
+    const previousRun = job.find((run) => run.step === previous);
+    if (!previousRun || previousRun.status !== "done") {
+      return {
+        ok: false,
+        message:
+          previousRun?.status === "running"
+            ? "คนก่อนหน้ายังไม่กดจบงาน"
+            : `ขั้น ${previous} ยังไม่จบ ไปต่อไม่ได้`,
+      };
+    }
+    return { ok: true };
+  }
+
+  const afterIndex = input.flow.after.indexOf(input.step);
+  if (afterIndex < 0) return { ok: false, message: "ขั้นตอนนี้ไม่อยู่ในโฟลของหมวดนี้" };
+
+  for (const name of input.flow.lanes.flat()) {
+    const run = job.find((row) => row.step === name);
+    if (!run || run.status !== "done") {
+      return {
+        ok: false,
+        message:
+          run?.status === "running"
+            ? "คนก่อนหน้ายังไม่กดจบงาน"
+            : `ขั้น ${name} ยังไม่จบ ไปต่อไม่ได้`,
+      };
+    }
+  }
+
+  if (afterIndex > 0) {
+    const previous = input.flow.after[afterIndex - 1];
+    const previousRun = job.find((run) => run.step === previous);
+    if (!previousRun || previousRun.status !== "done") {
+      return {
+        ok: false,
+        message:
+          previousRun?.status === "running"
+            ? "คนก่อนหน้ายังไม่กดจบงาน"
+            : `ขั้น ${previous} ยังไม่จบ ไปต่อไม่ได้`,
+      };
+    }
+  }
+
+  return { ok: true };
+}
