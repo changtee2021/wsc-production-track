@@ -95,7 +95,14 @@ function StepMedia({
   t: WiT;
   onOpenImage: (src: string, caption: string) => void;
 }) {
-  if (step.media.length === 0) return null;
+  if (step.media.length === 0) {
+    return (
+      <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-muted text-muted-foreground">
+        <Camera className="h-10 w-10 opacity-40" />
+        <span className="text-sm font-medium">{t("photoWaiting")}</span>
+      </div>
+    );
+  }
   const single = step.media.length === 1;
   return (
     <div className={cn("grid gap-2", !single && "grid-cols-2")}>
@@ -174,20 +181,12 @@ function StepBlock({
   t: WiT;
   onOpenImage: (src: string, caption: string) => void;
 }) {
-  const hasMedia = step.media.length > 0;
   return (
     <article className="@container rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
-      <div
-        className={cn(
-          "space-y-4",
-          hasMedia && "@2xl:grid @2xl:grid-cols-2 @2xl:items-start @2xl:gap-6 @2xl:space-y-0",
-        )}
-      >
-        {hasMedia && (
-          <div className="@2xl:sticky @2xl:top-20">
-            <StepMedia step={step} mediaUrls={mediaUrls} t={t} onOpenImage={onOpenImage} />
-          </div>
-        )}
+      <div className="space-y-4 @2xl:grid @2xl:grid-cols-2 @2xl:items-start @2xl:gap-6 @2xl:space-y-0">
+        <div className="@2xl:sticky @2xl:top-20">
+          <StepMedia step={step} mediaUrls={mediaUrls} t={t} onOpenImage={onOpenImage} />
+        </div>
         <div className="min-w-0 space-y-4">
           <header className="flex items-start gap-3 px-1">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#E32D24] text-lg font-bold text-white">
