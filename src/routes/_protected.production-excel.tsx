@@ -163,14 +163,14 @@ function ProductionExcelPage() {
   };
 
   return (
-    <main className="mx-auto max-w-[1600px] px-4 py-6">
+    <main className="mx-auto flex h-[calc(100dvh-3.5rem)] max-w-[1600px] flex-col overflow-hidden px-4 py-4 md:h-[calc(100dvh-5rem)]">
       <div className="mb-5">
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
           <FileSpreadsheet className="h-6 w-6 text-primary" /> พรีวิว Excel ประวัติผลิต
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          ตารางแบบ Excel: 1 แถว = 1 Job, คอลัมน์ขั้นตอนกระจายตามลำดับเวลา พร้อมส่งออก CSV/XLSX และ
-          Sync เข้า Google Sheets
+          ตารางแบบ Excel: 1 แถว = 1 Job ขั้นแรกคือส่งออเดอร์เข้าไลน์ผลิต แล้วตามด้วยขั้นที่สแกน
+          ส่งออก CSV/XLSX และ Sync เข้า Google Sheets ได้
         </p>
       </div>
 
@@ -315,11 +315,11 @@ function ProductionExcelPage() {
       </div>
 
       {/* Excel-like table */}
-      <div className="overflow-auto rounded-md border bg-card">
+      <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-card">
         <table className="w-max min-w-full text-xs">
-          <thead className="sticky top-0 z-10 bg-muted">
+          <thead className="sticky top-0 z-30 bg-muted">
             <tr>
-              <th className="sticky left-0 z-20 border-b border-r bg-muted px-2 py-2">
+              <th className="sticky left-0 z-40 border-b border-r bg-muted px-2 py-2">
                 <Checkbox checked={allChecked} onCheckedChange={(v) => toggleAll(!!v)} />
               </th>
               <th className="border-b border-r bg-muted px-2 py-2 text-left font-semibold whitespace-nowrap">
@@ -328,7 +328,7 @@ function ProductionExcelPage() {
               <th className="border-b border-r bg-muted px-2 py-2 text-left font-semibold whitespace-nowrap">
                 วันจบ
               </th>
-              <th className="sticky left-[40px] z-20 border-b border-r bg-muted px-2 py-2 text-left font-semibold">
+              <th className="sticky left-[40px] z-40 border-b border-r bg-muted px-2 py-2 text-left font-semibold">
                 Job
               </th>
               <th className="border-b border-r bg-muted px-2 py-2 text-left font-semibold">
@@ -355,10 +355,10 @@ function ProductionExcelPage() {
             </tr>
 
             <tr>
-              <th className="sticky left-0 z-20 border-b bg-muted" />
+              <th className="sticky left-0 z-40 border-b bg-muted" />
               <th className="border-b bg-muted" />
               <th className="border-b bg-muted" />
-              <th className="sticky left-[40px] z-20 border-b bg-muted" />
+              <th className="sticky left-[40px] z-40 border-b bg-muted" />
               <th className="border-b bg-muted" />
               <th className="border-b bg-muted" />
               <th className="border-b bg-muted" />

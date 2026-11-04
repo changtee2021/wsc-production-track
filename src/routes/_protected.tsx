@@ -29,6 +29,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/job-lookup": "ค้นหา Job ด่วน",
   "/trial-releases": "ออเดอร์เข้าไลน์",
+  "/production-queue": "คิวผลิต",
   "/logs": "ประวัติงานผลิต",
   "/qc-reports": "รายงาน QC",
   "/qc-summary": "สรุป QC",

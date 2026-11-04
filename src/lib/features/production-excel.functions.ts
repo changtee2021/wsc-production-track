@@ -3,6 +3,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
+import { flowForProductName, trialProductLabel } from "@/lib/scan-trial";
+import {
+  LINE_RELEASE_STEP_NAME,
+  compareExcelSteps,
+  lineReleaseStep,
+  trialRunStep,
+} from "@/lib/utils/production-excel-steps";
+
+export { LINE_RELEASE_STEP_NAME };
 
 function assertAdmin(token: string | undefined) {
   if (!verifyAdminToken(token)) throw new Error("Unauthorized");
@@ -116,9 +125,32 @@ export const adminGetProductionExcel = createServerFn({ method: "POST" })
     const catName = new Map((catsRes.data ?? []).map((c) => [c.id, c.name]));
     const empMap = new Map((empsRes.data ?? []).map((e) => [e.id, e]));
 
+    const [releasesInRange, runsStarted, runsFinished] = await Promise.all([
+      supabaseAdmin
+        .from("scan_trial_releases")
+        .select("job_id, product, sent_by_name, created_at")
+        .gte("created_at", startISO)
+        .lte("created_at", endISO),
+      trialRunsBetween("started_at", startISO, endISO),
+      trialRunsBetween("finished_at", startISO, endISO),
+    ]);
+    if (releasesInRange.error) throw new Error(releasesInRange.error.message);
+
     const pairs = pairLogs((logsRes.data ?? []) as LogRow[]).filter(
       (p) => !data.category_id || p.category_id === data.category_id,
     );
+
+    const runs = dedupeRuns([...(runsStarted ?? []), ...(runsFinished ?? [])]);
+    const releaseByJob = new Map(
+      (releasesInRange.data ?? []).map((row) => [row.job_id, row]),
+    );
+    const extraJobIds = [
+      ...new Set([
+        ...pairs.map((p) => p.job_id),
+        ...runs.map((run) => run.job_id),
+      ]),
+    ].filter((jobId) => !releaseByJob.has(jobId));
+    for (const row of await releasesForJobs(extraJobIds)) releaseByJob.set(row.job_id, row);
 
     // group by job_id
     const byJob = new Map<string, ExcelStep[]>();
@@ -140,9 +172,36 @@ export const adminGetProductionExcel = createServerFn({ method: "POST" })
       }
     }
 
+    const selectedCategory = data.category_id ? (catName.get(data.category_id) ?? null) : null;
+    for (const [jobId, release] of releaseByJob) {
+      const matches =
+        !data.category_id ||
+        byJob.has(jobId) ||
+        (selectedCategory != null && flowForProductName(selectedCategory)?.id === release.product);
+      if (!matches) continue;
+      pushExcelStep(byJob, jobId, lineReleaseStep(release.sent_by_name, release.created_at));
+      if (!jobCat.has(jobId)) jobCat.set(jobId, trialProductLabel(release.product));
+    }
+    for (const run of runs) {
+      const release = releaseByJob.get(run.job_id);
+      const matches =
+        !data.category_id ||
+        byJob.has(run.job_id) ||
+        (selectedCategory != null &&
+          (release
+            ? flowForProductName(selectedCategory)?.id === release.product
+            : flowForProductName(selectedCategory)?.id === run.flow));
+      if (!matches) continue;
+      const emp = empMap.get(run.employee_id);
+      pushExcelStep(byJob, run.job_id, trialRunStep(run, emp?.emp_code ?? null));
+      if (!jobCat.has(run.job_id)) {
+        jobCat.set(run.job_id, release ? trialProductLabel(release.product) : trialProductLabel(run.flow));
+      }
+    }
+
     const jobs: ExcelJob[] = [];
     for (const [job_id, steps] of byJob) {
-      steps.sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime());
+      steps.sort(compareExcelSteps);
       jobs.push({
         job_id,
         category_name: jobCat.get(job_id) ?? null,
@@ -163,6 +222,78 @@ export const adminGetProductionExcel = createServerFn({ method: "POST" })
       range: { start: startISO, end: endISO },
     };
   });
+
+type TrialRunRow = {
+  job_id: string;
+  flow: string;
+  step: string;
+  employee_id: string;
+  employee_name: string;
+  status: "running" | "done";
+  started_at: string;
+  finished_at: string | null;
+};
+
+type TrialRunQuery = {
+  select: (columns: string) => {
+    gte: (
+      column: string,
+      value: string,
+    ) => {
+      lte: (
+        column: string,
+        value: string,
+      ) => PromiseLike<{ data: TrialRunRow[] | null; error: { message: string } | null }>;
+    };
+  };
+};
+
+function trialRunsTable(): TrialRunQuery {
+  return supabaseAdmin.from("scan_trial_runs" as never) as unknown as TrialRunQuery;
+}
+
+async function trialRunsBetween(column: "started_at" | "finished_at", startISO: string, endISO: string) {
+  const { data, error } = await trialRunsTable()
+    .select("job_id, flow, step, employee_id, employee_name, status, started_at, finished_at")
+    .gte(column, startISO)
+    .lte(column, endISO);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+function dedupeRuns(rows: TrialRunRow[]): TrialRunRow[] {
+  const byKey = new Map<string, TrialRunRow>();
+  for (const row of rows) byKey.set(`${row.job_id}|${row.step}`, row);
+  return [...byKey.values()];
+}
+
+async function releasesForJobs(jobIds: string[]) {
+  const out: {
+    job_id: string;
+    product: string;
+    sent_by_name: string | null;
+    created_at: string;
+  }[] = [];
+  for (let i = 0; i < jobIds.length; i += 150) {
+    const slice = jobIds.slice(i, i + 150);
+    const { data, error } = await supabaseAdmin
+      .from("scan_trial_releases")
+      .select("job_id, product, sent_by_name, created_at")
+      .in("job_id", slice);
+    if (error) throw new Error(error.message);
+    out.push(...(data ?? []));
+  }
+  return out;
+}
+
+function pushExcelStep(byJob: Map<string, ExcelStep[]>, jobId: string, step: ExcelStep) {
+  if (!byJob.has(jobId)) byJob.set(jobId, []);
+  const steps = byJob.get(jobId)!;
+  const duplicate = steps.some(
+    (row) => row.step_name === step.step_name && row.started_at === step.started_at,
+  );
+  if (!duplicate) steps.push(step);
+}
 
 // -------- Google Sheets sync via Connector Gateway --------
 

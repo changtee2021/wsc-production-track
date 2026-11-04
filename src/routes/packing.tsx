@@ -8,9 +8,9 @@ import { AppHeader } from "@/components/AppHeader";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import { MediaAttachButtons } from "@/components/MediaAttachButtons";
 import { MediaUploadStatusLine, type MediaUploadStatus } from "@/components/MediaUploadStatus";
+import { DeptBadgeGate } from "@/components/DeptBadgeGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -38,20 +38,22 @@ import {
   XCircle,
 } from "lucide-react";
 import {
-  verifyPackingPassword,
+  enterPackingByBadge,
   packingFetchJobLogs,
   packingFetchChecklist,
   packingSubmitReport,
   packingUploadMedia,
   packingCreateVideoUploadUrl,
   packingCreateVideoReplaceUploadUrl,
-  packingListEmployees,
 } from "@/lib/features/packing.functions";
 import {
   isPackingSession,
   setPackingToken,
   getPackingToken,
   clearPackingSession,
+  setPackingEmployee,
+  getPackingEmployee,
+  type PackingSessionEmployee,
 } from "@/lib/auth/packing-session";
 import { compressMedia, videoNeedsWebSafeTranscode } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
@@ -83,41 +85,57 @@ export const Route = createFileRoute("/packing")({
 });
 
 function PackingPage() {
-  const verify = useServerFn(verifyPackingPassword);
-  const [authed, setAuthed] = useState(false);
+  const enter = useServerFn(enterPackingByBadge);
+  const [employee, setEmployee] = useState<PackingSessionEmployee | null>(null);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
-    if (isPackingSession()) {
-      setAuthed(true);
-      return;
+    if (!isPackingSession()) return;
+    const saved = getPackingEmployee();
+    if (saved) setEmployee(saved);
+    else clearPackingSession();
+  }, []);
+
+  const onCode = async (code: string) => {
+    setBusy(true);
+    try {
+      const res = await enter({ data: { code } });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setPackingToken(res.token);
+      setPackingEmployee(res.employee);
+      setEmployee(res.employee);
+      toast.success("เข้าสู่ระบบแพ็คของสำเร็จ");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ");
+    } finally {
+      setBusy(false);
     }
-    // ไม่ต้องใส่รหัส — ออก token ให้อัตโนมัติ
-    verify({ data: { password: "" } })
-      .then((res) => {
-        if (res.ok) {
-          setPackingToken(res.token);
-          setAuthed(true);
-        } else toast.error("เข้าสู่ระบบแพ็คของไม่สำเร็จ");
-      })
-      .catch((err) =>
-        toast.error(err instanceof Error ? err.message : "เข้าสู่ระบบแพ็คของไม่สำเร็จ"),
-      );
-  }, [verify]);
-  if (!authed) {
+  };
+
+  if (!employee) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Toaster richColors position="top-center" />
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <DeptBadgeGate
+        title="เข้าสู่ระบบแพ็คของ"
+        subtitle="สแกนบัตรพนักงานแพ็คของ หรือพิมพ์เลขพนักงาน"
+        icon={<Package className="h-7 w-7" />}
+        busy={busy}
+        onCode={onCode}
+      />
     );
   }
-  return <PackingWorkbench onLogout={() => setAuthed(false)} />;
+  return (
+    <PackingWorkbench
+      employee={employee}
+      onLogout={() => {
+        clearPackingSession();
+        setEmployee(null);
+      }}
+    />
+  );
 }
 
-interface PackingEmployee {
-  id: string;
-  name: string;
-  emp_code: string | null;
-}
 interface JobLog {
   id: string;
   job_id: string;
@@ -163,14 +181,19 @@ const VID_EXT: Record<string, string> = {
 const MAX_IMG = MAX_IMAGE_BYTES;
 const MAX_VID = MAX_VIDEO_BYTES;
 
-function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
+function PackingWorkbench({
+  employee,
+  onLogout,
+}: {
+  employee: PackingSessionEmployee;
+  onLogout: () => void;
+}) {
   const { job_id } = Route.useSearch();
   const navigate = useNavigate({ from: "/packing" });
   const [manualJob, setManualJob] = useState("");
   const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
 
-  const [emps, setEmps] = useState<PackingEmployee[]>([]);
-  const [empId, setEmpId] = useState("");
+  const empId = employee.id;
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [categoryId, setCategoryId] = useState("");
   const [categoryAuto, setCategoryAuto] = useState(false);
@@ -211,32 +234,18 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
         },
       }));
   };
-  const listEmps = useServerFn(packingListEmployees);
   const submitReport = useServerFn(packingSubmitReport);
 
   useEffect(() => {
     (async () => {
-      const token = getPackingToken();
-      const tasks: Promise<unknown>[] = [
-        (async () => {
-          const cat = await supabase
-            .from("categories")
-            .select("id, name")
-            .eq("active", true)
-            .order("name");
-          if (cat.data) setCategories(cat.data);
-        })(),
-      ];
-      if (token) {
-        tasks.push(
-          listEmps({ data: { token } })
-            .then((r) => setEmps(r.rows as PackingEmployee[]))
-            .catch(() => {}),
-        );
-      }
-      await Promise.all(tasks);
+      const cat = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("active", true)
+        .order("name");
+      if (cat.data) setCategories(cat.data);
     })();
-  }, [listEmps]);
+  }, []);
 
   useEffect(() => {
     if (!job_id) {
@@ -598,28 +607,14 @@ function PackingWorkbench({ onLogout }: { onLogout: () => void }) {
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
             <Package className="h-4 w-4 text-secondary" /> พนักงานแพ็คของ
           </h2>
-          <Select value={empId} onValueChange={setEmpId}>
-            <SelectTrigger className="h-14 w-full rounded-2xl text-base">
-              <SelectValue placeholder="เลือกพนักงานแพ็คของ" />
-            </SelectTrigger>
-            <SelectContent>
-              {emps.length === 0 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
-                  ยังไม่มีพนักงาน — ให้แอดมินเพิ่มในหน้าจัดการ
-                </div>
+          <div className="flex h-14 items-center rounded-2xl border border-border bg-card px-4">
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold leading-tight">{employee.name}</p>
+              {employee.emp_code && (
+                <p className="font-mono text-xs text-muted-foreground">{employee.emp_code}</p>
               )}
-              {emps.map((e) => (
-                <SelectItem key={e.id} value={e.id} className="py-2">
-                  <div className="flex flex-col text-left">
-                    <span className="text-base font-semibold leading-tight">{e.name}</span>
-                    {e.emp_code && (
-                      <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            </div>
+          </div>
         </section>
 
         {job_id && (

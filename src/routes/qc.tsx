@@ -7,8 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppHeader } from "@/components/AppHeader";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import { Button } from "@/components/ui/button";
+import { DeptBadgeGate } from "@/components/DeptBadgeGate";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -39,16 +39,23 @@ import {
   Wrench,
 } from "lucide-react";
 import {
-  verifyQcPassword,
+  enterQcByBadge,
   qcFetchJobLogs,
   qcFetchChecklist,
   qcSubmitReport,
   qcUploadMedia,
   qcCreateVideoUploadUrl,
   qcCreateVideoReplaceUploadUrl,
-  qcListEmployees,
 } from "@/lib/features/qc.functions";
-import { isQcSession, setQcToken, getQcToken, clearQcSession } from "@/lib/auth/qc-session";
+import {
+  isQcSession,
+  setQcToken,
+  getQcToken,
+  clearQcSession,
+  setQcEmployee,
+  getQcEmployee,
+  type QcSessionEmployee,
+} from "@/lib/auth/qc-session";
 import { compressMedia, videoNeedsWebSafeTranscode } from "@/lib/utils/media-compress";
 import { uploadVideoViaSignedUrl } from "@/lib/utils/direct-video-upload";
 import {
@@ -91,93 +98,55 @@ export const Route = createFileRoute("/qc")({
 });
 
 function QcPage() {
-  const [authed, setAuthed] = useState(false);
+  const enter = useServerFn(enterQcByBadge);
+  const [employee, setEmployee] = useState<QcSessionEmployee | null>(null);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
-    setAuthed(isQcSession());
+    if (!isQcSession()) return;
+    const saved = getQcEmployee();
+    if (saved) setEmployee(saved);
+    else clearQcSession();
   }, []);
 
-  if (!authed) return <QcLogin onSuccess={() => setAuthed(true)} />;
-  return <QcWorkbench onLogout={() => setAuthed(false)} />;
-}
-
-function QcLogin({ onSuccess }: { onSuccess: () => void }) {
-  const verify = useServerFn(verifyQcPassword);
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const onCode = async (code: string) => {
+    setBusy(true);
     try {
-      const res = await verify({ data: { password } });
-      if (res.ok) {
-        setQcToken(res.token);
-        toast.success("เข้าสู่ระบบ QC สำเร็จ");
-        onSuccess();
-      } else {
-        toast.error(res.error || "เข้าสู่ระบบไม่สำเร็จ");
+      const res = await enter({ data: { code } });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
       }
+      setQcToken(res.token);
+      setQcEmployee(res.employee);
+      setEmployee(res.employee);
+      toast.success("เข้าสู่ระบบ QC สำเร็จ");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
 
+  if (!employee) {
+    return (
+      <DeptBadgeGate
+        title="เข้าสู่ระบบ QC"
+        subtitle="สแกนบัตรพนักงาน QC หรือพิมพ์เลขพนักงาน"
+        icon={<ClipboardCheck className="h-7 w-7" />}
+        busy={busy}
+        onCode={onCode}
+      />
+    );
+  }
   return (
-    <div className="min-h-screen bg-background">
-      <Toaster richColors position="top-center" />
-      <AppHeader mark="white">
-        <Link to="/">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">หน้าแรก</span>
-          </Button>
-        </Link>
-      </AppHeader>
-      <main className="mx-auto flex max-w-md flex-col items-center px-4 py-12">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-lg">
-          <ClipboardCheck className="h-7 w-7" />
-        </div>
-        <h1 className="mt-4 text-2xl font-bold text-foreground">เข้าสู่ระบบ QC</h1>
-        <p className="mt-1 text-sm text-muted-foreground">กรอกรหัสผ่านสำหรับพนักงาน QC</p>
-        <form
-          onSubmit={onSubmit}
-          className="mt-6 w-full rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)]"
-        >
-          <Label htmlFor="qcpw" className="text-sm font-medium">
-            รหัสผ่าน QC
-          </Label>
-          <Input
-            id="qcpw"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 h-12 text-base"
-            autoFocus
-            required
-          />
-          <Button
-            type="submit"
-            disabled={loading}
-            className="mt-4 h-12 w-full text-base font-semibold"
-          >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "เข้าสู่ระบบ"}
-          </Button>
-        </form>
-      </main>
-    </div>
+    <QcWorkbench
+      employee={employee}
+      onLogout={() => {
+        clearQcSession();
+        setEmployee(null);
+      }}
+    />
   );
-}
-
-interface QcEmployee {
-  id: string;
-  name: string;
-  emp_code: string | null;
 }
 
 interface JobLog {
@@ -231,15 +200,20 @@ const IMAGE_EXT_BY_MIME: Record<string, string> = {
   "image/gif": "gif",
 };
 
-function QcWorkbench({ onLogout }: { onLogout: () => void }) {
+function QcWorkbench({
+  employee,
+  onLogout,
+}: {
+  employee: QcSessionEmployee;
+  onLogout: () => void;
+}) {
   const { job_id } = Route.useSearch();
   const navigate = useNavigate({ from: "/qc" });
   const [manualJob, setManualJob] = useState("");
   const [scannerStream, setScannerStream] = useState<MediaStream | null>(null);
   const scannerOpen = scannerStream !== null;
 
-  const [qcEmployees, setQcEmployees] = useState<QcEmployee[]>([]);
-  const [qcEmployeeId, setQcEmployeeId] = useState("");
+  const qcEmployeeId = employee.id;
 
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [categoryId, setCategoryId] = useState<string>("");
@@ -263,7 +237,6 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
   const uploadMedia = useServerFn(qcUploadMedia);
   const prepareVideoUpload = useServerFn(qcCreateVideoUploadUrl);
   const prepareVideoReplace = useServerFn(qcCreateVideoReplaceUploadUrl);
-  const listQcEmployees = useServerFn(qcListEmployees);
   const submitReport = useServerFn(qcSubmitReport);
 
   const patchMediaPlayback = (
@@ -289,30 +262,16 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
     }
   };
 
-  // Load QC employees (token-gated) and categories (public)
   useEffect(() => {
     (async () => {
-      const token = getQcToken();
-      const tasks: Promise<unknown>[] = [
-        (async () => {
-          const cat = await supabase
-            .from("categories")
-            .select("id, name")
-            .eq("active", true)
-            .order("name");
-          if (cat.data) setCategories(cat.data);
-        })(),
-      ];
-      if (token) {
-        tasks.push(
-          listQcEmployees({ data: { token } })
-            .then((res) => setQcEmployees(res.rows as QcEmployee[]))
-            .catch(() => {}),
-        );
-      }
-      await Promise.all(tasks);
+      const cat = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("active", true)
+        .order("name");
+      if (cat.data) setCategories(cat.data);
     })();
-  }, [listQcEmployees]);
+  }, []);
 
   // Load job logs when job_id changes
   useEffect(() => {
@@ -745,28 +704,14 @@ function QcWorkbench({ onLogout }: { onLogout: () => void }) {
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
             <ClipboardCheck className="h-4 w-4 text-secondary" /> พนักงาน QC
           </h2>
-          <Select value={qcEmployeeId} onValueChange={setQcEmployeeId}>
-            <SelectTrigger className="h-14 w-full rounded-2xl text-base">
-              <SelectValue placeholder="เลือกพนักงาน QC" />
-            </SelectTrigger>
-            <SelectContent>
-              {qcEmployees.length === 0 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
-                  ยังไม่มีพนักงาน QC — ให้แอดมินเพิ่มในหน้าจัดการ
-                </div>
+          <div className="flex h-14 items-center rounded-2xl border border-border bg-card px-4">
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold leading-tight">{employee.name}</p>
+              {employee.emp_code && (
+                <p className="font-mono text-xs text-muted-foreground">{employee.emp_code}</p>
               )}
-              {qcEmployees.map((e) => (
-                <SelectItem key={e.id} value={e.id} className="py-2">
-                  <div className="flex flex-col text-left">
-                    <span className="text-base font-semibold leading-tight">{e.name}</span>
-                    {e.emp_code && (
-                      <span className="font-mono text-xs text-muted-foreground">{e.emp_code}</span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            </div>
+          </div>
         </section>
 
         {/* Job history pass-through */}

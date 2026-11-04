@@ -12,7 +12,6 @@ import {
   Search,
   Factory,
   Ruler,
-  Calendar,
   User as UserIcon,
   CheckCircle2,
   Clock,
@@ -120,7 +119,7 @@ function ProductionQueuePage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 px-4 py-6">
       <Toaster richColors position="top-center" />
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="flex items-center gap-2 text-xl font-bold">
@@ -241,7 +240,7 @@ function ProductionQueuePage() {
                 >
                   <Printer className="h-4 w-4" /> พิมพ์ Label
                 </Button>
-                <Link to="/scan" search={{ job_id: j.job_no }} className="flex-1">
+                <Link to="/scan-trial" search={{ job_id: j.job_no }} className="flex-1">
                   <Button
                     size="sm"
                     variant="secondary"

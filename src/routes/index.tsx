@@ -5,9 +5,7 @@ import {
   BookOpenCheck,
   ShieldCheck,
   ScanLine,
-  ClipboardCheck,
   MessageSquarePlus,
-  Package,
   Wrench,
   ShoppingCart,
   Boxes,
@@ -50,7 +48,7 @@ export const Route = createFileRoute("/")({
 
 function WelcomePage() {
   const navigate = useNavigate({ from: "/" });
-  const goToScan = () => navigate({ to: "/scan", search: { job_id: "" } });
+  const goToScan = () => navigate({ to: "/scan-trial", search: { job_id: "" } });
 
   const [banners, setBanners] = useState<string[]>([]);
   const [api, setApi] = useState<CarouselApi | null>(null);
@@ -221,43 +219,24 @@ function WelcomePage() {
               <ScanLine className="mr-2 h-5 w-5" />
               สแกน
             </Button>
-            <div className="grid grid-cols-2 gap-2 sm:flex">
-              <Link to="/warehouse" className="sm:flex-1">
+            <div className="grid grid-cols-2 gap-2">
+              <Link to="/warehouse">
                 <Button
                   variant="ghost"
                   aria-label="คลังสินค้า"
                   className="h-12 w-full rounded-2xl bg-teal-600 text-white ring-1 ring-white/30 hover:bg-teal-700 hover:text-white"
                 >
-                  <Warehouse className="h-4 w-4 mr-1" />
+                  <Warehouse className="mr-1 h-4 w-4" />
                   คลัง
                 </Button>
               </Link>
-              <Link to="/qc" search={{ job_id: "" }} className="sm:flex-1">
-                <Button
-                  variant="ghost"
-                  className="h-12 w-full rounded-2xl bg-white/[0.07] text-primary-foreground backdrop-blur-md ring-1 ring-white/20 hover:bg-white/15 hover:text-primary-foreground"
-                >
-                  <ClipboardCheck className="h-4 w-4 mr-1" />
-                  QC
-                </Button>
-              </Link>
-              <Link to="/packing" search={{ job_id: "" }} className="sm:flex-[2]">
-                <Button
-                  variant="ghost"
-                  aria-label="แพ็คของ"
-                  className="h-12 w-full rounded-2xl bg-blue-600 text-white ring-1 ring-white/30 hover:bg-blue-700 hover:text-white"
-                >
-                  <Package className="h-4 w-4 mr-1" />
-                  แพ็คของ
-                </Button>
-              </Link>
-              <Link to="/stock-count" className="sm:flex-1">
+              <Link to="/stock-count">
                 <Button
                   variant="ghost"
                   aria-label="นับสต๊อก"
                   className="h-12 w-full rounded-2xl bg-amber-600 text-white ring-1 ring-white/30 hover:bg-amber-700 hover:text-white"
                 >
-                  <Boxes className="h-4 w-4 mr-1" />
+                  <Boxes className="mr-1 h-4 w-4" />
                   นับสต๊อก
                 </Button>
               </Link>

@@ -2,13 +2,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  issuePackingToken,
-  verifyPackingToken,
-  checkPackingPassword,
-} from "@/lib/auth/packing-token.server";
+import { allowBadgeAttempt, findBadgeEmployee } from "@/lib/auth/badge-entry.server";
+import { issuePackingToken, verifyPackingToken } from "@/lib/auth/packing-token.server";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
-import { assertReportSubmitValid } from "@/lib/utils/report-media-validation";
+import { assertReportSubmitValid, checklistOverall } from "@/lib/utils/report-media-validation";
 
 function assertPacking(token: string | undefined) {
   if (!verifyPackingToken(token)) throw new Error("Unauthorized");
@@ -16,18 +13,28 @@ function assertPacking(token: string | undefined) {
 
 const tokenStr = z.string().min(1);
 
-// ยกเลิกรหัสผ่านแพ็คของ — ออก token ให้ทันทีโดยไม่ตรวจรหัสผ่าน
+export const enterPackingByBadge = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ code: z.string().trim().min(1).max(50) }).parse(d))
+  .handler(async ({ data }) => {
+    if (!allowBadgeAttempt()) return { ok: false as const, error: "ลองถี่เกินไป โปรดลองใหม่" };
+    const employee = await findBadgeEmployee("packing_employees", data.code);
+    if (!employee) return { ok: false as const, error: "ไม่พบเลขพนักงานนี้ในแผนกแพ็คของ" };
+    return { ok: true as const, token: issuePackingToken(), employee };
+  });
+
 export const verifyPackingPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ password: z.string().max(200).optional() }).parse(d ?? {}),
   )
   .handler(async () => {
-    return { ok: true as const, token: issuePackingToken() };
+    return { ok: false as const, error: "สแกนบัตรหรือพิมพ์เลขพนักงาน" };
   });
 
 export const issuePackingSession = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({}).parse(d ?? {}))
-  .handler(async () => ({ token: issuePackingToken() }));
+  .handler(async () => {
+    throw new Error("สแกนบัตรหรือพิมพ์เลขพนักงาน");
+  });
 
 export const checkPackingToken = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: z.string() }).parse(d))
@@ -108,11 +115,7 @@ export const packingSubmitReport = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     assertPacking(data.token);
     assertReportSubmitValid(data.items, data.media);
-    const passCount = data.items.filter((i) => i.is_passed).length;
-    const total = data.items.length;
-    const computedOverall =
-      data.overall_result ?? (total > 0 ? (passCount === total ? "pass" : "fail") : null);
-    const summary = total > 0 ? `ผ่าน ${passCount}/${total} ข้อ` : null;
+    const scored = checklistOverall(data.items, data.overall_result);
 
     const { data: inserted, error } = await supabaseAdmin
       .from("packing_reports")
@@ -125,8 +128,8 @@ export const packingSubmitReport = createServerFn({ method: "POST" })
         employee_id: data.employee_id ?? null,
         note: data.note ?? null,
         media: data.media,
-        overall_result: computedOverall,
-        summary,
+        overall_result: scored.overall,
+        summary: scored.summary,
       })
       .select("id")
       .single();

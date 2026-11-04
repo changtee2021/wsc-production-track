@@ -14,6 +14,10 @@ if (counts.have + counts.partial + counts.missing !== ISO_ITEMS.length) {
 if (ISO_ITEMS.filter((item) => item.status === "missing").some((item) => item.id !== "SI.4.2")) {
   issues.push("มีข้อที่ยังไม่มีนอกจาก SI.4.2");
 }
+const unitTest = ISO_ITEMS.find((item) => item.id === "SI.4.2");
+if (unitTest?.status !== "have") {
+  issues.push("SI.4.2 ต้องเป็นมีแล้วเมื่อ npm test ครอบกฎสแกนและรายงาน");
+}
 
 if (issues.length) {
   console.error(issues.join("\n"));

@@ -10,39 +10,30 @@ import { Input } from "@/components/ui/input";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import { cn } from "@/lib/utils";
 import { flagFor } from "@/lib/utils/i18n";
-import { WI_LANGS } from "@/lib/wi/wi-schema";
+import { WI_LANGS, type WiLang } from "@/lib/wi/wi-schema";
 import { WI_LANG_LABEL, useWiLang, useWiReader, type WiReader } from "@/lib/wi/wi-i18n";
 
 export function WiLangSwitch({ className, dark }: { className?: string; dark?: boolean }) {
   const [lang, setLang, t] = useWiLang();
   return (
-    <div
-      role="radiogroup"
+    <select
       aria-label={t("language")}
-      className={cn("inline-flex rounded-xl p-1", dark ? "bg-white/15" : "bg-muted", className)}
+      value={lang}
+      onChange={(event) => setLang(event.target.value as WiLang)}
+      className={cn(
+        "h-11 min-w-[4.5rem] rounded-xl border px-2 text-sm font-semibold",
+        dark
+          ? "border-white/30 bg-white/15 text-white"
+          : "border-border bg-background text-foreground",
+        className,
+      )}
     >
-      {WI_LANGS.map((l) => (
-        <button
-          key={l}
-          type="button"
-          role="radio"
-          aria-checked={lang === l}
-          onClick={() => setLang(l)}
-          className={cn(
-            "min-h-10 min-w-12 whitespace-nowrap rounded-lg px-2.5 text-sm font-semibold transition-colors",
-            lang === l
-              ? dark
-                ? "bg-white text-slate-900"
-                : "bg-background text-foreground shadow-sm"
-              : dark
-                ? "text-white/80"
-                : "text-muted-foreground",
-          )}
-        >
-          {WI_LANG_LABEL[l]}
-        </button>
+      {WI_LANGS.map((code) => (
+        <option key={code} value={code}>
+          {WI_LANG_LABEL[code]}
+        </option>
       ))}
-    </div>
+    </select>
   );
 }
 
@@ -273,22 +264,17 @@ export function WiManualHeader({
       <header className="sticky top-0 z-20 border-b border-border bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-2 px-3 py-2">
           <div className="shrink-0">{back}</div>
-          <div className="hidden min-w-0 items-center gap-2 sm:flex">
-            <span className="hidden min-w-0 items-center gap-1.5 text-sm font-semibold md:flex">
-              <BookOpenCheck className="h-4 w-4 shrink-0 text-[#E32D24]" />
-              <span className="truncate">{t("appTitle")}</span>
-            </span>
-            <WiLangSwitch />
-          </div>
-          <div className="ml-auto flex min-w-0 items-center justify-end gap-1">
+          <span className="hidden min-w-0 items-center gap-1.5 text-sm font-semibold md:flex">
+            <BookOpenCheck className="h-4 w-4 shrink-0 text-[#E32D24]" />
+            <span className="truncate">{t("appTitle")}</span>
+          </span>
+          <div className="ml-auto flex min-w-0 items-center justify-end gap-1.5">
             {extra}
+            <WiLangSwitch />
             <WiReaderChip open={pickerOpen} onOpenChange={onPickerOpenChange} />
           </div>
         </div>
       </header>
-      <div className="mx-auto flex max-w-5xl px-3 pt-3 sm:hidden">
-        <WiLangSwitch className="w-full [&>button]:flex-1" />
-      </div>
     </>
   );
 }

@@ -19,12 +19,11 @@ import { cn } from "@/lib/utils";
 import {
   wiPublicCatalog,
   type WiCatalogFlow,
-  type WiCatalogStep,
   type WiReadStatus,
 } from "@/lib/features/wi.functions";
 import { WiManualHeader, WiReaderGate } from "@/components/wi/WiReaderControls";
 import { stepLabel } from "@/lib/scan-trial";
-import { bilingualName, useWiLang, useWiReader, type WiT } from "@/lib/wi/wi-i18n";
+import { bilingualName, useWiLang, useWiReader, wiStepBlurb, type WiT } from "@/lib/wi/wi-i18n";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -64,99 +63,110 @@ function ReadBadge({ status, t }: { status: WiReadStatus; t: WiT }) {
   );
 }
 
-function FlowChip({
-  step,
-  lang,
-  empty,
-}: {
-  step: WiCatalogStep;
-  lang: ReturnType<typeof useWiLang>[0];
-  empty: string;
-}) {
-  const label = lang === "my" ? stepLabel(step.step_name) : bilingualName(step.step_name, lang);
-  if (step.items.length === 0) {
-    return (
-      <span className="inline-flex min-h-11 items-center rounded-full border border-dashed border-border px-3 text-sm font-semibold text-muted-foreground">
-        {label}
-        <span className="ml-1 text-[10px] font-normal">{empty}</span>
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex flex-wrap gap-1">
-      {step.items.map((item) => (
-        <Link
-          key={item.code}
-          to="/manual/$code"
-          params={{ code: item.code }}
-          className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-3 text-sm font-semibold"
-        >
-          {step.items.length > 1 ? item.title : label}
-        </Link>
-      ))}
-    </span>
-  );
-}
-
 function FlowBoard({
   flow,
   lang,
   t,
+  readerId,
 }: {
   flow: WiCatalogFlow;
   lang: ReturnType<typeof useWiLang>[0];
   t: WiT;
+  readerId: string | null;
 }) {
+  const rows = [
+    ...flow.lanes.flatMap((lane) => lane.map((step) => ({ step, phase: null as string | null }))),
+    ...flow.after.map((step, index) => ({
+      step,
+      phase: index === 0 ? t("flowThen") : null,
+    })),
+  ];
+  const extras = flow.extra.flatMap((step) => step.items);
+
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">{t("flowParallelHint")}</p>
-      <div className="rounded-3xl border border-dashed border-sky-300 bg-sky-50/70 p-3 dark:border-sky-800 dark:bg-sky-950/30">
-        <p className="mb-2 text-xs font-semibold text-sky-800 dark:text-sky-200">
-          1 · {t("flowParallel")}
-        </p>
-        <div className="space-y-2">
-          {flow.lanes.map((lane, index) => (
-            <div key={index} className="flex flex-wrap items-center gap-1.5">
-              {lane.map((step, stepIndex) => (
-                <span key={step.step_id} className="inline-flex items-center gap-1.5">
-                  {stepIndex > 0 && <span className="text-muted-foreground">→</span>}
-                  <FlowChip step={step} lang={lang} empty={t("noStepManual")} />
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {flow.after.map((step, index) => (
-          <span key={step.step_id} className="inline-flex items-center gap-1.5">
-            <span className="text-muted-foreground">{index === 0 ? "→" : "→"}</span>
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
-              {index + 2}
-            </span>
-            <FlowChip step={step} lang={lang} empty={t("noStepManual")} />
-          </span>
-        ))}
-      </div>
-      {flow.extra.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground">{t("extraManuals")}</p>
-          <div className="flex flex-wrap gap-2">
-            {flow.extra.flatMap((step) =>
-              step.items.map((item) => (
-                <Link
-                  key={item.code}
-                  to="/manual/$code"
-                  params={{ code: item.code }}
-                  className="inline-flex min-h-11 items-center rounded-full border bg-card px-3 text-sm font-semibold"
-                >
-                  {item.title}
-                </Link>
-              )),
+    <div>
+      <ol>
+        {rows.map((row, index) => {
+          const label =
+            lang === "my" ? stepLabel(row.step.step_name) : bilingualName(row.step.step_name, lang);
+          const last = index === rows.length - 1 && extras.length === 0;
+          return (
+            <li key={row.step.step_id} className="relative flex gap-3 pb-5">
+              {!last && (
+                <span
+                  aria-hidden
+                  className="absolute bottom-0 left-5 top-10 w-0.5 -translate-x-1/2 bg-slate-300 dark:bg-slate-600"
+                />
+              )}
+              <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                {index + 1}
+              </span>
+              <div className="min-w-0 flex-1 pt-0.5">
+                {row.phase && (
+                  <p className="text-xs font-semibold text-sky-800 dark:text-sky-200">{row.phase}</p>
+                )}
+                <h2 className="text-lg font-bold leading-tight">{label}</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {wiStepBlurb(row.step.step_name, lang)}
+                </p>
+                {row.step.items.length === 0 ? (
+                  <p className="mt-2 text-xs font-medium text-muted-foreground">{t("noStepManual")}</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {row.step.items.map((item) => (
+                      <li key={item.code}>
+                        <Link
+                          to="/manual/$code"
+                          params={{ code: item.code }}
+                          className="flex min-h-11 items-center justify-between gap-2 rounded-2xl border border-border bg-card px-3 py-2 text-sm font-semibold active:bg-muted"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate">
+                              {row.step.items.length > 1 ? item.title : t("stepManual")}
+                            </span>
+                            {readerId && (
+                              <span className="mt-1 inline-flex">
+                                <ReadBadge status={item.read_status} t={t} />
+                              </span>
+                            )}
+                          </span>
+                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </li>
+          );
+        })}
+        {extras.map((item, index) => (
+          <li key={item.code} className="relative flex gap-3 pb-5">
+            {index < extras.length - 1 && (
+              <span
+                aria-hidden
+                className="absolute bottom-0 left-5 top-10 w-0.5 -translate-x-1/2 bg-slate-300 dark:bg-slate-600"
+              />
             )}
-          </div>
-        </div>
-      )}
+            <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-400 text-xs font-bold text-muted-foreground">
+              +
+            </span>
+            <div className="min-w-0 flex-1 pt-1">
+              {index === 0 && (
+                <p className="text-xs font-semibold text-muted-foreground">{t("extraManuals")}</p>
+              )}
+              <Link
+                to="/manual/$code"
+                params={{ code: item.code }}
+                className="mt-1 flex min-h-11 items-center justify-between gap-2 rounded-2xl border border-border bg-card px-3 text-sm font-semibold"
+              >
+                <span className="truncate">{item.title}</span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -293,7 +303,7 @@ function ManualCatalogPage() {
                 ))}
               </ul>
             ) : data.flow ? (
-              <FlowBoard flow={data.flow} lang={lang} t={t} />
+              <FlowBoard flow={data.flow} lang={lang} t={t} readerId={readerId} />
             ) : loading && data.steps.length === 0 ? (
               <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" /> {t("loading")}
@@ -304,23 +314,27 @@ function ManualCatalogPage() {
                 <p className="mt-1 text-sm text-muted-foreground">{t("noManualsHint")}</p>
               </div>
             ) : (
-              <ol className="relative space-y-5">
+              <ol>
                 {data.steps.map((step, index) => (
-                  <li key={step.step_id} className="space-y-2">
-                    <div className="flex items-center gap-3 px-1">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#E32D24] text-lg font-bold text-white">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">{t("step")}</p>
-                        <h2
-                          className="truncate text-lg font-bold leading-tight"
-                          title={step.step_name}
-                        >
+                  <li key={step.step_id} className="relative flex gap-3 pb-5">
+                    {index < data.steps.length - 1 && (
+                      <span
+                        aria-hidden
+                        className="absolute bottom-0 left-5 top-10 w-0.5 -translate-x-1/2 bg-slate-300 dark:bg-slate-600"
+                      />
+                    )}
+                    <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+                      <div>
+                        <h2 className="text-lg font-bold leading-tight" title={step.step_name}>
                           {bilingualName(step.step_name, lang)}
                         </h2>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          {wiStepBlurb(step.step_name, lang)}
+                        </p>
                       </div>
-                    </div>
                     <ul className="grid gap-2 lg:grid-cols-2">
                       {step.items.map((item) => (
                         <li key={item.code}>
@@ -368,6 +382,7 @@ function ManualCatalogPage() {
                         </li>
                       ))}
                     </ul>
+                    </div>
                   </li>
                 ))}
               </ol>

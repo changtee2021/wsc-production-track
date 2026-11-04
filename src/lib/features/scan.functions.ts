@@ -11,6 +11,7 @@ const payload = z.object({
   action: z.enum(["start", "finish"]),
   note: z.string().trim().max(2000).nullable().optional(),
   note_image_url: z.string().trim().max(2000).nullable().optional(),
+  lane: z.enum(["v1", "v2"]).default("v1"),
 });
 
 // In-memory IP rate limit: 60 submissions / minute / IP.
@@ -51,6 +52,20 @@ export const submitProductionLog = createServerFn({ method: "POST" })
     if (!emp.data?.active) throw new Error("ไม่พบพนักงาน หรือพนักงานถูกปิดใช้งาน");
     if (!step.data?.active) throw new Error("ไม่พบขั้นตอน หรือถูกปิดใช้งาน");
     if (!cat.data) throw new Error("ไม่พบหมวดหมู่");
+
+    const { data: release, error: releaseError } = await supabaseAdmin
+      .from("scan_trial_releases")
+      .select("job_id")
+      .eq("job_id", data.job_id)
+      .maybeSingle();
+    if (releaseError) throw new Error("ตรวจออเดอร์ไม่สำเร็จ");
+    const released = Boolean(release);
+    if (data.lane === "v2" && !released) {
+      throw new Error("ออเดอร์นี้ยังไม่ถูกออฟฟิศส่งเข้าสแกน v2 ใช้ออฟฟิศคีย์ก่อน หรือใช้สแกนเดิม");
+    }
+    if (data.lane === "v1" && released) {
+      throw new Error("ออเดอร์นี้ถูกส่งเข้าสแกน v2 แล้ว ให้พนักงานใช้สแกน v2");
+    }
 
     const { error } = await supabaseAdmin.from("production_logs").insert({
       job_id: data.job_id,
