@@ -25,6 +25,18 @@ export function getReportSubmitBlockReason(
   return null;
 }
 
+/** Same pass/fail total the QC and packing report handlers store. */
+export function checklistOverall(
+  items: { is_passed: boolean }[],
+  chosen?: "pass" | "fail" | null,
+): { overall: "pass" | "fail" | null; summary: string | null } {
+  const passCount = items.filter((item) => item.is_passed).length;
+  const total = items.length;
+  const overall = chosen ?? (total > 0 ? (passCount === total ? "pass" : "fail") : null);
+  const summary = total > 0 ? `ผ่าน ${passCount}/${total} ข้อ` : null;
+  return { overall, summary };
+}
+
 /** Server-side: throws if overall media or failed-item remarks are missing. */
 export function assertReportSubmitValid(
   items: { is_passed: boolean; remark?: string | null }[],

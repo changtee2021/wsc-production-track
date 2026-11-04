@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IsoApprove } from "@/components/iso29110/IsoApprove";
+import { IsoAuditReport } from "@/components/iso29110/IsoAuditReport";
 import { IsoDocuments } from "@/components/iso29110/IsoDocuments";
 import {
   ISO_CATEGORIES,
@@ -31,7 +33,7 @@ const FILTERS: Array<{ id: StatusFilter; label: string }> = [
 ];
 
 function Iso29110Page() {
-  const [view, setView] = useState<"check" | "docs">("docs");
+  const [view, setView] = useState<"check" | "docs" | "audit" | "approve">("approve");
   const [filter, setFilter] = useState<StatusFilter>("all");
 
   const counts = useMemo(() => {
@@ -61,11 +63,28 @@ function Iso29110Page() {
       </div>
       <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">ความพร้อมโปรเจกต์ซอฟต์แวร์</h1>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        ชุดเอกสารรุ่น 1.0 ตามโปรไฟล์ Basic สำหรับระบบที่ฝ่ายผลิตใช้เอง CEO เป็นผู้สั่ง
-        หัวหน้าฝ่ายผลิตเป็นผู้รับมอบ พนักงานเป็นผู้ใช้ ฟรีแลนซ์เป็นผู้ทำ
-        ช่องลายเซ็นเว้นว่างไว้ให้คนที่มีอำนาจลงชื่อ ยังไม่นับว่ารับมอบแล้ว
+        ใบด้านล่างคือสิ่งที่ให้ติ๊กอนุมัติ ที่ปรึกษาจัดเอกสารและรันเทสชิ้นส่วนแล้ว
+        ยังไม่ติ๊กหรือเซ็นแทน CEO และหัวหน้าฝ่ายผลิต
       </p>
       <div className="no-print mt-4 flex flex-wrap gap-2" role="group" aria-label="มุมมอง">
+        <Button
+          type="button"
+          variant={view === "approve" ? "default" : "outline"}
+          className="min-h-11 px-3 sm:min-h-9"
+          aria-pressed={view === "approve"}
+          onClick={() => setView("approve")}
+        >
+          ให้ติ๊กอนุมัติ
+        </Button>
+        <Button
+          type="button"
+          variant={view === "audit" ? "default" : "outline"}
+          className="min-h-11 px-3 sm:min-h-9"
+          aria-pressed={view === "audit"}
+          onClick={() => setView("audit")}
+        >
+          รายงานการตรวจ
+        </Button>
         <Button
           type="button"
           variant={view === "docs" ? "default" : "outline"}
@@ -85,6 +104,16 @@ function Iso29110Page() {
           เช็คลิส
         </Button>
       </div>
+      {view === "approve" ? (
+        <div className="mt-4">
+          <IsoApprove />
+        </div>
+      ) : null}
+      {view === "audit" ? (
+        <div className="mt-4">
+          <IsoAuditReport />
+        </div>
+      ) : null}
       {view === "docs" ? (
         <div className="mt-4">
           <IsoDocuments />

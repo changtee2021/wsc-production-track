@@ -1,5 +1,19 @@
 export type TrialFlowId = "roller" | "wood" | "aluminum" | "shade";
 
+export type ScanLane = "v1" | "v2";
+
+/** Office-released jobs stay on v2. Everything else stays on the original scan. */
+export function scanLaneDecision(lane: ScanLane, released: boolean): "open" | "blocked" {
+  if (lane === "v2") return released ? "open" : "blocked";
+  return released ? "blocked" : "open";
+}
+
+export function scanLaneBlockMessage(lane: ScanLane): string {
+  return lane === "v2"
+    ? "ออเดอร์นี้ยังไม่ถูกออฟฟิศส่งเข้าสแกน v2 ใช้ออฟฟิศคีย์ก่อน หรือใช้สแกนเดิม"
+    : "ออเดอร์นี้ถูกส่งเข้าสแกน v2 แล้ว ให้พนักงานใช้สแกน v2";
+}
+
 export type TrialFlow = {
   id: TrialFlowId;
   label: string;
@@ -117,8 +131,159 @@ export function stepLabel(name: string): string {
   return burmese ? `${name} I ${burmese}` : name;
 }
 
+/** Same departments as the staff menu. Badge login must see every one of them. */
+export const TRIAL_STAFF_SOURCES = [
+  "production",
+  "qc",
+  "packing",
+  "maintenance",
+  "office",
+  "stock",
+  "warehouse",
+  "transport",
+] as const;
+
+export type TrialStaffSource = (typeof TRIAL_STAFF_SOURCES)[number];
+
+export type TrialStaffRow = {
+  id: string;
+  name: string;
+  emp_code: string | null;
+  avatar_url: string | null;
+  source: TrialStaffSource;
+};
+
+export type TrialDesk = "production" | "office" | "qc" | "packing" | "final";
+
+export type TrialBadgePerson = {
+  id: string;
+  name: string;
+  emp_code: string;
+  avatar_url: string | null;
+  /**
+   * QC and packing are the last stations, so those badges do not use the
+   * floor step list. `final` is only when one badge is in both.
+   */
+  department: TrialDesk;
+};
+
+const FLOOR_SOURCES: readonly TrialStaffSource[] = [
+  "production",
+  "maintenance",
+  "stock",
+  "warehouse",
+  "transport",
+];
+
+export function trialDesk(sources: readonly TrialStaffSource[]): TrialDesk {
+  const present = new Set(sources);
+  if (FLOOR_SOURCES.some((source) => present.has(source))) return "production";
+  if (present.has("qc") && present.has("packing")) return "final";
+  if (present.has("qc")) return "qc";
+  if (present.has("packing")) return "packing";
+  if (present.has("office")) return "office";
+  return "production";
+}
+
+/** Steps this badge may see. QC and packing never see earlier production steps. */
+export function trialVisibleSteps(department: TrialDesk, flow: TrialFlow): string[] {
+  if (department === "qc") return ["QC"];
+  if (department === "packing") return ["PACK"];
+  if (department === "final") return ["QC", "PACK"];
+  if (department === "office") return [];
+  return flowSteps(flow);
+}
+
+/**
+ * One badge code is one person, even when the staff menu stores them in
+ * several department tables. Office intake only when that is their only row.
+ */
+export function trialBadgeRoster(rows: TrialStaffRow[]): TrialBadgePerson[] {
+  const groups = new Map<string, TrialStaffRow[]>();
+  for (const row of rows) {
+    const code = (row.emp_code ?? "").trim();
+    if (!code) continue;
+    const list = groups.get(code) ?? [];
+    list.push(row);
+    groups.set(code, list);
+  }
+
+  const people: TrialBadgePerson[] = [];
+  for (const [code, list] of groups) {
+    const ordered = [...list].sort(
+      (a, b) => TRIAL_STAFF_SOURCES.indexOf(a.source) - TRIAL_STAFF_SOURCES.indexOf(b.source),
+    );
+    const worker = ordered.find((row) => row.source !== "office") ?? ordered[0];
+    people.push({
+      id: worker.id,
+      name: worker.name,
+      emp_code: code,
+      avatar_url: ordered.find((row) => row.avatar_url)?.avatar_url ?? null,
+      department: trialDesk(ordered.map((row) => row.source)),
+    });
+  }
+  people.sort((a, b) => a.name.localeCompare(b.name, "th"));
+  return people;
+}
+
 export function flowSteps(flow: TrialFlow): string[] {
   return [...flow.lanes.flat(), ...flow.after];
+}
+
+export type TrialStepSnapshot = {
+  step: string;
+  employeeName: string;
+  status: "running" | "done";
+  startedAt: number;
+  finishedAt: number | null;
+};
+
+/** What the office list shows: the live step, plus earlier steps that are already finished. */
+export function trialStepView(
+  flow: TrialFlow,
+  runs: TrialStepSnapshot[],
+): { headline: string; who: string | null; since: number | null; earlier: TrialStepSnapshot[] } {
+  const ordered = flowSteps(flow);
+  const byStep = new Map(runs.map((run) => [run.step, run]));
+  const inFlow = new Set(ordered);
+  const flowDone = ordered
+    .map((step) => byStep.get(step))
+    .filter((run): run is TrialStepSnapshot => run?.status === "done");
+  const extraDone = runs
+    .filter((run) => run.status === "done" && !inFlow.has(run.step))
+    .sort((a, b) => (a.finishedAt ?? a.startedAt) - (b.finishedAt ?? b.startedAt));
+  const earlier = [...flowDone, ...extraDone];
+  const running =
+    ordered.map((step) => byStep.get(step)).find((run) => run?.status === "running") ??
+    runs.find((run) => run.status === "running");
+  if (running) {
+    return {
+      headline: `กำลังทำ ${running.step}`,
+      who: running.employeeName,
+      since: running.startedAt,
+      earlier,
+    };
+  }
+  const next = ordered.find((step) => byStep.get(step)?.status !== "done");
+  if (!next) return { headline: "ครบทุกขั้น", who: null, since: null, earlier };
+  if (earlier.length === 0) return { headline: "ยังไม่เริ่ม", who: null, since: null, earlier };
+  if (flowDone.length === 0) {
+    return { headline: `ทำแล้ว ${earlier.length} ขั้น`, who: null, since: null, earlier };
+  }
+  return { headline: `รอ ${next}`, who: null, since: null, earlier };
+}
+
+/** Keep the newer record for each step when the phone and the server both have a copy. */
+export function mergeTrialRuns(local: TrialRun[], remote: TrialRun[], jobId: string): TrialRun[] {
+  const others = local.filter((run) => run.jobId !== jobId);
+  const byStep = new Map<string, TrialRun>();
+  const stamp = (run: TrialRun) => run.finishedAt ?? run.startedAt;
+  for (const run of remote.filter((row) => row.jobId === jobId)) byStep.set(run.step, run);
+  for (const run of local.filter((row) => row.jobId === jobId)) {
+    const have = byStep.get(run.step);
+    if (!have || stamp(run) > stamp(have)) byStep.set(run.step, run);
+  }
+  return [...others, ...byStep.values()];
 }
 
 /** The steps a worker should see while the list is folded: the next unfinished step of each lane, then the join steps. */

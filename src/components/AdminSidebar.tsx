@@ -22,11 +22,11 @@ import {
   ListChecks,
   Activity,
   Timer,
+  Send,
   ShieldCheck,
   ScrollText,
   BookOpenCheck,
   Library,
-  Send,
 } from "lucide-react";
 import {
   Sidebar,
@@ -67,12 +67,12 @@ const NAV_GROUPS: Array<{
       { title: "ค้นหา Job ด่วน", url: "/job-lookup", icon: Search },
       { title: "โฟลว์สแกนโหมดสถานี", url: "/scan-flow", icon: ScanLine },
       { title: "แอปทดลองสแกน", url: "/scan-trial", icon: ScanLine },
-      { title: "ออเดอร์เข้าไลน์", url: "/trial-releases", icon: Send },
     ],
   },
   {
     label: "การผลิต",
     items: [
+      { title: "ออเดอร์เข้าไลน์", url: "/trial-releases", icon: Send },
       { title: "คิวผลิต (Curtain Flow)", url: "/production-queue", icon: Factory },
       { title: "ประวัติงานผลิต", url: "/logs", icon: FileText },
       { title: "พรีวิว Excel ผลิต", url: "/production-excel", icon: ListChecks },

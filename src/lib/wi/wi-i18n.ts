@@ -27,6 +27,7 @@ const th = {
   checks: "ตรวจก่อนส่งต่อ",
   prev: "ก่อนหน้า",
   next: "ถัดไป",
+  viewStepFirst: "ดูรูปในขั้นนี้ให้ครบ แล้วค่อยกดถัดไป",
   oneByOne: "ทีละขั้น",
   showAll: "ทั้งหมด",
   confirmRead: "อ่านจบแล้ว เข้าใจ",
@@ -107,6 +108,7 @@ const en: Record<WiLabelKey, string> = {
   checks: "Check before passing on",
   prev: "Back",
   next: "Next",
+  viewStepFirst: "Look at every photo in this step, then press Next",
   oneByOne: "One by one",
   showAll: "Show all",
   confirmRead: "I have read and understood",
@@ -186,6 +188,7 @@ const my: Record<WiLabelKey, string> = {
   checks: "မပို့မီ စစ်ဆေးရန်",
   prev: "ယခင်",
   next: "နောက်တစ်ဆင့်",
+  viewStepFirst: "ဤအဆင့်၏ ဓာတ်ပုံအားလုံး ကြည့်ပြီးမှ နောက်တစ်ဆင့် နှိပ်ပါ",
   oneByOne: "တစ်ဆင့်ချင်း",
   showAll: "အားလုံး",
   confirmRead: "ဖတ်ပြီး နားလည်ပါပြီ",
@@ -261,6 +264,103 @@ export function checkpointTypeLabel(t: WiT, type: WiCheckpointType): string {
 }
 
 /** Production names are stored as "ไทย မြန်မာ"; show the part for the language. */
+const STEP_BLURB: Record<string, Record<WiLang, string>> = {
+  ตัดผ้า: {
+    th: "ตัดผ้าตามขนาดในใบงาน",
+    en: "Cut the fabric to the size on the order",
+    my: "အော်ဒါပါ အရွယ်အတိုင်း အထည်ဖြတ်ပါ",
+  },
+  เจาะผ้า: {
+    th: "เจาะรูผ้าให้ตรงตำแหน่ง",
+    en: "Punch the fabric holes in the right place",
+    my: "အထည်ကို နေရာမှန်အောင် ဖောက်ပါ",
+  },
+  ตัดราง: {
+    th: "ตัดรางตามความกว้างที่สั่ง",
+    en: "Cut the rail to the ordered width",
+    my: "မှာထားသည့် အကျယ်အတိုင်း လမ်းကြောင်းဖြတ်ပါ",
+  },
+  ประกอบราง: {
+    th: "ประกอบชิ้นส่วนรางให้ครบก่อนส่งต่อ",
+    en: "Assemble the rail parts before passing it on",
+    my: "မပို့မီ လမ်းကြောင်းအစိတ်အပိုင်း တပ်ဆင်ပါ",
+  },
+  "เตรียมโซ่/หัวเกียร์": {
+    th: "เตรียมโซ่และหัวเกียร์ให้ตรงใบงาน",
+    en: "Prepare the chain and gear head to match the order",
+    my: "အော်ဒါအတိုင်း သံကြိုးနှင့် ဂီယာပြင်ပါ",
+  },
+  เปิดไม้: {
+    th: "เปิดมัดไม้แล้วแยกตามใบงาน",
+    en: "Open the timber bundle and sort it to the order",
+    my: "သစ်ထုပ်ဖွင့်ပြီး အော်ဒါအလိုက် ခွဲပါ",
+  },
+  ตัดใบ: {
+    th: "ตัดใบมู่ลี่ตามขนาดที่สั่ง",
+    en: "Cut the slats to the ordered size",
+    my: "မှာထားသည့် အရွယ်အတိုင်း ရွက်ဖြတ်ပါ",
+  },
+  เก็บสี: {
+    th: "เก็บสีผิวไม้ให้เรียบเสมอกัน",
+    en: "Finish the wood surface so the colour is even",
+    my: "သစ်သားမျက်နှာပြင် အရောင်ညီအောင် သုတ်ပါ",
+  },
+  เจาะใบ: {
+    th: "เจาะรูใบให้ตรงกันทุกแผ่น",
+    en: "Drill the slat holes so every piece lines up",
+    my: "ရွက်ပေါက်များ တစ်ထပ်တည်းကျအောင် ဖောက်ပါ",
+  },
+  "ตัดเทป/เตรียมโซ่": {
+    th: "ตัดเทปและเตรียมโซ่ตามแบบ",
+    en: "Cut the tape and prepare the chain to the pattern",
+    my: "တိပ်ဖြတ်ပြီး ပုံစံအတိုင်း သံကြိုးပြင်ပါ",
+  },
+  ประกอบ: {
+    th: "ประกอบชุดให้ครบก่อนส่งต่อ",
+    en: "Assemble the set fully before passing it on",
+    my: "မပို့မီ အစုံတပ်ဆင်ပြီးအောင် လုပ်ပါ",
+  },
+  ประกอบชุด: {
+    th: "ประกอบชิ้นส่วนทั้งชุดเข้าด้วยกัน",
+    en: "Put every part of the set together",
+    my: "အစုံ၏ အစိတ်အပိုင်းအားလုံး တပ်ဆင်ပါ",
+  },
+  หัว: {
+    th: "ใส่หัวแล้วตรวจว่าเลื่อนได้ลื่น",
+    en: "Fit the head and check that it moves smoothly",
+    my: "ခေါင်းတပ်ပြီး ချောချောရွှေ့နိုင်မရ စစ်ပါ",
+  },
+  QC: {
+    th: "ตรวจคุณภาพตามรายการก่อนแพ็ค",
+    en: "Check quality against the list before packing",
+    my: "မထုပ်မီ စာရင်းအတိုင်း အရည်အသွေးစစ်ပါ",
+  },
+  PACK: {
+    th: "แพ็คของและตรวจว่าอุปกรณ์ครบ",
+    en: "Pack the job and check that the parts are complete",
+    my: "ထုပ်ပိုးပြီး ပစ္စည်းစုံမစုံ စစ်ပါ",
+  },
+};
+
+const STEP_BLURB_FALLBACK: Record<WiLang, string> = {
+  th: "ทำให้ครบขั้นนี้ แล้วไปขั้นถัดไป",
+  en: "Finish this step, then go to the next one",
+  my: "ဤအဆင့် ပြီးမှ နောက်တစ်ဆင့် ဆက်ပါ",
+};
+
+export function wiStepBlurb(stepName: string, lang: WiLang): string {
+  const thai =
+    stepName
+      .replace(/^\d+\.\s*/, "")
+      .trim()
+      .match(/^[\u0E00-\u0E7F0-9.\s/()-]+/)?.[0]
+      ?.trim() || stepName.trim();
+  const key = Object.keys(STEP_BLURB)
+    .sort((a, b) => b.length - a.length)
+    .find((name) => thai === name || thai.startsWith(name));
+  return (key ? STEP_BLURB[key][lang] : null) ?? STEP_BLURB_FALLBACK[lang];
+}
+
 export function bilingualName(name: string, lang: WiLang): string {
   const body = name.replace(/^\d+\.\s*/, "").trim();
   const thai = body.match(/^[\u0E00-\u0E7F0-9.\s/()-]+/)?.[0]?.trim() ?? "";

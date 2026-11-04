@@ -2,15 +2,25 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { allowBadgeAttempt, findBadgeEmployee } from "@/lib/auth/badge-entry.server";
 import { issueQcToken, verifyQcToken, checkQcPassword } from "@/lib/auth/qc-token.server";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "@/lib/utils/media-limits";
-import { assertReportSubmitValid } from "@/lib/utils/report-media-validation";
+import { assertReportSubmitValid, checklistOverall } from "@/lib/utils/report-media-validation";
 
 function assertQc(token: string | undefined) {
   if (!verifyQcToken(token)) throw new Error("Unauthorized");
 }
 
 const tokenStr = z.string().min(1);
+
+export const enterQcByBadge = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ code: z.string().trim().min(1).max(50) }).parse(d))
+  .handler(async ({ data }) => {
+    if (!allowBadgeAttempt()) return { ok: false as const, error: "ลองถี่เกินไป โปรดลองใหม่" };
+    const employee = await findBadgeEmployee("qc_employees", data.code);
+    if (!employee) return { ok: false as const, error: "ไม่พบเลขพนักงานนี้ในแผนก QC" };
+    return { ok: true as const, token: issueQcToken(), employee };
+  });
 
 export const verifyQcPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ password: z.string().min(1).max(200) }).parse(d))
@@ -104,11 +114,7 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     assertQc(data.token);
     assertReportSubmitValid(data.items, data.media);
-    const passCount = data.items.filter((i) => i.is_passed).length;
-    const total = data.items.length;
-    const computedOverall =
-      data.overall_result ?? (total > 0 ? (passCount === total ? "pass" : "fail") : null);
-    const summary = total > 0 ? `ผ่าน ${passCount}/${total} ข้อ` : null;
+    const scored = checklistOverall(data.items, data.overall_result);
 
     const { data: inserted, error } = await supabaseAdmin
       .from("qc_reports")
@@ -121,8 +127,8 @@ export const qcSubmitReport = createServerFn({ method: "POST" })
         employee_id: data.employee_id ?? null,
         note: data.note ?? null,
         media: data.media,
-        overall_result: computedOverall,
-        summary,
+        overall_result: scored.overall,
+        summary: scored.summary,
       })
       .select("id")
       .single();

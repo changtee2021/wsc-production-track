@@ -1,7 +1,7 @@
 // Read-only Work Instruction view — the same component renders the admin
 // preview (draft) and the employee view (published snapshot), so what the
 // reviewer approves is exactly what the floor sees. No edit controls here.
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -84,16 +84,51 @@ function CheckpointItem({ c, t }: { c: WiCheckpoint; t: WiT }) {
   );
 }
 
+function SeenFigure({
+  id,
+  onSeen,
+  className,
+  children,
+}: {
+  id: string;
+  onSeen?: (id: string) => void;
+  className?: string;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || !onSeen) return;
+    const watch = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.45)) {
+          onSeen(id);
+        }
+      },
+      { threshold: [0.45] },
+    );
+    watch.observe(node);
+    return () => watch.disconnect();
+  }, [id, onSeen]);
+  return (
+    <figure ref={ref} className={className}>
+      {children}
+    </figure>
+  );
+}
+
 function StepMedia({
   step,
   mediaUrls,
   t,
   onOpenImage,
+  onSeen,
 }: {
   step: WiStepContent;
   mediaUrls: Record<string, string>;
   t: WiT;
   onOpenImage: (src: string, caption: string) => void;
+  onSeen?: (id: string) => void;
 }) {
   if (step.media.length === 0) {
     return (
@@ -110,12 +145,20 @@ function StepMedia({
         const src = m.path ? mediaUrls[m.path] : undefined;
         const wide = single || (i === 0 && step.media.length % 2 === 1);
         return (
-          <figure key={m.id} className={cn("space-y-1", wide && "col-span-2")}>
+          <SeenFigure
+            key={m.id}
+            id={m.id}
+            onSeen={onSeen}
+            className={cn("space-y-1", wide && "col-span-2")}
+          >
             {m.type === "image" &&
               (src ? (
                 <button
                   type="button"
-                  onClick={() => onOpenImage(src, m.caption || step.title)}
+                  onClick={() => {
+                    onSeen?.(m.id);
+                    onOpenImage(src, m.caption || step.title);
+                  }}
                   className="flex w-full justify-center overflow-hidden rounded-2xl bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <img
@@ -162,7 +205,7 @@ function StepMedia({
             {m.caption && m.type !== "link" && (
               <figcaption className="px-1 text-sm text-muted-foreground">{m.caption}</figcaption>
             )}
-          </figure>
+          </SeenFigure>
         );
       })}
     </div>
@@ -182,30 +225,20 @@ function stepIsCaptionOnly(step: WiStepContent) {
 
 function StepBlock({
   step,
-  index,
-  total,
   mediaUrls,
   t,
   onOpenImage,
+  onSeen,
 }: {
   step: WiStepContent;
-  index: number;
-  total: number;
   mediaUrls: Record<string, string>;
   t: WiT;
   onOpenImage: (src: string, caption: string) => void;
+  onSeen?: (id: string) => void;
 }) {
   const heading = (
-    <header className="flex items-start gap-3 px-1">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#E32D24] text-lg font-bold text-white">
-        {index + 1}
-      </span>
-      <div className="min-w-0 pt-0.5">
-        <div className="text-xs font-medium text-muted-foreground">
-          {t("stepOf", { i: index + 1, n: total })}
-        </div>
-        <h3 className="text-xl font-bold leading-snug">{step.title || "—"}</h3>
-      </div>
+    <header className="px-1">
+      <h3 className="text-xl font-bold leading-snug">{step.title || "—"}</h3>
     </header>
   );
 
@@ -214,7 +247,13 @@ function StepBlock({
       <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
         <div className="px-3 pt-3 sm:px-4">{heading}</div>
         <div className="p-3 sm:p-4">
-          <StepMedia step={step} mediaUrls={mediaUrls} t={t} onOpenImage={onOpenImage} />
+          <StepMedia
+            step={step}
+            mediaUrls={mediaUrls}
+            t={t}
+            onOpenImage={onOpenImage}
+            onSeen={onSeen}
+          />
         </div>
       </article>
     );
@@ -224,7 +263,13 @@ function StepBlock({
     <article className="@container rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
       <div className="space-y-4 @2xl:grid @2xl:grid-cols-2 @2xl:items-start @2xl:gap-6 @2xl:space-y-0">
         <div className="@2xl:sticky @2xl:top-20">
-          <StepMedia step={step} mediaUrls={mediaUrls} t={t} onOpenImage={onOpenImage} />
+          <StepMedia
+            step={step}
+            mediaUrls={mediaUrls}
+            t={t}
+            onOpenImage={onOpenImage}
+            onSeen={onSeen}
+          />
         </div>
         <div className="min-w-0 space-y-4">
           {heading}
@@ -315,14 +360,32 @@ export function WiViewer({
   const steps = snapshot.steps;
   const [mode, setMode] = useState<"step" | "all">("step");
   const [current, setCurrent] = useState(0);
+  const [seenIds, setSeenIds] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<{ src: string; caption: string } | null>(null);
   const idx = Math.min(current, Math.max(0, steps.length - 1));
   const isLast = idx >= steps.length - 1;
   const isRead = readState?.status === "read";
+  const lockSteps = !isPreview;
+  const seen = useMemo(() => new Set(seenIds), [seenIds]);
+  const markSeen = useCallback((id: string) => {
+    setSeenIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  }, []);
+  const stepReady = (step: WiStepContent | undefined) =>
+    !step || step.media.length === 0 || step.media.every((item) => seen.has(item.id));
+  const currentReady = !lockSteps || stepReady(steps[idx]);
 
-  const goTo = (i: number) => {
-    setCurrent(i);
+  const scrollTop = () => {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const goBackTo = (i: number) => {
+    if (lockSteps && (i >= idx || !currentReady)) return;
+    setCurrent(i);
+    scrollTop();
+  };
+  const goNext = () => {
+    if (!currentReady || isLast) return;
+    setCurrent(idx + 1);
+    scrollTop();
   };
   const openImage = (src: string, caption: string) => setLightbox({ src, caption });
 
@@ -334,7 +397,7 @@ export function WiViewer({
           ? "bg-emerald-600 text-white hover:bg-emerald-600 disabled:opacity-100"
           : WI_ACCENT_BTN,
       )}
-      disabled={isRead || acknowledging}
+      disabled={isRead || acknowledging || (lockSteps && isLast && mode === "step" && !currentReady)}
       onClick={onAcknowledge}
     >
       {acknowledging ? (
@@ -418,11 +481,8 @@ export function WiViewer({
         </div>
       ) : (
         <section className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-semibold">
-              {mode === "step" ? t("stepOf", { i: idx + 1, n: steps.length }) : t("showAll")}
-            </div>
-            {steps.length > 1 && (
+          {isPreview && steps.length > 1 && (
+            <div className="flex justify-end">
               <div className="inline-flex rounded-xl bg-muted p-1">
                 {(
                   [
@@ -445,10 +505,10 @@ export function WiViewer({
                   </button>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {mode === "step" ? (
+          {mode === "step" || !isPreview ? (
             <>
               {steps.length > 1 && (
                 <div
@@ -456,42 +516,50 @@ export function WiViewer({
                   role="tablist"
                   aria-label={t("step")}
                 >
-                  {steps.map((s, i) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={i === idx}
-                      onClick={() => goTo(i)}
-                      title={s.title}
-                      className={cn(
-                        "h-11 min-w-11 shrink-0 rounded-xl text-sm font-bold transition-colors",
-                        i === idx
-                          ? "bg-[#E32D24] text-white"
-                          : i < idx
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-                            : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {i < idx ? <CheckCircle2 className="mx-auto h-4 w-4" /> : i + 1}
-                    </button>
-                  ))}
+                  {steps.map((s, i) => {
+                    const ahead = i > idx;
+                    const locked = lockSteps && (ahead || (i !== idx && !currentReady));
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={i === idx}
+                        aria-disabled={locked}
+                        disabled={locked}
+                        onClick={() => goBackTo(i)}
+                        title={s.title}
+                        className={cn(
+                          "h-11 shrink-0 rounded-xl px-3 text-sm font-bold tabular-nums transition-colors",
+                          i === idx
+                            ? "bg-[#E32D24] text-white"
+                            : locked
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
+                        )}
+                      >
+                        {i + 1}/{steps.length}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               <StepBlock
                 step={steps[idx]}
-                index={idx}
-                total={steps.length}
                 mediaUrls={mediaUrls}
                 t={t}
                 onOpenImage={openImage}
+                onSeen={lockSteps ? markSeen : undefined}
               />
+              {!currentReady && (
+                <p className="px-1 text-center text-sm text-muted-foreground">{t("viewStepFirst")}</p>
+              )}
               <div className="sticky bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-10 mx-auto grid w-full max-w-2xl grid-cols-[auto_1fr] gap-2 rounded-2xl bg-background/80 p-1 backdrop-blur">
                 <Button
                   variant="outline"
                   className="h-14 rounded-2xl px-4 text-base"
-                  disabled={idx === 0}
-                  onClick={() => goTo(idx - 1)}
+                  disabled={idx === 0 || (lockSteps && !currentReady)}
+                  onClick={() => goBackTo(idx - 1)}
                   aria-label={t("prev")}
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -502,8 +570,8 @@ export function WiViewer({
                 ) : (
                   <Button
                     className={cn("h-14 rounded-2xl text-base font-semibold", WI_ACCENT_BTN)}
-                    disabled={isLast}
-                    onClick={() => goTo(idx + 1)}
+                    disabled={isLast || !currentReady}
+                    onClick={goNext}
                   >
                     {t("next")} <ChevronRight className="h-5 w-5" />
                   </Button>
@@ -512,12 +580,10 @@ export function WiViewer({
             </>
           ) : (
             <div className="space-y-3">
-              {steps.map((s, i) => (
+              {steps.map((s) => (
                 <StepBlock
                   key={s.id}
                   step={s}
-                  index={i}
-                  total={steps.length}
                   mediaUrls={mediaUrls}
                   t={t}
                   onOpenImage={openImage}

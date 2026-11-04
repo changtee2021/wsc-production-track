@@ -1,22 +1,34 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { AppHeader } from "@/components/AppHeader";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
+import { Button } from "@/components/ui/button";
+import { TrialEndPanel } from "@/components/TrialEndPanel";
 import {
   canStartTrial,
   flowSteps,
   flowById,
   loadTrialRuns,
+  mergeTrialRuns,
   nextTrialSteps,
   saveTrialRuns,
   stepLabel,
   TRIAL_FLOWS,
+  type TrialBadgePerson,
   type TrialFlowId,
   type TrialRun,
 } from "@/lib/scan-trial";
-import { lookupTrialRelease, releaseTrialJobs } from "@/lib/scan-trial.functions";
+import {
+  listTrialJobRuns,
+  listTrialStaff,
+  lookupTrialRelease,
+  releaseTrialJobs,
+  saveTrialRun,
+} from "@/lib/scan-trial.functions";
 import { AppVersion } from "@/components/AppVersion";
 import {
+  ArrowLeft,
   Check,
   ChevronDown,
   ChevronUp,
@@ -31,13 +43,7 @@ import {
   X,
 } from "lucide-react";
 
-type Employee = {
-  id: string;
-  name: string;
-  emp_code: string | null;
-  avatar_url: string | null;
-  department: "production" | "office";
-};
+type Employee = TrialBadgePerson;
 type ScanTarget = "badge" | "job";
 
 function splitName(full: string): { name: string; nickname: string | null } {
@@ -169,7 +175,7 @@ function readJobCode(text: string): string {
   return raw;
 }
 
-export function ScanTrialApp() {
+export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [worker, setWorker] = useState<Employee | null>(null);
@@ -193,13 +199,21 @@ export function ScanTrialApp() {
   const [batchProduct, setBatchProduct] = useState<TrialFlowId | null>(null);
   const [stepsOpen, setStepsOpen] = useState(false);
   const flashTimer = useRef<number | null>(null);
+  const seededJob = useRef("");
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
   const setRefs = useRef(new Map<string, HTMLLIElement>());
   const lookupRelease = useServerFn(lookupTrialRelease);
   const releaseJobs = useServerFn(releaseTrialJobs);
+  const listStaff = useServerFn(listTrialStaff);
+  const publishRun = useServerFn(saveTrialRun);
+  const listJobRuns = useServerFn(listTrialJobRuns);
 
   const flow = jobFlow ? flowById(jobFlow) : null;
   const selected = jobId && flow ? { jobId, flow } : null;
+  const endDesk =
+    worker?.department === "qc" ||
+    worker?.department === "packing" ||
+    worker?.department === "final";
   const steps = selected ? flowSteps(selected.flow) : [];
   const mine = runs.find(
     (run) => run.employeeId === worker?.id && run.jobId === jobId && run.status === "running",
@@ -234,37 +248,29 @@ export function ScanTrialApp() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [production, office] = await Promise.all([
-        supabase
-          .from("employees")
-          .select("id,name,emp_code,avatar_url")
-          .eq("active", true)
-          .order("name"),
-        supabase
-          .from("office_employees")
-          .select("id,name,emp_code,avatar_url")
-          .eq("active", true)
-          .order("name"),
-      ]);
-      if (cancelled) return;
-      if (production.error || office.error) {
-        setLoadState("error");
-        return;
+      try {
+        const roster = await listStaff({ data: {} });
+        if (cancelled) return;
+        setEmployees(roster.rows);
+        setLoadState("ready");
+      } catch {
+        if (!cancelled) setLoadState("error");
       }
-      setEmployees([
-        ...(production.data ?? []).map((row) => ({ ...row, department: "production" as const })),
-        ...(office.data ?? []).map((row) => ({ ...row, department: "office" as const })),
-      ]);
-      setLoadState("ready");
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [listStaff]);
 
   useEffect(() => {
     setStepsOpen(false);
   }, [jobId]);
+
+  useEffect(() => {
+    if (worker?.department === "qc") setStep("QC");
+    else if (worker?.department === "packing") setStep("PACK");
+    else if (worker?.department === "final") setStep("");
+  }, [worker?.id, worker?.department, jobId]);
 
   useEffect(() => {
     if (!running) return;
@@ -275,6 +281,36 @@ export function ScanTrialApp() {
   function persist(next: TrialRun[]) {
     saveTrialRuns(next);
     setRuns(next);
+  }
+
+  function publish(run: TrialRun) {
+    void publishRun({
+      data: {
+        jobId: run.jobId,
+        flow: run.flow,
+        step: run.step,
+        employeeId: run.employeeId,
+        employeeName: run.employeeName,
+        status: run.status,
+        startedAt: run.startedAt,
+        finishedAt: run.finishedAt,
+      },
+    }).catch(() => {
+      setNote("บันทึกขั้นตอนขึ้นไลน์ไม่สำเร็จ");
+    });
+  }
+
+  async function pullJobRuns(code: string) {
+    try {
+      const remote = await listJobRuns({ data: { jobId: code } });
+      setRuns((current) => {
+        const next = mergeTrialRuns(current, remote.runs, code);
+        saveTrialRuns(next);
+        return next;
+      });
+    } catch {
+      // Keep the copy already on this phone.
+    }
   }
 
   function assignWorker(person: Employee) {
@@ -313,10 +349,18 @@ export function ScanTrialApp() {
       setStep("");
       setBlocked([]);
       setNote(known.product ? null : "ยังไม่ส่งเข้าไลน์ผลิต");
+      void pullJobRuns(code);
     } catch (error) {
       setNote(error instanceof Error ? error.message : "ตรวจรหัสงานไม่สำเร็จ");
     }
   }
+
+  useEffect(() => {
+    const code = initialJobId.trim();
+    if (!code || seededJob.current === code) return;
+    seededJob.current = code;
+    void applyJobCode(code);
+  }, [initialJobId]);
 
   async function openScanner(target: ScanTarget) {
     if (running) return;
@@ -513,47 +557,91 @@ export function ScanTrialApp() {
       return;
     }
     setBlocked([]);
-    persist([
-      ...runs,
-      {
-        jobId: selected.jobId,
-        flow: selected.flow.id,
-        step,
-        employeeId: worker.id,
-        employeeName: worker.name,
-        status: "running",
-        startedAt: Date.now(),
-        finishedAt: null,
-      },
-    ]);
+    const started: TrialRun = {
+      jobId: selected.jobId,
+      flow: selected.flow.id,
+      step,
+      employeeId: worker.id,
+      employeeName: worker.name,
+      status: "running",
+      startedAt: Date.now(),
+      finishedAt: null,
+    };
+    persist([...runs, started]);
+    publish(started);
     setNote(null);
     setNow(Date.now());
   }
 
   function finishWork() {
     if (!mine) return;
-    persist(
-      runs.map((run) => (run === mine ? { ...run, status: "done", finishedAt: Date.now() } : run)),
-    );
+    const finished: TrialRun = { ...mine, status: "done", finishedAt: Date.now() };
+    persist(runs.map((run) => (run === mine ? finished : run)));
+    publish(finished);
     setStep("");
     setBlocked([]);
     setNote(null);
   }
 
+  function completeEndStep(stepName: string) {
+    if (!worker || !selected) return;
+    const now = Date.now();
+    const existing = runs.find(
+      (run) =>
+        run.jobId === selected.jobId && run.flow === selected.flow.id && run.step === stepName,
+    );
+    if (existing) {
+      const finished: TrialRun = {
+        ...existing,
+        status: "done",
+        finishedAt: now,
+        employeeId: worker.id,
+        employeeName: worker.name,
+      };
+      persist(runs.map((run) => (run === existing ? finished : run)));
+      publish(finished);
+      return;
+    }
+    const finished: TrialRun = {
+      jobId: selected.jobId,
+      flow: selected.flow.id,
+      step: stepName,
+      employeeId: worker.id,
+      employeeName: worker.name,
+      status: "done",
+      startedAt: now,
+      finishedAt: now,
+    };
+    persist([...runs, finished]);
+    publish(finished);
+  }
+
+  useEffect(() => {
+    if (!jobId) return;
+    const id = window.setInterval(() => {
+      void pullJobRuns(jobId);
+    }, 8000);
+    return () => window.clearInterval(id);
+  }, [jobId, listJobRuns]);
+
   const shown = worker ? splitName(worker.name) : null;
   const jobRuns = runs.filter((run) => run.jobId === jobId);
 
   return (
-    <div className="mx-auto w-full max-w-[24rem]">
-      <div className="mb-3 rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
-        แอปทดลอง ไม่บันทึกงานจริง และไม่เกี่ยวกับหน้าสแกนที่ใช้อยู่
-      </div>
-      <div className="rounded-[2rem] border-4 border-slate-800 bg-slate-800 p-1.5 shadow-lg">
-        <div className="relative flex min-h-[40rem] flex-col overflow-hidden rounded-[1.5rem] bg-background">
-          <div className="flex items-center justify-between bg-primary px-4 py-2 text-[11px] font-semibold text-primary-foreground">
-            <span>ทดลองสแกน</span>
-            <span>ไม่ลงงานจริง</span>
-          </div>
+    <div className="flex min-h-screen flex-col bg-background">
+      <AppHeader mark="white">
+        <Link to="/">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-11 gap-1 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            หน้าแรก
+          </Button>
+        </Link>
+      </AppHeader>
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
             {!worker ? (
               <>
@@ -624,7 +712,15 @@ export function ScanTrialApp() {
                     </p>
                     <p className="truncate text-[11px] opacity-80">
                       {worker.emp_code}
-                      {worker.department === "office" ? " · ออฟฟิศ" : ""}
+                      {worker.department === "office"
+                        ? " · ออฟฟิศ"
+                        : worker.department === "qc"
+                          ? " · QC"
+                          : worker.department === "packing"
+                            ? " · แพ็คของ"
+                            : worker.department === "final"
+                              ? " · QC / แพ็คของ"
+                              : ""}
                     </p>
                   </div>
                   <button
@@ -632,7 +728,10 @@ export function ScanTrialApp() {
                     aria-label="เปลี่ยนคน"
                     onClick={() => {
                       setWorker(null);
+                      setJobId("");
+                      setJobFlow(null);
                       setJobInput("");
+                      setStep("");
                       setNote(null);
                     }}
                     disabled={running}
@@ -894,7 +993,54 @@ export function ScanTrialApp() {
                       </div>
                     </div>
 
-                    {selected && (
+                    {selected && endDesk && (step === "QC" || step === "PACK") && (
+                      <>
+                        <p className="text-sm font-semibold">ขั้นตอน {stepLabel(step)}</p>
+                        {worker?.department === "final" && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {(["QC", "PACK"] as const).map((name) => (
+                              <button
+                                key={name}
+                                type="button"
+                                onClick={() => setStep(name)}
+                                className={`h-11 rounded-xl text-sm font-bold ${step === name ? "bg-sky-600 text-white" : "border bg-background"}`}
+                              >
+                                {stepLabel(name)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <TrialEndPanel
+                          key={`${selected.jobId}-${step}`}
+                          flowId={selected.flow.id}
+                          kind={step === "PACK" ? "packing" : "qc"}
+                          done={jobRuns.some((run) => run.step === step && run.status === "done")}
+                          onDone={(message) => {
+                            completeEndStep(step);
+                            setNote(message);
+                          }}
+                        />
+                      </>
+                    )}
+                    {selected &&
+                      worker?.department === "final" &&
+                      step !== "QC" &&
+                      step !== "PACK" && (
+                        <div className="grid grid-cols-2 gap-2">
+                          {(["QC", "PACK"] as const).map((name) => (
+                            <button
+                              key={name}
+                              type="button"
+                              onClick={() => setStep(name)}
+                              className="h-11 rounded-xl border bg-background text-sm font-bold"
+                            >
+                              {stepLabel(name)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                    {selected && !endDesk && (
                       <>
                         <label className="block">
                           <span className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
@@ -1020,7 +1166,7 @@ export function ScanTrialApp() {
             {note && (
               <p
                 className={`text-center text-xs font-medium ${
-                  note.startsWith("ส่งเข้าไลน์ผลิตแล้ว")
+                  note.startsWith("ส่งเข้าไลน์ผลิตแล้ว") || note.startsWith("ส่งรายงานสำเร็จ")
                     ? "text-emerald-700"
                     : note.includes("แก้แล้ว")
                       ? "text-foreground"
@@ -1052,8 +1198,6 @@ export function ScanTrialApp() {
               <AppVersion className="rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-sky-800" />
             </div>
           )}
-        </div>
-      </div>
       <QrScannerDialog
         open={scannerStream !== null}
         onOpenChange={(open) => {
@@ -1062,6 +1206,7 @@ export function ScanTrialApp() {
         onScanned={handleScanned}
         initialStream={scannerStream}
       />
+      </div>
     </div>
   );
 }
