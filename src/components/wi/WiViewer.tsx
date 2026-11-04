@@ -115,14 +115,17 @@ function StepMedia({
               (src ? (
                 <button
                   type="button"
-                  onClick={() => onOpenImage(src, m.caption)}
-                  className="block w-full overflow-hidden rounded-2xl bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => onOpenImage(src, m.caption || step.title)}
+                  className="flex w-full justify-center overflow-hidden rounded-2xl bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <img
                     src={src}
                     alt={m.caption || step.title}
                     loading="lazy"
-                    className="aspect-[4/3] w-full object-cover"
+                    className={cn(
+                      "bg-muted object-contain",
+                      single ? "h-auto max-h-[46vh] w-auto max-w-full" : "aspect-[4/3] w-full",
+                    )}
                   />
                 </button>
               ) : (
@@ -166,6 +169,17 @@ function StepMedia({
   );
 }
 
+function stepIsCaptionOnly(step: WiStepContent) {
+  return (
+    step.media.length > 0 &&
+    !step.instructions &&
+    !step.warning &&
+    !step.note &&
+    !step.expected_result &&
+    step.checkpoints.length === 0
+  );
+}
+
 function StepBlock({
   step,
   index,
@@ -181,6 +195,31 @@ function StepBlock({
   t: WiT;
   onOpenImage: (src: string, caption: string) => void;
 }) {
+  const heading = (
+    <header className="flex items-start gap-3 px-1">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#E32D24] text-lg font-bold text-white">
+        {index + 1}
+      </span>
+      <div className="min-w-0 pt-0.5">
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("stepOf", { i: index + 1, n: total })}
+        </div>
+        <h3 className="text-xl font-bold leading-snug">{step.title || "—"}</h3>
+      </div>
+    </header>
+  );
+
+  if (stepIsCaptionOnly(step)) {
+    return (
+      <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+        <div className="px-3 pt-3 sm:px-4">{heading}</div>
+        <div className="p-3 sm:p-4">
+          <StepMedia step={step} mediaUrls={mediaUrls} t={t} onOpenImage={onOpenImage} />
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article className="@container rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-5">
       <div className="space-y-4 @2xl:grid @2xl:grid-cols-2 @2xl:items-start @2xl:gap-6 @2xl:space-y-0">
@@ -188,17 +227,7 @@ function StepBlock({
           <StepMedia step={step} mediaUrls={mediaUrls} t={t} onOpenImage={onOpenImage} />
         </div>
         <div className="min-w-0 space-y-4">
-          <header className="flex items-start gap-3 px-1">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#E32D24] text-lg font-bold text-white">
-              {index + 1}
-            </span>
-            <div className="min-w-0 pt-0.5">
-              <div className="text-xs font-medium text-muted-foreground">
-                {t("stepOf", { i: index + 1, n: total })}
-              </div>
-              <h3 className="text-xl font-bold leading-snug">{step.title || "—"}</h3>
-            </div>
-          </header>
+          {heading}
 
           {step.warning && (
             <div className="flex gap-2 rounded-2xl bg-[#E32D24]/10 p-3 text-[#b3221b] dark:text-[#ff8a84]">
