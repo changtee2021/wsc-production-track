@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { ArrowLeft, MessageSquare, Send } from "lucide-react";
 import { submitFeedback } from "@/lib/features/feedback.functions";
+import { loadHomeActor } from "@/lib/home-actor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +43,15 @@ const CATEGORIES: Array<{
 function FeedbackPage() {
   const submit = useServerFn(submitFeedback);
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    const actor = loadHomeActor();
+    if (!actor) return;
+    setForm((current) => ({
+      ...current,
+      from_name: current.from_name || actor.name,
+      from_emp_code: current.from_emp_code || actor.empCode,
+    }));
+  }, []);
   const [form, setForm] = useState({
     from_name: "",
     from_emp_code: "",

@@ -1,5 +1,6 @@
 // CSV + XLSX exporters for production dashboard (historical view).
 import * as XLSX from "xlsx";
+import { PACE_LABEL, productionPace } from "@/lib/production-pace";
 
 type Timeline = {
   employee_name: string;
@@ -11,6 +12,7 @@ type Timeline = {
   finished_at: string;
   actual_seconds: number;
   target_seconds: number | null;
+  normal_seconds?: number | null;
   exceeded: boolean;
 };
 type ByEmployee = {
@@ -24,6 +26,10 @@ type ByEmployee = {
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("th-TH");
+}
+function paceLabel(t: Timeline): string {
+  const pace = productionPace(t.actual_seconds, t.normal_seconds, t.target_seconds);
+  return pace ? PACE_LABEL[pace] : "";
 }
 function escapeCell(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -43,8 +49,9 @@ export function buildHistoryCsv(timeline: Timeline[]): string {
     "เริ่ม",
     "เสร็จ",
     "เวลาจริง(วิ)",
-    "มาตรฐาน(วิ)",
-    "เกินมาตรฐาน",
+    "เวลาปกติ(วิ)",
+    "เกินเวลา(วิ)",
+    "สี",
   ];
   const lines = [header.join(",")];
   for (const t of timeline) {
@@ -59,8 +66,9 @@ export function buildHistoryCsv(timeline: Timeline[]): string {
         fmtDate(t.started_at),
         fmtDate(t.finished_at),
         t.actual_seconds,
+        t.normal_seconds ?? "",
         t.target_seconds ?? "",
-        t.exceeded ? "เกิน" : "",
+        paceLabel(t),
       ]
         .map(escapeCell)
         .join(","),
@@ -106,8 +114,9 @@ export function downloadHistoryXlsx(
     เริ่ม: fmtDate(t.started_at),
     เสร็จ: fmtDate(t.finished_at),
     "เวลาจริง(วิ)": t.actual_seconds,
-    "มาตรฐาน(วิ)": t.target_seconds ?? "",
-    เกินมาตรฐาน: t.exceeded ? "เกิน" : "",
+    "เวลาปกติ(วิ)": t.normal_seconds ?? "",
+    "เกินเวลา(วิ)": t.target_seconds ?? "",
+    สี: paceLabel(t),
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "สรุปต่อคน");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(tl), "Timeline");

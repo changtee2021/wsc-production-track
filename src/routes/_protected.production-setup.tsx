@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Toaster } from "@/components/ui/sonner";
 import { CategoriesPanel, StepsPanel } from "@/components/production-setup-panels";
+import { ProductionStandardsPanel } from "@/components/ProductionStandardsPanel";
 import { QcChecklistsPanel } from "@/components/QcChecklistsPanel";
 import { PackingChecklistsPanel } from "@/components/PackingChecklistsPanel";
 
@@ -44,6 +45,7 @@ function ProductionSetup() {
   const sections: { id: string; title: string; node: React.ReactNode }[] = [
     { id: "cat", title: "หมวดหมู่งานม่าน", node: <CategoriesPanel /> },
     { id: "step", title: "ขั้นตอนการผลิต", node: <StepsPanel /> },
+    { id: "std", title: "เวลามาตรฐาน & ไฟแดง", node: <ProductionStandardsPanel /> },
     { id: "qc-check", title: "เช็คลิสต์ QC", node: <QcChecklistsPanel /> },
     { id: "pack-check", title: "เช็คลิสต์แพ็คของ", node: <PackingChecklistsPanel /> },
   ];
@@ -54,7 +56,7 @@ function ProductionSetup() {
       <Toaster richColors position="top-center" />
       <h1 className="mb-1 text-2xl font-bold tracking-tight">ตั้งค่าการผลิต</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        จัดการหมวดหมู่งานม่าน ขั้นตอนการผลิต และเช็คลิสต์ QC / แพ็คของ (คลิกหัวข้อเพื่อเปิด/ปิด)
+        จัดการหมวดหมู่งานม่าน ขั้นตอนการผลิต เวลามาตรฐาน & ไฟแดง และเช็คลิสต์ QC / แพ็คของ (คลิกหัวข้อเพื่อเปิด/ปิด)
       </p>
       <div className="space-y-4">
         {sections.map((s, i) => (

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 import { loadLiveDashboard } from "@/lib/features/production-monitor.functions";
+import { productionPace, type ProductionPace } from "@/lib/production-pace";
 
 const SETTING_KEY = "monitor_share";
 
@@ -67,6 +68,7 @@ export interface MonitorWorker {
   who: string;
   job: string;
   seconds: number;
+  pace: ProductionPace | null;
   over: boolean;
   red: boolean;
 }
@@ -166,7 +168,8 @@ export const getMonitorSnapshot = createServerFn({ method: "POST" })
       for (const a of live.active) {
         if (!match(a.category_id)) continue;
         active++;
-        const isOver = a.target_seconds != null && a.elapsed_seconds > a.target_seconds;
+        const pace = productionPace(a.elapsed_seconds, a.normal_seconds, a.target_seconds);
+        const isOver = pace === "red";
         if (isOver) over++;
         if (a.is_red) red++;
         const list = workers.get(a.step_id) ?? [];
@@ -174,6 +177,7 @@ export const getMonitorSnapshot = createServerFn({ method: "POST" })
           who: first(a.employee_name),
           job: a.job_id,
           seconds: a.elapsed_seconds,
+          pace,
           over: isOver,
           red: a.is_red,
         });
@@ -194,7 +198,8 @@ export const getMonitorSnapshot = createServerFn({ method: "POST" })
       const steps: MonitorStep[] = live.steps.map((s) => {
         const ws = (workers.get(s.id) ?? []).sort((a, b) => b.seconds - a.seconds);
         const stepRed = ws.filter((w) => w.red).length;
-        const stepOver = ws.filter((w) => w.over).length;
+        const stepOver = ws.filter((w) => w.pace === "red").length;
+        const stepYellow = ws.filter((w) => w.pace === "yellow").length;
         return {
           id: s.id,
           name: s.step_name,
@@ -202,7 +207,7 @@ export const getMonitorSnapshot = createServerFn({ method: "POST" })
           over: stepOver,
           red: stepRed,
           doneToday: done.get(s.id) ?? 0,
-          level: stepRed > 0 ? "alert" : stepOver > 0 ? "warn" : "ok",
+          level: stepRed > 0 || stepOver > 0 ? "alert" : stepYellow > 0 ? "warn" : "ok",
           workers: ws,
         };
       });

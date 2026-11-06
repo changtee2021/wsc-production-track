@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   createFileRoute,
   Outlet,
@@ -5,7 +6,13 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { isAdminSession, clearAdminSession } from "@/lib/auth/admin-session";
+import {
+  isAdminSession,
+  clearAdminSession,
+  loadAdminActor,
+  type AdminActor,
+} from "@/lib/auth/admin-session";
+import { currentAvatarUrl } from "@/lib/employee-badge";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -59,9 +66,51 @@ const PAGE_TITLES: Record<string, string> = {
   "/iso-29110": "ISO 29110",
 };
 
+function splitName(full: string): { name: string; nickname: string | null } {
+  const match = full.trim().match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  return match
+    ? { name: match[1].trim(), nickname: match[2].trim() }
+    : { name: full.trim(), nickname: null };
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  return name.trim().slice(0, 2).toUpperCase();
+}
+
+function AdminActorChip({ actor }: { actor: AdminActor }) {
+  const shown = splitName(actor.name);
+  const photo = currentAvatarUrl(actor.avatarUrl);
+  const label = shown.nickname ?? shown.name;
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-xl bg-sky-50 px-2 py-1 text-sky-700 dark:bg-sky-950 dark:text-sky-200">
+      {photo ? (
+        <img
+          src={photo}
+          alt={label}
+          className="h-9 w-9 shrink-0 rounded-full object-cover object-top"
+        />
+      ) : (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-200 text-xs font-bold dark:bg-sky-800">
+          {initials(actor.name)}
+        </span>
+      )}
+      <div className="min-w-0">
+        <p className="max-w-[7rem] truncate text-xs font-semibold sm:max-w-[12rem]">{label}</p>
+        <p className="truncate text-[11px] opacity-80">{actor.empCode}</p>
+      </div>
+    </div>
+  );
+}
+
 function AdminLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [actor, setActor] = useState<AdminActor | null>(null);
+  useEffect(() => {
+    setActor(loadAdminActor());
+  }, []);
   const title =
     PAGE_TITLES[pathname] ?? (pathname.startsWith("/wi/") ? "Work Instructions" : "แอดมิน");
 
@@ -79,18 +128,19 @@ function AdminLayout() {
                 </h1>
               </div>
               <div className="flex items-center gap-1">
+                {actor && <AdminActorChip actor={actor} />}
                 <ThemeToggle />
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="gap-1"
+                  size="icon"
+                  aria-label="ออกจากระบบ"
+                  className="h-11 w-11"
                   onClick={() => {
                     clearAdminSession();
                     navigate({ to: "/admin" });
                   }}
                 >
                   <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline">Logout</span>
                 </Button>
               </div>
             </header>

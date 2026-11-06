@@ -295,6 +295,21 @@ const STEP_BLURB: Record<string, Record<WiLang, string>> = {
     en: "Open the timber bundle and sort it to the order",
     my: "သစ်ထုပ်ဖွင့်ပြီး အော်ဒါအလိုက် ခွဲပါ",
   },
+  เบิกไม้: {
+    th: "เบิกไม้ตามใบงาน",
+    en: "Issue the wood for this order",
+    my: "အော်ဒါအတွက် သစ်ထုတ်ပါ",
+  },
+  "QC ไม้ที่เบิก": {
+    th: "ตรวจสี ตำหนิ และความงอของไม้ที่เบิก ก่อนส่งไปตัด",
+    en: "Check the colour, defects, and bend of the issued wood before it is cut",
+    my: "မဖြတ်မီ ထုတ်ထားသော သစ်၏ အရောင်၊ အပြစ်နှင့် ကွေးမှုကို စစ်ပါ",
+  },
+  ตั้งงาน: {
+    th: "ตั้งงานหลังประกอบชุดเสร็จ",
+    en: "Set up the job after the set is assembled",
+    my: "အစုံတပ်ပြီးမှ အလုပ်စီစဉ်ပါ",
+  },
   ตัดใบ: {
     th: "ตัดใบมู่ลี่ตามขนาดที่สั่ง",
     en: "Cut the slats to the ordered size",

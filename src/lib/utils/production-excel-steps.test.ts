@@ -12,7 +12,7 @@ describe("production excel line release", () => {
     const send = lineReleaseStep("เนย", "2026-11-04T10:00:00.000Z");
     const cut = trialRunStep(
       {
-        step: "เปิดไม้",
+        step: "เบิกไม้",
         employee_name: "สมชาย",
         started_at: "2026-11-04T10:00:00.000Z",
         finished_at: "2026-11-04T10:20:00.000Z",
@@ -24,7 +24,7 @@ describe("production excel line release", () => {
     assert.equal(send.employee_name, "เนย");
     assert.equal(send.started_at, send.finished_at);
     assert.equal(ordered[0]?.step_name, LINE_RELEASE_STEP_NAME);
-    assert.equal(ordered[1]?.step_name, "เปิดไม้");
+    assert.equal(ordered[1]?.step_name, "เบิกไม้");
     assert.equal(ordered[1]?.actual_seconds, 1200);
   });
 });

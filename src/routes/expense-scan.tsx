@@ -12,6 +12,7 @@ import {
   ImagePlus,
   FileText,
 } from "lucide-react";
+import { loadHomeActor } from "@/lib/home-actor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -98,6 +99,12 @@ function Form() {
   const [emps, setEmps] = useState<Emp[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
   const [empId, setEmpId] = useState("");
+  useEffect(() => {
+    const actor = loadHomeActor();
+    if (!actor || !emps.length || empId) return;
+    const match = emps.find((row) => (row.emp_code ?? "").trim() === actor.empCode);
+    if (match) setEmpId(match.id);
+  }, [emps, empId]);
   const [files, setFiles] = useState<Uploaded[]>([]);
   const [uploading, setUploading] = useState(false);
   const [scanning, setScanning] = useState(false);

@@ -22,6 +22,7 @@ import {
   type WiReadStatus,
 } from "@/lib/features/wi.functions";
 import { WiManualHeader, WiReaderGate } from "@/components/wi/WiReaderControls";
+import { loadHomeActor } from "@/lib/home-actor";
 import { stepLabel } from "@/lib/scan-trial";
 import { bilingualName, useWiLang, useWiReader, wiStepBlurb, type WiT } from "@/lib/wi/wi-i18n";
 
@@ -88,7 +89,7 @@ function FlowBoard({
       <ol>
         {rows.map((row, index) => {
           const label =
-            lang === "my" ? stepLabel(row.step.step_name) : bilingualName(row.step.step_name, lang);
+            lang === "my" ? stepLabel(row.step.step_name, "my") : bilingualName(row.step.step_name, lang);
           const last = index === rows.length - 1 && extras.length === 0;
           return (
             <li key={row.step.step_id} className="relative flex gap-3 pb-5">
@@ -177,7 +178,14 @@ function ManualCatalogPage() {
   const catalogFn = useServerFn(wiPublicCatalog);
   const categoryId = UUID_RE.test(category) ? category : null;
   const [lang, , t] = useWiLang();
-  const [reader] = useWiReader();
+  const [reader, setReader] = useWiReader();
+  useEffect(() => {
+    if (reader) return;
+    const actor = loadHomeActor();
+    if (actor?.source === "production") {
+      setReader({ id: actor.id, name: actor.name, nationality: null });
+    }
+  }, [reader, setReader]);
   const readerId = reader?.id ?? null;
 
   const [data, setData] = useState<Catalog | null>(null);

@@ -183,6 +183,7 @@ export const adminGetProductionExcel = createServerFn({ method: "POST" })
       if (!jobCat.has(jobId)) jobCat.set(jobId, trialProductLabel(release.product));
     }
     for (const run of runs) {
+      if (run.status === "held") continue;
       const release = releaseByJob.get(run.job_id);
       const matches =
         !data.category_id ||
@@ -229,7 +230,7 @@ type TrialRunRow = {
   step: string;
   employee_id: string;
   employee_name: string;
-  status: "running" | "done";
+  status: "held" | "running" | "done";
   started_at: string;
   finished_at: string | null;
 };

@@ -22,8 +22,12 @@ import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/welcome-hero.png";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { AppVersion } from "@/components/AppVersion";
+import { HomeEntryDialog } from "@/components/HomeEntryDialog";
 import { clientAppPublicPath } from "@/lib/app-public-url";
 import { WscMark } from "@/components/WscMark";
+import type { HomeActor } from "@/lib/home-actor";
+import { SEQUENTIAL_SCAN_ENABLED, homeScanTarget } from "@/lib/sequential-scan";
+import { saveStoredStockEmployee } from "@/lib/stock-employee-persistence";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -48,7 +52,17 @@ export const Route = createFileRoute("/")({
 
 function WelcomePage() {
   const navigate = useNavigate({ from: "/" });
-  const goToScan = () => navigate({ to: "/scan-trial", search: { job_id: "" } });
+  const [entry, setEntry] = useState<{ label: string; go: (actor: HomeActor) => void } | null>(null);
+
+  function ask(label: string, go: (actor: HomeActor) => void) {
+    setEntry({ label, go });
+  }
+
+  function entered(actor: HomeActor) {
+    const go = entry?.go;
+    setEntry(null);
+    go?.(actor);
+  }
 
   const [banners, setBanners] = useState<string[]>([]);
   const [api, setApi] = useState<CarouselApi | null>(null);
@@ -132,56 +146,61 @@ function WelcomePage() {
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
-            <Link to="/expense-scan" aria-label="เบิกค่าใช้จ่าย (AI สแกน)">
-              <Button
+            <Button
+                type="button"
                 variant="ghost"
                 size="sm"
+                aria-label="เบิกค่าใช้จ่าย (AI สแกน)"
+                onClick={() => ask("สแกนบิล", () => navigate({ to: "/expense-scan" }))}
                 className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-emerald-600 text-white ring-1 ring-white/30 hover:bg-emerald-700 hover:text-white"
               >
                 <ScanLine className="h-4 w-4" />
                 <span className="hidden sm:inline">สแกนบิล</span>
               </Button>
-            </Link>
-            <Link to="/supplies-request" aria-label="เบิกอุปกรณ์ออฟฟิศ">
-              <Button
+            <Button
+                type="button"
                 variant="ghost"
                 size="sm"
+                aria-label="เบิกอุปกรณ์ออฟฟิศ"
+                onClick={() => ask("เบิกของ", () => navigate({ to: "/supplies-request" }))}
                 className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-indigo-600 text-white ring-1 ring-white/30 hover:bg-indigo-700 hover:text-white"
               >
                 <ShoppingCart className="h-4 w-4" />
                 <span className="hidden sm:inline">เบิกของ</span>
               </Button>
-            </Link>
-            <Link to="/maintenance" aria-label="เจ้าหนูแจ้งซ่อม">
-              <Button
+            <Button
+                type="button"
                 variant="ghost"
                 size="sm"
+                aria-label="เจ้าหนูแจ้งซ่อม"
+                onClick={() => ask("แจ้งซ่อม", () => navigate({ to: "/maintenance" }))}
                 className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-orange-600 text-white ring-1 ring-white/30 hover:bg-orange-700 hover:text-white"
               >
                 <Wrench className="h-4 w-4" />
                 <span className="hidden sm:inline">แจ้งซ่อม</span>
               </Button>
-            </Link>
-            <Link to="/feedback" aria-label="ส่งความคิดเห็น/แจ้งปัญหา">
-              <Button
+            <Button
+                type="button"
                 variant="ghost"
                 size="sm"
+                aria-label="ส่งความคิดเห็น/แจ้งปัญหา"
+                onClick={() => ask("แจ้งปัญหา", () => navigate({ to: "/feedback" }))}
                 className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-sky-600 text-white ring-1 ring-white/30 hover:bg-sky-700 hover:text-white"
               >
                 <MessageSquarePlus className="h-4 w-4" />
                 <span className="hidden sm:inline">แจ้งปัญหา</span>
               </Button>
-            </Link>
-            <Link to="/manual" search={{ category: "" }} aria-label="ดูคู่มือ WI">
-              <Button
+            <Button
+                type="button"
                 variant="ghost"
                 size="sm"
+                aria-label="ดูคู่มือ WI"
+                onClick={() => ask("คู่มือ WI", () => navigate({ to: "/manual", search: { category: "" } }))}
                 className="h-11 w-11 gap-1 rounded-full p-0 sm:h-9 sm:w-auto sm:px-3 bg-violet-600 text-white ring-1 ring-white/30 hover:bg-violet-700 hover:text-white"
               >
                 <BookOpenCheck className="h-4 w-4" />
                 <span className="hidden sm:inline">คู่มือ WI</span>
               </Button>
-            </Link>
             <Link to="/admin">
               <Button
                 variant="ghost"
@@ -213,38 +232,63 @@ function WelcomePage() {
           )}
           <div className="w-full max-w-md space-y-2">
             <Button
-              onClick={goToScan}
+              type="button"
+              onClick={() =>
+                ask("สแกน", (actor) =>
+                  navigate(
+                    homeScanTarget(actor.source, SEQUENTIAL_SCAN_ENABLED, actor.office === true),
+                  ),
+                )
+              }
               className="h-16 w-full rounded-2xl bg-white text-lg font-bold text-primary shadow-lg hover:bg-white/90"
             >
               <ScanLine className="mr-2 h-5 w-5" />
               สแกน
             </Button>
             <div className="grid grid-cols-2 gap-2">
-              <Link to="/warehouse">
-                <Button
+              <Button
+                  type="button"
                   variant="ghost"
                   aria-label="คลังสินค้า"
+                  onClick={() =>
+                    ask("คลัง", (actor) => {
+                      if (actor.source === "warehouse") {
+                        saveStoredStockEmployee({ id: actor.id, code: actor.empCode, name: actor.name });
+                      }
+                      void navigate({ to: "/warehouse" });
+                    })
+                  }
                   className="h-12 w-full rounded-2xl bg-teal-600 text-white ring-1 ring-white/30 hover:bg-teal-700 hover:text-white"
                 >
                   <Warehouse className="mr-1 h-4 w-4" />
                   คลัง
                 </Button>
-              </Link>
-              <Link to="/stock-count">
-                <Button
+              <Button
+                  type="button"
                   variant="ghost"
                   aria-label="นับสต๊อก"
+                  onClick={() =>
+                    ask("นับสต๊อก", (actor) => {
+                      if (actor.source === "stock") {
+                        saveStoredStockEmployee({ id: actor.id, code: actor.empCode, name: actor.name });
+                      }
+                      void navigate({ to: "/stock-count" });
+                    })
+                  }
                   className="h-12 w-full rounded-2xl bg-amber-600 text-white ring-1 ring-white/30 hover:bg-amber-700 hover:text-white"
                 >
                   <Boxes className="mr-1 h-4 w-4" />
                   นับสต๊อก
                 </Button>
-              </Link>
             </div>
             <div className="flex justify-center gap-3 pt-1 text-xs text-white/70">
-              <Link to="/feedback" className="underline-offset-2 hover:text-white hover:underline">
+              <button
+                type="button"
+                onClick={() => ask("แจ้งปัญหา", () => navigate({ to: "/feedback" }))}
+                className="underline-offset-2 hover:text-white hover:underline"
+              >
                 ส่งความคิดเห็น
-              </Link>
+              </button>
               <span>·</span>
               <Link to="/terms" className="underline-offset-2 hover:text-white hover:underline">
                 ข้อกำหนดการใช้งาน
@@ -253,6 +297,14 @@ function WelcomePage() {
           </div>
         </div>
       </section>
+      <HomeEntryDialog
+        label={entry?.label ?? ""}
+        open={entry !== null}
+        onOpenChange={(open) => {
+          if (!open) setEntry(null);
+        }}
+        onEntered={entered}
+      />
     </div>
   );
 }

@@ -25,20 +25,25 @@ type LogRow = {
   created_at: string;
 };
 
-type StdEntry = { target_seconds: number; red_threshold: number };
+type StdEntry = {
+  target_seconds: number;
+  normal_seconds: number | null;
+  red_threshold: number;
+};
 
 const DEFAULT_RED_THRESHOLD = 3;
 
 async function fetchStandardsMap(): Promise<Map<string, StdEntry>> {
   const { data, error } = await supabaseAdmin
     .from("production_standards")
-    .select("step_id, category_id, target_seconds, red_threshold")
+    .select("step_id, category_id, target_seconds, fast_seconds, red_threshold")
     .eq("active", true);
   if (error) throw new Error(error.message);
   const map = new Map<string, StdEntry>();
   for (const r of data ?? []) {
     map.set(`${r.step_id}|${r.category_id ?? ""}`, {
       target_seconds: r.target_seconds,
+      normal_seconds: r.fast_seconds ?? null,
       red_threshold:
         typeof r.red_threshold === "number" && r.red_threshold > 0
           ? r.red_threshold
@@ -159,6 +164,7 @@ export const adminGetEmployeeTimeline = createServerFn({ method: "POST" })
           finished_at: p.finished_at,
           actual_seconds: p.actual_seconds,
           target_seconds: std?.target_seconds ?? null,
+          normal_seconds: std?.normal_seconds ?? null,
           red_threshold: std?.red_threshold ?? null,
           exceeded: std != null && p.actual_seconds > std.target_seconds,
         };
@@ -249,6 +255,7 @@ export async function loadLiveDashboard() {
       started_at: string;
       elapsed_seconds: number;
       target_seconds: number | null;
+      normal_seconds: number | null;
       red_threshold: number | null;
       exceeded_today: number;
       is_red: boolean;
@@ -275,6 +282,7 @@ export async function loadLiveDashboard() {
         started_at: l.created_at,
         elapsed_seconds: elapsed,
         target_seconds: std?.target_seconds ?? null,
+        normal_seconds: std?.normal_seconds ?? null,
         red_threshold: threshold,
         exceeded_today: exc,
         is_red: threshold != null && exc >= threshold,
@@ -375,6 +383,7 @@ export const adminGetProductionHistory = createServerFn({ method: "POST" })
       finished_at: string;
       actual_seconds: number;
       target_seconds: number | null;
+      normal_seconds: number | null;
       exceeded: boolean;
     };
     const timeline: TL[] = pairs
@@ -394,6 +403,7 @@ export const adminGetProductionHistory = createServerFn({ method: "POST" })
           finished_at: p.finished_at,
           actual_seconds: p.actual_seconds,
           target_seconds: std?.target_seconds ?? null,
+          normal_seconds: std?.normal_seconds ?? null,
           exceeded: std != null && p.actual_seconds > std.target_seconds,
         };
       })
@@ -484,7 +494,7 @@ export const adminListProductionStandards = createServerFn({ method: "POST" })
     const [stdRes, catsRes, stepsRes] = await Promise.all([
       supabaseAdmin
         .from("production_standards")
-        .select("id, step_id, category_id, target_seconds, red_threshold, active"),
+        .select("id, step_id, category_id, target_seconds, fast_seconds, red_threshold, active"),
       supabaseAdmin.from("categories").select("id, name").eq("active", true).order("name"),
       supabaseAdmin.from("steps").select("id, step_name").eq("active", true).order("step_name"),
     ]);
@@ -505,7 +515,11 @@ export const adminUpsertProductionStandard = createServerFn({ method: "POST" })
         step_id: z.string().uuid(),
         category_id: z.string().uuid().nullable(),
         target_seconds: z.number().int().min(1).max(86400),
+        normal_seconds: z.number().int().min(1).max(86400).nullable(),
         red_threshold: z.number().int().min(1).max(50),
+      })
+      .refine((row) => row.normal_seconds == null || row.normal_seconds <= row.target_seconds, {
+        message: "เวลาปกติต้องไม่เกินเส้นเกินเวลา",
       })
       .parse(d),
   )
@@ -531,6 +545,7 @@ export const adminUpsertProductionStandard = createServerFn({ method: "POST" })
         .from("production_standards")
         .update({
           target_seconds: data.target_seconds,
+          fast_seconds: data.normal_seconds,
           red_threshold: data.red_threshold,
           active: true,
         })
@@ -541,6 +556,7 @@ export const adminUpsertProductionStandard = createServerFn({ method: "POST" })
         step_id: data.step_id,
         category_id: data.category_id,
         target_seconds: data.target_seconds,
+        fast_seconds: data.normal_seconds,
         red_threshold: data.red_threshold,
       });
       if (error) throw new Error(error.message);

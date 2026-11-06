@@ -169,13 +169,20 @@ function printWhenReadyScript(): string {
   </script>`;
 }
 
-export function openBadgePrint(people: BadgePerson[]) {
-  const win = window.open("", "_blank", "noopener,noreferrer,width=920,height=760");
+function openPrintWindow(html: string, width: number, height: number) {
+  // "noopener" makes Chrome open a blank about:blank window and drop the handle,
+  // so the badge HTML never gets written.
+  const win = window.open("", "_blank", `width=${width},height=${height}`);
   if (!win) throw new Error("เปิดหน้าต่างพิมพ์ไม่ได้ ลองอนุญาตป๊อปอัป");
-  const cards = people.map(renderBadgeHtml).join("");
   win.document.open();
-  win.document
-    .write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>บัตรพนักงาน WSC</title>
+  win.document.write(html);
+  win.document.close();
+}
+
+export function openBadgePrint(people: BadgePerson[]) {
+  const cards = people.map(renderBadgeHtml).join("");
+  openPrintWindow(
+    `<!doctype html><html lang="th"><head><meta charset="utf-8"><title>บัตรพนักงาน WSC</title>
     <link rel="stylesheet" href="${BADGE_FONT_HREF}">
     <style>
       @page{size:54mm 86mm;margin:0}
@@ -186,16 +193,16 @@ export function openBadgePrint(people: BadgePerson[]) {
       @media screen{body{background:#ece7df;display:flex;flex-wrap:wrap;gap:8px;padding:12px}.wsc-badge{box-shadow:0 8px 24px rgba(0,0,0,.18)}}
     </style></head><body>${cards}
     ${printWhenReadyScript()}
-    </body></html>`);
-  win.document.close();
+    </body></html>`,
+    920,
+    760,
+  );
 }
 
 /** A4 portrait holds 3 × 3 real 54×86 mm cards. Dashed lines are the cut guides. */
 export function openBadgeA4Print(people: BadgePerson[]) {
   const ready = people.filter((person) => person.photo);
   if (!ready.length) throw new Error("ไม่มีพนักงานที่มีรูปสำหรับพิมพ์บน A4");
-  const win = window.open("", "_blank", "noopener,noreferrer,width=980,height=820");
-  if (!win) throw new Error("เปิดหน้าต่างพิมพ์ไม่ได้ ลองอนุญาตป๊อปอัป");
   const perPage = 9;
   const pages: string[] = [];
   for (let i = 0; i < ready.length; i += perPage) {
@@ -205,9 +212,8 @@ export function openBadgeA4Print(people: BadgePerson[]) {
       .join("");
     pages.push(`<section class="sheet">${cells}</section>`);
   }
-  win.document.open();
-  win.document
-    .write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>บัตรพนักงาน A4 ${ready.length} ใบ</title>
+  openPrintWindow(
+    `<!doctype html><html lang="th"><head><meta charset="utf-8"><title>บัตรพนักงาน A4 ${ready.length} ใบ</title>
     <link rel="stylesheet" href="${BADGE_FONT_HREF}">
     <style>
       @page{size:A4 portrait;margin:0}
@@ -225,6 +231,8 @@ export function openBadgeA4Print(people: BadgePerson[]) {
     <p class="hint">บันทึกเป็น PDF · กระดาษ A4 แนวตั้ง · ขอบกระดาษ = ไม่มี · เส้นประคือรอยตัด · ${ready.length} ใบ หน้าละ 9 ใบ</p>
     ${pages.join("")}
     ${printWhenReadyScript()}
-    </body></html>`);
-  win.document.close();
+    </body></html>`,
+    980,
+    820,
+  );
 }

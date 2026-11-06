@@ -9,16 +9,22 @@ import {
   adminListTrialRuns,
   adminLookupTrialEmployee,
   adminUpdateTrialRelease,
+  adminWithdrawTrialBatch,
 } from "@/lib/scan-trial.functions";
 import {
+  batchWithdrawBlock,
   flowById,
+  isBatchStep,
   TRIAL_FLOWS,
   trialProductLabel,
   trialStepView,
+  type BatchStep,
   type TrialFlowId,
   type TrialStepSnapshot,
 } from "@/lib/scan-trial";
-import { ChevronDown, PenLine, Pencil, PlayCircle, Search, StopCircle } from "lucide-react";
+import { ChevronDown, PenLine, Pencil, PlayCircle, Plus, Search, StopCircle } from "lucide-react";
+import { LineIntakeDialog } from "@/components/LineIntakeDialog";
+import { loadAdminActor } from "@/lib/auth/admin-session";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -116,6 +122,7 @@ function runsAsLogs(runs: TrialStepSnapshot[]): TimelineLog[] {
   const logs: TimelineLog[] = [];
   for (const run of runs) {
     const sameInstant = run.finishedAt != null && Math.abs(run.finishedAt - run.startedAt) < 1000;
+    if (run.status === "held") continue;
     if (!sameInstant) {
       logs.push({
         id: `${run.step}-start`,
@@ -303,10 +310,15 @@ export function TrialReleasesPage() {
   const lookupEmployee = useServerFn(adminLookupTrialEmployee);
   const updateRelease = useServerFn(adminUpdateTrialRelease);
   const deleteRelease = useServerFn(adminDeleteTrialRelease);
+  const withdrawBatch = useServerFn(adminWithdrawTrialBatch);
   const [rows, setRows] = useState<ReleaseRow[]>([]);
   const [runs, setRuns] = useState<
-    (TrialStepSnapshot & { jobId: string; flow: TrialFlowId })[]
+    (TrialStepSnapshot & { jobId: string; flow: TrialFlowId; batchId?: string | null })[]
   >([]);
+  const [withdraw, setWithdraw] = useState<ReleaseRow | null>(null);
+  const [withdrawReason, setWithdrawReason] = useState("");
+  const [withdrawCode, setWithdrawCode] = useState("");
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const rowsRef = useRef<ReleaseRow[]>([]);
   const [busy, setBusy] = useState(false);
@@ -315,6 +327,7 @@ export function TrialReleasesPage() {
   const [codeError, setCodeError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [productFilter, setProductFilter] = useState("all");
+  const [intakeOpen, setIntakeOpen] = useState(false);
 
   const load = useCallback(async () => {
     const token = getAdminToken();
@@ -476,6 +489,49 @@ export function TrialReleasesPage() {
     });
   }, [rows, search, productFilter]);
 
+  const withdrawRuns = withdraw
+    ? runs.filter(
+        (run): run is (typeof runs)[number] & { step: BatchStep } =>
+          run.jobId === withdraw.job_id && isBatchStep(run.step),
+      )
+    : [];
+
+  async function runWithdraw(scope: "job" | "batch", step: BatchStep, batchId: string | null) {
+    const token = getAdminToken();
+    if (!token || !withdraw) return;
+    const reason = withdrawReason.trim();
+    const code = withdrawCode.trim();
+    if (!reason) {
+      setWithdrawError("ใส่สาเหตุก่อน");
+      return;
+    }
+    if (!code) {
+      setWithdrawError("ใส่รหัสพนักงานก่อน");
+      return;
+    }
+    setBusy(true);
+    setWithdrawError(null);
+    try {
+      await withdrawBatch({
+        data: {
+          token,
+          empCode: code,
+          reason,
+          step,
+          scope,
+          jobId: withdraw.job_id,
+          batchId: batchId ?? undefined,
+        },
+      });
+      toast.success(scope === "batch" ? "ถอนทั้งชุดแล้ว" : "ถอนใบนี้ออกจากชุดแล้ว");
+      setWithdraw(null);
+      await load();
+    } catch (error) {
+      setWithdrawError(error instanceof Error ? error.message : "ถอนไม่สำเร็จ");
+    }
+    setBusy(false);
+  }
+
   const reasonReady = (draft?.reason.trim().length ?? 0) > 0;
   const productChanged =
     draft != null &&
@@ -493,6 +549,14 @@ export function TrialReleasesPage() {
           </p>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            className="h-11 gap-1"
+            onClick={() => setIntakeOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            สแกนเข้าไลน์ผลิตใหม่
+          </Button>
           <Select value={productFilter} onValueChange={setProductFilter}>
             <SelectTrigger className="h-11 w-44" aria-label="กรองสินค้า">
               <SelectValue placeholder="สินค้า" />
@@ -582,15 +646,32 @@ export function TrialReleasesPage() {
                       </Popover>
                     </td>
                     <td className="px-4 py-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="min-h-11 min-w-11 px-2.5"
-                        aria-label="แก้ไข"
-                        onClick={() => openEdit(row)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-11 min-w-11 px-2.5"
+                          aria-label="แก้ไข"
+                          onClick={() => openEdit(row)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {jobRuns.some((run) => isBatchStep(run.step)) && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="min-h-11 px-3"
+                            onClick={() => {
+                              setWithdraw(row);
+                              setWithdrawReason("");
+                              setWithdrawCode("");
+                              setWithdrawError(null);
+                            }}
+                          >
+                            ถอนออกจากชุด
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -744,6 +825,113 @@ export function TrialReleasesPage() {
           )}
         </DialogContent>
       </Dialog>
+      <Dialog
+        open={withdraw != null}
+        onOpenChange={(open) => {
+          if (!open && !busy) setWithdraw(null);
+        }}
+      >
+        <DialogContent className="max-h-[90dvh] max-w-md overflow-y-auto">
+          <DialogTitle>ถอนออกจากชุด</DialogTitle>
+          <DialogDescription>
+            {withdraw?.job_id} ถอนได้เฉพาะขั้นนี้ ใบงานยังอยู่บนไลน์
+            ถ้าขั้นถัดไปเริ่มแล้ว ถอนไม่ได้
+          </DialogDescription>
+          <ul className="space-y-2">
+            {withdrawRuns.map((run) => {
+              const flow = TRIAL_FLOWS.some((item) => item.id === run.flow)
+                ? flowById(run.flow)
+                : null;
+              const jobRunsForBlock = runs
+                .filter((item) => item.jobId === run.jobId)
+                .map((item) => ({
+                  jobId: item.jobId,
+                  flow: item.flow,
+                  step: item.step,
+                  employeeId: "",
+                  employeeName: item.employeeName,
+                  status: item.status,
+                  startedAt: item.startedAt,
+                  finishedAt: item.finishedAt,
+                }));
+              const block = flow
+                ? batchWithdrawBlock({ flow, step: run.step, runs: jobRunsForBlock })
+                : { ok: false as const, message: "ไม่รู้จักสินค้า", who: null };
+              const statusLabel =
+                run.status === "held" ? "ยืนยันแล้ว รอเริ่ม" : run.status === "running" ? "กำลังทำ" : "จบแล้ว";
+              return (
+                <li key={`${run.step}-${run.batchId ?? "one"}`} className="space-y-2 rounded-xl border p-3">
+                  <p className="text-sm font-semibold">
+                    {run.step} · {statusLabel}
+                    {run.employeeName ? ` · ${run.employeeName}` : ""}
+                  </p>
+                  {!block.ok ? (
+                    <p className="text-sm font-medium text-red-700">{block.message}</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11"
+                        disabled={busy}
+                        onClick={() => void runWithdraw("job", run.step, run.batchId ?? null)}
+                      >
+                        ถอนใบนี้
+                      </Button>
+                      {run.batchId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-11"
+                          disabled={busy}
+                          onClick={() => void runWithdraw("batch", run.step, run.batchId ?? null)}
+                        >
+                          ถอนทั้งชุด
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <label className="block space-y-1 text-sm font-medium" htmlFor="withdraw-reason">
+            สาเหตุ
+            <Textarea
+              id="withdraw-reason"
+              value={withdrawReason}
+              maxLength={500}
+              placeholder="บอกสาเหตุก่อนถอน"
+              className="min-h-20"
+              onChange={(event) => setWithdrawReason(event.target.value)}
+            />
+          </label>
+          <label className="block space-y-1 text-sm font-medium" htmlFor="withdraw-code">
+            รหัสพนักงาน
+            <Input
+              id="withdraw-code"
+              value={withdrawCode}
+              autoComplete="off"
+              className="h-11 font-mono"
+              onChange={(event) => setWithdrawCode(event.target.value)}
+            />
+          </label>
+          {withdrawError && (
+            <p className="whitespace-pre-line text-sm font-medium text-destructive">{withdrawError}</p>
+          )}
+          <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => setWithdraw(null)}>
+            ปิด
+          </Button>
+        </DialogContent>
+      </Dialog>
+      <LineIntakeDialog
+        open={intakeOpen}
+        onOpenChange={setIntakeOpen}
+        sentByName={loadAdminActor()?.name ?? "แอดมิน"}
+        onSent={() => {
+          void load();
+        }}
+      />
     </section>
   );
 }
