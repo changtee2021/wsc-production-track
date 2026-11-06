@@ -1,5 +1,14 @@
 export type TrialFlowId = "roller" | "wood" | "aluminum" | "shade";
 
+/** Wood QC after the timber is issued, before the slats are cut. */
+export const WOOD_ISSUE_QC_STEP = "QC ไม้ที่เบิก";
+
+export const WOOD_ISSUE_QC_ITEMS = [
+  { id: "wood-qc-color", item_text: "เช็คสี", item_order: 1 },
+  { id: "wood-qc-defect", item_text: "เช็คตำหนิ", item_order: 2 },
+  { id: "wood-qc-bend", item_text: "ไม้งอหรือไม่", item_order: 3 },
+] as const;
+
 export type ScanLane = "v1" | "v2";
 
 /** Office-released jobs stay on v2. Everything else stays on the original scan. */
@@ -39,11 +48,11 @@ export const TRIAL_FLOWS: TrialFlow[] = [
     id: "wood",
     label: "มู่ลี่ไม้",
     lanes: [
-      ["เปิดไม้", "ตัดใบ", "เก็บสี", "เจาะใบ"],
+      ["เบิกไม้", WOOD_ISSUE_QC_STEP, "ตัดใบ", "เก็บสี", "เจาะใบ"],
       ["ตัดราง", "เจาะราง", "ประกอบราง"],
       ["ตัดเทป/เตรียมโซ่"],
     ],
-    after: ["ประกอบชุด", "หัว", "QC", "PACK"],
+    after: ["ประกอบชุด", "ตั้งงาน", "QC", "PACK"],
   },
   {
     id: "aluminum",
@@ -74,6 +83,7 @@ export function flowForProductName(name: string): TrialFlow | undefined {
 export function manualMatchesFlowStep(flowStep: string, text: string): boolean {
   if (flowStep === "ประกอบ") return /ประกอบ/.test(text) && !/ประกอบราง|ประกอบชุด/.test(text);
   if (flowStep === "หัว") return /หัว/.test(text) && !/หัวเกียร์/.test(text);
+  if (flowStep === "เบิกไม้") return /เบิกไม้|เปิดไม้/.test(text);
   return text.includes(flowStep);
 }
 
@@ -82,15 +92,60 @@ export function bestFlowStep(flow: TrialFlow, text: string): string | null {
   return names.find((name) => manualMatchesFlowStep(name, text)) ?? null;
 }
 
+export const BATCH_STEPS = ["เบิกไม้", "ตัดใบ", "ตัดราง"] as const;
+export type BatchStep = (typeof BATCH_STEPS)[number];
+
+export const BATCH_STEP_LABELS: Record<BatchStep, string> = {
+  เบิกไม้: "Issue wood",
+  ตัดใบ: "Cut slats",
+  ตัดราง: "Cut rail",
+};
+
+/** Roller-blind staff who may batch-scan. Everyone else stays on one-QR scan. */
+export const BATCH_SCAN_EMP_CODES = [
+  "66090018",
+  "66090021",
+  "66090022",
+  "66090023",
+  "66100027",
+  "68040039",
+  "69050053",
+  "68060045",
+  "68060058",
+  "68070067",
+  "68080080",
+  "68080083",
+  "68080084",
+  "68110103",
+  "69010013",
+  "69020022",
+  "69030032",
+  "69030035",
+  "69030036",
+  "69080081",
+  "69090087",
+] as const;
+
+const BATCH_SCAN_EMP_CODE_SET = new Set<string>(BATCH_SCAN_EMP_CODES);
+
+export function canUseBatchScan(empCode: string | null | undefined): boolean {
+  return BATCH_SCAN_EMP_CODE_SET.has((empCode ?? "").trim());
+}
+
+export function isBatchStep(step: string): step is BatchStep {
+  return (BATCH_STEPS as readonly string[]).includes(step);
+}
+
 export type TrialRun = {
   jobId: string;
   flow: TrialFlowId;
   step: string;
   employeeId: string;
   employeeName: string;
-  status: "running" | "done";
+  status: "held" | "running" | "done";
   startedAt: number;
   finishedAt: number | null;
+  batchId?: string | null;
 };
 
 const STORAGE_KEY = "wsc:scan-trial:v1";
@@ -107,6 +162,26 @@ export function trialJob(jobId: string): { jobId: string; flow: TrialFlow } | nu
   return { jobId: match.jobId, flow: flowById(match.flow) };
 }
 
+const STEP_EN: Record<string, string> = {
+  ตัดผ้า: "Cut fabric",
+  เจาะผ้า: "Punch fabric",
+  ตัดราง: "Cut rail",
+  เจาะราง: "Drill rail",
+  ประกอบราง: "Assemble rail",
+  "เตรียมโซ่/หัวเกียร์": "Prep chain / gear",
+  ประกอบ: "Assemble",
+  ประกอบชุด: "Assemble set",
+  หัว: "Fit head",
+  เบิกไม้: "Issue wood",
+  [WOOD_ISSUE_QC_STEP]: "Check issued wood",
+  ตัดใบ: "Cut slats",
+  เก็บสี: "Finish colour",
+  เจาะใบ: "Drill slats",
+  "ตัดเทป/เตรียมโซ่": "Cut tape / prep chain",
+  ตั้งงาน: "Set up",
+};
+
+/** Burmese labels stay for the manual when the reader picks Myanmar. */
 const STEP_MY: Record<string, string> = {
   ตัดผ้า: "အထည်ဖြတ်",
   เจาะผ้า: "အထည်ဖောက်",
@@ -117,18 +192,35 @@ const STEP_MY: Record<string, string> = {
   ประกอบ: "တပ်ဆင်",
   ประกอบชุด: "အစုံတပ်",
   หัว: "ခေါင်းတပ်",
+  เบิกไม้: "သစ်ထုတ်",
+  [WOOD_ISSUE_QC_STEP]: "ထုတ်သစ်စစ်",
   เปิดไม้: "သစ်ဖွင့်",
   ตัดใบ: "ရွက်ဖြတ်",
   เก็บสี: "အရောင်တင်",
   เจาะใบ: "ရွက်ဖောက်",
   "ตัดเทป/เตรียมโซ่": "တိပ်ဖြတ်/သံကြိုးပြင်",
+  ตั้งงาน: "အလုပ်စီစဉ်",
   QC: "စစ်ဆေး",
   PACK: "ထုပ်ပိုး",
 };
 
-export function stepLabel(name: string): string {
-  const burmese = STEP_MY[name];
-  return burmese ? `${name} I ${burmese}` : name;
+const PLAIN_STEPS = new Set(["QC", "PACK"]);
+
+/** Older scans stored the wood issue step under its previous name. */
+const STEP_DONE_ALIASES: Record<string, readonly string[]> = {
+  เบิกไม้: ["เปิดไม้"],
+};
+
+function matchingDoneRun(runs: TrialRun[], step: string): TrialRun | undefined {
+  const names = new Set([step, ...(STEP_DONE_ALIASES[step] ?? [])]);
+  return runs.find((run) => names.has(run.step) && run.status === "done");
+}
+
+/** Scan shows Thai then English. QC and PACK stay as a single name. */
+export function stepLabel(name: string, script: "en" | "my" = "en"): string {
+  if (script === "en" && PLAIN_STEPS.has(name)) return name;
+  const second = (script === "my" ? STEP_MY : STEP_EN)[name];
+  return second ? `${name} I ${second}` : name;
 }
 
 /** Same departments as the staff menu. Badge login must see every one of them. */
@@ -185,13 +277,18 @@ export function trialDesk(sources: readonly TrialStaffSource[]): TrialDesk {
   return "production";
 }
 
+/** Floor staff do not start the wood-issue QC. That checklist belongs to the QC desk. */
+export function floorFlowSteps(flow: TrialFlow): string[] {
+  return flowSteps(flow).filter((name) => name !== WOOD_ISSUE_QC_STEP);
+}
+
 /** Steps this badge may see. QC and packing never see earlier production steps. */
 export function trialVisibleSteps(department: TrialDesk, flow: TrialFlow): string[] {
   if (department === "qc") return ["QC"];
   if (department === "packing") return ["PACK"];
   if (department === "final") return ["QC", "PACK"];
   if (department === "office") return [];
-  return flowSteps(flow);
+  return floorFlowSteps(flow);
 }
 
 /**
@@ -233,7 +330,7 @@ export function flowSteps(flow: TrialFlow): string[] {
 export type TrialStepSnapshot = {
   step: string;
   employeeName: string;
-  status: "running" | "done";
+  status: "held" | "running" | "done";
   startedAt: number;
   finishedAt: number | null;
 };
@@ -264,6 +361,17 @@ export function trialStepView(
       earlier,
     };
   }
+  const held =
+    ordered.map((step) => byStep.get(step)).find((run) => run?.status === "held") ??
+    runs.find((run) => run.status === "held");
+  if (held) {
+    return {
+      headline: `ยืนยันชุดแล้ว รอเริ่ม ${held.step}`,
+      who: held.employeeName,
+      since: null,
+      earlier,
+    };
+  }
   const next = ordered.find((step) => byStep.get(step)?.status !== "done");
   if (!next) return { headline: "ครบทุกขั้น", who: null, since: null, earlier };
   if (earlier.length === 0) return { headline: "ยังไม่เริ่ม", who: null, since: null, earlier };
@@ -289,7 +397,7 @@ export function mergeTrialRuns(local: TrialRun[], remote: TrialRun[], jobId: str
 /** The steps a worker should see while the list is folded: the next unfinished step of each lane, then the join steps. */
 export function nextTrialSteps(flow: TrialFlow, runs: TrialRun[], jobId: string): string[] {
   const job = runs.filter((run) => run.jobId === jobId && run.flow === flow.id);
-  const done = (name: string) => job.find((run) => run.step === name)?.status === "done";
+  const done = (name: string) => Boolean(matchingDoneRun(job, name));
   const laneNow = flow.lanes
     .map((lane) => lane.find((name) => !done(name)))
     .filter((name): name is string => Boolean(name));
@@ -330,12 +438,21 @@ export function canStartTrial(input: {
   if (open) {
     return deny("เครื่องนี้ยังไม่กดเสร็จงาน ไปขั้นต่อไปไม่ได้", [open.step]);
   }
+  const heldOpen = input.runs.find(
+    (run) => run.employeeId === input.employeeId && run.status === "held",
+  );
+  if (heldOpen) {
+    return deny("มีชุดที่ยืนยันแล้วยังไม่กดเริ่ม", [heldOpen.step]);
+  }
 
   const same = job.find((run) => run.step === input.step);
+  if (same?.status === "held") {
+    return deny("ชุดนี้รับไปแล้ว", [input.step]);
+  }
   if (same?.status === "running") {
     return deny("คนก่อนหน้ายังไม่กดจบงาน", [input.step]);
   }
-  if (same?.status === "done") {
+  if (same?.status === "done" || matchingDoneRun(job, input.step)) {
     return deny("ขั้นนี้จบแล้ว", []);
   }
 
@@ -344,7 +461,7 @@ export function canStartTrial(input: {
     if (index < 0) continue;
     if (index === 0) return { ok: true };
     const previous = lane[index - 1];
-    const previousRun = job.find((run) => run.step === previous);
+    const previousRun = matchingDoneRun(job, previous) ?? job.find((run) => run.step === previous);
     if (!previousRun || previousRun.status !== "done") {
       return deny(
         previousRun?.status === "running"
@@ -385,4 +502,66 @@ export function canStartTrial(input: {
   }
 
   return { ok: true };
+}
+
+/** The step that must stay untouched before an admin can pull a job out of a set. */
+export function nextFlowStep(flow: TrialFlow, step: string): string | null {
+  for (const lane of flow.lanes) {
+    const index = lane.indexOf(step);
+    if (index < 0) continue;
+    if (index < lane.length - 1) return lane[index + 1] ?? null;
+    return flow.after[0] ?? null;
+  }
+  const afterIndex = flow.after.indexOf(step);
+  if (afterIndex < 0) return null;
+  return flow.after[afterIndex + 1] ?? null;
+}
+
+/** Whether this job can join a wood-issue, slat-cut, or rail-cut set. */
+export function claimBatchJob(input: {
+  step: BatchStep;
+  flow: TrialFlow;
+  jobId: string;
+  runs: TrialRun[];
+}): { ok: true } | { ok: false; message: string } {
+  if ((input.step === "เบิกไม้" || input.step === "ตัดใบ") && input.flow.id !== "wood") {
+    return { ok: false, message: "จุดนี้รับเฉพาะมู่ลี่ไม้" };
+  }
+  if (!flowSteps(input.flow).includes(input.step)) {
+    return { ok: false, message: "ขั้นตอนนี้ไม่อยู่ในสินค้านี้" };
+  }
+  const gate = canStartTrial({
+    runs: input.runs,
+    jobId: input.jobId,
+    flow: input.flow,
+    step: input.step,
+    employeeId: "__batch__",
+  });
+  if (!gate.ok) {
+    if (gate.blocked.length === 1 && gate.blocked[0] === input.step) {
+      return { ok: false, message: "ชุดนี้รับไปแล้ว" };
+    }
+    return { ok: false, message: gate.message };
+  }
+  return { ok: true };
+}
+
+/** Admin may remove only this step, and only while the following step has no row. */
+export function batchWithdrawBlock(input: {
+  flow: TrialFlow;
+  step: string;
+  runs: TrialRun[];
+}): { ok: true } | { ok: false; message: string; who: string | null } {
+  const jobRuns = input.runs.filter((run) => run.flow === input.flow.id);
+  const target = jobRuns.find((run) => run.step === input.step);
+  if (!target) return { ok: false, message: "ไม่พบขั้นนี้ในชุด", who: null };
+  const next = nextFlowStep(input.flow, input.step);
+  if (!next) return { ok: true };
+  const nextRun = jobRuns.find((run) => run.step === next);
+  if (!nextRun) return { ok: true };
+  return {
+    ok: false,
+    message: `${nextRun.employeeName} เริ่มขั้น ${next} แล้ว`,
+    who: nextRun.employeeName,
+  };
 }

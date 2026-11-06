@@ -15,9 +15,13 @@ const POLL_MS = 10_000;
 const MAX_WORKERS_SHOWN = 4;
 
 const LEVEL_STYLE: Record<MonitorStep["level"], { dot: string; ring: string; label: string }> = {
-  ok: { dot: "bg-emerald-500", ring: "border-emerald-200 dark:border-emerald-900", label: "ปกติ" },
-  warn: { dot: "bg-amber-500", ring: "border-amber-300 dark:border-amber-800", label: "เกินเวลา" },
-  alert: { dot: "bg-red-500", ring: "border-red-300 dark:border-red-800", label: "ไฟแดง" },
+  ok: {
+    dot: "bg-emerald-500",
+    ring: "border-emerald-200 dark:border-emerald-900",
+    label: "ก่อนเวลา",
+  },
+  warn: { dot: "bg-amber-500", ring: "border-amber-300 dark:border-amber-800", label: "เวลาปกติ" },
+  alert: { dot: "bg-red-500", ring: "border-red-300 dark:border-red-800", label: "เกินเวลา" },
 };
 
 function fmtTime(iso: string) {
@@ -143,11 +147,13 @@ function ActiveStepCard({ s }: { s: MonitorStep }) {
             </span>
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs tabular-nums ${
-                w.red
+                w.pace === "red"
                   ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
-                  : w.over
+                  : w.pace === "yellow"
                     ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                    : "bg-muted text-muted-foreground"
+                    : w.pace === "green"
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                      : "bg-muted text-muted-foreground"
               }`}
             >
               {fmtDur(w.seconds)}
@@ -324,7 +330,7 @@ export function MonitorBoard({ share }: { share: string }) {
               value={view.totals.over}
               sub={view.totals.over === 0 ? "ทุกงานอยู่ในเวลา" : "% ของงานที่กำลังทำ"}
               percent={pct(view.totals.over, view.totals.active)}
-              tone={view.totals.over > 0 ? "amber" : "slate"}
+              tone={view.totals.over > 0 ? "red" : "slate"}
             />
             <Kpi
               label="ไฟแดง"
@@ -415,9 +421,7 @@ export function MonitorBoard({ share }: { share: string }) {
                   {view.alerts.map((a, i) => (
                     <li
                       key={`${a.job}-${i}`}
-                      className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${
-                        a.red ? "bg-red-50 dark:bg-red-950/30" : "bg-amber-50 dark:bg-amber-950/30"
-                      }`}
+                      className="flex items-center justify-between gap-3 rounded-xl bg-red-50 px-3 py-2.5 dark:bg-red-950/30"
                     >
                       <div className="min-w-0">
                         <p className="truncate font-medium">{a.job}</p>
@@ -425,13 +429,7 @@ export function MonitorBoard({ share }: { share: string }) {
                           {a.step} · {a.who} · ทำมา {fmtDur(a.seconds)}
                         </p>
                       </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-                          a.red
-                            ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
-                            : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                        }`}
-                      >
+                      <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
                         +{fmtDur(a.overSeconds)}
                       </span>
                     </li>

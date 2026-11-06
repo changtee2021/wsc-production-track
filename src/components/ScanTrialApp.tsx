@@ -1,25 +1,34 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AppHeader } from "@/components/AppHeader";
+import { BatchStepPanel } from "@/components/BatchStepPanel";
 import { QrScannerDialog, acquireCameraStream } from "@/components/QrScannerDialog";
 import { Button } from "@/components/ui/button";
 import { TrialEndPanel } from "@/components/TrialEndPanel";
 import {
+  BATCH_STEP_LABELS,
+  BATCH_STEPS,
+  canUseBatchScan,
   canStartTrial,
-  flowSteps,
+  floorFlowSteps,
+  isBatchStep,
   flowById,
+  WOOD_ISSUE_QC_ITEMS,
+  WOOD_ISSUE_QC_STEP,
   loadTrialRuns,
   mergeTrialRuns,
   nextTrialSteps,
   saveTrialRuns,
   stepLabel,
   TRIAL_FLOWS,
+  type BatchStep,
   type TrialBadgePerson,
   type TrialFlowId,
   type TrialRun,
 } from "@/lib/scan-trial";
 import {
+  listMyTrialBatch,
   listTrialJobRuns,
   listTrialStaff,
   lookupTrialRelease,
@@ -27,6 +36,10 @@ import {
   saveTrialRun,
 } from "@/lib/scan-trial.functions";
 import { AppVersion } from "@/components/AppVersion";
+import { loadHomeActor } from "@/lib/home-actor";
+import { collectFreshJobCodes, intakeReviewNote, readJobCode } from "@/lib/intake-codes";
+import { decodeQrCodes } from "@/lib/qr-image";
+import { SEQUENTIAL_SCAN_ENABLED } from "@/lib/sequential-scan";
 import {
   ArrowLeft,
   Check,
@@ -34,7 +47,9 @@ import {
   ChevronUp,
   Clock,
   CreditCard,
+  ImagePlus,
   ListChecks,
+  Loader2,
   Play,
   QrCode,
   ScanLine,
@@ -164,18 +179,13 @@ function clockLabel(startedAt: number, now: number): string {
   return `${mm}:${ss}`;
 }
 
-function readJobCode(text: string): string {
-  const raw = text.trim();
-  try {
-    const fromQuery = new URL(raw).searchParams.get("job_id");
-    if (fromQuery) return fromQuery.trim();
-  } catch {
-    // The QR is a plain job id, not a link.
-  }
-  return raw;
-}
-
-export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
+export function ScanTrialApp({
+  initialJobId = "",
+  desk = "floor",
+}: {
+  initialJobId?: string;
+  desk?: "office" | "floor";
+}) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [worker, setWorker] = useState<Employee | null>(null);
@@ -198,7 +208,16 @@ export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
   const [choosingProduct, setChoosingProduct] = useState(false);
   const [batchProduct, setBatchProduct] = useState<TrialFlowId | null>(null);
   const [stepsOpen, setStepsOpen] = useState(false);
+  const [woodQcMode, setWoodQcMode] = useState<"issue" | "final">("issue");
+  const navigate = useNavigate();
   const flashTimer = useRef<number | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [review, setReview] = useState<string[]>([]);
+  const [reviewNote, setReviewNote] = useState<string | null>(null);
+  const [readingPhoto, setReadingPhoto] = useState(false);
+  const [batchStep, setBatchStep] = useState<BatchStep | null>(null);
+  const [batchLocked, setBatchLocked] = useState(false);
+  const [batchDraftCount, setBatchDraftCount] = useState(0);
   const seededJob = useRef("");
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
   const setRefs = useRef(new Map<string, HTMLLIElement>());
@@ -207,14 +226,20 @@ export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
   const listStaff = useServerFn(listTrialStaff);
   const publishRun = useServerFn(saveTrialRun);
   const listJobRuns = useServerFn(listTrialJobRuns);
+  const listMine = useServerFn(listMyTrialBatch);
 
   const flow = jobFlow ? flowById(jobFlow) : null;
   const selected = jobId && flow ? { jobId, flow } : null;
+  const showOffice = desk === "office" || worker?.department === "office";
   const endDesk =
     worker?.department === "qc" ||
     worker?.department === "packing" ||
     worker?.department === "final";
-  const steps = selected ? flowSteps(selected.flow) : [];
+  const batchDesk = Boolean(worker) && !endDesk && canUseBatchScan(worker?.emp_code);
+  const steps = selected ? floorFlowSteps(selected.flow) : [];
+  const woodQcDesk =
+    selected?.flow.id === "wood" &&
+    (worker?.department === "qc" || (worker?.department === "final" && step === "QC"));
   const mine = runs.find(
     (run) => run.employeeId === worker?.id && run.jobId === jobId && run.status === "running",
   );
@@ -253,6 +278,11 @@ export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
         if (cancelled) return;
         setEmployees(roster.rows);
         setLoadState("ready");
+        const actor = loadHomeActor();
+        if (actor) {
+          const person = roster.rows.find((row) => (row.emp_code ?? "").trim() === actor.empCode);
+          if (person) setWorker(person);
+        }
       } catch {
         if (!cancelled) setLoadState("error");
       }
@@ -263,8 +293,73 @@ export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
   }, [listStaff]);
 
   useEffect(() => {
+    if (SEQUENTIAL_SCAN_ENABLED || desk !== "office" || !worker) return;
+    if (worker.department === "office" || loadHomeActor()?.office === true) return;
+    void navigate({ to: "/scan", search: { job_id: "" }, replace: true });
+  }, [desk, navigate, worker]);
+
+  useEffect(() => {
     setStepsOpen(false);
+    setWoodQcMode("issue");
   }, [jobId]);
+
+  const seenBatchWorker = useRef<string | null>(null);
+
+  function pickBatch(step: BatchStep) {
+    if (batchLocked) {
+      setNote("ชุดนี้ล็อกแล้ว จบงานหรือให้แอดมินถอนก่อน");
+      return;
+    }
+    if (batchStep === step) {
+      if (batchDraftCount > 0 && !window.confirm("ปิดชุดนี้แล้ว ลิสต์ที่ยังไม่ยืนยันจะหาย")) return;
+      setBatchStep(null);
+      return;
+    }
+    if (
+      batchStep &&
+      batchDraftCount > 0 &&
+      !window.confirm("เปลี่ยนจุดแล้ว ลิสต์ที่ยังไม่ยืนยันจะหาย")
+    ) {
+      return;
+    }
+    setBatchStep(step);
+    setNote(null);
+  }
+
+  function pickGeneral() {
+    if (batchLocked) {
+      setNote("ชุดนี้ล็อกแล้ว จบงานหรือให้แอดมินถอนก่อน");
+      return;
+    }
+    if (batchDraftCount > 0 && !window.confirm("ปิดชุดนี้แล้ว ลิสต์ที่ยังไม่ยืนยันจะหาย")) return;
+    setBatchStep(null);
+    setNote(null);
+  }
+
+  useEffect(() => {
+    if (!worker || showOffice || endDesk || !canUseBatchScan(worker.emp_code)) {
+      seenBatchWorker.current = null;
+      setBatchStep(null);
+      setBatchLocked(false);
+      return;
+    }
+    if (seenBatchWorker.current !== worker.id) {
+      seenBatchWorker.current = worker.id;
+      setBatchStep(null);
+      setBatchLocked(false);
+    }
+    let cancelled = false;
+    void listMine({ data: { employeeId: worker.id } })
+      .then((res) => {
+        if (cancelled || !res.batch) return;
+        setBatchStep(res.batch.step);
+        setBatchLocked(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [worker, showOffice, endDesk, listMine]);
 
   useEffect(() => {
     if (worker?.department === "qc") setStep("QC");
@@ -531,9 +626,60 @@ export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
     }
   }
 
+  function blockedIntakeCodes(): Set<string> {
+    const blocked = new Set<string>([...batch, ...review]);
+    for (const row of sets) for (const code of row.codes) blocked.add(code);
+    return blocked;
+  }
+
+  async function stageCodes(raws: string[]) {
+    const result = await collectFreshJobCodes(raws, blockedIntakeCodes(), async (code) => {
+      const known = await lookupRelease({ data: { jobId: code } });
+      return known.product != null;
+    });
+    if (result.fresh.length > 0) {
+      setReview((current) => [
+        ...current,
+        ...result.fresh.filter((code) => !current.includes(code)),
+      ]);
+    }
+    setReviewNote(
+      intakeReviewNote({
+        found: raws.map(readJobCode).filter(Boolean).length,
+        fresh: result.fresh.length,
+        skipped: result.skipped,
+        failed: result.failed,
+      }),
+    );
+  }
+
+  function confirmReview() {
+    if (review.length === 0) return;
+    const next = [...batch];
+    for (const code of review) if (!next.includes(code)) next.push(code);
+    setBatch(next);
+    saveIntake(next, sets);
+    setReview([]);
+    setReviewNote(null);
+    setNote(null);
+  }
+
+  async function onPhoto(file: File) {
+    setReadingPhoto(true);
+    setReviewNote(null);
+    try {
+      const found = await decodeQrCodes(file);
+      if (found.length === 0) setReviewNote("ไม่พบ QR ในรูปนี้");
+      else await stageCodes(found);
+    } catch {
+      setReviewNote("อ่านรูปไม่สำเร็จ");
+    }
+    setReadingPhoto(false);
+  }
+
   function handleScanned(text: string) {
     if (scanTarget === "badge") applyBadgeCode(text);
-    else if (worker?.department === "office") addIntake(text);
+    else if (showOffice) void stageCodes([text]);
     else applyJobCode(text);
     closeScanner();
   }
@@ -626,6 +772,19 @@ export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
 
   const shown = worker ? splitName(worker.name) : null;
   const jobRuns = runs.filter((run) => run.jobId === jobId);
+  const woodIssueDone = jobRuns.some(
+    (run) => run.step === WOOD_ISSUE_QC_STEP && run.status === "done",
+  );
+  const woodIssueGate =
+    woodQcDesk && woodQcMode === "issue" && !woodIssueDone && worker && selected
+      ? canStartTrial({
+          runs,
+          jobId: selected.jobId,
+          flow: selected.flow,
+          step: WOOD_ISSUE_QC_STEP,
+          employeeId: worker.id,
+        })
+      : ({ ok: true } as const);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -642,152 +801,149 @@ export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
         </Link>
       </AppHeader>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-          <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-            {!worker ? (
-              <>
-                <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-muted/40 px-4 py-8 text-center">
-                  <CreditCard className="h-10 w-10 text-primary" />
-                  <p className="text-sm font-semibold leading-snug">สแกนบัตรพนักงาน</p>
-                  <p className="text-sm font-semibold leading-snug">ဝန်ထမ်းကတ် ဖတ်ပါ</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    สแกนเลขบนบัตร แล้วชื่อจะขึ้นเอง
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    ကတ်ပေါ်ကနံပါတ်ကို ဖတ်ရင် နာမည်ပေါ်လာမယ်
+        <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+          {!worker ? (
+            <>
+              <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-muted/40 px-4 py-8 text-center">
+                <CreditCard className="h-10 w-10 text-primary" />
+                <p className="text-sm font-semibold leading-snug">สแกนบัตรพนักงาน</p>
+                <p className="text-sm font-semibold leading-snug">ဝန်ထမ်းကတ် ဖတ်ပါ</p>
+                <p className="text-[11px] text-muted-foreground">สแกนเลขบนบัตร แล้วชื่อจะขึ้นเอง</p>
+                <p className="text-[11px] text-muted-foreground">
+                  ကတ်ပေါ်ကနံပါတ်ကို ဖတ်ရင် နာမည်ပေါ်လာမယ်
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void openScanner("badge")}
+                disabled={loadState !== "ready"}
+                className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-sky-500 text-base font-bold text-white shadow disabled:opacity-50"
+              >
+                <ScanLine className="h-5 w-5" />
+                {loadState === "loading" ? (
+                  "กำลังโหลดรายชื่อ"
+                ) : (
+                  <span className="leading-tight">
+                    สแกนบัตร <span className="font-semibold">ကတ်ဖတ်</span>
+                  </span>
+                )}
+              </button>
+              <div className="flex gap-1.5">
+                <input
+                  value={codeInput}
+                  onChange={(event) => setCodeInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") applyBadgeCode(codeInput);
+                  }}
+                  placeholder="หรือพิมพ์เลขพนักงาน သို့မဟုတ် ဝန်ထမ်းနံပါတ် ရိုက်ပါ"
+                  inputMode="numeric"
+                  className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-sm placeholder:text-[10px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => applyBadgeCode(codeInput)}
+                  aria-label="ยืนยันเลขพนักงาน"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-background"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 rounded-xl bg-sky-50 px-3 py-2 text-sky-700">
+                {worker.avatar_url ? (
+                  <img
+                    src={worker.avatar_url}
+                    alt={shown?.nickname ?? shown?.name ?? ""}
+                    className="h-12 w-12 shrink-0 rounded-full object-cover object-top"
+                  />
+                ) : (
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-200 text-sm font-bold">
+                    {initials(worker.name)}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-semibold">{shown?.nickname ?? shown?.name}</p>
+                  <p className="truncate text-[11px] opacity-80">
+                    {worker.emp_code}
+                    {showOffice
+                      ? " · ออฟฟิศ"
+                      : worker.department === "qc"
+                        ? " · QC"
+                        : worker.department === "packing"
+                          ? " · แพ็คของ"
+                          : worker.department === "final"
+                            ? " · QC / แพ็คของ"
+                            : ""}
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => void openScanner("badge")}
-                  disabled={loadState !== "ready"}
-                  className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-sky-500 text-base font-bold text-white shadow disabled:opacity-50"
+                  aria-label="เปลี่ยนคน"
+                  onClick={() => {
+                    setWorker(null);
+                    setJobId("");
+                    setJobFlow(null);
+                    setJobInput("");
+                    setStep("");
+                    setNote(null);
+                  }}
+                  disabled={running}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40"
                 >
-                  <ScanLine className="h-5 w-5" />
-                  {loadState === "loading" ? (
-                    "กำลังโหลดรายชื่อ"
-                  ) : (
-                    <span className="leading-tight">
-                      สแกนบัตร <span className="font-semibold">ကတ်ဖတ်</span>
-                    </span>
-                  )}
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-6 w-6 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M4 8h13" />
+                    <path d="M14 4.5 17.5 8 14 11.5" />
+                    <path d="M20 16H7" />
+                    <path d="M10 12.5 6.5 16 10 19.5" />
+                  </svg>
                 </button>
-                <div className="flex gap-1.5">
-                  <input
-                    value={codeInput}
-                    onChange={(event) => setCodeInput(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") applyBadgeCode(codeInput);
-                    }}
-                    placeholder="หรือพิมพ์เลขพนักงาน သို့မဟုတ် ဝန်ထမ်းနံပါတ် ရိုက်ပါ"
-                    inputMode="numeric"
-                    className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-sm placeholder:text-[10px]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => applyBadgeCode(codeInput)}
-                    aria-label="ยืนยันเลขพนักงาน"
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-background"
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 rounded-xl bg-sky-50 px-3 py-2 text-sky-700">
-                  {worker.avatar_url ? (
-                    <img
-                      src={worker.avatar_url}
-                      alt={shown?.nickname ?? shown?.name ?? ""}
-                      className="h-12 w-12 shrink-0 rounded-full object-cover object-top"
-                    />
-                  ) : (
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-200 text-sm font-bold">
-                      {initials(worker.name)}
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold">
-                      {shown?.nickname ?? shown?.name}
-                    </p>
-                    <p className="truncate text-[11px] opacity-80">
-                      {worker.emp_code}
-                      {worker.department === "office"
-                        ? " · ออฟฟิศ"
-                        : worker.department === "qc"
-                          ? " · QC"
-                          : worker.department === "packing"
-                            ? " · แพ็คของ"
-                            : worker.department === "final"
-                              ? " · QC / แพ็คของ"
-                              : ""}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    aria-label="เปลี่ยนคน"
-                    onClick={() => {
-                      setWorker(null);
-                      setJobId("");
-                      setJobFlow(null);
-                      setJobInput("");
-                      setStep("");
-                      setNote(null);
-                    }}
-                    disabled={running}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-6 w-6 text-neutral-500"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4 8h13" />
-                      <path d="M14 4.5 17.5 8 14 11.5" />
-                      <path d="M20 16H7" />
-                      <path d="M10 12.5 6.5 16 10 19.5" />
-                    </svg>
-                  </button>
-                </div>
+              </div>
 
-                {worker.department === "office" ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">รับออเดอร์</p>
-                      <p className="text-sm font-bold">{batch.length} ใบ</p>
-                    </div>
-                    <ul className="max-h-48 space-y-1 overflow-y-auto">
-                      {flashId && !batch.includes(flashId) && (
-                        <li className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-                          {flashId} · {flashMessage}
-                        </li>
-                      )}
-                      {batch.map((code) => (
-                        <li
-                          key={code}
-                          ref={(node) => {
-                            if (node) rowRefs.current.set(code, node);
-                            else rowRefs.current.delete(code);
-                          }}
-                          className={`flex min-h-11 items-center justify-between gap-2 rounded-lg border-2 px-2 text-sm ${flashId === code ? "border-red-500 bg-red-50 font-semibold text-red-700" : "border-transparent bg-muted/50"}`}
+              {showOffice ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">รับออเดอร์</p>
+                    <p className="text-sm font-bold">{batch.length} ใบ</p>
+                  </div>
+                  <ul className="max-h-48 space-y-1 overflow-y-auto">
+                    {flashId && !batch.includes(flashId) && (
+                      <li className="rounded-lg border-2 border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                        {flashId} · {flashMessage}
+                      </li>
+                    )}
+                    {batch.map((code) => (
+                      <li
+                        key={code}
+                        ref={(node) => {
+                          if (node) rowRefs.current.set(code, node);
+                          else rowRefs.current.delete(code);
+                        }}
+                        className={`flex min-h-11 items-center justify-between gap-2 rounded-lg border-2 px-2 text-sm ${flashId === code ? "border-red-500 bg-red-50 font-semibold text-red-700" : "border-transparent bg-muted/50"}`}
+                      >
+                        <span className="truncate">{code}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeIntake(code)}
+                          aria-label="เอาใบนี้ออก"
+                          className="flex h-11 w-11 shrink-0 items-center justify-center"
                         >
-                          <span className="truncate">{code}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeIntake(code)}
-                            aria-label="เอาใบนี้ออก"
-                            className="flex h-11 w-11 shrink-0 items-center justify-center"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                          <X className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => void openScanner("job")}
@@ -795,335 +951,502 @@ export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
                     >
                       <ScanLine className="h-5 w-5" /> สแกน QR
                     </button>
-                    <div className="flex gap-1.5">
-                      <input
-                        value={jobInput}
-                        onChange={(event) => setJobInput(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") addIntake(jobInput);
-                        }}
-                        placeholder="หรือพิมพ์รหัสงาน"
-                        className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => addIntake(jobInput)}
-                        aria-label="เพิ่มรหัสงาน"
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-background"
-                      >
-                        <Check className="h-4 w-4" />
-                      </button>
-                    </div>
-                    {!choosingProduct ? (
-                      <button
-                        type="button"
-                        disabled={batch.length === 0}
-                        onClick={() => {
-                          setChoosingProduct(true);
-                          setNote(null);
-                        }}
-                        className="flex h-14 items-center justify-center rounded-2xl bg-slate-900 text-base font-bold text-white disabled:opacity-40"
-                      >
-                        ชุดนี้ครบแล้ว
-                      </button>
-                    ) : (
-                      <>
-                        <p className="text-sm font-semibold">เลือกสินค้าทั้งชุด</p>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {TRIAL_FLOWS.map((flow) => (
-                            <button
-                              key={flow.id}
-                              type="button"
-                              onClick={() => setBatchProduct(flow.id)}
-                              className={`min-h-11 rounded-xl border px-2 text-sm font-semibold ${batchProduct === flow.id ? "border-sky-500 bg-sky-50" : "bg-card"}`}
-                            >
-                              {flow.label}
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={confirmProduct}
-                          className="flex h-14 items-center justify-center rounded-2xl bg-sky-500 text-base font-bold text-white"
-                        >
-                          ยืนยัน
-                        </button>
-                      </>
-                    )}
-                    <div className="border-t pt-3">
-                      <p className="text-sm font-semibold">รายการชุด</p>
-                      {sets.length === 0 ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          เลือกสินค้าแล้ว ชุดจะมาอยู่ตรงนี้ก่อนส่ง
-                        </p>
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={readingPhoto}
+                      className="flex h-14 items-center justify-center gap-2 rounded-2xl border bg-card text-base font-bold disabled:opacity-40"
+                    >
+                      {readingPhoto ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
-                        <ul className="mt-2 space-y-2">
-                          {sets.map((row) => {
-                            const flashed = row.codes.includes(flashId ?? "");
-                            const tone = flashed
-                              ? "border-red-500 bg-red-50"
-                              : row.sent
-                                ? "border-emerald-300 bg-emerald-50"
-                                : "border-border bg-card";
-                            return (
-                              <li
-                                key={row.id}
-                                ref={(node) => {
-                                  if (node) setRefs.current.set(row.id, node);
-                                  else setRefs.current.delete(row.id);
-                                }}
-                                className={`rounded-xl border-2 p-2 ${tone}`}
+                        <ImagePlus className="h-5 w-5" />
+                      )}
+                      อัปโหลดรูป
+                    </button>
+                  </div>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) void onPhoto(file);
+                    }}
+                  />
+                  {(review.length > 0 || reviewNote) && (
+                    <div className="space-y-2 rounded-2xl border bg-card p-3">
+                      <p className="text-sm font-semibold">ตรวจรหัสจากรูป</p>
+                      {review.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">ยังไม่มีรหัสใหม่</p>
+                      ) : (
+                        <ul className="max-h-48 space-y-1 overflow-y-auto">
+                          {review.map((code) => (
+                            <li
+                              key={code}
+                              className="flex min-h-11 items-center justify-between gap-2 rounded-lg bg-muted/60 px-2 text-sm"
+                            >
+                              <span className="truncate">{code}</span>
+                              <button
+                                type="button"
+                                aria-label={`ลบ ${code}`}
+                                className="flex h-11 w-11 items-center justify-center"
+                                onClick={() =>
+                                  setReview((current) => current.filter((item) => item !== code))
+                                }
                               >
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="text-sm font-semibold">
-                                    {productLabel(row.product)} · {row.codes.length} ใบ
-                                  </p>
-                                  <p
-                                    className={`text-xs font-semibold ${row.sent ? "text-emerald-700" : "text-amber-700"}`}
-                                  >
-                                    {row.sent ? "ส่งแล้ว" : "รอส่ง"}
-                                  </p>
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {row.codes.join(", ")}
-                                </p>
-                                {row.sent && row.sentAt && (
-                                  <p className="mt-1 text-xs font-medium text-emerald-800">
-                                    ส่งเมื่อ {formatSentAt(row.sentAt)}
-                                  </p>
-                                )}
-                                {!row.sent && (
-                                  <div className="mt-2 flex gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => editSet(row.id)}
-                                      className="min-h-11 flex-1 rounded-xl border bg-background text-sm font-semibold"
-                                    >
-                                      แก้ไข
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => deleteSet(row.id)}
-                                      className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-700"
-                                    >
-                                      ลบ
-                                    </button>
-                                  </div>
-                                )}
-                              </li>
-                            );
-                          })}
+                                <X className="h-4 w-4" />
+                              </button>
+                            </li>
+                          ))}
                         </ul>
                       )}
-                      <button
-                        type="button"
-                        disabled={sending || !sets.some((row) => !row.sent)}
-                        onClick={sendSets}
-                        className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-base font-bold text-white disabled:opacity-40"
-                      >
-                        <Send className="h-5 w-5" /> ส่งออเดอร์เข้าไลน์ผลิต
-                      </button>
-                      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                        รายการที่ส่งแล้วอยู่ถึงเที่ยงคืน ดูย้อนหลังหรือแก้ไขได้ที่หลังบ้านแอดมิน
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="rounded-2xl border bg-card p-3">
-                      <p className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                        <QrCode className="h-3.5 w-3.5" /> รหัสงาน (JOB ID)
-                      </p>
-                      {jobId ? (
-                        <>
-                          <div className="mt-1.5 flex items-center gap-1">
-                            <p className="text-lg font-bold text-primary">{jobId}</p>
-                            <button
-                              type="button"
-                              aria-label="ล้างรหัสงาน"
-                              disabled={running}
-                              onClick={() => {
-                                setJobId("");
-                                setJobInput("");
-                                setJobFlow(null);
-                                setStep("");
-                                setBlocked([]);
-                                setNote(null);
-                              }}
-                              className="flex h-11 w-11 items-center justify-center rounded-full text-red-600 disabled:opacity-40"
-                            >
-                              <X className="h-5 w-5" />
-                            </button>
-                          </div>
-                          {flow && <p className="text-[11px] font-semibold">{flow.label}</p>}
-                        </>
-                      ) : (
-                        <p className="mt-1.5 text-[11px] font-medium leading-snug text-destructive">
-                          ยังไม่มีรหัสงาน — กดปุ่ม &quot;สแกน QR&quot; หรือกรอกด้วยตัวเอง
-                        </p>
+                      {reviewNote && (
+                        <p className="text-sm font-medium text-amber-700">{reviewNote}</p>
                       )}
                       <button
                         type="button"
-                        onClick={() => void openScanner("job")}
-                        disabled={running}
-                        className="mt-2 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-40"
+                        onClick={confirmReview}
+                        disabled={review.length === 0}
+                        className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white disabled:opacity-40"
                       >
-                        <ScanLine className="h-4 w-4" /> สแกน QR
+                        ยืนยันเข้ารายการ
                       </button>
-                      <div className="mt-2 flex gap-1.5">
-                        <input
-                          value={jobInput}
-                          disabled={running}
-                          onChange={(event) => setJobInput(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") applyJobCode(jobInput);
-                          }}
-                          placeholder="หรือพิมพ์รหัสงาน"
-                          className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-[11px] disabled:opacity-40"
-                        />
+                    </div>
+                  )}
+                  <div className="flex gap-1.5">
+                    <input
+                      value={jobInput}
+                      onChange={(event) => setJobInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") addIntake(jobInput);
+                      }}
+                      placeholder="หรือพิมพ์รหัสงาน"
+                      className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addIntake(jobInput)}
+                      aria-label="เพิ่มรหัสงาน"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-background"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {!choosingProduct ? (
+                    <button
+                      type="button"
+                      disabled={batch.length === 0}
+                      onClick={() => {
+                        setChoosingProduct(true);
+                        setNote(null);
+                      }}
+                      className="flex h-14 items-center justify-center rounded-2xl bg-slate-900 text-base font-bold text-white disabled:opacity-40"
+                    >
+                      ชุดนี้ครบแล้ว
+                    </button>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold">เลือกสินค้าทั้งชุด</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {TRIAL_FLOWS.map((flow) => (
+                          <button
+                            key={flow.id}
+                            type="button"
+                            onClick={() => setBatchProduct(flow.id)}
+                            className={`min-h-11 rounded-xl border px-2 text-sm font-semibold ${batchProduct === flow.id ? "border-sky-500 bg-sky-50" : "bg-card"}`}
+                          >
+                            {flow.label}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={confirmProduct}
+                        className="flex h-14 items-center justify-center rounded-2xl bg-sky-500 text-base font-bold text-white"
+                      >
+                        ยืนยัน
+                      </button>
+                    </>
+                  )}
+                  <div className="border-t pt-3">
+                    <p className="text-sm font-semibold">รายการชุด</p>
+                    {sets.length === 0 ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        เลือกสินค้าแล้ว ชุดจะมาอยู่ตรงนี้ก่อนส่ง
+                      </p>
+                    ) : (
+                      <ul className="mt-2 space-y-2">
+                        {sets.map((row) => {
+                          const flashed = row.codes.includes(flashId ?? "");
+                          const tone = flashed
+                            ? "border-red-500 bg-red-50"
+                            : row.sent
+                              ? "border-emerald-300 bg-emerald-50"
+                              : "border-border bg-card";
+                          return (
+                            <li
+                              key={row.id}
+                              ref={(node) => {
+                                if (node) setRefs.current.set(row.id, node);
+                                else setRefs.current.delete(row.id);
+                              }}
+                              className={`rounded-xl border-2 p-2 ${tone}`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-sm font-semibold">
+                                  {productLabel(row.product)} · {row.codes.length} ใบ
+                                </p>
+                                <p
+                                  className={`text-xs font-semibold ${row.sent ? "text-emerald-700" : "text-amber-700"}`}
+                                >
+                                  {row.sent ? "ส่งแล้ว" : "รอส่ง"}
+                                </p>
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {row.codes.join(", ")}
+                              </p>
+                              {row.sent && row.sentAt && (
+                                <p className="mt-1 text-xs font-medium text-emerald-800">
+                                  ส่งเมื่อ {formatSentAt(row.sentAt)}
+                                </p>
+                              )}
+                              {!row.sent && (
+                                <div className="mt-2 flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => editSet(row.id)}
+                                    className="min-h-11 flex-1 rounded-xl border bg-background text-sm font-semibold"
+                                  >
+                                    แก้ไข
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteSet(row.id)}
+                                    className="min-h-11 flex-1 rounded-xl border border-red-200 bg-red-50 text-sm font-semibold text-red-700"
+                                  >
+                                    ลบ
+                                  </button>
+                                </div>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    <button
+                      type="button"
+                      disabled={sending || !sets.some((row) => !row.sent)}
+                      onClick={sendSets}
+                      className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-base font-bold text-white disabled:opacity-40"
+                    >
+                      <Send className="h-5 w-5" /> ส่งออเดอร์เข้าไลน์ผลิต
+                    </button>
+                    <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                      รายการที่ส่งแล้วอยู่ถึงเที่ยงคืน ดูย้อนหลังหรือแก้ไขได้ที่หลังบ้านแอดมิน
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {batchDesk && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">Scan</p>
+                      <div className="grid grid-cols-4 gap-2">
                         <button
                           type="button"
-                          onClick={() => applyJobCode(jobInput)}
-                          disabled={running}
-                          aria-label="ยืนยันรหัสงาน"
-                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-background disabled:opacity-40"
+                          onClick={pickGeneral}
+                          disabled={batchLocked}
+                          className={`min-h-11 rounded-xl border px-1 text-xs font-bold leading-tight disabled:opacity-40 ${batchStep == null ? "border-sky-600 bg-sky-600 text-white" : "bg-card"}`}
                         >
-                          <Check className="h-4 w-4" />
+                          General
                         </button>
+                        {BATCH_STEPS.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => pickBatch(name)}
+                            disabled={batchLocked && batchStep !== name}
+                            className={`min-h-11 rounded-xl border px-1 text-xs font-bold leading-tight disabled:opacity-40 ${batchStep === name ? "border-sky-600 bg-sky-600 text-white" : "bg-card"}`}
+                          >
+                            {BATCH_STEP_LABELS[name]}
+                          </button>
+                        ))}
                       </div>
                     </div>
+                  )}
+                  {batchDesk && batchStep ? (
+                    <BatchStepPanel
+                      key={`${worker.id}-${batchStep}`}
+                      step={batchStep}
+                      employeeId={worker.id}
+                      employeeName={worker.name}
+                      onLeave={() => {
+                        if (
+                          batchDraftCount > 0 &&
+                          !window.confirm("ปิดชุดนี้แล้ว ลิสต์ที่ยังไม่ยืนยันจะหาย")
+                        ) {
+                          return;
+                        }
+                        setBatchStep(null);
+                      }}
+                      onLockChange={setBatchLocked}
+                      onDraftCount={setBatchDraftCount}
+                    />
+                  ) : (
+                    <>
+                      <div className="rounded-2xl border bg-card p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                            <QrCode className="h-3.5 w-3.5" /> รหัสงาน (JOB ID)
+                          </p>
+                          {woodQcDesk && (
+                            <div className="flex shrink-0 gap-1.5">
+                              {(
+                                [
+                                  ["issue", "QC ไม้"],
+                                  ["final", "QC จบงาน"],
+                                ] as const
+                              ).map(([mode, label]) => (
+                                <button
+                                  key={mode}
+                                  type="button"
+                                  onClick={() => setWoodQcMode(mode)}
+                                  className={`h-11 rounded-xl px-3 text-sm font-bold ${
+                                    woodQcMode === mode
+                                      ? "bg-sky-600 text-white"
+                                      : "border bg-background"
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {jobId ? (
+                          <>
+                            <div className="mt-1.5 flex items-center gap-1">
+                              <p className="text-lg font-bold text-primary">{jobId}</p>
+                              <button
+                                type="button"
+                                aria-label="ล้างรหัสงาน"
+                                disabled={running}
+                                onClick={() => {
+                                  setJobId("");
+                                  setJobInput("");
+                                  setJobFlow(null);
+                                  setStep("");
+                                  setBlocked([]);
+                                  setNote(null);
+                                }}
+                                className="flex h-11 w-11 items-center justify-center rounded-full text-red-600 disabled:opacity-40"
+                              >
+                                <X className="h-5 w-5" />
+                              </button>
+                            </div>
+                            {flow && <p className="text-[11px] font-semibold">{flow.label}</p>}
+                          </>
+                        ) : (
+                          <p className="mt-1.5 text-[11px] font-medium leading-snug text-destructive">
+                            ยังไม่มีรหัสงาน — กดปุ่ม &quot;สแกน QR&quot; หรือกรอกด้วยตัวเอง
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void openScanner("job")}
+                          disabled={running}
+                          className="mt-2 flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-40"
+                        >
+                          <ScanLine className="h-4 w-4" /> สแกน QR
+                        </button>
+                        <div className="mt-2 flex gap-1.5">
+                          <input
+                            value={jobInput}
+                            disabled={running}
+                            onChange={(event) => setJobInput(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") applyJobCode(jobInput);
+                            }}
+                            placeholder="หรือพิมพ์รหัสงาน"
+                            className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-2.5 text-[11px] disabled:opacity-40"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => applyJobCode(jobInput)}
+                            disabled={running}
+                            aria-label="ยืนยันรหัสงาน"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-background disabled:opacity-40"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
 
-                    {selected && endDesk && (step === "QC" || step === "PACK") && (
-                      <>
-                        <p className="text-sm font-semibold">ขั้นตอน {stepLabel(step)}</p>
-                        {worker?.department === "final" && (
+                      {selected && endDesk && (step === "QC" || step === "PACK") && (
+                        <>
+                          <p className={woodQcDesk ? "text-xl font-bold" : "text-sm font-semibold"}>
+                            {woodQcDesk
+                              ? woodQcMode === "issue"
+                                ? "QC ไม้"
+                                : "QC จบงาน"
+                              : `ขั้นตอน ${stepLabel(step)}`}
+                          </p>
+                          {worker?.department === "final" && (
+                            <div className="grid grid-cols-2 gap-2">
+                              {(["QC", "PACK"] as const).map((name) => (
+                                <button
+                                  key={name}
+                                  type="button"
+                                  onClick={() => setStep(name)}
+                                  className={`h-11 rounded-xl text-sm font-bold ${step === name ? "bg-sky-600 text-white" : "border bg-background"}`}
+                                >
+                                  {stepLabel(name)}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {woodQcDesk && woodQcMode === "issue" && !woodIssueGate.ok ? (
+                            <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-800">
+                              {woodIssueGate.message}
+                            </p>
+                          ) : (
+                            <TrialEndPanel
+                              key={`${selected.jobId}-${step}-${woodQcDesk ? woodQcMode : "end"}`}
+                              flowId={selected.flow.id}
+                              kind={step === "PACK" ? "packing" : "qc"}
+                              fixedItems={
+                                woodQcDesk && woodQcMode === "issue"
+                                  ? WOOD_ISSUE_QC_ITEMS
+                                  : undefined
+                              }
+                              done={
+                                woodQcDesk && woodQcMode === "issue"
+                                  ? woodIssueDone
+                                  : jobRuns.some(
+                                      (run) => run.step === step && run.status === "done",
+                                    )
+                              }
+                              onDone={(message) => {
+                                completeEndStep(
+                                  woodQcDesk && woodQcMode === "issue" ? WOOD_ISSUE_QC_STEP : step,
+                                );
+                                setNote(message);
+                              }}
+                            />
+                          )}
+                        </>
+                      )}
+                      {selected &&
+                        worker?.department === "final" &&
+                        step !== "QC" &&
+                        step !== "PACK" && (
                           <div className="grid grid-cols-2 gap-2">
                             {(["QC", "PACK"] as const).map((name) => (
                               <button
                                 key={name}
                                 type="button"
                                 onClick={() => setStep(name)}
-                                className={`h-11 rounded-xl text-sm font-bold ${step === name ? "bg-sky-600 text-white" : "border bg-background"}`}
+                                className="h-11 rounded-xl border bg-background text-sm font-bold"
                               >
                                 {stepLabel(name)}
                               </button>
                             ))}
                           </div>
                         )}
-                        <TrialEndPanel
-                          key={`${selected.jobId}-${step}`}
-                          flowId={selected.flow.id}
-                          kind={step === "PACK" ? "packing" : "qc"}
-                          done={jobRuns.some((run) => run.step === step && run.status === "done")}
-                          onDone={(message) => {
-                            completeEndStep(step);
-                            setNote(message);
-                          }}
-                        />
-                      </>
-                    )}
-                    {selected &&
-                      worker?.department === "final" &&
-                      step !== "QC" &&
-                      step !== "PACK" && (
-                        <div className="grid grid-cols-2 gap-2">
-                          {(["QC", "PACK"] as const).map((name) => (
-                            <button
-                              key={name}
-                              type="button"
-                              onClick={() => setStep(name)}
-                              className="h-11 rounded-xl border bg-background text-sm font-bold"
+
+                      {selected && !endDesk && (
+                        <>
+                          <label className="block">
+                            <span className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                              <ListChecks className="h-3.5 w-3.5" /> ขั้นตอน {selected.flow.label}
+                            </span>
+                            <select
+                              value={running ? (mine?.step ?? "") : step}
+                              disabled={running}
+                              onChange={(event) => {
+                                setStep(event.target.value);
+                                setBlocked([]);
+                                setNote(null);
+                              }}
+                              className="h-12 w-full rounded-xl border bg-card px-3 text-sm font-semibold disabled:opacity-60"
                             >
-                              {stepLabel(name)}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                              <option value="">เลือกขั้นตอน</option>
+                              {steps
+                                .filter((name) => !isBatchStep(name))
+                                .map((name) => {
+                                  const row = jobRuns.find((run) => run.step === name);
+                                  const mark =
+                                    row?.status === "done"
+                                      ? " · จบแล้ว"
+                                      : row?.status === "running"
+                                        ? " · กำลังทำ"
+                                        : "";
+                                  return (
+                                    <option key={name} value={name}>
+                                      {stepLabel(name)}
+                                      {mark}
+                                    </option>
+                                  );
+                                })}
+                            </select>
+                          </label>
 
-                    {selected && !endDesk && (
-                      <>
-                        <label className="block">
-                          <span className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
-                            <ListChecks className="h-3.5 w-3.5" /> ขั้นตอน {selected.flow.label}
-                          </span>
-                          <select
-                            value={running ? (mine?.step ?? "") : step}
-                            disabled={running}
-                            onChange={(event) => {
-                              setStep(event.target.value);
-                              setBlocked([]);
-                              setNote(null);
-                            }}
-                            className="h-12 w-full rounded-xl border bg-card px-3 text-sm font-semibold disabled:opacity-60"
-                          >
-                            <option value="">เลือกขั้นตอน</option>
-                            {steps.map((name) => {
-                              const row = jobRuns.find((run) => run.step === name);
-                              const mark =
-                                row?.status === "done"
-                                  ? " · จบแล้ว"
-                                  : row?.status === "running"
-                                    ? " · กำลังทำ"
-                                    : "";
-                              return (
-                                <option key={name} value={name}>
-                                  {stepLabel(name)}
-                                  {mark}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        </label>
-
-                        <button
-                          type="button"
-                          onClick={startWork}
-                          disabled={running}
-                          className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-sky-500 text-base font-bold text-white shadow disabled:opacity-50"
-                        >
-                          <Play className="h-5 w-5" /> เริ่มงาน
-                        </button>
-
-                        {running && mine && (
-                          <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-700">
-                            <span className="flex items-center gap-1.5 text-sm font-semibold">
-                              <Clock className="h-4 w-4" /> {stepLabel(mine.step)}
-                            </span>
-                            <span className="font-mono text-xl font-bold tabular-nums">
-                              {clockLabel(mine.startedAt, now)}
-                            </span>
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={finishWork}
-                          disabled={!running}
-                          className={`flex h-14 items-center justify-center gap-2 rounded-2xl text-base font-bold text-white ${running ? "bg-slate-900" : "bg-slate-400"}`}
-                        >
-                          <Square className="h-5 w-5 fill-current" /> เสร็จงาน
-                        </button>
-
-                        <div className="flex items-center justify-between">
-                          <p className="text-[11px] font-semibold text-muted-foreground">
-                            ลำดับงาน
-                          </p>
                           <button
                             type="button"
-                            onClick={() => setStepsOpen((open) => !open)}
-                            className="flex min-h-11 items-center gap-1 px-1 text-xs font-semibold"
+                            onClick={startWork}
+                            disabled={running}
+                            className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-sky-500 text-base font-bold text-white shadow disabled:opacity-50"
                           >
-                            {stepsOpen ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
-                            {stepsOpen ? "หุบ" : "ดูกำหนดทั้งหมด"}
+                            <Play className="h-5 w-5" /> เริ่มงาน
                           </button>
-                        </div>
-                        <ul className="space-y-1 text-[11px]">
-                          {(stepsOpen ? steps : nextTrialSteps(selected.flow, runs, jobId)).map(
-                            (name) => {
+
+                          {running && mine && (
+                            <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-700">
+                              <span className="flex items-center gap-1.5 text-sm font-semibold">
+                                <Clock className="h-4 w-4" /> {stepLabel(mine.step)}
+                              </span>
+                              <span className="font-mono text-xl font-bold tabular-nums">
+                                {clockLabel(mine.startedAt, now)}
+                              </span>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={finishWork}
+                            disabled={!running}
+                            className={`flex h-14 items-center justify-center gap-2 rounded-2xl text-base font-bold text-white ${running ? "bg-slate-900" : "bg-slate-400"}`}
+                          >
+                            <Square className="h-5 w-5 fill-current" /> เสร็จงาน
+                          </button>
+
+                          <div className="flex items-center justify-between">
+                            <p className="text-[11px] font-semibold text-muted-foreground">
+                              ลำดับงาน
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setStepsOpen((open) => !open)}
+                              className="flex min-h-11 items-center gap-1 px-1 text-xs font-semibold"
+                            >
+                              {stepsOpen ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                              {stepsOpen ? "หุบ" : "ดูกำหนดทั้งหมด"}
+                            </button>
+                          </div>
+                          <ul className="space-y-1 text-[11px]">
+                            {(stepsOpen
+                              ? steps
+                              : nextTrialSteps(selected.flow, runs, jobId).filter(
+                                  (name) => name !== WOOD_ISSUE_QC_STEP,
+                                )
+                            ).map((name) => {
                               const row = jobRuns.find((run) => run.step === name);
                               const done = row?.status === "done";
                               const held = blocked.includes(name);
@@ -1149,63 +1472,63 @@ export function ScanTrialApp({ initialJobId = "" }: { initialJobId?: string }) {
                                   </span>
                                 </li>
                               );
-                            },
-                          )}
-                        </ul>
-                        {!stepsOpen && nextTrialSteps(selected.flow, runs, jobId).length === 0 && (
-                          <p className="text-center text-xs font-medium text-emerald-700">
-                            ครบทุกขั้นแล้ว
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-            {note && (
-              <p
-                className={`text-center text-xs font-medium ${
-                  note.startsWith("ส่งเข้าไลน์ผลิตแล้ว") || note.startsWith("ส่งรายงานสำเร็จ")
-                    ? "text-emerald-700"
-                    : note.includes("แก้แล้ว")
-                      ? "text-foreground"
-                      : "text-destructive"
-                }`}
-              >
-                {note === "ยังไม่ส่งเข้าไลน์ผลิต" ? (
-                  <>
-                    <span className="block">ยังไม่ส่งเข้าไลน์ผลิต</span>
-                    <span className="block">ထုတ်လုပ်ရေးလိုင်းကို မပို့ရသေးပါ</span>
-                  </>
-                ) : (
-                  note
-                )}
-              </p>
-            )}
-            {loadState === "error" && (
-              <p className="text-center text-xs font-medium text-destructive">
-                โหลดรายชื่อไม่สำเร็จ
-              </p>
-            )}
-          </div>
-          {!worker && (
-            <div className="flex shrink-0 flex-col items-center gap-1 px-4 pb-3 text-center">
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                <span className="block">หากพบปัญหาเข้าแจ้งหัวหน้างานทันที</span>
-                <span className="block">ပြဿနာတွေ့ရင် အကြီးအကဲကို ချက်ချင်းပြောပါ</span>
-              </p>
-              <AppVersion className="rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-sky-800" />
-            </div>
+                            })}
+                          </ul>
+                          {!stepsOpen &&
+                            nextTrialSteps(selected.flow, runs, jobId).length === 0 && (
+                              <p className="text-center text-xs font-medium text-emerald-700">
+                                ครบทุกขั้นแล้ว
+                              </p>
+                            )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </>
           )}
-      <QrScannerDialog
-        open={scannerStream !== null}
-        onOpenChange={(open) => {
-          if (!open) closeScanner();
-        }}
-        onScanned={handleScanned}
-        initialStream={scannerStream}
-      />
+          {note && (
+            <p
+              className={`text-center text-xs font-medium ${
+                note.startsWith("ส่งเข้าไลน์ผลิตแล้ว") || note.startsWith("ส่งรายงานสำเร็จ")
+                  ? "text-emerald-700"
+                  : note.includes("แก้แล้ว")
+                    ? "text-foreground"
+                    : "text-destructive"
+              }`}
+            >
+              {note === "ยังไม่ส่งเข้าไลน์ผลิต" ? (
+                <>
+                  <span className="block">ยังไม่ส่งเข้าไลน์ผลิต</span>
+                  <span className="block">ထုတ်လုပ်ရေးလိုင်းကို မပို့ရသေးပါ</span>
+                </>
+              ) : (
+                note
+              )}
+            </p>
+          )}
+          {loadState === "error" && (
+            <p className="text-center text-xs font-medium text-destructive">โหลดรายชื่อไม่สำเร็จ</p>
+          )}
+        </div>
+        {!worker && (
+          <div className="flex shrink-0 flex-col items-center gap-1 px-4 pb-3 text-center">
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <span className="block">หากพบปัญหาเข้าแจ้งหัวหน้างานทันที</span>
+              <span className="block">ပြဿနာတွေ့ရင် အကြီးအကဲကို ချက်ချင်းပြောပါ</span>
+            </p>
+            <AppVersion className="rounded-md border border-sky-300 bg-sky-50 px-2 py-1 text-sky-800" />
+          </div>
+        )}
+        <QrScannerDialog
+          open={scannerStream !== null}
+          onOpenChange={(open) => {
+            if (!open) closeScanner();
+          }}
+          onScanned={handleScanned}
+          initialStream={scannerStream}
+        />
       </div>
     </div>
   );

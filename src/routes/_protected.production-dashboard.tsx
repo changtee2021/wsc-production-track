@@ -24,6 +24,7 @@ import {
 import { AppVersion } from "@/components/AppVersion";
 import { MonitorPanel } from "@/components/monitor/MonitorPanel";
 import { downloadHistoryCsv, downloadHistoryXlsx } from "@/lib/utils/production-export";
+import { paceTone, productionPace } from "@/lib/production-pace";
 
 export const Route = createFileRoute("/_protected/production-dashboard")({
   head: () => ({ meta: [{ title: "แดชบอร์ดไลน์ผลิต — WSC ProductionTrack" }] }),
@@ -298,48 +299,50 @@ function HistoryView() {
               </div>
             ) : (
               <ol className="space-y-2">
-                {data.timeline.slice(0, 300).map((t, idx) => (
-                  <li
-                    key={`${t.job_id}-${idx}`}
-                    className={`rounded-xl border p-3 ${t.exceeded ? "border-rose-300 bg-rose-50/40 dark:bg-rose-950/10" : "border-border bg-background"}`}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2 text-sm">
-                      <div className="min-w-0">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openProfile({ name: t.employee_name, emp_code: t.emp_code })
-                          }
-                          className="font-semibold hover:text-primary hover:underline"
-                        >
-                          {t.employee_name}
-                        </button>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(t.started_at).toLocaleString("th-TH")} →{" "}
-                          {new Date(t.finished_at).toLocaleTimeString("th-TH", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                {data.timeline.slice(0, 300).map((t, idx) => {
+                  const tone = paceTone(
+                    productionPace(t.actual_seconds, t.normal_seconds, t.target_seconds),
+                  );
+                  return (
+                    <li key={`${t.job_id}-${idx}`} className={`rounded-xl border p-3 ${tone.card}`}>
+                      <div className="flex flex-wrap items-start justify-between gap-2 text-sm">
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openProfile({ name: t.employee_name, emp_code: t.emp_code })
+                            }
+                            className="font-semibold hover:text-primary hover:underline"
+                          >
+                            {t.employee_name}
+                          </button>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(t.started_at).toLocaleString("th-TH")} →{" "}
+                            {new Date(t.finished_at).toLocaleTimeString("th-TH", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {t.step_name}
+                            {t.category_name && <> · {t.category_name}</>} · Job{" "}
+                            <span className="font-mono">{t.job_id}</span>
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {t.step_name}
-                          {t.category_name && <> · {t.category_name}</>} · Job{" "}
-                          <span className="font-mono">{t.job_id}</span>
+                        <div className="text-right">
+                          <div className={`font-bold ${tone.text}`}>
+                            {fmtDuration(t.actual_seconds)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {tone.label || "ยังไม่ตั้งเวลา"}
+                            {t.normal_seconds ? ` · ปกติ ${fmtDuration(t.normal_seconds)}` : ""}
+                            {t.target_seconds ? ` · เกิน ${fmtDuration(t.target_seconds)}` : ""}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div
-                          className={`font-bold ${t.exceeded ? "text-rose-600" : "text-emerald-600"}`}
-                        >
-                          {fmtDuration(t.actual_seconds)}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">
-                          มาตรฐาน {t.target_seconds ? fmtDuration(t.target_seconds) : "—"}
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
                 {data.timeline.length > 300 && (
                   <li className="text-center text-xs text-muted-foreground">
                     แสดง 300 แถวแรก · ใช้ Export เพื่อดูทั้งหมด ({data.timeline.length} รายการ)

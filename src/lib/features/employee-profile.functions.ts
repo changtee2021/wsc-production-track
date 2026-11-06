@@ -177,6 +177,7 @@ export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" 
       finished_at: string;
       actual_seconds: number;
       target_seconds: number | null;
+      normal_seconds: number | null;
       red_threshold: number | null;
       exceeded: boolean;
     };
@@ -199,16 +200,17 @@ export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" 
           .order("created_at", { ascending: true }),
         supabaseAdmin
           .from("production_standards")
-          .select("step_id, category_id, target_seconds, red_threshold")
+          .select("step_id, category_id, target_seconds, fast_seconds, red_threshold")
           .eq("active", true),
         supabaseAdmin.from("steps").select("id, step_name"),
         supabaseAdmin.from("categories").select("id, name"),
       ]);
-      type Std = { target_seconds: number; red_threshold: number };
+      type Std = { target_seconds: number; normal_seconds: number | null; red_threshold: number };
       const stdMap = new Map<string, Std>();
       for (const r of stdRes.data ?? [])
         stdMap.set(`${r.step_id}|${r.category_id ?? ""}`, {
           target_seconds: r.target_seconds,
+          normal_seconds: r.fast_seconds ?? null,
           red_threshold:
             typeof r.red_threshold === "number" && r.red_threshold > 0
               ? r.red_threshold
@@ -233,6 +235,7 @@ export const adminGetEmployeeAggregateProfile = createServerFn({ method: "POST" 
             finished_at: p.finished_at,
             actual_seconds: p.actual_seconds,
             target_seconds: std?.target_seconds ?? null,
+            normal_seconds: std?.normal_seconds ?? null,
             red_threshold: std?.red_threshold ?? null,
             exceeded: std != null && p.actual_seconds > std.target_seconds,
           };

@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Trash2,
 } from "lucide-react";
+import { loadHomeActor } from "@/lib/home-actor";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -129,7 +130,12 @@ function RequestForm() {
       try {
         const token = getOfficeToken() ?? "";
         const res = await listEmps({ data: { token } });
-        setEmps(res.rows as Emp[]);
+        const rows = res.rows as Emp[];
+        setEmps(rows);
+        const actor = loadHomeActor();
+        if (!actor) return;
+        const match = rows.find((row) => (row.emp_code ?? "").trim() === actor.empCode);
+        if (match) setEmpId(match.id);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "โหลดพนักงานไม่สำเร็จ");
       }

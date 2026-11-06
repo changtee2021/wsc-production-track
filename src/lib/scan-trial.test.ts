@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  batchWithdrawBlock,
   canStartTrial,
+  canUseBatchScan,
+  claimBatchJob,
   flowById,
+  nextFlowStep,
+  stepLabel,
   flowForProductName,
   mergeTrialRuns,
   nextTrialSteps,
@@ -28,6 +33,18 @@ function done(step: string, extra: Partial<TrialRun> = {}): TrialRun {
     ...extra,
   };
 }
+
+describe("batch scan staff", () => {
+  it("keeps the roller batch buttons on the named badges only", () => {
+    assert.equal(canUseBatchScan("66090018"), true);
+    assert.equal(canUseBatchScan("69090087"), true);
+    assert.equal(canUseBatchScan("68110103"), true);
+    assert.equal(canUseBatchScan(" 68080080 "), true);
+    assert.equal(canUseBatchScan("68080084"), true);
+    assert.equal(canUseBatchScan("66090024"), false);
+    assert.equal(canUseBatchScan(""), false);
+  });
+});
 
 describe("scan lanes", () => {
   it("keeps an office-released job on v2 only", () => {
@@ -114,6 +131,154 @@ describe("scan trial flow", () => {
 
   it("matches a production category name to the roller flow", () => {
     assert.equal(flowForProductName("2.ม่านม้วน ကုလားကာ")?.id, "roller");
+  });
+
+  it("uses issue-wood and set-up on the wood flow, with English labels", () => {
+    const wood = flowById("wood");
+    assert.deepEqual(wood.lanes[0], ["เบิกไม้", "QC ไม้ที่เบิก", "ตัดใบ", "เก็บสี", "เจาะใบ"]);
+    assert.deepEqual(wood.after, ["ประกอบชุด", "ตั้งงาน", "QC", "PACK"]);
+    assert.equal(stepLabel("เบิกไม้"), "เบิกไม้ I Issue wood");
+    assert.equal(stepLabel("ตั้งงาน"), "ตั้งงาน I Set up");
+    assert.equal(stepLabel("ตัดใบ"), "ตัดใบ I Cut slats");
+    assert.equal(stepLabel("QC ไม้ที่เบิก"), "QC ไม้ที่เบิก I Check issued wood");
+    assert.equal(stepLabel("QC"), "QC");
+    assert.equal(stepLabel("PACK"), "PACK");
+    assert.equal(stepLabel("เบิกไม้", "my").includes("Issue"), false);
+  });
+
+  it("holds slat cutting until the issued-wood QC is finished", () => {
+    const wood = flowById("wood");
+    const issued = done("เบิกไม้", { jobId: "456", flow: "wood" });
+    const blocked = canStartTrial({
+      runs: [issued],
+      jobId: "456",
+      flow: wood,
+      step: "ตัดใบ",
+      employeeId: "e2",
+    });
+    assert.equal(blocked.ok, false);
+    if (!blocked.ok) assert.deepEqual(blocked.blocked, ["QC ไม้ที่เบิก"]);
+    const open = canStartTrial({
+      runs: [issued, done("QC ไม้ที่เบิก", { jobId: "456", flow: "wood" })],
+      jobId: "456",
+      flow: wood,
+      step: "ตัดใบ",
+      employeeId: "e2",
+    });
+    assert.equal(open.ok, true);
+    const legacy = canStartTrial({
+      runs: [done("เปิดไม้", { jobId: "456", flow: "wood" })],
+      jobId: "456",
+      flow: wood,
+      step: "QC ไม้ที่เบิก",
+      employeeId: "e2",
+    });
+    assert.equal(legacy.ok, true);
+  });
+
+  it("lets a wood issue, slat cut, or rail cut join a set only when the step is free", () => {
+    const wood = flowById("wood");
+    const open = claimBatchJob({ step: "เบิกไม้", flow: wood, jobId: "456", runs: [] });
+    assert.equal(open.ok, true);
+    const wrongProduct = claimBatchJob({
+      step: "เบิกไม้",
+      flow: roller,
+      jobId: "123",
+      runs: [],
+    });
+    assert.equal(wrongProduct.ok, false);
+    if (!wrongProduct.ok) assert.equal(wrongProduct.message, "จุดนี้รับเฉพาะมู่ลี่ไม้");
+    const claimed = claimBatchJob({
+      step: "ตัดราง",
+      flow: roller,
+      jobId: "123",
+      runs: [done("ตัดราง", { status: "held", finishedAt: null })],
+    });
+    assert.equal(claimed.ok, false);
+    if (!claimed.ok) assert.equal(claimed.message, "ชุดนี้รับไปแล้ว");
+    const waitingQc = claimBatchJob({
+      step: "ตัดใบ",
+      flow: wood,
+      jobId: "456",
+      runs: [done("เบิกไม้", { jobId: "456", flow: "wood" })],
+    });
+    assert.equal(waitingQc.ok, false);
+  });
+
+  it("blocks the next station until a confirmed set is finished", () => {
+    const wood = flowById("wood");
+    const held = canStartTrial({
+      runs: [done("เบิกไม้", { jobId: "456", flow: "wood", status: "held", finishedAt: null })],
+      jobId: "456",
+      flow: wood,
+      step: "QC ไม้ที่เบิก",
+      employeeId: "qc",
+    });
+    assert.equal(held.ok, false);
+  });
+
+  it("keeps a confirmed set on that person until they press start", () => {
+    const wood = flowById("wood");
+    const blocked = canStartTrial({
+      runs: [
+        done("เบิกไม้", {
+          jobId: "456",
+          flow: "wood",
+          status: "held",
+          finishedAt: null,
+          employeeId: "e1",
+        }),
+      ],
+      jobId: "789",
+      flow: wood,
+      step: "ตัดราง",
+      employeeId: "e1",
+    });
+    assert.equal(blocked.ok, false);
+    if (!blocked.ok) assert.equal(blocked.message, "มีชุดที่ยืนยันแล้วยังไม่กดเริ่ม");
+  });
+
+  it("shows a confirmed set as waiting to start", () => {
+    const wood = flowById("wood");
+    const view = trialStepView(wood, [
+      done("เบิกไม้", {
+        jobId: "456",
+        flow: "wood",
+        status: "held",
+        finishedAt: null,
+        employeeName: "ไม้",
+      }),
+    ]);
+    assert.equal(view.headline, "ยืนยันชุดแล้ว รอเริ่ม เบิกไม้");
+    assert.equal(view.since, null);
+    assert.equal(view.who, "ไม้");
+  });
+});
+
+describe("batch withdraw", () => {
+  it("allows withdraw until the next step has a row", () => {
+    const wood = flowById("wood");
+    assert.equal(nextFlowStep(wood, "เบิกไม้"), "QC ไม้ที่เบิก");
+    assert.equal(nextFlowStep(wood, "ตัดราง"), "เจาะราง");
+    const open = batchWithdrawBlock({
+      flow: wood,
+      step: "เบิกไม้",
+      runs: [done("เบิกไม้", { jobId: "456", flow: "wood", status: "held", finishedAt: null })],
+    });
+    assert.equal(open.ok, true);
+    const blocked = batchWithdrawBlock({
+      flow: wood,
+      step: "เบิกไม้",
+      runs: [
+        done("เบิกไม้", { jobId: "456", flow: "wood" }),
+        done("QC ไม้ที่เบิก", { jobId: "456", flow: "wood", employeeName: "คิวซี" }),
+      ],
+    });
+    assert.equal(blocked.ok, false);
+    if (!blocked.ok) {
+      assert.equal(blocked.who, "คิวซี");
+      assert.match(blocked.message, /QC ไม้ที่เบิก/);
+    }
   });
 });
 

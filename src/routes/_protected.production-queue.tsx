@@ -24,6 +24,7 @@ import {
   type ProductionJobStatus,
 } from "@/lib/features/production-jobs.functions";
 import { requireToken, showError } from "@/lib/utils/admin-helpers";
+import { SEQUENTIAL_SCAN_ENABLED } from "@/lib/sequential-scan";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -240,7 +241,15 @@ function ProductionQueuePage() {
                 >
                   <Printer className="h-4 w-4" /> พิมพ์ Label
                 </Button>
-                <Link to="/scan-trial" search={{ job_id: j.job_no }} className="flex-1">
+                <Link
+                  to={SEQUENTIAL_SCAN_ENABLED ? "/scan-trial" : "/scan"}
+                  search={
+                    SEQUENTIAL_SCAN_ENABLED
+                      ? { job_id: j.job_no, desk: "floor" as const }
+                      : { job_id: j.job_no }
+                  }
+                  className="flex-1"
+                >
                   <Button
                     size="sm"
                     variant="secondary"

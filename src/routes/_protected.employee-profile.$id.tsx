@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { initialsOf } from "@/lib/utils/i18n";
+import { paceTone, productionPace } from "@/lib/production-pace";
 import {
   ArrowLeft,
   Clock,
@@ -228,13 +229,15 @@ function EmployeeProfilePage() {
               <ol className="space-y-3">
                 {prod.rows.map((r, idx) => {
                   const target = r.target_seconds;
+                  const pace = productionPace(r.actual_seconds, r.normal_seconds, target);
+                  const tone = paceTone(pace);
                   const pct = target
                     ? Math.min(200, Math.round((r.actual_seconds / target) * 100))
                     : 100;
                   return (
                     <li
                       key={`${r.job_id}-${idx}`}
-                      className={`relative rounded-xl border p-4 ${r.exceeded ? "border-rose-300 bg-rose-50/50 dark:bg-rose-950/20" : "border-border bg-background"}`}
+                      className={`relative rounded-xl border p-4 ${tone.card}`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
@@ -249,33 +252,26 @@ function EmployeeProfilePage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div
-                            className={`text-lg font-bold ${r.exceeded ? "text-rose-600" : "text-emerald-600"}`}
-                          >
+                          <div className={`text-lg font-bold ${tone.text}`}>
                             {fmtDuration(r.actual_seconds)}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            มาตรฐาน: {target ? fmtDuration(target) : "—"}
+                            {r.normal_seconds ? `ปกติ ${fmtDuration(r.normal_seconds)} · ` : ""}
+                            เกิน: {target ? fmtDuration(target) : "—"}
                           </div>
                         </div>
                       </div>
                       {target && (
                         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                           <div
-                            className={`h-full ${r.exceeded ? "bg-rose-500" : "bg-emerald-500"}`}
+                            className={`h-full ${tone.bar}`}
                             style={{ width: `${Math.min(100, pct)}%` }}
                           />
                         </div>
                       )}
                       <div className="mt-1">
-                        {r.exceeded ? (
-                          <span className="text-xs font-semibold text-rose-600">
-                            🔴 เกินเวลามาตรฐาน
-                          </span>
-                        ) : target ? (
-                          <span className="text-xs font-semibold text-emerald-600">
-                            🟢 ผ่านเกณฑ์
-                          </span>
+                        {pace ? (
+                          <span className={`text-xs font-semibold ${tone.text}`}>{tone.label}</span>
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             — ยังไม่ตั้งค่ามาตรฐาน —{" "}

@@ -4,11 +4,18 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyAdminToken } from "@/lib/auth/admin-token.server";
 import {
+  BATCH_STEPS,
   TRIAL_FLOWS,
   TRIAL_STAFF_SOURCES,
+  batchWithdrawBlock,
+  claimBatchJob,
+  flowById,
   flowForProductName,
+  isBatchStep,
   trialBadgeRoster,
+  type BatchStep,
   type TrialFlowId,
+  type TrialRun,
   type TrialStaffRow,
   type TrialStaffSource,
 } from "@/lib/scan-trial";
@@ -201,7 +208,7 @@ type CodeQuery = {
       column: string,
       value: string,
     ) => PromiseLike<{
-      data: Array<{ name: string; emp_code: string | null }> | null;
+      data: Array<{ id: string; name: string; emp_code: string | null }> | null;
       error: { message: string } | null;
     }>;
   };
@@ -223,6 +230,89 @@ async function findTrialEmployee(code: string): Promise<{ name: string; emp_code
   }
   return null;
 }
+
+async function findHomeEmployee(code: string): Promise<{
+  id: string;
+  name: string;
+  empCode: string;
+  source: TrialStaffSource;
+  office: boolean;
+} | null> {
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+  let match: { id: string; name: string; source: TrialStaffSource } | null = null;
+  let office = false;
+  for (const source of TRIAL_STAFF_SOURCES) {
+    const { data, error } = await (
+      supabaseAdmin.from(STAFF_TABLE[source] as never) as unknown as CodeQuery
+    )
+      .select("id, name, emp_code")
+      .eq("emp_code", trimmed);
+    if (error) throw new Error("ตรวจรหัสพนักงานไม่สำเร็จ");
+    const row = (data ?? []).find((item) => (item.emp_code ?? "").trim() === trimmed);
+    if (!row?.id || !row.name) continue;
+    if (source === "office") office = true;
+    if (!match || (match.source === "office" && source !== "office")) {
+      match = { id: row.id, name: row.name, source };
+    }
+  }
+  if (!match) return null;
+  return {
+    id: match.id,
+    name: match.name,
+    empCode: trimmed,
+    source: match.source,
+    office: office || match.source === "office",
+  };
+}
+
+type OfficeCodeQuery = {
+  select: (columns: string) => {
+    eq: (
+      column: string,
+      value: string,
+    ) => PromiseLike<{
+      data: Array<{
+        id: string;
+        name: string;
+        emp_code: string | null;
+        avatar_url: string | null;
+        active: boolean;
+      }> | null;
+      error: { message: string } | null;
+    }>;
+  };
+};
+
+export const lookupOfficeEmployee = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ code: z.string().trim().min(1).max(40) }).parse(input))
+  .handler(async ({ data }) => {
+    if (!allow(clientIp(), 30)) throw new Error("ลองถี่เกินไป โปรดลองใหม่");
+    const trimmed = data.code.trim();
+    const { data: rows, error } = await (
+      supabaseAdmin.from("office_employees" as never) as unknown as OfficeCodeQuery
+    )
+      .select("id, name, emp_code, avatar_url, active")
+      .eq("emp_code", trimmed);
+    if (error) throw new Error("ตรวจรหัสพนักงานไม่สำเร็จ");
+    const row = (rows ?? []).find((item) => (item.emp_code ?? "").trim() === trimmed && item.active);
+    if (!row?.id || !row.name) throw new Error("เข้าแอดมินได้เฉพาะพนักงานออฟฟิศ");
+    return {
+      id: row.id,
+      name: row.name,
+      empCode: trimmed,
+      avatarUrl: row.avatar_url,
+    };
+  });
+
+export const lookupHomeEmployee = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ code: z.string().trim().min(1).max(40) }).parse(input))
+  .handler(async ({ data }) => {
+    if (!allow(clientIp(), 30)) throw new Error("ลองถี่เกินไป โปรดลองใหม่");
+    const person = await findHomeEmployee(data.code);
+    if (!person) throw new Error("ไม่พบรหัสพนักงานนี้");
+    return person;
+  });
 
 async function requireTrialEmployee(code: string): Promise<{ name: string; emp_code: string }> {
   const person = await findTrialEmployee(code);
@@ -315,9 +405,10 @@ type TrialRunDb = {
   step: string;
   employee_id: string;
   employee_name: string;
-  status: "running" | "done";
+  status: "held" | "running" | "done";
   started_at: string;
   finished_at: string | null;
+  batch_id: string | null;
 };
 
 type RunQuery = {
@@ -357,6 +448,7 @@ function toClientRun(row: TrialRunDb) {
     status: row.status,
     startedAt: new Date(row.started_at).getTime(),
     finishedAt: row.finished_at ? new Date(row.finished_at).getTime() : null,
+    batchId: row.batch_id,
   };
 }
 
@@ -389,7 +481,7 @@ export const listTrialJobRuns = createServerFn({ method: "POST" })
     if (!allow(clientIp(), 180)) throw new Error("โหลดขั้นตอนถี่เกินไป โปรดลองใหม่");
     const { data: rows, error } = await runsTable()
       .select(
-        "job_id, flow, step, employee_id, employee_name, status, started_at, finished_at",
+        "job_id, flow, step, employee_id, employee_name, status, started_at, finished_at, batch_id",
       )
       .eq("job_id", data.jobId);
     if (error) throw new Error("โหลดขั้นตอนไม่สำเร็จ");
@@ -405,9 +497,310 @@ export const adminListTrialRuns = createServerFn({ method: "POST" })
     if (!data.jobIds.length) return { runs: [] as ReturnType<typeof toClientRun>[] };
     const { data: rows, error } = await runsTable()
       .select(
-        "job_id, flow, step, employee_id, employee_name, status, started_at, finished_at",
+        "job_id, flow, step, employee_id, employee_name, status, started_at, finished_at, batch_id",
       )
       .in("job_id", data.jobIds);
     if (error) throw new Error("โหลดความคืบหน้าไม่สำเร็จ");
     return { runs: (rows ?? []).map(toClientRun) };
+  });
+
+const batchStepSchema = z.enum(BATCH_STEPS);
+const RUN_COLUMNS =
+  "id, job_id, flow, step, employee_id, employee_name, status, started_at, finished_at, batch_id, updated_at";
+
+type BatchRunRow = TrialRunDb & { id: string; updated_at: string };
+
+type BatchResult = {
+  data: BatchRunRow[] | null;
+  error: { message: string } | null;
+};
+
+function batchTable() {
+  return supabaseAdmin.from("scan_trial_runs" as never) as unknown as {
+    select: (columns: string) => {
+      in: (column: string, values: string[]) => PromiseLike<BatchResult>;
+      eq: (column: string, value: string) => {
+        in: (column: string, values: string[]) => PromiseLike<BatchResult>;
+      } & PromiseLike<BatchResult>;
+    };
+    insert: (
+      rows: Record<string, string | null>[],
+    ) => PromiseLike<{ error: { message: string } | null }>;
+    update: (row: Record<string, string | null>) => {
+      eq: (column: string, value: string) => {
+        eq: (column: string, value: string) => PromiseLike<{ error: { message: string } | null }>;
+      };
+    };
+    delete: () => {
+      in: (column: string, values: string[]) => PromiseLike<{ error: { message: string } | null }>;
+    };
+  };
+}
+
+function asRuns(rows: BatchRunRow[]): TrialRun[] {
+  return rows.map((row) => toClientRun(row));
+}
+
+async function runsForJobs(jobIds: string[]): Promise<BatchRunRow[]> {
+  if (!jobIds.length) return [];
+  const { data, error } = await batchTable().select(RUN_COLUMNS).in("job_id", jobIds);
+  if (error) throw new Error("โหลดขั้นตอนไม่สำเร็จ");
+  return data ?? [];
+}
+
+function openBatchFrom(rows: BatchRunRow[]) {
+  const open = rows.filter(
+    (row) =>
+      row.batch_id &&
+      isBatchStep(row.step) &&
+      (row.status === "held" || row.status === "running"),
+  );
+  if (!open.length) return null;
+  open.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const batchId = open[0]?.batch_id;
+  const mine = open.filter((row) => row.batch_id === batchId);
+  const head = mine[0];
+  if (!head?.batch_id || !isBatchStep(head.step)) return null;
+  const status = mine.some((row) => row.status === "running") ? "running" : "held";
+  return {
+    batchId: head.batch_id,
+    step: head.step,
+    status,
+    startedAt: status === "running" ? new Date(head.started_at).getTime() : null,
+    jobs: mine.map((row) => ({ jobId: row.job_id, product: row.flow })),
+  };
+}
+
+/** One code, checked before it joins a floor set. */
+export const inspectTrialBatchJob = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ jobId: jobIdSchema, step: batchStepSchema }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    if (!allow(clientIp(), 180)) throw new Error("ตรวจรหัสงานถี่เกินไป โปรดลองใหม่");
+    const { data: release, error } = await supabaseAdmin
+      .from("scan_trial_releases")
+      .select("product")
+      .eq("job_id", data.jobId)
+      .maybeSingle();
+    if (error) throw new Error("ตรวจรหัสงานไม่สำเร็จ");
+    const product = productSchema.safeParse(release?.product);
+    if (!product.success) return { ok: false as const, message: "ยังไม่ส่งเข้าไลน์ผลิต" };
+    const runs = asRuns(await runsForJobs([data.jobId]));
+    const claim = claimBatchJob({
+      step: data.step,
+      flow: flowById(product.data),
+      jobId: data.jobId,
+      runs,
+    });
+    if (!claim.ok) return { ok: false as const, message: claim.message };
+    return { ok: true as const, product: product.data };
+  });
+
+/** The set this person confirmed and has not finished. */
+export const listMyTrialBatch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ employeeId: z.string().trim().min(1).max(80) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    if (!allow(clientIp(), 120)) throw new Error("โหลดชุดถี่เกินไป โปรดลองใหม่");
+    const { data: rows, error } = await batchTable()
+      .select(RUN_COLUMNS)
+      .eq("employee_id", data.employeeId)
+      .in("status", ["held", "running"]);
+    if (error) throw new Error("โหลดชุดไม่สำเร็จ");
+    return { batch: openBatchFrom(rows ?? []) };
+  });
+
+/** Lock the list. The clock stays off until Start. */
+export const confirmTrialBatch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        step: batchStepSchema,
+        employeeId: z.string().trim().min(1).max(80),
+        employeeName: z.string().trim().min(1).max(120),
+        jobIds: z.array(jobIdSchema).min(1).max(200),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    if (!allow(clientIp(), 40)) throw new Error("ยืนยันถี่เกินไป โปรดลองใหม่");
+    const jobIds = [...new Set(data.jobIds)];
+    if (jobIds.length !== data.jobIds.length) throw new Error("มีรหัสซ้ำในชุด");
+    const { data: openRows, error: openError } = await batchTable()
+      .select(RUN_COLUMNS)
+      .eq("employee_id", data.employeeId)
+      .in("status", ["held", "running"]);
+    if (openError) throw new Error("ตรวจชุดเดิมไม่สำเร็จ");
+    if ((openRows ?? []).some((row) => row.status === "running")) {
+      throw new Error("เครื่องนี้ยังไม่กดเสร็จงาน ไปขั้นต่อไปไม่ได้");
+    }
+    if ((openRows ?? []).some((row) => row.status === "held")) {
+      throw new Error("มีชุดที่ยืนยันแล้วยังไม่กดเริ่ม");
+    }
+    const { data: releases, error: releaseError } = await supabaseAdmin
+      .from("scan_trial_releases")
+      .select("job_id, product")
+      .in("job_id", jobIds);
+    if (releaseError) throw new Error("ตรวจรหัสงานไม่สำเร็จ");
+    const productByJob = new Map((releases ?? []).map((row) => [row.job_id, row.product]));
+    const existing = asRuns(await runsForJobs(jobIds));
+    const problems: string[] = [];
+    const accepted: { jobId: string; product: TrialFlowId }[] = [];
+    for (const jobId of jobIds) {
+      const product = productSchema.safeParse(productByJob.get(jobId));
+      if (!product.success) {
+        problems.push(`${jobId} ยังไม่ส่งเข้าไลน์ผลิต`);
+        continue;
+      }
+      const claim = claimBatchJob({
+        step: data.step,
+        flow: flowById(product.data),
+        jobId,
+        runs: existing.filter((run) => run.jobId === jobId),
+      });
+      if (!claim.ok) {
+        problems.push(`${jobId} ${claim.message}`);
+        continue;
+      }
+      accepted.push({ jobId, product: product.data });
+    }
+    if (problems.length) throw new Error(problems.slice(0, 8).join("\n"));
+    const batchId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const { error } = await batchTable().insert(
+      accepted.map((job) => ({
+        job_id: job.jobId,
+        flow: job.product,
+        step: data.step,
+        employee_id: data.employeeId,
+        employee_name: data.employeeName,
+        status: "held",
+        started_at: now,
+        finished_at: null,
+        batch_id: batchId,
+        updated_at: now,
+      })),
+    );
+    if (error) throw new Error("ยืนยันชุดไม่สำเร็จ");
+    return { ok: true as const, batchId, step: data.step, jobs: accepted };
+  });
+
+async function loadBatch(batchId: string, employeeId: string, expected: "held" | "running") {
+  const { data, error } = await batchTable().select(RUN_COLUMNS).eq("batch_id", batchId);
+  if (error) throw new Error("โหลดชุดไม่สำเร็จ");
+  const rows = data ?? [];
+  if (!rows.length) throw new Error("ไม่พบชุดนี้");
+  if (rows.some((row) => row.employee_id !== employeeId)) throw new Error("ชุดนี้เป็นของคนอื่น");
+  if (rows.some((row) => row.status !== expected)) {
+    throw new Error(expected === "held" ? "ชุดนี้เริ่มไปแล้ว" : "ชุดนี้ยังไม่กดเริ่ม");
+  }
+  return rows;
+}
+
+/** Start the clock for every job in the confirmed set. */
+export const startTrialBatch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        batchId: z.string().uuid(),
+        employeeId: z.string().trim().min(1).max(80),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    if (!allow(clientIp(), 40)) throw new Error("เริ่มถี่เกินไป โปรดลองใหม่");
+    await loadBatch(data.batchId, data.employeeId, "held");
+    const startedAt = new Date().toISOString();
+    const { error } = await batchTable()
+      .update({ status: "running", started_at: startedAt, updated_at: startedAt })
+      .eq("batch_id", data.batchId)
+      .eq("status", "held");
+    if (error) throw new Error("เริ่มชุดไม่สำเร็จ");
+    return { ok: true as const, startedAt: new Date(startedAt).getTime() };
+  });
+
+/** Finish every job in the set so the next station can start. */
+export const finishTrialBatch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        batchId: z.string().uuid(),
+        employeeId: z.string().trim().min(1).max(80),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    if (!allow(clientIp(), 40)) throw new Error("จบถี่เกินไป โปรดลองใหม่");
+    const rows = await loadBatch(data.batchId, data.employeeId, "running");
+    const finishedAt = new Date().toISOString();
+    const { error } = await batchTable()
+      .update({ status: "done", finished_at: finishedAt, updated_at: finishedAt })
+      .eq("batch_id", data.batchId)
+      .eq("status", "running");
+    if (error) throw new Error("จบชุดไม่สำเร็จ");
+    return { ok: true as const, finished: rows.length };
+  });
+
+async function assertBatchWithdrawable(rows: BatchRunRow[], step: BatchStep) {
+  const jobIds = [...new Set(rows.map((row) => row.job_id))];
+  const all = await runsForJobs(jobIds);
+  const problems: string[] = [];
+  for (const jobId of jobIds) {
+    const jobRuns = all.filter((row) => row.job_id === jobId);
+    const target = jobRuns.find((row) => row.step === step);
+    if (!target) {
+      problems.push(`${jobId} ไม่พบขั้นนี้ในชุด`);
+      continue;
+    }
+    const decision = batchWithdrawBlock({
+      flow: flowById(target.flow),
+      step,
+      runs: asRuns(jobRuns),
+    });
+    if (!decision.ok) problems.push(`${jobId} ${decision.message}`);
+  }
+  if (problems.length) throw new Error(problems.slice(0, 8).join("\n"));
+}
+
+/** Drop one code, or a whole set, from this step only. The line release stays. */
+export const adminWithdrawTrialBatch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    adminToken
+      .extend({
+        empCode: empCodeSchema,
+        reason: reasonSchema,
+        step: batchStepSchema,
+        scope: z.enum(["job", "batch"]),
+        jobId: jobIdSchema.optional(),
+        batchId: z.string().uuid().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    assertAdmin(data.token);
+    if (!data.reason.trim()) throw new Error("ใส่สาเหตุก่อน");
+    await requireTrialEmployee(data.empCode);
+    if (!allow(clientIp(), 40)) throw new Error("ถอนถี่เกินไป โปรดลองใหม่");
+    let rows: BatchRunRow[] = [];
+    if (data.scope === "job") {
+      if (!data.jobId) throw new Error("ไม่พบรหัสงาน");
+      rows = (await runsForJobs([data.jobId])).filter((row) => row.step === data.step);
+    } else {
+      if (!data.batchId) throw new Error("ไม่พบชุดนี้");
+      const { data: found, error } = await batchTable().select(RUN_COLUMNS).eq("batch_id", data.batchId);
+      if (error) throw new Error("โหลดชุดไม่สำเร็จ");
+      rows = (found ?? []).filter((row) => row.step === data.step);
+    }
+    if (!rows.length) throw new Error("ไม่พบขั้นนี้ในชุด");
+    await assertBatchWithdrawable(rows, data.step);
+    const { error } = await batchTable()
+      .delete()
+      .in(
+        "id",
+        rows.map((row) => row.id),
+      );
+    if (error) throw new Error("ถอนออกจากชุดไม่สำเร็จ");
+    return { ok: true as const, removed: rows.length };
   });

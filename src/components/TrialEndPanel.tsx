@@ -19,11 +19,14 @@ export function TrialEndPanel({
   kind,
   done,
   onDone,
+  fixedItems,
 }: {
   flowId: TrialFlowId;
   kind: Kind;
   done: boolean;
   onDone: (message: string) => void;
+  /** A built-in list, such as the wood-issue QC. Skips the category checklist. */
+  fixedItems?: readonly Item[];
 }) {
   const listChecklist = useServerFn(listTrialChecklist);
   const [items, setItems] = useState<Item[]>([]);
@@ -41,6 +44,12 @@ export function TrialEndPanel({
   }, []);
 
   useEffect(() => {
+    if (fixedItems) {
+      setItems(fixedItems.map((item) => ({ ...item })));
+      setItemStates({});
+      setLoadState("ready");
+      return;
+    }
     let cancelled = false;
     setLoadState("loading");
     listChecklist({ data: { flow: flowId, kind } })
@@ -56,7 +65,7 @@ export function TrialEndPanel({
     return () => {
       cancelled = true;
     };
-  }, [flowId, kind, listChecklist]);
+  }, [flowId, kind, listChecklist, fixedItems]);
 
   const answered = items.filter((item) => itemStates[item.id]?.is_passed != null).length;
   const passCount = items.filter((item) => itemStates[item.id]?.is_passed === true).length;

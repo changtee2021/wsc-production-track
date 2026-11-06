@@ -9,7 +9,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test src/lib/scan-trial.test.ts src/lib/utils/report-media-validation.test.ts src/lib/utils/report-export.test.ts src/lib/utils/production-excel-steps.test.ts tests/integration/dept-token.test.ts tests/integration/handler-load.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/scan-trial.test.ts src/lib/sequential-scan.test.ts src/lib/intake-codes.test.ts src/lib/production-flow-steps.test.ts src/lib/production-pace.test.ts src/lib/utils/report-media-validation.test.ts src/lib/utils/report-export.test.ts src/lib/utils/production-excel-steps.test.ts tests/integration/dept-token.test.ts tests/integration/handler-load.test.ts",
     "format": "prettier --write .",
     "backfill:videos": "node scripts/backfill-web-safe-videos.mjs",
     "backfill:videos:apply": "node scripts/backfill-web-safe-videos.mjs --apply",
